@@ -173,10 +173,10 @@ export default function EmailSyncMockPage() {
             <button
               type="submit"
               disabled={isSubmitting || !emailInput}
-              className="flex-1 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-black rounded-2xl text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-lime-500/20"
+              className="flex-1 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-white rounded-2xl text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg shadow-lime-500/20"
             >
               {isSubmitting ? (
-                <div className="h-4 w-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 'Grant Access'
               )}

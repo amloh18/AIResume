@@ -259,8 +259,6 @@ const OptimizedNavigation: React.FC = () => {
       setActiveSection('interview-coach');
     } else if (pathname.includes('/linkedin-enhancer')) {
       setActiveSection('linkedin-enhancer');
-    } else if (pathname.includes('/editor') && typeof window !== 'undefined' && window.location.search.includes('tab=cover-letters')) {
-      setActiveSection('cover-letter-generator');
     } else if (pathname.includes('/editor')) {
       setActiveSection('cv-builder-pro');
     } else if (pathname.includes('/settings')) {
@@ -286,7 +284,6 @@ const OptimizedNavigation: React.FC = () => {
       'tracker': '/dashboard/jobs?tab=applications',
       'settings': '/dashboard/settings',
       'cv-builder-pro': '/editor',
-      'cover-letter-generator': '/editor?tab=cover-letters',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
       'ats-resume-checker': '/ats-resume-checker'
@@ -369,16 +366,6 @@ const OptimizedNavigation: React.FC = () => {
       icon: Kanban,
       description: 'Job application tracker',
       route: '/dashboard/jobs?tab=applications',
-      color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
-    },
-    {
-      id: 'cover-letter-generator',
-      name: 'Cover Letter',
-      icon: PenTool,
-      description: 'Create cover letters',
-      route: '/editor?tab=cover-letters',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
       activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
@@ -506,7 +493,6 @@ const OptimizedNavigation: React.FC = () => {
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                 <div className="text-small font-semibold truncate flex items-baseline gap-1">
                   {section.name}
-                  {section.id === 'jobs-dashboard' && <Lock className="w-3 h-3 opacity-60 ml-1" />}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
                 <div className={`text-small truncate mt-0.5 ${isActive
@@ -577,7 +563,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="text-small font-semibold truncate flex items-baseline gap-1">
                     <span>{section.name}</span>
                     {section.badge && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-black rounded-full leading-none ml-1">
+                      <span className="px-1.5 py-0.5 text-[9px] font-black bg-[#36D39B] text-white rounded-full leading-none ml-1">
                         {section.badge}
                       </span>
                     )}

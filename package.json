@@ -22,7 +22,9 @@
     "import:us-h1b": "npx tsx scripts/import-us-h1b-standalone.ts",
     "fix:source-field": "npx tsx scripts/fix-missing-source-field.ts",
     "migrate:cv-type": "npx tsx scripts/migrate-cv-type.ts",
-    "migrate:legacy-templates": "npx tsx scripts/migrate-legacy-templates.ts"
+    "migrate:legacy-templates": "npx tsx scripts/migrate-legacy-templates.ts",
+    "backfill:role-families": "npx tsx scripts/backfill-role-families.ts",
+    "db:indexes": "npx tsx scripts/create-job-indexes.ts"
   },
   "keywords": [
     "cv",
@@ -96,7 +98,6 @@
     "mongoose": "^8.16.5",
     "next": "^16.0.10",
     "next-auth": "^4.24.13",
-    "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.6",
     "pdf-parse": "1.1.1",
     "pdfjs-dist": "^5.4.149",
@@ -150,6 +151,7 @@
   "overrides": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "rimraf": "^5.0.0"
+    "rimraf": "^5.0.0",
+    "glob": "^11.0.0"
   }
 }

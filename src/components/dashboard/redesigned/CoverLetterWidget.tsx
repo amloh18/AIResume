@@ -32,7 +32,7 @@ export default function CoverLetterWidget({ docs = defaultDocs, loading = false,
         description: "Generate a cover letter for your next application.",
         action: {
           label: "Create Letter",
-          onClick: () => window.location.href = '/editor?tab=cover-letters',
+          onClick: () => window.location.href = '/editor?action=create&tab=cover-letters',
           primary: true
         }
       }}

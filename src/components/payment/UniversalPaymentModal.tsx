@@ -1238,7 +1238,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                     }`}
                                   >
                                     Yearly
-                                    <span className="bg-lime-500 text-black text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 50%</span>
+                                    <span className="bg-lime-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 50%</span>
                                   </button>
                                 </div>
                               )}
@@ -1308,7 +1308,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                           {plan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
                                         </h3>
                                         {isFocusedYearly && (
-                                          <span className="text-[9px] bg-lime-500 text-black px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block shadow-sm">
+                                          <span className="text-[9px] bg-lime-500 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block shadow-sm">
                                             Most Popular
                                           </span>
                                         )}
@@ -1406,7 +1406,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               <button
                                 onClick={() => setStep(2)}
                                 disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                                className="w-full tablet:w-auto px-16 py-4 bg-[#013f2e] hover:bg-[#02523c] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 group"
+                                className="w-full tablet:w-auto px-16 py-4 bg-[#013f2e] hover:bg-[#02523c] text-white rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 group"
                               >
                                 <Shield className="w-5 h-5 opacity-50 group-hover:scale-110 transition-transform" />
                                 <span>
@@ -1596,7 +1596,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               <button
                                 onClick={applyDiscountCode}
                                 disabled={!discountCode.trim() || loading}
-                                className="px-6 py-2.5 bg-gray-950 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold text-sm"
+                                className="px-6 py-2.5 bg-gray-950 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold text-sm"
                               >
                                 Apply
                               </button>
@@ -1772,7 +1772,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           <button
                             onClick={handlePayment}
                             disabled={loading}
-                            className="w-full max-w-md py-4 bg-[#013f2e] hover:bg-[#02523c] text-black rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
+                            className="w-full max-w-md py-4 bg-[#013f2e] hover:bg-[#02523c] text-white rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
                           >
                             {loading ? (
                               <>

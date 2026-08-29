@@ -302,7 +302,7 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
         <div className="p-4 border-t border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02] shrink-0">
           <button 
             onClick={onComplete}
-            className="w-full py-3 bg-[#013f2e] hover:bg-[#02523c] text-black text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-[0.98]"
+            className="w-full py-3 bg-[#013f2e] hover:bg-[#02523c] text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 active:scale-[0.98]"
             title="Review & Export"
           >
             Review & Export <Check className="w-4 h-4" />

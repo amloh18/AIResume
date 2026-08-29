@@ -1032,7 +1032,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
+            className="fixed bg-black/50 backdrop-blur-sm z-[100001]"
             style={{
               top: 0,
               left: 0,
@@ -1052,7 +1052,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
+            className="fixed right-3 top-3 bottom-3 h-auto bg-white dark:bg-[#141810] shadow-2xl z-[100002] flex flex-col rounded-2xl overflow-hidden"
             style={{ width: sidebarWidth }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1060,7 +1060,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
               <div className="flex items-center justify-between p-4">
                 <h2 className="!text-lg font-bold text-gray-900 dark:text-white">
-                  {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
+                  Edit Job Application
                 </h2>
                 <motion.button
                   onClick={handleClose}

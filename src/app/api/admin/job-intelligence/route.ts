@@ -251,6 +251,21 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
 
+      // Prevent duplicate runs for the same source
+      const runsColl = db.collection('ingestionRuns');
+      const existingRunning = await runsColl.findOne({
+        source: sourceName,
+        status: { $in: ['running', 'queued'] },
+      });
+
+      if (existingRunning) {
+        return NextResponse.json({
+          success: false,
+          error: `${sourceName} ingestion is already running (runId: ${existingRunning.runId}). Wait for it to finish or cancel it.`,
+          runId: existingRunning.runId,
+        }, { status: 409 });
+      }
+
       // Create the run record — this is the ONE place runs are created for UI triggers
       const { runId } = await createRun(db, sourceName);
 

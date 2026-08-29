@@ -242,7 +242,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
               onClick={() => { setActiveTab('email'); resetModalState(); }}
               className={`flex-1 py-2 text-small font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 ${
                 activeTab === 'email' 
-                  ? 'bg-[#013f2e] text-black shadow-md' 
+                  ? 'bg-[#013f2e] text-white shadow-md' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
               }`}
             >
@@ -253,7 +253,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
               onClick={() => { setActiveTab('calendar'); resetModalState(); }}
               className={`flex-1 py-2 text-small font-bold rounded-xl transition duration-150 flex items-center justify-center gap-1.5 ${
                 activeTab === 'calendar' 
-                  ? 'bg-[#013f2e] text-black shadow-md' 
+                  ? 'bg-[#013f2e] text-white shadow-md' 
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
               }`}
             >

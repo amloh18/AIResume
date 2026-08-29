@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
@@ -20,6 +20,7 @@ import { JobCard } from '@/components/jobs/JobCard';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { detectUserCountry } from '@/components/jobs/CountrySelector';
 import NaukriConnectCard from './JobsDashboard/NaukriConnectCard';
+import IndeedConnectCard from './JobsDashboard/IndeedConnectCard';
 import LimitedOptionsBanner from './JobsDashboard/LimitedOptionsBanner';
 import PortalConnectModal, { type PortalType } from './settings/PortalConnectModal';
 import { getCachedJobs, setCachedJobs } from '@/lib/utils/jobCache';
@@ -53,6 +54,7 @@ const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
 
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
+  const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const { data: session } = useSession();
@@ -73,8 +75,10 @@ export default function JobsDashboard() {
 
     if (jobIdParam || newJobParam || filterParam) {
       setActiveTab('applications');
+      tabSetByUrl.current = true;
     } else if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
+      tabSetByUrl.current = true;
     }
   }, [searchParams]);
 
@@ -124,6 +128,7 @@ export default function JobsDashboard() {
   const [modalOpen, setModalOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [portalConnections, setPortalConnections] = useState<any[]>([]);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
@@ -188,6 +193,10 @@ export default function JobsDashboard() {
         if (data?.profile) {
           setUserPreferences(data.profile);
           setAutoApplyEnabled(data.profile.enabled === true);
+          // Apply saved default tab if no URL param overrode it
+          if (!tabSetByUrl.current && data.profile.defaultJobsTab) {
+            setActiveTab(data.profile.defaultJobsTab);
+          }
         }
         if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
           setCvTailoringMode(
@@ -197,6 +206,84 @@ export default function JobsDashboard() {
       })
       .catch(() => {});
   }, [userId, fetchPortalConnections]);
+
+  // Search Profile Data Formatting for Discover results summary
+  const targetRolesDisplay = useMemo(() => {
+    if (filters.roles?.length) {
+      return filters.roles.join(' · ');
+    }
+    if (userPreferences?.targetRoles && userPreferences.targetRoles.length > 0) {
+      return userPreferences.targetRoles.join(' · ');
+    }
+    return 'your target roles';
+  }, [userPreferences, filters.roles]);
+
+  const metadataList = useMemo(() => {
+    const parts: string[] = [];
+
+    // Workplace Types
+    if (filters.workplaceType?.length) {
+      parts.push(filters.workplaceType.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
+    } else if (userPreferences?.workplaceTypes && userPreferences.workplaceTypes.length > 0) {
+      parts.push(userPreferences.workplaceTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
+    } else if (userPreferences?.locations && userPreferences.locations.length > 0) {
+      parts.push(userPreferences.locations.join(' · '));
+    }
+
+    // Salary Threshold
+    if (userPreferences?.minSalary) {
+      const cur = userPreferences.salaryCurrency;
+      if (cur === 'GBP_YEAR' || cur === 'GBP' || cur === '£') {
+        parts.push(`£${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
+      } else if (cur === 'EUR_YEAR' || cur === 'EUR' || cur === '€') {
+        parts.push(`€${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
+      } else if (cur === 'USD_YEAR' || cur === 'USD' || cur === '$') {
+        parts.push(`$${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
+      } else {
+        parts.push(`₹${userPreferences.minSalary} LPA+`);
+      }
+    }
+
+    // Experience
+    if (filters.experienceLevel?.length) {
+      const expLabels: Record<string, string> = {
+        entry: 'Entry Level',
+        mid: 'Mid-level',
+        senior: 'Senior',
+        lead: 'Lead / Principal',
+      };
+      parts.push(filters.experienceLevel.map((e) => expLabels[e] || e).join(' · '));
+    } else if (userPreferences?.experienceYears !== undefined && userPreferences.experienceYears > 0) {
+      parts.push(`${userPreferences.experienceYears}+ yrs`);
+    }
+
+    // Availability
+    if (userPreferences?.maxNoticePeriodDays !== undefined) {
+      if (userPreferences.maxNoticePeriodDays === 0) {
+        parts.push('Immediate');
+      } else {
+        parts.push(`${userPreferences.maxNoticePeriodDays}d notice`);
+      }
+    }
+
+    // Search Intensity
+    if (userPreferences?.searchIntensity) {
+      const intensityLabels: Record<string, string> = {
+        browsing: 'Browsing',
+        exploring: 'Exploring',
+        active: 'Actively Applying',
+        aggressive: 'Aggressively Hunting',
+      };
+      parts.push(intensityLabels[userPreferences.searchIntensity] || userPreferences.searchIntensity);
+    }
+
+    // Application Volume
+    if (userPreferences?.expectedApplicationsPerMonth) {
+      parts.push(`${userPreferences.expectedApplicationsPerMonth}/mo`);
+    }
+
+    return parts;
+  }, [userPreferences, filters.workplaceType, filters.experienceLevel]);
 
   // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
   const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
@@ -304,7 +391,7 @@ export default function JobsDashboard() {
             next.delete(dbJobId);
             return next;
           });
-          toast({ title: 'Removed from saved jobs' });
+          toast({ title: 'Removed from saved jobs', company: job.company, logoUrl: job.companyLogo });
         } else {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData?.error || 'Failed to remove saved job');
@@ -364,6 +451,8 @@ export default function JobsDashboard() {
           toast({
             title: 'Job saved successfully',
             description: 'Added to your applications shortlist',
+            company: job.company,
+            logoUrl: job.companyLogo,
           });
         } else {
           const data = await res.json().catch(() => ({}));
@@ -375,6 +464,8 @@ export default function JobsDashboard() {
         title: 'Error updating saved job',
         description: err.message,
         variant: 'destructive',
+        company: job.company,
+        logoUrl: job.companyLogo,
       });
     } finally {
       setSavingId(null);
@@ -403,13 +494,13 @@ export default function JobsDashboard() {
     const appId = `apply-${job._id}`;
     setIsApplying(appId);
 
-    // Start progress toast
-    applyProgress.startApplyProgress(job.title);
+    // Start progress
+    applyProgress.startApplyProgress(job.title, job.company, job._id);
     updateProgress(appId, 15, `Matching CV for ${job.title}...`, 'progress');
 
     try {
       // Update progress: tailoring
-      applyProgress.updateToTailoring(job.title, job.company);
+      applyProgress.updateToTailoring(job.title, job.company, job._id);
       updateProgress(appId, 45, `Tailoring application for ${job.company}...`, 'progress');
 
       const res = await fetch('/api/jobs/auto-apply', {
@@ -443,7 +534,7 @@ export default function JobsDashboard() {
         resData.code === 'AUTO_APPLY_NOT_INCLUDED' ||
         resData.code === 'AUTO_APPLY_LIMIT_REACHED'
       ) {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: resData.code || 'AUTO_APPLY_NOT_INCLUDED',
           jobTitle: job.title,
@@ -459,7 +550,7 @@ export default function JobsDashboard() {
 
       // Verification / Unknown outcome
       if (resData.code === 'APPLICATION_VERIFICATION_FAILED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: 'APPLICATION_VERIFICATION_FAILED',
           jobTitle: job.title,
@@ -473,7 +564,7 @@ export default function JobsDashboard() {
 
       // Authentication required
       if (resData.code === 'AUTHENTICATION_REQUIRED') {
-        applyProgress.cancelProgress();
+        applyProgress.cancelProgress(job._id);
         setEntitlementNoticeData({
           code: 'AUTHENTICATION_REQUIRED',
           jobTitle: job.title,
@@ -485,7 +576,7 @@ export default function JobsDashboard() {
       }
 
       // Update progress: submitting
-      applyProgress.updateToSubmitting(job.company);
+      applyProgress.updateToSubmitting(job.company, job._id);
       updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
 
       if (res.ok && resData.success) {
@@ -495,11 +586,11 @@ export default function JobsDashboard() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(job.title, job.company, true, resData.message);
+        applyProgress.completeApply(job.title, job.company, true, resData.message, job._id);
         updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
       } else {
         // Genuine submission failure on employer site
-        applyProgress.cancelProgress();
+        applyProgress.completeApply(job.title, job.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", job._id);
         setEntitlementNoticeData({
           code: 'APPLICATION_FAILED',
           jobTitle: job.title,
@@ -510,7 +601,7 @@ export default function JobsDashboard() {
         setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      applyProgress.cancelProgress();
+      applyProgress.completeApply(job.title, job.company, false, err.message || 'Network error occurred during submission.', job._id);
       setEntitlementNoticeData({
         code: 'APPLICATION_FAILED',
         jobTitle: job.title,
@@ -566,6 +657,7 @@ export default function JobsDashboard() {
       if (filters.datePosted && filters.datePosted !== 'all') params.datePosted = filters.datePosted;
       if (filters.sponsorsVisa) params.sponsorsVisa = 'true';
       if (filters.savedOnly) params.savedOnly = 'true';
+      if (filters.unpersonalized) params.unpersonalized = 'true';
 
       // Check cache for initial page load
       if (isFirstPage) {
@@ -612,6 +704,7 @@ export default function JobsDashboard() {
 
       setTotal(data.total);
       setHasMore(data.hasMore);
+      setSuggestedSearches(data.suggestedSearches || []);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching jobs:', err);
@@ -681,6 +774,7 @@ export default function JobsDashboard() {
     setFilters({
       sortBy: 'matchScore',
       sortOrder: 'desc',
+      unpersonalized: false,
     });
     setPage(1);
   };
@@ -775,7 +869,7 @@ export default function JobsDashboard() {
   const deduplicatedJobs = deduplicateJobs(jobs);
   const displayedJobs = filters.savedOnly
     ? deduplicatedJobs.filter((job) => isJobSaved(job))
-    : deduplicatedJobs;
+    : deduplicatedJobs.filter((job) => !isJobSaved(job));
 
   if (error && !metrics) {
     return <JobsErrorState message={error} onRetry={handleRetry} />;
@@ -843,16 +937,44 @@ export default function JobsDashboard() {
               portalConnections={portalConnections}
             />
 
-            {/* Results Count & Match Statement */}
-            <div className="flex items-center justify-between pt-1 text-xs">
-              <div>
-                <span className="font-bold text-sm text-gray-900 dark:text-white">
-                  {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400 ml-2 hidden sm:inline">
+            {/* Results Count & Dynamic Mode Statement */}
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 pt-1 text-xs">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="font-bold text-sm text-gray-900 dark:text-white shrink-0">
+                  {total > 0 ? total.toLocaleString() : displayedJobs.length.toLocaleString()}{' '}
                   {filters.savedOnly
-                    ? 'Jobs you have saved to your shortlist and staging pipeline'
-                    : 'Personalized based on your target roles, locations, and compensation threshold'}
+                    ? (total === 1 || displayedJobs.length === 1 ? 'saved job' : 'saved jobs')
+                    : filters.matchScoreMin === 0 || filters.unpersonalized
+                    ? (total === 1 || displayedJobs.length === 1 ? 'available job' : 'available jobs')
+                    : filters.sortBy === 'postedDate'
+                    ? (total === 1 || displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
+                    : (total === 1 || displayedJobs.length === 1 ? 'matching job' : 'matching jobs')}
+                </span>
+
+                <span className="text-gray-500 dark:text-gray-400">
+                  {filters.savedOnly ? (
+                    <span>Shortlisted opportunities ready for tailored CV generation and application</span>
+                  ) : filters.matchScoreMin === 0 || filters.unpersonalized ? (
+                    <span>
+                      All active jobs from ingested sources across all roles and industries
+                      {countries.length > 0 && <span className="font-medium text-gray-700 dark:text-gray-300"> · {countries.join(', ')}</span>}
+                    </span>
+                  ) : filters.sortBy === 'postedDate' ? (
+                    <span>
+                      Fresh job listings sorted chronologically by most recently posted
+                      {countries.length > 0 && <span className="font-medium text-gray-700 dark:text-gray-300"> · {countries.join(', ')}</span>}
+                    </span>
+                  ) : (
+                    <span>
+                      Personalized based on your{' '}
+                      <strong className="text-gray-800 dark:text-gray-200 font-semibold">{targetRolesDisplay}</strong>
+                      {metadataList.length > 0 && (
+                        <span className="text-gray-500 dark:text-gray-400 font-normal">
+                          {' '}({metadataList.join(' · ')})
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
@@ -866,7 +988,7 @@ export default function JobsDashboard() {
                     setNewJobsCount(0);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white dark:text-black text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0f172a] dark:bg-[#013f2e] text-white text-sm font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                 >
                   <ArrowUp className="w-4 h-4" />
                   {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
@@ -894,14 +1016,6 @@ export default function JobsDashboard() {
             ) : displayedJobs.length > 0 ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                  {!naukriConnected && !filters.savedOnly && (
-                    <NaukriConnectCard
-                      onConnected={() => {
-                        setNaukriConnected(true);
-                        fetchJobs();
-                      }}
-                    />
-                  )}
                   {displayedJobs
                     .map((job, index) => (
                       <JobCard
@@ -941,6 +1055,28 @@ export default function JobsDashboard() {
                       />
                     ))}
 
+                  {/* Naukri Featured Card — only when account not connected & not in savedOnly mode */}
+                  {!naukriConnected && !filters.savedOnly && (
+                    <NaukriConnectCard
+                      onConnected={() => {
+                        setNaukriConnected(true);
+                        fetchPortalConnections();
+                        fetchJobs();
+                      }}
+                    />
+                  )}
+
+                  {/* Indeed Featured Card — only when account not connected & not in savedOnly mode */}
+                  {!indeedConnected && !filters.savedOnly && (
+                    <IndeedConnectCard
+                      onConnected={() => {
+                        setIndeedConnected(true);
+                        fetchPortalConnections();
+                        fetchJobs();
+                      }}
+                    />
+                  )}
+
                   {/* Extension card styled as a job card at the end of the loaded batch */}
                   {!filters.savedOnly && (
                     <LimitedOptionsBanner
@@ -977,6 +1113,23 @@ export default function JobsDashboard() {
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   Try adjusting your search criteria or switching region
                 </p>
+                {suggestedSearches.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    {suggestedSearches.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => {
+                          setFilters((prev) => ({ ...prev, q: suggestion }));
+                          setPage(1);
+                        }}
+                        className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors cursor-pointer"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {!isPaidUser && (
                   <Link
                     href="/linkedin-enhancer"
@@ -1011,7 +1164,7 @@ export default function JobsDashboard() {
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                    You've viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
+                    You've viewed all {total > 0 ? total : displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {(total > 0 ? total : displayedJobs.length) === 1 ? 'job' : 'jobs'}
                   </div>
                 )}
               </div>
@@ -1049,7 +1202,14 @@ export default function JobsDashboard() {
 
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            <AutoApplyPanel userId={userId} />
+            <AutoApplyPanel userId={userId} onProfileSaved={() => {
+              fetch('/api/job-search-profile')
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  if (data?.profile) setUserPreferences(data.profile);
+                })
+                .catch(() => {});
+            }} />
           </div>
         )}
 

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Button, IconButton, Pill, SearchInput, Dropdown } from '@/components/ui';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
@@ -27,7 +28,6 @@ import { useMembership } from '@/lib/hooks/useMembership';
 import toast from 'react-hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
 import JobsListView from '@/components/dashboard/jobs/JobsListView';
 import JobsKanbanView from '@/components/dashboard/jobs/JobsKanbanView';
@@ -132,9 +132,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [draggedJob, setDraggedJob] = useState<string | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
-  const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [showJobParserDialog, setShowJobParserDialog] = useState(false);
-  const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showTrackerAccessPrompt, setShowTrackerAccessPrompt] = useState(false);
   const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
@@ -164,7 +162,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
 
   useEffect(() => {
     if (deepLinkNewJob) {
-      setShowAddJobModal(true);
+      setShowJobParserDialog(true);
     }
   }, [deepLinkNewJob]);
 
@@ -408,13 +406,13 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   };
 
   const handleAddJob = () => {
-    setEditingJob(null);
-    setShowAddJobModal(true);
+    setShowJobParserDialog(true);
   };
 
   const handleEditJob = (job: JobApplication) => {
-    setEditingJob(job);
-    setShowAddJobModal(true);
+    setSelectedJob(job);
+    setSidebarOpenContext({ autoOpenEdit: true });
+    setShowModal(true);
   };
 
   const handleDeleteJob = async (job: JobApplication) => {
@@ -438,8 +436,6 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
 
   const handleJobSaved = () => {
     loadData(true);
-    setShowAddJobModal(false);
-    setEditingJob(null);
   };
 
   const handleViewModeChange = (mode: 'list' | 'kanban') => {
@@ -558,9 +554,50 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     setShowDownloadModal(true);
   };
 
-  const handleParseComplete = () => {
+  const handleParseComplete = async (data?: any) => {
     setShowJobParserDialog(false);
-    loadData();
+    if (!data) {
+      loadData(true);
+      return;
+    }
+
+    try {
+      const payload = {
+        jobTitle: data.jobTitle || 'Untitled Role',
+        company: data.company || 'Unknown Company',
+        location: data.location || 'Remote',
+        jobUrl: data.jobUrl || '',
+        jobDescription: data.jobDescription || data.jobDescriptionRaw || '',
+        salary: data.salary,
+        experienceLevel: data.experienceLevel,
+        tags: data.tags || [],
+        sponsorship: data.sponsorship,
+        benefits: data.benefits,
+        status: 'created',
+        source: 'manual',
+      };
+
+      const res = await authenticatedFetch('/api/jobs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast.success('Job application created successfully!');
+        window.dispatchEvent(new CustomEvent('creditsUpdated'));
+        window.dispatchEvent(new CustomEvent('jobUpdated'));
+        loadData(true);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.error || errorData.message || 'Failed to save job application');
+      }
+    } catch (err) {
+      console.error('Failed to create job application:', err);
+      toast.error('Failed to create job application');
+    }
   };
 
   const planKey = membership?.planKey || 'free';
@@ -655,65 +692,69 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
         ))}
       </div>
 
-      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl p-4 shadow-sm space-y-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Left Controls: Search & Filters */}
           <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
             <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
+              <SearchInput
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onClear={() => setSearchQuery('')}
                 placeholder="Search by role, company, location..."
-                className="w-full h-9 pl-9 pr-3 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:ring-2 focus:ring-lime-500 transition-all"
+                size="md"
               />
             </div>
 
-            <select
+            <Dropdown
+              size="md"
               value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-              className="h-9 px-3 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-lime-500 transition-all cursor-pointer"
-            >
-              <option value="all">All Portals / Sources</option>
-              <option value="direct">Direct ATS</option>
-              <option value="naukri">Naukri.com</option>
-              <option value="indeed">Indeed</option>
-              <option value="greenhouse">Greenhouse ATS</option>
-              <option value="lever">Lever ATS</option>
-              <option value="adzuna">Adzuna</option>
-              <option value="linkedin">LinkedIn</option>
-            </select>
+              onChange={setSourceFilter}
+              options={[
+                { id: 'all', label: 'All Portals / Sources' },
+                { id: 'direct', label: 'Direct ATS' },
+                { id: 'naukri', label: 'Naukri.com' },
+                { id: 'indeed', label: 'Indeed' },
+                { id: 'greenhouse', label: 'Greenhouse ATS' },
+                { id: 'lever', label: 'Lever ATS' },
+                { id: 'adzuna', label: 'Adzuna' },
+                { id: 'linkedin', label: 'LinkedIn' },
+              ]}
+            />
 
-            <select
+            <Dropdown
+              size="md"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="h-9 px-3 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-lime-500 transition-all cursor-pointer"
-            >
-              <option value="appliedAt">Sort by Date Applied</option>
-              <option value="matchScore">Sort by Match Score</option>
-              <option value="company">Sort by Company</option>
-              <option value="lastUpdated">Sort by Last Updated</option>
-            </select>
+              onChange={(val) => setSortBy(val as any)}
+              options={[
+                { id: 'appliedAt', label: 'Sort by Date Applied' },
+                { id: 'matchScore', label: 'Sort by Match Score' },
+                { id: 'company', label: 'Sort by Company' },
+                { id: 'lastUpdated', label: 'Sort by Last Updated' },
+              ]}
+            />
 
-            <button
+            <IconButton
+              variant="secondary"
+              size="md"
+              tooltip={sortOrder === 'desc' ? 'Sort Ascending' : 'Sort Descending'}
+              aria-label="Toggle sort order"
               onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-              title="Toggle sort order"
-              className="h-9 w-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a230f] text-gray-700 dark:text-gray-300 hover:border-lime-500 text-xs transition-colors shrink-0"
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-            </button>
+              <ArrowUpDown className="w-4 h-4" />
+            </IconButton>
           </div>
 
           {/* Right Controls: View Switcher & Action CTAs */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="flex items-center h-9 p-1 rounded-xl bg-gray-100 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-auto h-10">
+            <div className="flex items-center h-10 p-1 rounded-xl bg-gray-100/90 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 shadow-2xs">
               <button
+                type="button"
                 onClick={() => handleViewModeChange('list')}
-                className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold transition-all ${
+                className={`h-full px-3.5 rounded-[8px] text-xs font-semibold transition-all duration-150 ease-out flex items-center gap-1.5 ${
                   viewMode === 'list'
-                    ? 'bg-white dark:bg-[#253316] text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
                 }`}
                 title="Table view"
               >
@@ -721,11 +762,12 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
                 <span>List</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleViewModeChange('kanban')}
-                className={`flex items-center justify-center gap-1.5 h-7 px-3 rounded-lg text-xs font-semibold transition-all ${
+                className={`h-full px-3.5 rounded-[8px] text-xs font-semibold transition-all duration-150 ease-out flex items-center gap-1.5 ${
                   viewMode === 'kanban'
-                    ? 'bg-white dark:bg-[#253316] text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
                 }`}
                 title="Kanban view"
               >
@@ -734,26 +776,20 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
               </button>
             </div>
 
-            <button
-              onClick={() => setShowJobParserDialog(true)}
-              className="flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#1a230f] hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-semibold transition-colors"
-            >
-              <Zap className="w-3.5 h-3.5 text-lime-500" />
-              <span>Parse JD</span>
-            </button>
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={handleAddJob}
-              className="flex items-center justify-center gap-1.5 h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-400 text-black text-xs font-bold transition-all shadow-sm"
+              leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Job</span>
-            </button>
+              Add Job
+            </Button>
           </div>
         </div>
 
         {/* Status filter chips ONLY rendered in list view */}
         {viewMode === 'list' && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide border-t border-gray-100 dark:border-white/5 pt-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide border-t border-gray-100 dark:border-white/5 pt-3">
             {[
               { id: 'all', label: 'All Applications', count: stats.total },
               { id: 'created', label: 'Staging / Ready', count: stats.pending },
@@ -762,22 +798,15 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
               { id: 'offer', label: 'Offers', count: stats.offer },
               { id: 'rejected', label: 'Declined', count: stats.rejected },
             ].map((tab) => (
-              <button
+              <Pill
                 key={tab.id}
+                size="md"
+                selected={filterStatus === tab.id}
                 onClick={() => setFilterStatus(tab.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
-                  filterStatus === tab.id
-                    ? 'bg-[#0f3822] dark:bg-[#133820] text-white border border-[#1a4a2c] shadow-sm'
-                    : 'bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-400'
-                }`}
+                badgeCount={tab.count}
               >
-                <span>{tab.label}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-                  filterStatus === tab.id ? 'bg-white/20 text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
-                }`}>
-                  {tab.count}
-                </span>
-              </button>
+                {tab.label}
+              </Pill>
             ))}
           </div>
         )}
@@ -904,37 +933,6 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
           />
         </div>
       )}
-
-      <EditJobSidebar
-        isOpen={showAddJobModal}
-        onClose={() => {
-          setShowAddJobModal(false);
-          setEditingJob(null);
-        }}
-        onJobSaved={handleJobSaved}
-        existingJobs={jobs}
-        editingJob={editingJob ? {
-          id: editingJob.id,
-          jobTitle: editingJob.jobTitle,
-          company: editingJob.company,
-          location: editingJob.location,
-          jobUrl: editingJob.jobUrl,
-          jobDescription: editingJob.jobDescription,
-          notes: editingJob.notes,
-          priority: editingJob.priority,
-          status: editingJob.status,
-          deadline: editingJob.deadline ? (typeof editingJob.deadline === 'string' ? editingJob.deadline : new Date(editingJob.deadline).toISOString().split('T')[0]) : undefined,
-          applicationDate: editingJob.applicationDate ? (typeof editingJob.applicationDate === 'string' ? editingJob.applicationDate : new Date(editingJob.applicationDate).toISOString().split('T')[0]) : undefined,
-          salary: editingJob.salary,
-          sponsorship: editingJob.sponsorship,
-          tags: editingJob.tags,
-          contactDetails: editingJob.contactDetails || { name: '', email: '', phone: '', role: '' },
-          source: editingJob.source as any,
-          createdAt: editingJob.createdAt,
-          updatedAt: editingJob.updatedAt
-        } : null}
-        userId={userId || ''}
-      />
 
       {showModal && selectedJob && (
         <JobSidebar

@@ -50,11 +50,41 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Global Design Token Colors
+        brand: {
+          primary: "var(--color-primary)",
+          hover: "var(--color-primary-hover)",
+          active: "var(--color-primary-active)",
+          foreground: "var(--color-primary-foreground)",
+          soft: "var(--color-primary-soft)",
+          softHover: "var(--color-primary-soft-hover)",
+          accent: "var(--color-accent-green)",
+          accentHover: "var(--color-accent-green-hover)",
+          accentSoft: "var(--color-accent-green-soft)",
+        },
+        surface: {
+          DEFAULT: "var(--color-surface)",
+          elevated: "var(--color-surface-elevated)",
+          subtle: "var(--color-surface-subtle)",
+          muted: "var(--color-surface-muted)",
+        },
+        status: {
+          success: "var(--status-success)",
+          warning: "var(--status-warning)",
+          danger: "var(--status-danger)",
+          info: "var(--status-info)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        "control-xs": "var(--radius-xs)",
+        "control-sm": "var(--radius-sm)",
+        "control-md": "var(--radius-md)",
+        "control-lg": "var(--radius-lg)",
+        "control-xl": "var(--radius-xl)",
+        "control-full": "var(--radius-full)",
       },
       fontSize: {
         xs: ["var(--text-xs)", { lineHeight: "1rem" }],
@@ -69,6 +99,14 @@ module.exports = {
       },
       height: {
         macro: "100dvh",
+        "control-sm": "var(--control-height-sm)", // 32px
+        "control-md": "var(--control-height-md)", // 40px
+        "control-lg": "var(--control-height-lg)", // 46px
+      },
+      minHeight: {
+        "control-sm": "var(--control-height-sm)",
+        "control-md": "var(--control-height-md)",
+        "control-lg": "var(--control-height-lg)",
       },
       backdropBlur: {
         glass: "12px",

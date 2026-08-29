@@ -83,7 +83,7 @@ export default function NeedsAttentionModal({
               onConfirmManualSubmit();
               onClose();
             }}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
           >
             <CheckCircle2 className="w-4 h-4" />
             I Have Applied

@@ -574,7 +574,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
         {/* Next Step Button */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('editor-next-step'))}
-          className="p-2 rounded-xl bg-black text-[#013f2e] dark:bg-[#013f2e] dark:text-black hover:opacity-90 active:scale-95 transition-all flex items-center justify-center shadow-sm"
+          className="p-2 rounded-xl bg-black text-[#013f2e] dark:bg-[#013f2e] dark:text-white hover:opacity-90 active:scale-95 transition-all flex items-center justify-center shadow-sm"
           title="Next Step"
           aria-label="Next step"
         >

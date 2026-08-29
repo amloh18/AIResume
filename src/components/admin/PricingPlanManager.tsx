@@ -108,7 +108,7 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest transition-all">
+            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest transition-all">
               <Plus className="w-5 h-5" /> Establish Plan
             </button>
           </div>
@@ -268,7 +268,7 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
                   <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForPreview(selectedPlanForDetails); setIsPreviewModalOpen(true); }} className="flex-1 px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl transition-all flex items-center justify-center gap-2">
                     <Eye className="w-4 h-4" /> Visual Preview
                   </button>
-                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForEdit(selectedPlanForDetails); setIsEditModalOpen(true); }} className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
+                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForEdit(selectedPlanForDetails); setIsEditModalOpen(true); }} className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
                     <Edit className="w-4 h-4" /> Reconfigure
                   </button>
                 </div>

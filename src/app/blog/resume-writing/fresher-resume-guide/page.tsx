@@ -229,7 +229,7 @@ export default function FresherResumeGuidePage() {
         <footer className="py-8 px-4 border-t border-white/5">
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-[#013f2e] rounded"><span className="text-black font-bold text-small">CV</span></div>
+              <div className="w-6 h-6 bg-[#013f2e] rounded flex items-center justify-center"><span className="text-white font-bold text-small">CV</span></div>
               <span className="text-gray-500 text-small">© 2026 AIResume</span>
             </div>
             <div className="flex gap-6">

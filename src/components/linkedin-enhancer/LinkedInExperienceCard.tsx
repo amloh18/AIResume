@@ -71,16 +71,16 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className={`bg-white rounded-xl overflow-hidden shadow-sm border ${allAccepted ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'}`}
+            className={`bg-[var(--bg-secondary)] rounded-2xl overflow-hidden shadow-xs border ${allAccepted ? 'border-emerald-500/40 ring-1 ring-emerald-500/20' : 'border-[var(--border-primary)]'}`}
         >
-            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[var(--border-primary)]">
                 {/* Original Column */}
-                <div className="flex-1 p-6 bg-gray-50/50">
+                <div className="flex-1 p-5 sm:p-6 bg-[var(--bg-tertiary)]/30">
                     <div className="flex items-center justify-between mb-6">
-                        <span className="text-small font-semibold uppercase tracking-wider text-gray-500">Original Experience</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Original Experience</span>
                     </div>
                     <div className="space-y-6">
                         {validData.map((experience, index) => (
@@ -307,7 +307,7 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                                     <Edit2 className="w-3.5 h-3.5" />
                                 </button>
                                 {data.status !== 'ACCEPTED' && (
-                                    <button onClick={handleAccept} className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded text-[10px] font-semibold">
+                                    <button onClick={handleAccept} className="flex items-center gap-1 px-2.5 py-1 bg-[#013f2e] text-white hover:bg-[#025c43] rounded-lg text-[10px] font-bold shadow-xs transition-all">
                                         <Check className="w-3 h-3" /> Accept
                                     </button>
                                 )}

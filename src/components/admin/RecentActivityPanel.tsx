@@ -180,7 +180,7 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
               <button
                 onClick={onRefresh}
                 disabled={loading}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs transition-all disabled:opacity-30 flex items-center justify-center gap-3"
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs transition-all disabled:opacity-30 flex items-center justify-center gap-3"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 Refresh Stream

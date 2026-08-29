@@ -4,6 +4,8 @@ import React, { Suspense, useEffect } from 'react';
 import UnifiedAuthPage from '@/components/auth/UnifiedAuthPage';
 import { useSearchParams } from 'next/navigation';
 
+export const dynamic = 'force-dynamic';
+
 function AdminLoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams ? searchParams.get('callbackUrl') : null;

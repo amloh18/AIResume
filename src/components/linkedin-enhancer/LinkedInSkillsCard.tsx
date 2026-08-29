@@ -41,27 +41,27 @@ export default function LinkedInSkillsCard({ data }: LinkedInSkillsCardProps) {
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200"
+            className="bg-[var(--bg-secondary)] rounded-2xl overflow-hidden shadow-xs border border-[var(--border-primary)]"
         >
-            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[var(--border-primary)]">
                 {/* Original Column */}
-                <div className="flex-1 p-6 bg-gray-50/50">
+                <div className="flex-1 p-5 sm:p-6 bg-[var(--bg-tertiary)]/30">
                     <div className="flex items-center justify-between mb-4">
-                        <span className="text-small font-semibold uppercase tracking-wider text-gray-500">Original Skills</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Original Skills</span>
                     </div>
                     {currentSkills.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                             {currentSkills.map((skill, idx) => (
-                                <span key={idx} className="px-2.5 py-1 bg-white text-gray-700 text-small rounded-full border border-gray-200 shadow-sm">
+                                <span key={idx} className="px-2.5 py-1 bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-xs font-semibold rounded-lg border border-[var(--border-primary)] shadow-xs">
                                     {skill}
                                 </span>
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-500 text-small italic">No skills listed</p>
+                        <p className="text-[var(--text-tertiary)] text-xs italic">No skills listed</p>
                     )}
                 </div>
 

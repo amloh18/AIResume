@@ -11,6 +11,7 @@ import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
+import { checkForDuplicate } from '@/lib/jobs/deduplicate';
 
 export const dynamic = 'force-dynamic';
 
@@ -290,6 +291,18 @@ export async function POST(req: NextRequest) {
     }
 
     const sanitizedSource = sanitizeJobApplicationSource(source);
+
+    // Dedup check: prevent duplicate jobs per user
+    const dedup = await checkForDuplicate(userObjId, jobTitle, company, jobUrl);
+    if (dedup.isDuplicate && dedup.existingJob) {
+      return NextResponse.json({
+        success: false,
+        duplicate: true,
+        existingJob: dedup.existingJob,
+        matchType: dedup.matchType,
+        message: `This job already exists in your tracker (${dedup.matchType === 'url' ? 'matched by URL' : 'matched by title + company'})`,
+      }, { status: 409 });
+    }
 
     // Create JobApplication
     const newJobApp = await JobApplication.create({

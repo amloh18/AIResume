@@ -8,6 +8,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 
 interface NotificationCenterProps {
   variant?: 'default' | 'pill';
@@ -177,7 +178,7 @@ export default function NotificationCenter({ variant = 'default' }: Notification
         />
 
         {unreadCount > 0 && !activeProgress && (
-          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white dark:text-black text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">
+          <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -318,7 +319,15 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                                         : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#013f2e]/15 dark:text-[#013f2e]'
                                     }`}
                                   >
-                                    <Bell size={15} />
+                                    {n.metadata?.company ? (
+                                      <CompanyLogo
+                                        company={n.metadata.company}
+                                        size={28}
+                                        className="rounded-md"
+                                      />
+                                    ) : (
+                                      <Bell size={15} />
+                                    )}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <h4

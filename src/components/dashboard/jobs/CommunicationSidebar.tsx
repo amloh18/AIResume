@@ -479,7 +479,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
   return (
     <div 
       ref={sidebarRef}
-      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
+      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[100002] flex flex-col rounded-2xl overflow-hidden"
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#191f15] flex-shrink-0">
@@ -712,7 +712,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                         setModalInitialTab('email');
                         setIsEmailConnectModalOpen(true);
                       }}
-                      className="w-full bg-[#013f2e] hover:brightness-95 text-black font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
+                      className="w-full bg-[#013f2e] hover:brightness-95 text-white font-semibold py-2.5 rounded-xl text-small flex items-center justify-center gap-1.5 transition duration-150 shadow-sm"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Connect Automated Integration
@@ -1000,7 +1000,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
                     <button 
                       onClick={handleSendReply}
                       disabled={isSending || !replyText.trim()}
-                      className="h-11 w-11 shrink-0 bg-[#013f2e] hover:brightness-95 text-black rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="h-11 w-11 shrink-0 bg-[#013f2e] hover:brightness-95 text-white rounded-2xl flex items-center justify-center transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
