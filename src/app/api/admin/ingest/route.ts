@@ -20,6 +20,7 @@ import {
   executeSourceRun,
   completeRun,
   killJobSpyProcesses,
+  killLinkedInProcesses,
 } from '@/lib/ingestion/engine';
 
 export const dynamic = 'force-dynamic';
@@ -171,9 +172,12 @@ export const PATCH = withAdminAuth(async (request: NextRequest) => {
         { $set: { status: 'cancelled', finishedAt: new Date(), cancelledBy: 'admin' } }
       );
 
-      // Kill active JobSpy processes
+      // Kill active worker processes
       if (source === 'jobspy' || !source) {
         killJobSpyProcesses();
+      }
+      if (source === 'linkedin' || !source) {
+        killLinkedInProcesses();
       }
 
       return NextResponse.json({

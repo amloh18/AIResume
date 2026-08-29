@@ -9,7 +9,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save
+  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save, Edit2
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -21,6 +21,7 @@ import DocumentPreviewSidebar from './DocumentPreviewSidebar';
 import { CommunicationSidebar } from './CommunicationSidebar';
 import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
@@ -138,12 +139,14 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [activeTab, setActiveTab] = useState<SidebarTab>('details');
   const [jobNotes, setJobNotes] = useState<string>(job.notes || '');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [jobTags, setJobTags] = useState<string[]>(job.tags || []);
   const [newTagInput, setNewTagInput] = useState('');
 
   useEffect(() => {
     setJobNotes(job.notes || '');
     setJobTags(job.tags || []);
+    setIsEditingNotes(false);
   }, [job]);
 
   const handleSaveNotes = async () => {
@@ -176,6 +179,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
         toast.success('Notes & tags saved successfully!');
         job.notes = jobNotes;
         job.tags = jobTags;
+        setIsEditingNotes(false);
         if (typeof onRefresh === 'function') {
           onRefresh();
         }
@@ -2030,7 +2034,7 @@ ${userName}`
                           <motion.button
                             onClick={() => void handleTailorAndApply()}
                             disabled={isCreatingJourney || isMovingToCreated}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-small font-black text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-60"
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] dark:bg-lime-500 px-4 py-2.5 text-small font-black text-white dark:text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -2439,53 +2443,115 @@ ${userName}`
                 {/* Tab 4: Notes */}
                 {activeTab === 'notes' && (
                   <div className="space-y-5">
-                    {/* Live Interactive Notes Editor */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
-                      <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
-                        <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Personal Interview & Role Notes</h3>
+                    {!isEditingNotes && !jobNotes?.trim() ? (
+                      /* 1. Empty State: Shown as clean CTA */
+                      <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50/50 p-6 dark:border-white/10 dark:bg-[#131810]/50 transition-all hover:border-gray-300 dark:hover:border-white/20 text-center space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-lime-500/10 dark:text-lime-400 flex items-center justify-center mx-auto">
+                          <FileText className="w-6 h-6" />
                         </div>
-                        <button
+                        <div>
+                          <h4 className="text-body font-bold text-gray-900 dark:text-white">Personal Job Notes</h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto">
+                            Keep interview takeaways, recruiter details, tech stack questions, or salary targets handy.
+                          </p>
+                        </div>
+                        <Button
                           type="button"
-                          onClick={handleSaveNotes}
-                          disabled={isSavingNotes}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2 text-xs font-black text-white shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          variant="primary"
+                          size="md"
+                          onClick={() => setIsEditingNotes(true)}
+                          leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+                          className="mx-auto mt-2"
                         >
-                          {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                          Save Notes
-                        </button>
+                          Add Personal Notes
+                        </Button>
                       </div>
-
-                      {/* Quick Template Buttons */}
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { label: '+ Recruiter Call', text: '\n\n--- Recruiter Call Takeaways ---\n- Recruiter Name:\n- Salary Mentioned:\n- Next Stage Timeline:' },
-                          { label: '+ Interview Prep', text: '\n\n--- Interview Preparation ---\n- Key Projects to Highlight:\n- System Design Points:\n- Tech Stack Overlap:' },
-                          { label: '+ System Design / Tech', text: '\n\n--- Technical / Architecture Focus ---\n- Core Frameworks & DBs:\n- Scaling Bottlenecks & Solutions:\n- Performance & Reliability Goals:' },
-                          { label: '+ Questions for Team', text: '\n\n--- Questions for Interviewer ---\n1. What does the day-to-day look like?\n2. What are the key engineering challenges this quarter?\n3. How is engineering success and velocity measured?' },
-                          { label: '+ Salary & Offer Comp', text: '\n\n--- Compensation & Negotiation Target ---\n- Base Salary Goal:\n- Equity / Bonus Expected:\n- Competing Deadlines:' },
-                          { label: '+ Referral & Contacts', text: '\n\n--- Key Referral & Contact Notes ---\n- Contact Person:\n- Role / Connection:\n- Date Followed Up:' },
-                        ].map((prompt, idx) => (
-                          <button
-                            key={idx}
+                    ) : !isEditingNotes && Boolean(jobNotes?.trim()) ? (
+                      /* 2. Notes Present: Show saved notes preview with Edit CTA */
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                          <div>
+                            <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
+                            <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Personal Interview & Role Notes</h3>
+                          </div>
+                          <Button
                             type="button"
-                            onClick={() => setJobNotes(prev => (prev ? prev + prompt.text : prompt.text.trim()))}
-                            className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsEditingNotes(true)}
+                            leftIcon={<Edit2 className="w-3.5 h-3.5" />}
                           >
-                            {prompt.label}
-                          </button>
-                        ))}
+                            Edit Notes
+                          </Button>
+                        </div>
+                        <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-2">
+                          {jobNotes}
+                        </div>
                       </div>
+                    ) : (
+                      /* 3. Editing State: Live Interactive Notes Editor */
+                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                          <div>
+                            <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
+                            <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Personal Interview & Role Notes</h3>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setJobNotes(job.notes || '');
+                                setIsEditingNotes(false);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              size="sm"
+                              onClick={handleSaveNotes}
+                              isLoading={isSavingNotes}
+                              loadingText="Saving..."
+                              leftIcon={<Save className="w-3.5 h-3.5" />}
+                            >
+                              Save Notes
+                            </Button>
+                          </div>
+                        </div>
 
-                      <textarea
-                        value={jobNotes}
-                        onChange={(e) => setJobNotes(e.target.value)}
-                        placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
-                        rows={8}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
-                      />
-                    </div>
+                        {/* Quick Template Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { label: '+ Recruiter Call', text: '\n\n--- Recruiter Call Takeaways ---\n- Recruiter Name:\n- Salary Mentioned:\n- Next Stage Timeline:' },
+                            { label: '+ Interview Prep', text: '\n\n--- Interview Preparation ---\n- Key Projects to Highlight:\n- System Design Points:\n- Tech Stack Overlap:' },
+                            { label: '+ System Design / Tech', text: '\n\n--- Technical / Architecture Focus ---\n- Core Frameworks & DBs:\n- Scaling Bottlenecks & Solutions:\n- Performance & Reliability Goals:' },
+                            { label: '+ Questions for Team', text: '\n\n--- Questions for Interviewer ---\n1. What does the day-to-day look like?\n2. What are the key engineering challenges this quarter?\n3. How is engineering success and velocity measured?' },
+                            { label: '+ Salary & Offer Comp', text: '\n\n--- Compensation & Negotiation Target ---\n- Base Salary Goal:\n- Equity / Bonus Expected:\n- Competing Deadlines:' },
+                            { label: '+ Referral & Contacts', text: '\n\n--- Key Referral & Contact Notes ---\n- Contact Person:\n- Role / Connection:\n- Date Followed Up:' },
+                          ].map((prompt, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => setJobNotes(prev => (prev ? prev + prompt.text : prompt.text.trim()))}
+                              className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                            >
+                              {prompt.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <textarea
+                          value={jobNotes}
+                          onChange={(e) => setJobNotes(e.target.value)}
+                          placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
+                          rows={8}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
+                        />
+                      </div>
+                    )}
 
                     {/* Job Tags Manager */}
                     <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
@@ -3061,10 +3127,24 @@ ${userName}`
                       </div>
 
                       {/* Notes */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
-                        <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Notes</h4>
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-body font-semibold text-gray-900 dark:text-white">Personal Job Notes</h4>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              setActiveTab('notes');
+                              setIsEditingNotes(true);
+                            }}
+                            leftIcon={jobNotes?.trim() ? <Edit2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          >
+                            {jobNotes?.trim() ? 'Edit Notes' : 'Add Notes'}
+                          </Button>
+                        </div>
                         <div className="whitespace-pre-wrap text-small leading-6 text-gray-700 dark:text-gray-300">
-                          {job.notes || 'No notes added yet.'}
+                          {jobNotes?.trim() || <span className="text-gray-400 italic">No notes added yet.</span>}
                         </div>
                       </div>
 

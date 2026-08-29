@@ -35,6 +35,7 @@ export const BASELINE_SCHEDULES: SourceSchedule[] = [
   { source: 'jobspy', intervalMs: 8 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
   { source: 'remotive', intervalMs: 8 * 60 * 60 * 1000, maxDurationMs: 3 * 60 * 1000, enabled: true },
   { source: 'remoteok', intervalMs: 8 * 60 * 60 * 1000, maxDurationMs: 3 * 60 * 1000, enabled: true },
+  { source: 'linkedin', intervalMs: 12 * 60 * 60 * 1000, maxDurationMs: 15 * 60 * 1000, enabled: false },
 ];
 
 // ── Stagger Offset (minutes) ───────────────────────────────────────────────

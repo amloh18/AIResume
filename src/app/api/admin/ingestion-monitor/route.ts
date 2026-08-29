@@ -106,6 +106,13 @@ export async function GET(req: NextRequest) {
       const configuredCount = enriched.filter((h) => h.configStatus.ready).length;
       const dueCount = enriched.filter((h) => h.isDue).length;
 
+      // Count by health status for the summary
+      const statusCounts = enriched.reduce((acc: Record<string, number>, h) => {
+        const status = h.healthStatus || (h.healthy ? 'healthy' : 'failed');
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+      }, {});
+
       return NextResponse.json({
         sources: enriched,
         summary: {
@@ -115,6 +122,7 @@ export async function GET(req: NextRequest) {
           configured: configuredCount,
           unconfigured: enriched.length - configuredCount,
           due: dueCount,
+          statusCounts,
         },
         locks: { active: activeLocks },
         health,
@@ -226,6 +234,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Trigger a specific source run
+    // Uses the same run creation pattern as job-intelligence to ensure
+    // exactly one canonical runId per ingestion lifecycle.
     if (action === 'trigger_source') {
       if (!sourceName || !VALID_SOURCES.includes(sourceName)) {
         return NextResponse.json({ error: `Invalid source: ${sourceName}` }, { status: 400 });
@@ -233,8 +243,25 @@ export async function POST(req: NextRequest) {
 
       const { createRun, executeSourceRun, completeRun } = await import('@/lib/ingestion/engine');
       const db = mongoose.connection.db!;
+
+      // Check if this source already has a running run — prevent duplicate Run Now
+      const runsColl = db.collection('ingestionRuns');
+      const existingRunning = await runsColl.findOne({
+        source: sourceName,
+        status: { $in: ['running', 'queued'] },
+      });
+
+      if (existingRunning) {
+        return NextResponse.json({
+          success: false,
+          error: `${sourceName} ingestion is already running (runId: ${existingRunning.runId}). Wait for it to finish or cancel it.`,
+          runId: existingRunning.runId,
+        }, { status: 409 });
+      }
+
       const { runId } = await createRun(db, sourceName);
 
+      // Execute ingestion in background (fire and forget)
       const controller = new AbortController();
       executeSourceRun(db, sourceName, runId, controller.signal)
         .then(async (result) => {

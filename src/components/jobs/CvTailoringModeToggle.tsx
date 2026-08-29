@@ -26,7 +26,7 @@ export default function CvTailoringModeToggle({
         Auto CV:
       </span>
       <div
-        className="flex items-center rounded-xl border border-gray-200/90 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.03] p-0.5"
+        className="flex items-center h-10 p-1 rounded-xl border border-gray-200/90 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.03] shadow-2xs"
         role="group"
         aria-label="CV tailoring mode"
       >
@@ -41,10 +41,10 @@ export default function CvTailoringModeToggle({
               title={meta.description}
               aria-pressed={active}
               onClick={() => onChange(mode)}
-              className={`px-2.5 py-1 rounded-[10px] text-xs font-semibold transition-all disabled:opacity-50 ${
+              className={`h-full px-3 rounded-[8px] text-xs font-semibold transition-all duration-150 ease-out disabled:opacity-50 flex items-center justify-center ${
                 active
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs font-bold'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               {meta.short}

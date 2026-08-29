@@ -113,11 +113,11 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 ${
+        className={`flex items-center gap-2 h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ease-out border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 shadow-2xs ${
           isOpen
-            ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-gray-300 dark:border-white/20 shadow-2xs'
-            : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:border-gray-300 dark:hover:border-white/20'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-[#013f2e] dark:border-lime-500 ring-2 ring-lime-500/20'
+            : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.985] hover:scale-[1.015]'}`}
       >
         <div className="flex items-center gap-1">
           {selectedObjects.length === 1 ? (

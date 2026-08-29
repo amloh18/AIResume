@@ -15,6 +15,7 @@ interface SourceHealth {
   source: string;
   enabled: boolean;
   healthy: boolean;
+  healthStatus: 'healthy' | 'degraded' | 'stale' | 'failed' | 'config_error' | 'not_initialized' | 'running' | 'paused' | 'disabled';
   lastRunAt: string | null;
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
@@ -42,6 +43,7 @@ interface SourceHealthData {
     configured: number;
     unconfigured: number;
     due?: number;
+    statusCounts?: Record<string, number>;
   };
   locks?: { active: number };
   health?: {
@@ -229,7 +231,7 @@ export default function SourceHealthPanel() {
 
       {/* Summary Bar */}
       {summary && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-white">{summary.total}</div>
             <div className="text-xs text-white/50 mt-0.5">Total Sources</div>
@@ -239,7 +241,13 @@ export default function SourceHealthPanel() {
             <div className="text-xs text-white/50 mt-0.5">Healthy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{summary.unhealthy}</div>
+            <div className="text-2xl font-bold text-amber-400">
+              {summary.statusCounts?.degraded || 0}
+            </div>
+            <div className="text-xs text-white/50 mt-0.5">Degraded</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-400">{summary.unhealthy - (summary.statusCounts?.degraded || 0)}</div>
             <div className="text-xs text-white/50 mt-0.5">Unhealthy</div>
           </div>
           <div className="text-center">
@@ -279,18 +287,41 @@ export default function SourceHealthPanel() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    {src.healthy ? (
+                    {src.healthStatus === 'healthy' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    ) : hasFailures ? (
-                      <XCircle className="w-4 h-4 text-red-400" />
-                    ) : (
+                    ) : src.healthStatus === 'degraded' || src.healthStatus === 'stale' ? (
                       <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    ) : src.healthStatus === 'running' ? (
+                      <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                    ) : src.healthStatus === 'config_error' || src.healthStatus === 'not_initialized' ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    ) : src.healthStatus === 'disabled' ? (
+                      <XCircle className="w-4 h-4 text-white/30" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-400" />
                     )}
                     <h4 className="text-sm font-bold text-white capitalize">{def?.name || src.source}</h4>
                   </div>
                   {def?.description && (
                     <p className="text-[11px] text-white/40 mt-1 line-clamp-1">{def.description}</p>
                   )}
+                  {/* Health status badge */}
+                  <div className="mt-1.5">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      src.healthStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      src.healthStatus === 'degraded' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      src.healthStatus === 'stale' ? 'bg-white/5 text-white/40 border border-white/10' :
+                      src.healthStatus === 'running' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                      src.healthStatus === 'config_error' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      src.healthStatus === 'not_initialized' ? 'bg-white/5 text-white/40 border border-white/10' :
+                      src.healthStatus === 'disabled' ? 'bg-white/5 text-white/30 border border-white/10' :
+                      'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}>
+                      {src.healthStatus === 'config_error' ? 'Config Required' :
+                       src.healthStatus === 'not_initialized' ? 'Not Initialized' :
+                       src.healthStatus}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {isDue && src.enabled && (

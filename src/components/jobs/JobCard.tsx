@@ -239,7 +239,7 @@ export function JobCard({
                       e.stopPropagation();
                       onApply();
                     }}
-                    className="col-span-2 px-4 py-2.5 rounded-xl bg-lime-500 hover:bg-lime-600 dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
+                    className="col-span-2 px-4 py-2.5 rounded-xl bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Prepare Application</span>
