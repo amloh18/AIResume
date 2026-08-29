@@ -1,0 +1,79 @@
+{
+  "id": "blog-017",
+  "slug": "how-ats-resume-scoring-works",
+  "title": "How ATS Resume Scoring Works: What Recruiters and Hiring Systems Really Look For",
+  "subtitle": "Inside the mathematical algorithms of Greenhouse, Workday, and Lever — how parsing engines score keywords, measure proximity, and rank candidate pools in 2026.",
+  "excerpt": "Ever wonder what happens to your CV in the seconds after clicking submit? Discover how enterprise ATS scoring algorithms calculate match percentages, parse entity hierarchies, rank applicants, and what recruiters actually see on their dashboards.",
+  "category": "ATS Optimization",
+  "readTime": "13 min read",
+  "date": "2026-06-05",
+  "featuredImage": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1920&q=80",
+  "featuredImageAlt": "Applicant tracking system algorithm score calculation dashboard with keyword match metrics",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "ATS resume scoring",
+    "how ATS scores resumes",
+    "ATS algorithms",
+    "recruiter ATS dashboard",
+    "Greenhouse scoring",
+    "Workday ATS"
+  ],
+  "sections": [
+    {
+      "id": "behind-the-curtain",
+      "heading": "Behind the Curtain: What Happens When You Click Submit",
+      "content": "<p class=\"text-gray-300 mb-4\">When you apply for a job online, your resume does not land directly in a recruiter's email inbox. It is ingested by an <strong>Applicant Tracking System (ATS)</strong> pipeline. Within 3 to 10 seconds of upload, the system strips the file down to raw text, executes named-entity recognition (NER), tokenizes words against an internal dictionary, and computes a multi-variable relevance score against the job description parameters.</p><p class=\"text-gray-300 mb-4\">Recruiters managing requisitions with 300+ applicants rarely browse alphabetically. They filter their dashboard by <em>Relevance Score &gt; 80%</em>, <em>Years of Experience</em>, and <em>Required Skill Tags</em>. If your resume scores below the cutoff threshold configured by the hiring team, your profile is relegated to the bottom of the pile or automatically sent a rejection notification.</p>"
+    },
+    {
+      "id": "core-scoring-metrics",
+      "heading": "The 3 Core Scoring Metrics Used by Enterprise ATS",
+      "content": "<p class=\"text-gray-300 mb-4\">Modern ATS platforms like Greenhouse, Workday, and Ashby calculate overall applicant fit using three primary algorithmic components:</p>",
+      "subSections": [
+        {
+          "heading": "1. Exact Keyword Frequency & Density Weighting",
+          "content": "<p class=\"text-gray-300 mb-3\">The system compares your tokens against the hiring manager's required keywords. Critical required competencies carry higher weight (e.g., 2.5x multiplier) than optional bonus skills. However, modern parsers apply diminishing returns to prevent spamming: mentioning 'Python' 20 times yields no higher score than mentioning it 3 times across distinct contextual roles.</p>"
+        },
+        {
+          "heading": "2. Contextual Relevance and Entity Proximity",
+          "content": "<p class=\"text-gray-300 mb-3\">Advanced parsers analyze word proximity. If a posting requires \"AWS cloud infrastructure optimization\", having 'AWS', 'cloud infrastructure', and 'optimization' in the same sentence scores significantly higher than scattering those three words across disparate sections of the resume.</p>"
+        },
+        {
+          "heading": "3. Knockout Questions & Prerequisite Filters",
+          "content": "<p class=\"text-gray-300 mb-3\">Many platforms evaluate binary prerequisite filters: right-to-work visa eligibility, mandatory certifications (e.g., CPA, PMP), or minimum years of leadership experience. Failing a mandatory knockout filter immediately invalidates an otherwise 95% keyword match score.</p>"
+        }
+      ]
+    },
+    {
+      "id": "recruiter-view",
+      "heading": "Recruiter View: How Applications Appear on Greenhouse & Workday",
+      "content": "<p class=\"text-gray-300 mb-4\">When a recruiter logs into Greenhouse or Workday, they see a synthesized candidate card rather than your formatted PDF. The screen highlights:</p><div class=\"bg-[#1a1f1a] p-6 rounded-2xl border border-white/5 space-y-3 my-6\"><div class=\"flex items-center justify-between pb-2 border-b border-white/5\"><span class=\"text-gray-400 text-xs font-mono uppercase\">Matched Core Skills</span><span class=\"text-emerald-400 font-bold text-xs\">8 / 10 Found (80%)</span></div><div class=\"flex items-center justify-between pb-2 border-b border-white/5\"><span class=\"text-gray-400 text-xs font-mono uppercase\">Most Recent Title Match</span><span class=\"text-blue-400 font-bold text-xs\">Senior Backend Engineer (Direct)</span></div><div class=\"flex items-center justify-between pb-2 border-b border-white/5\"><span class=\"text-gray-400 text-xs font-mono uppercase\">Calculated Experience</span><span class=\"text-purple-400 font-bold text-xs\">6.2 Years in Track</span></div><div class=\"flex items-center justify-between\"><span class=\"text-gray-400 text-xs font-mono uppercase\">Algorithmic Rank</span><span class=\"text-amber-400 font-bold text-xs\">#4 of 184 Candidates</span></div></div><p class=\"text-gray-300\">The recruiter spends 6 to 10 seconds glancing at this summary card. If the score and skill indicators look strong, they click through to inspect the original PDF resume.</p>"
+    },
+    {
+      "id": "common-myths",
+      "heading": "Debunking Common ATS Scoring Myths",
+      "content": "<p class=\"text-gray-300 mb-4\">Pervasive internet myths continue to mislead candidates into sabotaging their applications. Here is what the data actually shows:</p><div class=\"grid md:grid-cols-2 gap-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-2\">Myth 1: \"ATS automatically deletes 80% of resumes without humans\"</h4><p class=\"text-gray-400 text-sm\"><strong>Reality:</strong> The ATS rarely deletes files permanently; it ranks them. Low-scoring resumes simply sit at the bottom of the list where recruiters rarely scroll before filling the interview quota.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-2\">Myth 2: \"You need a 100% keyword match to get an interview\"</h4><p class=\"text-gray-400 text-sm\"><strong>Reality:</strong> Scores of 80%–88% routinely qualify for the priority shortlist. Demanding 100% match often forces unnatural phrasing that hurts human readability.</p></div></div>"
+    },
+    {
+      "id": "how-to-test-score",
+      "heading": "How to Test and Validate Your Score Before Applying",
+      "content": "<p class=\"text-gray-300 mb-4\">Before submitting your application to high-stakes dream companies, test your resume using <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume's ATS Scanner</a>. The engine runs your document through multi-platform parsing simulations, outputting exact keyword gaps, structural readability metrics, and lexical density benchmarks in real time.</p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "behind-the-curtain", "title": "Behind the Curtain: What Happens When You Click Submit" },
+    { "id": "core-scoring-metrics", "title": "The 3 Core Scoring Metrics Used by Enterprise ATS" },
+    { "id": "recruiter-view", "title": "Recruiter View: How Applications Appear on Greenhouse & Workday" },
+    { "id": "common-myths", "title": "Debunking Common ATS Scoring Myths" },
+    { "id": "how-to-test-score", "title": "How to Test and Validate Your Score Before Applying" }
+  ],
+  "faqs": [
+    {
+      "question": "Can ATS parsers understand synonyms for technical skills?",
+      "answer": "Modern parsers understand common synonyms (e.g., JS = JavaScript, AWS = Amazon Web Services), but niche frameworks and internal jargon often fail to match. Always include the exact phrasing found in the job description alongside acronyms."
+    },
+    {
+      "question": "Does applying through an employee referral bypass ATS scoring?",
+      "answer": "Referrals usually bypass automated knockout filters and guarantee human recruiter review, but your resume is still parsed into the ATS database so hiring managers can view your skill match and experience history."
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "id": "blog-016",
+  "slug": "find-jobs-matching-skills-not-job-titles",
+  "title": "How to Find Jobs That Actually Match Your Skills, Not Just Your Job Title",
+  "subtitle": "Why rigid job title searches lock you out of high-paying opportunities — and how AI-powered semantic skill matching discovers hidden roles tailored to your real capabilities.",
+  "excerpt": "Over 62% of relevant job openings use titles different from what candidates search for. Learn how skills-first job discovery works, why titles are flawed search filters, how AI evaluates multi-dimensional fit, and practical steps to expand your opportunity pipeline.",
+  "category": "Job Discovery",
+  "readTime": "12 min read",
+  "date": "2026-05-27",
+  "featuredImage": "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=1920&q=80",
+  "featuredImageAlt": "Multi-dimensional skills matrix connecting candidate capabilities to diverse job titles",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "skills based job search",
+    "find jobs by skills",
+    "job matching algorithm",
+    "AI job discovery",
+    "job search strategy",
+    "career pivot"
+  ],
+  "sections": [
+    {
+      "id": "why-titles-fail",
+      "heading": "Why Job Titles Are Poor Search Filters",
+      "content": "<p class=\"text-gray-300 mb-4\">For decades, traditional job search engines like Indeed, Monster, and LinkedIn relied on basic string matching: you typed a job title into a search bar, and the algorithm returned listings where those exact words appeared in the header. In 2026, this approach is fundamentally broken.</p><p class=\"text-gray-300 mb-4\">Job titles are notoriously arbitrary and unstandardized across companies. A \"Product Operations Manager\" at a high-growth tech startup often executes the exact same responsibilities as a \"Business Operations Lead\" at a fintech or a \"Technical Program Manager\" at an enterprise corporation. When job seekers constrain their daily search to a single title string, they unknowingly lock themselves out of <strong>over 60% of qualified vacancies</strong> that carry higher salaries and better cultural fit.</p>"
+    },
+    {
+      "id": "same-skills-different-titles",
+      "heading": "The Same Skills Can Appear Under Different Job Titles",
+      "content": "<p class=\"text-gray-300 mb-4\">Industry hiring trends in 2026 show that companies invent specialized or modernized job titles to reflect evolving internal tooling rather than universal taxonomy. A candidate possessing deep expertise in SQL, data visualization, and business storytelling is fully qualified for roles spanning:</p><div class=\"grid sm:grid-cols-2 md:grid-cols-3 gap-3 my-6\"><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-emerald-400 text-xs font-bold uppercase tracking-wider\">Role 1</span><p class=\"text-white font-semibold text-sm mt-1\">Data Analyst</p></div><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-blue-400 text-xs font-bold uppercase tracking-wider\">Role 2</span><p class=\"text-white font-semibold text-sm mt-1\">Business Intelligence Specialist</p></div><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-purple-400 text-xs font-bold uppercase tracking-wider\">Role 3</span><p class=\"text-white font-semibold text-sm mt-1\">Product Analytics Lead</p></div><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-amber-400 text-xs font-bold uppercase tracking-wider\">Role 4</span><p class=\"text-white font-semibold text-sm mt-1\">Decision Science Associate</p></div><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-cyan-400 text-xs font-bold uppercase tracking-wider\">Role 5</span><p class=\"text-white font-semibold text-sm mt-1\">Revenue Operations Analyst</p></div><div class=\"bg-[#1a1f1a] p-4 rounded-xl border border-white/5\"><span class=\"text-rose-400 text-xs font-bold uppercase tracking-wider\">Role 6</span><p class=\"text-white font-semibold text-sm mt-1\">Growth Insight Specialist</p></div></div><p class=\"text-gray-300 mb-4\">If this professional only searches for \"Data Analyst\", they miss five high-paying alternative career tracks where competition is often lower because fewer candidates think to query those exact phrases.</p>"
+    },
+    {
+      "id": "search-by-skills-and-direction",
+      "heading": "Search by Skills, Responsibilities and Career Direction",
+      "content": "<p class=\"text-gray-300 mb-4\">A skills-first job search flips the conventional paradigm. Instead of asking <em>\"What job title do I want?\"</em>, candidates ask <em>\"What problems can I solve, and what capabilities do I bring to the table?\"</em></p><p class=\"text-gray-300 mb-4\">By grouping your core capabilities into high-leverage skill clusters (e.g., <em>Workflow Automation</em>, <em>Client Retention</em>, <em>Cloud Architecture</em>), you can evaluate job postings based on the actual day-to-day problems the employer is hiring to solve. This opens lateral promotion opportunities and career pivots that traditional title searches completely obscure.</p>"
+    },
+    {
+      "id": "what-good-job-match-considers",
+      "heading": "What Should a Good Job Match Consider?",
+      "content": "<p class=\"text-gray-300 mb-4\">True job compatibility is multi-dimensional. Modern AI matching engines evaluate eight interconnected pillars to determine your realistic probability of landing an interview and succeeding in the position:</p>",
+      "subSections": [
+        {
+          "heading": "1. Core and Adjacent Skills",
+          "content": "<p class=\"text-gray-300 mb-3\">Direct capability overlap (e.g., React, Node.js) combined with transferable adjacencies (e.g., strong Vue.js background adapting to React within days).</p>"
+        },
+        {
+          "heading": "2. Depth and Context of Experience",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether your experience was gained in early-stage startups, regulated enterprise environments, or high-scale consumer applications.</p>"
+        },
+        {
+          "heading": "3. Actual Day-to-Day Responsibilities",
+          "content": "<p class=\"text-gray-300 mb-3\">The proportion of strategic leadership, hands-on execution, cross-functional facilitation, and stakeholder communication.</p>"
+        },
+        {
+          "heading": "4. Commute and Geographical Viability",
+          "content": "<p class=\"text-gray-300 mb-3\">Physical office hubs, regional visa/sponsorship eligibility (e.g., UK Skilled Worker or US H-1B compliance), and realistic transit boundaries.</p>"
+        },
+        {
+          "heading": "5. Remote vs. Hybrid Expectations",
+          "content": "<p class=\"text-gray-300 mb-3\">Synchronous timezone alignment, mandatory on-site days, and asynchronous collaboration maturity.</p>"
+        },
+        {
+          "heading": "6. Market-Aligned Salary Expectations",
+          "content": "<p class=\"text-gray-300 mb-3\">Base compensation bands, bonus equity structures, and regional cost-of-living adjustments.</p>"
+        },
+        {
+          "heading": "7. Real Seniority and Ownership Scope",
+          "content": "<p class=\"text-gray-300 mb-3\">True organizational impact (individual contributor, squad lead, departmental head) rather than inflated nominal titles.</p>"
+        },
+        {
+          "heading": "8. Industry and Tech Stack Trajectory",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether the company's technology roadmap and market sector accelerate your long-term career value.</p>"
+        }
+      ]
+    },
+    {
+      "id": "how-ai-matching-works",
+      "heading": "How AI Job Matching Works",
+      "content": "<p class=\"text-gray-300 mb-4\">Unlike basic keyword filters that look for exact string matches, modern AI job matching engines use <strong>vector embeddings and semantic search</strong>. The AI ingests your entire Master CV and computes high-dimensional semantic representations of your projects, achievements, tools, and career trajectory.</p><p class=\"text-gray-300 mb-4\">When scanning thousands of freshly posted job descriptions, the engine measures mathematical distance in vector space. Even if a job posting never uses the words \"IT Support Specialist\", the AI recognizes that your hands-on experience resolving network bottlenecks, configuring Active Directory, and managing ticket SLAs is an 88% match for an open \"Tier II Systems Operations Associate\" position.</p>"
+    },
+    {
+      "id": "title-mapping-example",
+      "heading": "Real-World Title Mapping Example: IT Support",
+      "content": "<p class=\"text-gray-300 mb-4\">Consider a candidate with 3 years of experience troubleshooting enterprise hardware, managing cloud identities, and handling end-user escalation. Look at how their profile maps across five distinct job titles with varying compensation bands:</p><div class=\"overflow-x-auto my-6\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Job Title</th><th class=\"p-4 text-left text-white font-bold\">Primary Focus</th><th class=\"p-4 text-center text-[#013f2e] font-bold\">Skill Overlap</th><th class=\"p-4 text-right text-white font-bold\">Average Salary</th></tr></thead><tbody><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white font-semibold\">IT Support Technician</td><td class=\"p-4 text-gray-300\">Helpdesk tickets & hardware provisioning</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">95%</td><td class=\"p-4 text-right text-gray-300\">£32,000 – £38,000</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white font-semibold\">Technical Support Engineer</td><td class=\"p-4 text-gray-300\">SaaS application debugging & API logs</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">88%</td><td class=\"p-4 text-right text-emerald-400 font-bold\">£45,000 – £55,000</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white font-semibold\">Service Desk Analyst</td><td class=\"p-4 text-gray-300\">ITIL incident management & SLA monitoring</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">92%</td><td class=\"p-4 text-right text-gray-300\">£34,000 – £40,000</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white font-semibold\">Application Support Analyst</td><td class=\"p-4 text-gray-300\">SQL queries & ERP system troubleshooting</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">84%</td><td class=\"p-4 text-right text-emerald-400 font-bold\">£48,000 – £58,000</td></tr><tr><td class=\"p-4 text-white font-semibold\">IT Operations Specialist</td><td class=\"p-4 text-gray-300\">Cloud infrastructure & access governance</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">86%</td><td class=\"p-4 text-right text-emerald-400 font-bold\">£50,000 – £62,000</td></tr></tbody></table></div><p class=\"text-gray-400 text-xs text-center\">Notice how targeting \"Technical Support Engineer\" or \"IT Operations Specialist\" can yield a <strong>30%–50% salary premium</strong> for essentially identical foundational skills.</p>"
+    },
+    {
+      "id": "how-to-improve-matches",
+      "heading": "How to Improve Your Job Matches",
+      "content": "<p class=\"text-gray-300 mb-4\">To unlock the full potential of skills-based job matching, take these three actionable steps:</p><ul class=\"list-disc list-inside space-y-3 text-gray-300 mb-4\"><li><strong class=\"text-white\">Maintain an Exhaustive Master CV:</strong> Include all technologies, frameworks, certifications, internal tools, and methodologies you have ever worked with. The richer your profile data, the more connection nodes the semantic AI can discover.</li><li><strong class=\"text-white\">Articulate Problem-Solving Context:</strong> Rather than just listing a tool name, describe how you applied it to solve a business problem (e.g., <em>\"Leveraged Docker and Bash scripts to automate local staging setup, reducing onboarding time by 4 days\"</em>).</li><li><strong class=\"text-white\">Expand Target Seniority & Role Families:</strong> Allow your search preferences to include adjacent titles across the same functional family (e.g., including both Operations and Analytics roles).</li></ul>"
+    },
+    {
+      "id": "buildairesume-personalization",
+      "heading": "How BuildAIResume Personalizes Job Discovery",
+      "content": "<p class=\"text-gray-300 mb-4\">BuildAIResume eliminates manual, repetitive job board searching through its intelligent <strong>Job Discovery Engine</strong>. When you upload or build your Master CV on BuildAIResume:</p><div class=\"bg-[#1a1f1a] p-6 rounded-2xl border border-white/5 space-y-4 my-6\"><div class=\"flex items-start gap-3\"><div class=\"p-2 bg-emerald-500/10 rounded-lg text-emerald-400 shrink-0\">⚡</div><div><h4 class=\"text-white font-bold text-sm\">Semantic Skill Profiling</h4><p class=\"text-gray-400 text-xs mt-1\">Extracts both explicit proficiencies and implicit technical competencies from your career history.</p></div></div><div class=\"flex items-start gap-3\"><div class=\"p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0\">🔍</div><div><h4 class=\"text-white font-bold text-sm\">Multi-Channel Job Aggregation</h4><p class=\"text-gray-400 text-xs mt-1\">Continuously aggregates live postings across LinkedIn, Indeed, and direct ATS company portals (Greenhouse, Lever, Workday).</p></div></div><div class=\"flex items-start gap-3\"><div class=\"p-2 bg-purple-500/10 rounded-lg text-purple-400 shrink-0\">🎯</div><div><h4 class=\"text-white font-bold text-sm\">Predictive Match Scoring</h4><p class=\"text-gray-400 text-xs mt-1\">Ranks every opening with a transparent match score (e.g., 92% Match) showing exact skill alignments and minor gaps.</p></div></div></div><p class=\"text-gray-300\">From your personalized Discover feed, you can tailor your CV with a single click and launch automated or manual application tracking instantly.</p>"
+    },
+    {
+      "id": "job-matching-checklist",
+      "heading": "The Skills-Based Job Matching Checklist",
+      "content": "<p class=\"text-gray-300 mb-4\">Use this checklist to modernize your weekly job discovery workflow:</p><div class=\"bg-[#1a1f1a] p-6 rounded-2xl border border-white/5 space-y-3\"><div class=\"flex items-start gap-3\"><span class=\"text-emerald-400 font-bold\">✓</span><span class=\"text-gray-300 text-sm\"><strong>Audit Title Assumptions:</strong> Identify 4–6 alternate job titles that utilize your same core skillset.</span></div><div class=\"flex items-start gap-3\"><span class=\"text-emerald-400 font-bold\">✓</span><span class=\"text-gray-300 text-sm\"><strong>Define Core Value Pillars:</strong> Clarify the 3 primary business outcomes you deliver (e.g., revenue growth, system uptime, customer retention).</span></div><div class=\"flex items-start gap-3\"><span class=\"text-emerald-400 font-bold\">✓</span><span class=\"text-gray-300 text-sm\"><strong>Filter by Seniority & Impact:</strong> Look for scope of responsibility rather than rigid years-of-experience prerequisites.</span></div><div class=\"flex items-start gap-3\"><span class=\"text-emerald-400 font-bold\">✓</span><span class=\"text-gray-300 text-sm\"><strong>Leverage AI Aggregation:</strong> Utilize an automated match engine to surface high-compatibility roles outside your standard search queries.</span></div></div>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "why-titles-fail", "title": "Why Job Titles Are Poor Search Filters" },
+    { "id": "same-skills-different-titles", "title": "The Same Skills Can Appear Under Different Job Titles" },
+    { "id": "search-by-skills-and-direction", "title": "Search by Skills, Responsibilities and Career Direction" },
+    { "id": "what-good-job-match-considers", "title": "What Should a Good Job Match Consider?" },
+    { "id": "how-ai-matching-works", "title": "How AI Job Matching Works" },
+    { "id": "title-mapping-example", "title": "Real-World Title Mapping Example: IT Support" },
+    { "id": "how-to-improve-matches", "title": "How to Improve Your Job Matches" },
+    { "id": "buildairesume-personalization", "title": "How BuildAIResume Personalizes Job Discovery" },
+    { "id": "job-matching-checklist", "title": "The Skills-Based Job Matching Checklist" }
+  ],
+  "faqs": [
+    {
+      "question": "Why should I apply for jobs with titles I have never held?",
+      "answer": "Employers hire for capabilities and problem-solving ability, not previous job titles. If you meet 70%+ of the required core competencies, tailoring your CV to emphasize relevant accomplishments makes you a competitive candidate regardless of previous nominal titles."
+    },
+    {
+      "question": "How does skills-based search help when switching careers?",
+      "answer": "Skills-based discovery highlights your transferable skills (project management, data analysis, client communication) and matches you with hybrid roles where domain expertise is valued over direct linear industry experience."
+    },
+    {
+      "question": "How does BuildAIResume calculate job match scores?",
+      "answer": "BuildAIResume compares the semantic vector of your Master CV against live job requirements, scoring hard skill overlap, experience depth, seniority alignment, and preferred tools to provide an objective compatibility percentage."
+    }
+  ]
+}

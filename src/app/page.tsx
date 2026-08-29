@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     canonical: 'https://buildairesume.com',
   },
   openGraph: {
-    title: 'Build a Better Resume With AI',
-    description: 'Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.',
+    title: 'Build. Match. Apply. Get hired. | BuildAIResume',
+    description: 'Create once. Tailor for every job. Apply manually or let AI automate your applications.',
     url: 'https://buildairesume.com',
     siteName: 'AIResume',
     images: [
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'AIResume - Build a Better Resume With AI',
+        alt: 'BuildAIResume - Build. Match. Apply. Get hired.',
       },
     ],
     locale: 'en_US',

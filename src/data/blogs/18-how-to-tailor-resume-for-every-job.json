@@ -1,0 +1,58 @@
+{
+  "id": "blog-018",
+  "slug": "how-to-tailor-resume-for-every-job",
+  "title": "How to Tailor Your Resume for Every Job Without Starting From Scratch",
+  "subtitle": "Stop rebuilding resumes from zero. The modular Master CV blueprint for customizing keywords, summaries, and bullets for every application in under 5 minutes.",
+  "excerpt": "Applying with one generic resume yields low callbacks, but rewriting from scratch takes hours. Learn the 5-minute modular tailoring system that swaps high-impact keywords and metrics while keeping your core accomplishments intact.",
+  "category": "Resume Writing",
+  "readTime": "11 min read",
+  "date": "2026-06-12",
+  "featuredImage": "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=1920&q=80",
+  "featuredImageAlt": "Candidate tailoring modular resume components side-by-side with a job posting",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "tailor resume for every job",
+    "how to customize resume",
+    "master CV method",
+    "fast resume tailoring",
+    "job specific resume"
+  ],
+  "sections": [
+    {
+      "id": "cost-of-generic-resume",
+      "heading": "The Real Cost of the One-Size-Fits-All Resume",
+      "content": "<p class=\"text-gray-300 mb-4\">Sending an identical static resume to 50 distinct job postings is the single most common cause of job hunt fatigue. Different companies emphasize entirely different priorities: Company A seeks an analytical troubleshooter focused on cost reduction, while Company B seeks a growth-minded innovator focused on speed-to-market.</p><p class=\"text-gray-300 mb-4\">When you send a generic document, neither company sees their specific priorities reflected in your top bullet points. Data from over 10,000 applications reveals that <strong>tailored resumes generate a 14.2% interview rate</strong> compared to just 2.7% for generic blast submissions.</p>"
+    },
+    {
+      "id": "master-cv-architecture",
+      "heading": "The Master CV Architecture: Your Single Source of Truth",
+      "content": "<p class=\"text-gray-300 mb-4\">The secret to effortless tailoring without burnout is the <strong>Master CV Architecture</strong>. Instead of maintaining 20 fragmented Word files, you maintain a single comprehensive master repository containing every project, tool, promotion, and metric you have ever achieved.</p><p class=\"text-gray-300 mb-4\">When a high-priority opportunity appears, you do not write new history; you simply extract, re-order, and emphasize the relevant modules from your master database to construct a laser-targeted 1-to-2 page tailored CV in minutes.</p>"
+    },
+    {
+      "id": "sections-to-customize",
+      "heading": "The 3 Sections You Must Customize (And the 2 You Keep Constant)",
+      "content": "<p class=\"text-gray-300 mb-4\">Effective tailoring does not require rewriting your entire employment history. Focus your effort where it generates 90% of the impact:</p><div class=\"space-y-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">1. Professional Summary Headline (Customize)</h4><p class=\"text-gray-300 text-sm\">Reframe your 3-line elevator pitch to mirror the exact role title, industry focus, and top 2 pain points mentioned in the posting.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">2. Technical / Core Skills Matrix (Customize)</h4><p class=\"text-gray-300 text-sm\">Reorder your skill chips so the tools specified in the job description appear first in your list.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">3. Top 3 Experience Bullets per Role (Customize)</h4><p class=\"text-gray-300 text-sm\">Promote the accomplishments that directly prove you have solved the employer's current problems.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5 opacity-75\"><h4 class=\"text-gray-400 font-bold mb-1\">4. Education & Basic Dates (Keep Constant)</h4><p class=\"text-gray-400 text-sm\">Factual historical data (degrees, certifications, employment dates) remains fixed across all versions.</p></div></div>"
+    },
+    {
+      "id": "five-minute-workflow",
+      "heading": "The 5-Minute Tailoring Workflow Using BuildAIResume",
+      "content": "<p class=\"text-gray-300 mb-4\">With <a href=\"/ai-resume-builder\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume's AI Tailoring Engine</a>, customizing your resume is streamlined into three steps:</p><ol class=\"list-decimal list-inside space-y-3 text-gray-300 my-4\"><li><strong>Paste the Target Job URL or Description:</strong> The AI extracts core competencies, required tools, and lexical weights.</li><li><strong>AI Modular Selection:</strong> The engine matches your Master CV experience against the requirements, selecting and refining the highest-relevance achievement bullets.</li><li><strong>Export ATS-Optimized PDF:</strong> Download your verified, role-specific PDF and sync it directly to your application tracking board.</li></ol>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "cost-of-generic-resume", "title": "The Real Cost of the One-Size-Fits-All Resume" },
+    { "id": "master-cv-architecture", "title": "The Master CV Architecture: Your Single Source of Truth" },
+    { "id": "sections-to-customize", "title": "The 3 Sections You Must Customize (And the 2 You Keep Constant)" },
+    { "id": "five-minute-workflow", "title": "The 5-Minute Tailoring Workflow Using BuildAIResume" }
+  ],
+  "faqs": [
+    {
+      "question": "Does tailoring my resume mean lying about my experience?",
+      "answer": "Never. Tailoring is about selective emphasis: highlighting genuine past projects and authentic tools that align with what the employer needs, rather than inventing false qualifications."
+    },
+    {
+      "question": "How many tailored versions of my resume should I keep?",
+      "answer": "Keep one central Master CV and generate job-specific instances as needed. BuildAIResume saves all tailored versions linked to their corresponding job journey automatically."
+    }
+  ]
+}

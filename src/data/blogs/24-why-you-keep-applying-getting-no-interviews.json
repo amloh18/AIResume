@@ -1,0 +1,48 @@
+{
+  "id": "blog-024",
+  "slug": "why-you-keep-applying-getting-no-interviews",
+  "title": "Why You Keep Applying but Getting No Interviews (And How to Fix It)",
+  "subtitle": "The 6 diagnostic bottlenecks that kill job applications before human review — and the 14-day turnaround blueprint to start landing callbacks.",
+  "excerpt": "Sent 100+ applications into the void without a single response? Discover the 6 exact reasons your resume is getting screened out and how to overhaul your application funnel in 14 days.",
+  "category": "Job Applications",
+  "readTime": "13 min read",
+  "date": "2026-07-24",
+  "featuredImage": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1920&q=80",
+  "featuredImageAlt": "Job seeker diagnosing application drop-off points with analytics checklist",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "applying for jobs but getting no interviews",
+    "why am I not getting callbacks",
+    "job application rejection reasons",
+    "fix job application funnel",
+    "resume diagnostic"
+  ],
+  "sections": [
+    {
+      "id": "the-ghosting-epidemic",
+      "heading": "The Ghosting Epidemic: Why Volume Alone Fails",
+      "content": "<p class=\"text-gray-300 mb-4\">Submitting 200 applications using 1-click apply buttons on job aggregators feels productive, but it is the fastest route to burnout. With AI auto-apply tools flooding recruiters with generic resumes, hiring teams receive 500+ submissions per requisition within 48 hours.</p><p class=\"text-gray-300 mb-4\">When volume surges, recruiters tighten automated filtering. If your application has even one minor defect — unparseable PDF text, missing keywords, or vague bullets — it is filtered out instantly. You do not need to apply to more jobs; you need to fix your application conversion bottlenecks.</p>"
+    },
+    {
+      "id": "six-diagnostic-bottlenecks",
+      "heading": "The 6 Application Bottlenecks (And How to Fix Each One)",
+      "content": "<p class=\"text-gray-300 mb-4\">Audit your current job search against these six fatal bottlenecks:</p><div class=\"space-y-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 1: Unparseable Layout or Font Encodings</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Use a proven single-stream ATS template from <a href=\"/ai-resume-builder\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume</a> that guarantees 100% text-layer extraction across Workday and Greenhouse.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 2: Missing Keywords in the Top 30% of the Resume</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Mirror the exact core competencies from the job description directly in your Professional Summary and Technical Skills matrix.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 3: Task-Oriented Bullets Without Metrics</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Replace passive responsibilities with active CAR accomplishments: <em>[Active Verb] + [Specific Task] + [Quantified Outcome]</em>.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 4: Applying Too Late (After the 48-Hour Surge Window)</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Use automated direct ATS alerts to submit within the first 24–48 hours of a role being posted.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 5: Generic, Template-Based Cover Letters</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Generate a tailored letter connecting your specific career wins to the company's stated mission and challenges.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-red-400 font-bold mb-1\">Bottleneck 6: LinkedIn Profile Inconsistencies</h4><p class=\"text-gray-300 text-sm\"><strong>The Fix:</strong> Ensure your LinkedIn headline, dates, and skill endorsements match the narrative on your tailored resume.</p></div></div>"
+    },
+    {
+      "id": "fourteen-day-plan",
+      "heading": "The 14-Day Application Turnaround Plan",
+      "content": "<p class=\"text-gray-300 mb-4\">Follow this rapid turnaround schedule to reset your application momentum:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 mb-4\"><li><strong>Days 1–3:</strong> Build an exhaustive Master CV in BuildAIResume and run full ATS compliance diagnostics.</li><li><strong>Days 4–7:</strong> Select 15 high-fit target roles with match scores &gt; 75% and generate tailored CVs and cover letters.</li><li><strong>Days 8–10:</strong> Submit applications directly through native company portals within 24 hours of posting.</li><li><strong>Days 11–14:</strong> Follow up with hiring managers on LinkedIn and begin structured interview coaching simulations.</li></ul>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "ghosting-epidemic", "title": "The Ghosting Epidemic: Why Volume Alone Fails" },
+    { "id": "six-diagnostic-bottlenecks", "title": "The 6 Application Bottlenecks (And How to Fix Each One)" },
+    { "id": "fourteen-day-plan", "title": "The 14-Day Application Turnaround Plan" }
+  ],
+  "faqs": [
+    {
+      "question": "What is a normal callback rate for online job applications?",
+      "answer": "For untailored generic submissions, the average callback rate is 2% to 3%. For tailored applications with high ATS match scores submitted within 48 hours, expected callback rates rise to 12% to 18%."
+    }
+  ]
+}
