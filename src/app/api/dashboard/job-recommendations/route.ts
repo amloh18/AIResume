@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       company: companies[Math.floor(Math.random() * companies.length)],
       location: 'Remote',
       salary: '$120k - $180k',
-      matchScore: Math.floor(Math.random() * 20) + 75, // 75-95%
+      matchScore: 50, // Default — real scores calculated by matching engine
       postedAt: new Date(Date.now() - Math.floor(Math.random() * 5) * 24 * 60 * 60 * 1000)
     }));
 

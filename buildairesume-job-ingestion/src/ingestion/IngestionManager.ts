@@ -4,12 +4,28 @@ import { sourceRunner } from './SourceRunner';
 import { SYSTEM_CONSTANTS } from '../config/constants';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { jobIntelligenceService } from '../services/jobIntelligenceService';
+import { deduplicationService } from '../services/deduplicationService';
 
 export class IngestionManager {
+  private initialized = false;
+
+  /**
+   * Initialize services that require database connection
+   */
+  private async ensureInitialized(db: Db): Promise<void> {
+    if (!this.initialized) {
+      deduplicationService.initialize(db);
+      this.initialized = true;
+    }
+  }
+
   /**
    * Run a specific source by its name
    */
   async runSource(db: Db, sourceName: string): Promise<boolean> {
+    await this.ensureInitialized(db);
+    
     const source = getSourceByName(sourceName);
     if (!source) {
       logger.error(`Cannot run unknown source: ${sourceName}`);
@@ -31,6 +47,21 @@ export class IngestionManager {
       sourceRunner.runSource(db, source).catch((err) => {
         logger.error(`Error in background runner for [${source.name}]:`, err);
       });
+    }
+  }
+
+  /**
+   * Refresh freshness scores for all active jobs
+   */
+  async refreshFreshnessScores(db: Db): Promise<void> {
+    logger.info('🔄 Refreshing freshness scores for all active jobs...');
+    
+    try {
+      await jobIntelligenceService.initialize(db);
+      const result = await jobIntelligenceService.refreshAllFreshnessScores();
+      logger.info(`✅ Freshness scores refreshed: ${result.updated} jobs updated, ${result.errors} errors`);
+    } catch (error) {
+      logger.error('Error refreshing freshness scores:', error);
     }
   }
 

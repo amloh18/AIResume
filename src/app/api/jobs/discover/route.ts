@@ -158,49 +158,43 @@ export async function GET(request: NextRequest) {
     // ── Get exclude set (passed/dismissed & saved jobs) ───────────────────
     const excludeJobIds = new Set<string>();
     const savedIds = new Set<string>();
+    const savedJobUrls = new Set<string>();
     if (userId) {
-      try {
-        const passedDocs = await db
-          .collection('passed_jobs')
-          .find({ userId: new ObjectId(userId) })
-          .toArray();
-        for (const d of passedDocs) {
+      // Parallelize all three collection queries for performance
+      const userObjId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+      const trackerQuery = userObjId
+        ? { $or: [{ userId: userObjId }, { userId: String(userId) }] }
+        : { userId: String(userId) };
+
+      const [passedDocs, savedDocs, appDocs] = await Promise.allSettled([
+        db.collection('passed_jobs').find({ userId: new ObjectId(userId) }).toArray(),
+        db.collection('saved_jobs').find({ userId: new ObjectId(userId) }).toArray(),
+        db.collection('jobapplications').find(trackerQuery)
+          .project({ _id: 1, jobId: 1, externalId: 1, jobUrl: 1, company: 1, jobTitle: 1 })
+          .toArray(),
+      ]);
+
+      if (passedDocs.status === 'fulfilled') {
+        for (const d of passedDocs.value) {
           if (d.externalId) excludeJobIds.add(d.externalId);
           if (d.jobId) excludeJobIds.add(d.jobId.toString());
         }
-      } catch {
-        // Ignore
       }
-      try {
-        const savedDocs = await db
-          .collection('saved_jobs')
-          .find({ userId: new ObjectId(userId) })
-          .toArray();
-        for (const d of savedDocs) {
+      if (savedDocs.status === 'fulfilled') {
+        for (const d of savedDocs.value) {
           if (d.externalId) savedIds.add(d.externalId);
           if (d.jobId) savedIds.add(d.jobId.toString());
           if (d._id) savedIds.add(d._id.toString());
+          if (d.jobUrl) savedJobUrls.add(d.jobUrl.trim().toLowerCase());
         }
-      } catch {
-        // Ignore
       }
-      try {
-        const userObjId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
-        const trackerQuery = userObjId
-          ? { $or: [{ userId: userObjId }, { userId: String(userId) }] }
-          : { userId: String(userId) };
-        const appDocs = await db
-          .collection('jobapplications')
-          .find(trackerQuery)
-          .project({ _id: 1, jobId: 1, externalId: 1 })
-          .toArray();
-        for (const a of appDocs) {
+      if (appDocs.status === 'fulfilled') {
+        for (const a of appDocs.value) {
           if (a.externalId) savedIds.add(a.externalId);
           if (a.jobId) savedIds.add(a.jobId.toString());
           if (a._id) savedIds.add(a._id.toString());
+          if (a.jobUrl) savedJobUrls.add(a.jobUrl.trim().toLowerCase());
         }
-      } catch {
-        // Ignore
       }
 
       // If not viewing the Saved feed, exclude all saved jobs from all other feeds
@@ -478,6 +472,31 @@ export async function GET(request: NextRequest) {
         } as JobListing & { matchTier: string };
       });
 
+      // Boost match scores for companies on the user's watchlist
+      if (userId) {
+        try {
+          const CompanyWatchlist = (await import('@/models/CompanyWatchlist')).default;
+          const watchlistEntries = await CompanyWatchlist.find({
+            userId: userId,
+            isActive: true,
+          }).select({ company: 1 }).lean();
+          const watchedCompanies = new Set(
+            watchlistEntries.map((w: any) => (w.company || '').toLowerCase().trim())
+          );
+          if (watchedCompanies.size > 0) {
+            for (const job of scoredListings) {
+              if (watchedCompanies.has((job.company || '').toLowerCase().trim())) {
+                job.matchScore = Math.min(98, (job.matchScore || 50) + 15);
+              }
+            }
+            // Re-sort by boosted matchScore
+            scoredListings.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+          }
+        } catch {
+          // Watchlist boost is best-effort
+        }
+      }
+
       const response: DiscoverResponse = {
         jobs: scoredListings,
         total,
@@ -657,13 +676,33 @@ export async function GET(request: NextRequest) {
     // Saved only filter vs Exclude saved jobs from other feeds
     if (savedOnlyFilter && userId) {
       filteredListings = filteredListings.filter((job) => {
-        return savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId);
+        if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return true;
+        // Fallback: match by job URL from saved tracker entries
+        const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
+        if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return true;
+        return false;
       });
     } else if (userId && savedIds.size > 0) {
       filteredListings = filteredListings.filter((job) => {
-        return !savedIds.has(job._id) && !savedIds.has((job as any).id) && !savedIds.has((job as any).externalId);
+        if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return false;
+        const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
+        if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return false;
+        return true;
       });
     }
+
+    // Cross-source deduplication: keep best match per company+title+location
+    const dedupMap = new Map<string, typeof filteredListings[0]>();
+    for (const job of filteredListings) {
+      const comp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const tit = (job.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const loc = (job.location || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const key = `${comp}___${tit}___${loc}`;
+      if (!dedupMap.has(key) || (job.matchScore || 0) > (dedupMap.get(key)?.matchScore || 0)) {
+        dedupMap.set(key, job);
+      }
+    }
+    filteredListings = Array.from(dedupMap.values());
 
     // Sort
     const dir = sortOrder === 'asc' ? 1 : -1;

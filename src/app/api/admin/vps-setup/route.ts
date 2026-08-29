@@ -29,7 +29,7 @@ async function requireAdmin(req: NextRequest) {
   return user;
 }
 
-function runScript(scriptPath: string, args: string[], timeoutMs = 120000): Promise<{
+function runScript(scriptPath: string, args: string[], timeoutMs = 120000, extraEnv?: Record<string, string>): Promise<{
   exitCode: number | null;
   stdout: string;
   stderr: string;
@@ -38,7 +38,7 @@ function runScript(scriptPath: string, args: string[], timeoutMs = 120000): Prom
     const child = spawn('bash', [scriptPath, ...args], {
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: timeoutMs,
-      env: { ...process.env, PATH: process.env.PATH },
+      env: { ...process.env, PATH: process.env.PATH, ...extraEnv },
     });
 
     let stdout = '';
@@ -57,8 +57,38 @@ function runScript(scriptPath: string, args: string[], timeoutMs = 120000): Prom
   });
 }
 
+/**
+ * Resolve the actual project root on the deployed VPS.
+ * Dokploy deploys to /etc/dokploy/applications/<app-name>/code/
+ * Also checks PROJECT_DIR env var and process.cwd() as fallbacks.
+ */
+function resolveProjectRoot(): string {
+  // 1. Explicit env var
+  if (process.env.PROJECT_DIR && fs.existsSync(path.join(process.env.PROJECT_DIR, 'scripts', 'vps-setup.sh'))) {
+    return process.env.PROJECT_DIR;
+  }
+
+  // 2. Dokploy deployment path (pattern: /etc/dokploy/applications/<app>/code)
+  const dokployBase = '/etc/dokploy/applications';
+  try {
+    const { execSync } = require('child_process');
+    const apps = execSync(`ls ${dokployBase} 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim().split('\n').filter(Boolean);
+    for (const app of apps) {
+      const codeDir = path.join(dokployBase, app, 'code');
+      if (fs.existsSync(path.join(codeDir, 'scripts', 'vps-setup.sh'))) {
+        return codeDir;
+      }
+    }
+  } catch {
+    // Not on Dokploy or ls failed
+  }
+
+  // 3. Fallback to process.cwd()
+  return process.cwd();
+}
+
 function checkVpsStatus() {
-  const projectRoot = process.cwd();
+  const projectRoot = resolveProjectRoot();
   const setupScript = path.join(projectRoot, 'scripts', 'vps-setup.sh');
   const mainVenv = path.join(projectRoot, 'scripts', '.venv');
   const linkedinVenv = path.join(projectRoot, 'scripts', 'linkedin-worker', '.venv');
@@ -66,6 +96,36 @@ function checkVpsStatus() {
   const linkedinWorker = path.join(projectRoot, 'scripts', 'linkedin-worker', 'worker.py');
   const linkedinLogin = path.join(projectRoot, 'scripts', 'linkedin-worker', 'login_linkedin.py');
   const profileDir = process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin';
+
+  // Check Docker
+  let docker = { installed: false, version: undefined as string | undefined, running: false };
+  try {
+    const { execSync } = require('child_process');
+    const dockerVersion = execSync('docker --version 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
+    docker.installed = true;
+    docker.version = dockerVersion;
+    try {
+      execSync('docker info 2>/dev/null', { timeout: 5000 });
+      docker.running = true;
+    } catch {
+      docker.running = false;
+    }
+  } catch {
+    // Docker not installed
+  }
+
+  // Check Stalwart
+  let stalwart = { running: false, status: undefined as string | undefined, containerName: 'buildairesume-stalwart' };
+  try {
+    const { execSync } = require('child_process');
+    const psOutput = execSync('docker ps --filter name=buildairesume-stalwart --format "{{.Status}}" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
+    if (psOutput) {
+      stalwart.running = true;
+      stalwart.status = psOutput;
+    }
+  } catch {
+    // Stalwart not running
+  }
 
   return {
     setupScript: {
@@ -96,6 +156,8 @@ function checkVpsStatus() {
       linkedinDebug: process.env.LINKEDIN_DEBUG === 'true',
       linkedinDryRun: process.env.LINKEDIN_DRY_RUN === 'true',
     },
+    docker,
+    stalwart,
   };
 }
 
@@ -128,10 +190,11 @@ export async function POST(req: NextRequest) {
 
     // ── Install dependencies ─────────────────────────────────────────────
     if (action === 'install') {
-      const setupScript = path.join(process.cwd(), 'scripts', 'vps-setup.sh');
+      const projectRoot = resolveProjectRoot();
+      const setupScript = path.join(projectRoot, 'scripts', 'vps-setup.sh');
       if (!fs.existsSync(setupScript)) {
         return NextResponse.json({
-          error: 'VPS setup script not found at scripts/vps-setup.sh',
+          error: `VPS setup script not found at ${setupScript}`,
         }, { status: 404 });
       }
 
@@ -139,9 +202,10 @@ export async function POST(req: NextRequest) {
       const args: string[] = [];
       if (installType === 'linkedin') args.push('--linkedin-only');
       else if (installType === 'jobspy') args.push('--jobspy-only');
+      else if (installType === 'stalwart') args.push('--stalwart-only');
 
       // Run the setup script (non-interactive, with timeout)
-      const result = await runScript(setupScript, args, 300_000); // 5 min timeout
+      const result = await runScript(setupScript, args, 300_000, { PROJECT_DIR: projectRoot });
 
       return NextResponse.json({
         success: result.exitCode === 0,
@@ -156,12 +220,13 @@ export async function POST(req: NextRequest) {
 
     // ── Verify dependencies ──────────────────────────────────────────────
     if (action === 'verify') {
-      const setupScript = path.join(process.cwd(), 'scripts', 'vps-setup.sh');
+      const projectRoot = resolveProjectRoot();
+      const setupScript = path.join(projectRoot, 'scripts', 'vps-setup.sh');
       if (!fs.existsSync(setupScript)) {
-        return NextResponse.json({ error: 'VPS setup script not found' }, { status: 404 });
+        return NextResponse.json({ error: `VPS setup script not found at ${setupScript}` }, { status: 404 });
       }
 
-      const result = await runScript(setupScript, ['--verify'], 60_000);
+      const result = await runScript(setupScript, ['--verify'], 60_000, { PROJECT_DIR: projectRoot });
 
       return NextResponse.json({
         success: result.exitCode === 0,

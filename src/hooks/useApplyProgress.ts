@@ -87,7 +87,7 @@ export function useApplyProgress() {
   );
 
   const completeApply = useCallback(
-    (jobTitle: string, company: string, success: boolean, message?: string, directJobId?: string) => {
+    (jobTitle: string, company: string, success: boolean, message?: string, directJobId?: string, appStatus?: 'applied' | 'queued' | 'action_required' | 'saved' | 'failed') => {
       const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
       const isTechnical = Boolean(
         message && /validation failed|enum value|Internal Server Error|E11000/i.test(message)
@@ -95,13 +95,21 @@ export function useApplyProgress() {
       const succeeded = success && !isTechnical;
 
       if (succeeded) {
+        // Determine correct title and description based on actual application status
+        const isApplied = appStatus === 'applied';
+        const title = isApplied ? 'Application Submitted' : 'Documents Ready';
+        const description = isApplied
+          ? (message || `Application submitted to ${company} successfully.`)
+          : (message || `Tailored documents prepared for ${company}. Review or submit.`);
+        const toastTitle = isApplied ? 'Application submitted' : 'Documents ready';
+        const toastDescription = isApplied
+          ? (message || `Application submitted to ${company}.`)
+          : (message || `Tailored documents prepared for ${company}. Review and submit.`);
+
         updateStep(jobId, {
           step: 'submitted',
-          title: 'Application Submitted',
-          description:
-            message && !isTechnical
-              ? message
-              : `Tailored application prepared for ${company}. Review documents in Studio or complete submission.`,
+          title,
+          description,
           progress: 100,
           success: true,
           company,
@@ -120,10 +128,8 @@ export function useApplyProgress() {
         });
 
         toast({
-          title: 'Application ready',
-          description: message && !isTechnical
-            ? message
-            : `Tailored application prepared for ${company}. Review and submit.`,
+          title: toastTitle,
+          description: toastDescription,
           variant: 'success',
           company,
           duration: 6000,

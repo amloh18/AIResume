@@ -12,7 +12,12 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://username:password@cluster.mongodb.net/cvcircle?retryWrites=true&w=majority';
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error('ERROR: MONGODB_URI environment variable is required.');
+  console.error('Usage: MONGODB_URI=mongodb+srv://... node scripts/setup-mongodb.js');
+  process.exit(1);
+}
 const DATABASE_NAME = 'cvcircle';
 
 // Collections to create

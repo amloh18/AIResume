@@ -53,7 +53,17 @@ export interface JobIngestionMetrics {
   firstSeenAt: Date;
   lastSeenAt: Date;
   lastUpdatedAt: Date;
+  sourcePostedAt?: Date | null;
   updateCount: number;
+}
+
+export interface JobFreshness {
+  score: number; // 0-100, higher = fresher
+  calculatedAt: Date;
+  isStale: boolean;
+  isRecentlyUpdated: boolean;
+  isRemoved: boolean;
+  ageHours: number;
 }
 
 export interface JobSearchFields {
@@ -95,6 +105,7 @@ export interface NormalizedJob {
   postedAt: Date;
   expiresAt?: Date | null;
   status: JobStatus;
+  freshness?: JobFreshness;
   ingestion: JobIngestionMetrics;
   search: JobSearchFields;
   matching: JobMatchingFields;

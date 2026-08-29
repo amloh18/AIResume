@@ -8,6 +8,7 @@ import {
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId | string;
   // cvId removed - relationships now managed through CVJourney
+  jobId?: string; // Original job catalog ID (from jobs collection)
   jobTitle: string;
   company: string;
   companyLogo?: string; // Resolved company logo URL
@@ -175,6 +176,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     required: true
   },
   // cvId removed - relationships now managed through CVJourney
+  jobId: {
+    type: String,
+    trim: true,
+    default: undefined,
+  },
   jobTitle: {
     type: String,
     required: [true, 'Job title is required'],

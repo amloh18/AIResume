@@ -19,6 +19,8 @@ interface VpsStatus {
     linkedinDebug: boolean;
     linkedinDryRun: boolean;
   };
+  docker?: { installed: boolean; version?: string; running?: boolean };
+  stalwart?: { running: boolean; status?: string; containerName?: string };
 }
 
 interface DeployAction {
@@ -93,12 +95,20 @@ export default function VpsSetupPanel() {
   const deployActions: DeployAction[] = [
     {
       id: 'install-all',
-      label: 'Install All Dependencies',
-      description: 'Python, Playwright, JobSpy, LinkedIn Worker',
+      label: 'Install Everything',
+      description: 'Python, Playwright, JobSpy, LinkedIn, Docker, Stalwart',
       icon: Download,
       action: 'install',
       options: { type: 'all' },
       variant: 'primary',
+    },
+    {
+      id: 'deploy-stalwart',
+      label: 'Deploy Stalwart Mail Server',
+      description: 'Docker + Stalwart for application email delivery',
+      icon: Download,
+      action: 'install',
+      options: { type: 'stalwart' },
     },
     {
       id: 'install-linkedin',
@@ -224,6 +234,16 @@ export default function VpsSetupPanel() {
               label="LinkedIn Enabled"
               ok={status.environment.linkedinEnabled}
               detail={status.environment.linkedinEnabled ? 'Yes' : 'No'}
+            />
+            <StatusItem
+              label="Docker"
+              ok={status.docker?.installed ?? false}
+              detail={status.docker?.installed ? status.docker?.version || 'Installed' : 'Not installed'}
+            />
+            <StatusItem
+              label="Stalwart Mail Server"
+              ok={status.stalwart?.running ?? false}
+              detail={status.stalwart?.running ? status.stalwart?.status || 'Running' : 'Not running'}
             />
           </div>
         </div>

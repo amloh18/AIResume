@@ -29,6 +29,8 @@ import {
   Zap,
   Award,
   Layers,
+  Flame,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Radar,
@@ -43,6 +45,7 @@ import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { useToast } from '@/hooks/use-toast';
 import UpgradeSuggestionCard from '@/components/dashboard/redesigned/UpgradeSuggestionCard';
 import TopJobMatchesSection from '@/components/dashboard/redesigned/TopJobMatchesSection';
+import NeedsAttentionWidget from '@/components/dashboard/redesigned/NeedsAttentionWidget';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import ProfileAnalyticsSidebar from '@/components/dashboard/redesigned/ProfileAnalyticsSidebar';
@@ -360,6 +363,20 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
 
   const aiJourneyUsage = journeyApplicationIds.size;
 
+  // Count fresh jobs (posted in last 24 hours)
+  const freshJobsToday = jobs.filter((j: any) => {
+    const posted = new Date(j.postedAt || j.createdAt || j.updatedAt).getTime();
+    return !isNaN(posted) && now - posted < 24 * 60 * 60 * 1000;
+  }).length;
+
+  // Count jobs needing user attention (needs_user_action, failed, etc.)
+  const needsAttention = jobs.filter((j: any) =>
+    j.status === 'needs_input' || 
+    j.automationStatus === 'needs_user_action' ||
+    j.automationStatus === 'failed' ||
+    j.skipReason
+  ).length;
+
   return {
     cvs: cvs.length,
     cvsThisWeek,
@@ -373,6 +390,8 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
     strongMatches,
     aiJourneyUsage,
     cvsCreatedThisMonth: goals?.cvsCreatedThisMonth,
+    freshJobsToday,
+    needsAttention,
   };
 }
 
@@ -403,7 +422,15 @@ function KpiStrip() {
         trendUp: true,
       };
 
-  const metrics = [
+  const metrics: Array<{
+    label: string;
+    value: string;
+    icon: React.ReactNode;
+    trend: string;
+    trendUp: boolean;
+    trendIcon?: React.ReactNode;
+    trendExtra?: string;
+  }> = [
     {
       label: 'Total CVs',
       value: String(stats.cvs),
@@ -417,6 +444,8 @@ function KpiStrip() {
       icon: <Briefcase size={16} strokeWidth={1.75} />,
       trend: stats.jobsThisWeek > 0 ? `↑ ${stats.jobsThisWeek} this week` : 'Steady',
       trendUp: stats.jobsThisWeek > 0,
+      trendIcon: stats.freshJobsToday > 0 ? <Flame size={10} className="text-orange-500" /> : undefined,
+      trendExtra: stats.freshJobsToday > 0 ? `${stats.freshJobsToday} fresh today` : undefined,
     },
     {
       label: 'Applications',
@@ -424,6 +453,8 @@ function KpiStrip() {
       icon: <Send size={16} strokeWidth={1.75} />,
       trend: stats.applicationsThisWeek > 0 ? `↑ ${stats.applicationsThisWeek} this week` : 'No new this week',
       trendUp: stats.applicationsThisWeek > 0,
+      trendIcon: stats.needsAttention > 0 ? <AlertTriangle size={10} className="text-amber-500" /> : undefined,
+      trendExtra: stats.needsAttention > 0 ? `${stats.needsAttention} awaiting input` : undefined,
     },
     {
       label: 'Interviews',
@@ -463,7 +494,11 @@ function KpiStrip() {
                 </div>
                 <div className="mt-1 text-xs text-[var(--text-secondary)]">{m.label}</div>
                 <div className={`mt-0.5 text-[11px] font-medium ${m.trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--text-tertiary)]'}`}>
+                  {m.trendIcon && <span className="inline-flex items-center gap-0.5">{m.trendIcon}</span>}
                   {m.trend}
+                  {m.trendExtra && (
+                    <span className="text-[var(--text-tertiary)]"> | {m.trendExtra}</span>
+                  )}
                 </div>
               </>
             )}
@@ -960,9 +995,30 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
             {job.company || 'Company'} {job.location ? `· ${job.location}` : ''}
           </span>
         </p>
-        <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
-          Job added {timeAgo(job.createdAt || job.updatedAt)}
-        </p>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] text-[var(--text-tertiary)]">
+            Added {timeAgo(job.createdAt || job.updatedAt)}
+          </span>
+          {atsScore > 0 && (
+            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+              atsScore >= 80 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+              atsScore >= 60 ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
+              'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
+            }`}>
+              {atsScore}% match
+            </span>
+          )}
+          {job.freshness?.score >= 80 && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+              <Flame size={9} /> Fresh
+            </span>
+          )}
+          {job.isTargetCompany && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+              Target
+            </span>
+          )}
+        </div>
 
         {liveStatus ? (
           <div className="mt-3">
@@ -1331,6 +1387,9 @@ export default function RedesignedDashboardView() {
 
       {/* Top job matches */}
       <TopJobMatchesSection />
+
+      {/* Needs attention — items requiring user intervention */}
+      <NeedsAttentionWidget limit={3} />
 
       {/* Two-column workspace — fills the full content-area width */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
