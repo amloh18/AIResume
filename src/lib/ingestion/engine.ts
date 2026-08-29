@@ -63,6 +63,22 @@ async function withRetry<T>(
   throw lastError;
 }
 
+// ── Python Resolver ─────────────────────────────────────────────────────
+//
+// On VPS the service sets the correct python. Locally, prefer scripts/.venv
+// so we pick up packages like jobspy without touching the system python.
+
+function resolvePython(): string {
+  const fs = require('fs');
+  const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python3');
+  try {
+    fs.accessSync(venvPython, fs.constants.X_OK);
+    return venvPython;
+  } catch {
+    return 'python3';
+  }
+}
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 export interface RawJob {
@@ -824,7 +840,9 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
   return new Promise((resolve) => {
     const processId = `jobspy-${Date.now()}`;
 
-    const child = spawn('python3', [workerPath], {
+    const pythonBin = resolvePython();
+    log('FETCH', `JobSpy: using python at ${pythonBin}`);
+    const child = spawn(pythonBin, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
       timeout: 300_000,
@@ -937,7 +955,9 @@ async function fetchLinkedIn(signal?: AbortSignal): Promise<RawJob[]> {
   return new Promise((resolve) => {
     const processId = `linkedin-${Date.now()}`;
 
-    const child = spawn('python3', [workerPath], {
+    const pythonBin = resolvePython();
+    log('FETCH', `LinkedIn: using python at ${pythonBin}`);
+    const child = spawn(pythonBin, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,

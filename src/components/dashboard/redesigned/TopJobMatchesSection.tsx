@@ -195,12 +195,14 @@ export default function TopJobMatchesSection() {
     return () => controller.abort();
   }, [fetchTopMatches]);
 
-  const handlePass = (jobId: string, e: React.MouseEvent) => {
+  const handlePass = (jobId: string, e: React.MouseEvent, job?: TopMatchJob) => {
     e.stopPropagation();
     setJobs((prev) => prev.filter((j) => j._id !== jobId));
     toast({
       title: 'Job hidden',
-      description: 'We won’t show this match again.',
+      description: 'We won\'t show this match again.',
+      company: job?.company,
+      logoUrl: job?.companyLogo,
     });
   };
 
@@ -219,7 +221,7 @@ export default function TopJobMatchesSection() {
           next.delete(jobId);
           return next;
         });
-        toast({ title: 'Removed from saved jobs' });
+        toast({ title: 'Removed from saved jobs', company: job.company, logoUrl: job.companyLogo });
       } else {
         const res = await fetch('/api/jobs', {
           method: 'POST',
@@ -237,13 +239,15 @@ export default function TopJobMatchesSection() {
         });
         if (!res.ok) throw new Error('Failed to save');
         setSavedIds((prev) => new Set(prev).add(jobId));
-        toast({ title: 'Job saved to your tracker!' });
+        toast({ title: 'Job saved to your tracker!', company: job.company, logoUrl: job.companyLogo });
       }
     } catch (err: any) {
       toast({
         title: 'Error saving job',
         description: err.message || 'Please try again',
         variant: 'destructive',
+        company: job.company,
+        logoUrl: job.companyLogo,
       });
     } finally {
       setSavingId(null);
@@ -531,7 +535,7 @@ export default function TopJobMatchesSection() {
                 {/* Dismiss Button (top right hover) */}
                 <button
                   type="button"
-                  onClick={(e) => handlePass(job._id, e)}
+                  onClick={(e) => handlePass(job._id, e, job)}
                   title="Dismiss job"
                   className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all z-10"
                 >

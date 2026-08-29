@@ -664,22 +664,28 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const { clearStatus } = useJobLiveStatusStore();
 
   return (
-    <div
-      draggable={canDrag}
-      onDragStart={(e) => onDragStart(e, job.id)}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onClick={() => onClick(job)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`group relative overflow-hidden bg-white dark:bg-[#141810] rounded-xl border transition-all duration-300 ${
-        isSelected
-          ? "ring-2 ring-blue-500 ring-opacity-50"
-          : "border-gray-200 dark:border-white/20"
-      } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
-      `}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
     >
+      <div
+        draggable={canDrag}
+        onDragStart={(e) => onDragStart(e, job.id)}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+        onClick={() => onClick(job)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`group relative overflow-hidden bg-white dark:bg-[#141810] rounded-xl border transition-all duration-300 ${
+          isSelected
+            ? "ring-2 ring-blue-500 ring-opacity-50"
+            : "border-gray-200 dark:border-white/20"
+        } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
+        ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
+        `}
+      >
       <div className="p-3">
         {isStale && (
           <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-small font-medium border border-red-100 dark:border-red-900/30">
@@ -775,7 +781,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 
