@@ -236,14 +236,14 @@ export interface IApplicationHistory extends mongoose.Document {
 }
 
 // Create models (will be used after connection)
-let ApplicationQueue: mongoose.Model<IApplicationQueue>;
+let AutoApplyQueue: mongoose.Model<IApplicationQueue>;
 let UserQuota: mongoose.Model<IUserQuota>;
 let ExternalApiRateLimit: mongoose.Model<IExternalApiRateLimit>;
 let ApplicationHistory: mongoose.Model<IApplicationHistory>;
 
 export async function initializeModels() {
-  if (!ApplicationQueue) {
-    ApplicationQueue = mongoose.models.ApplicationQueue || mongoose.model<IApplicationQueue>('ApplicationQueue', ApplicationQueueSchema);
+  if (!AutoApplyQueue) {
+    AutoApplyQueue = mongoose.models.AutoApplyQueue || mongoose.model<IApplicationQueue>('AutoApplyQueue', ApplicationQueueSchema);
   }
   if (!UserQuota) {
     UserQuota = mongoose.models.UserQuota || mongoose.model<IUserQuota>('UserQuota', UserQuotaSchema);
@@ -382,7 +382,7 @@ export async function recordApplicationFailure(userId: string): Promise<void> {
 export async function addToApplicationQueue(application: Partial<IApplicationQueue>): Promise<IApplicationQueue> {
   await initializeModels();
   
-  const queued = new ApplicationQueue({
+  const queued = new AutoApplyQueue({
     ...application,
     status: 'queued',
     scheduledFor: application.scheduledFor || new Date()
@@ -396,11 +396,26 @@ export async function getNextQueuedApplication(userId: string): Promise<IApplica
   await initializeModels();
   
   const now = new Date();
-  return ApplicationQueue.findOne({
-    userId,
-    status: 'queued',
-    scheduledFor: { $lte: now }
-  }).sort({ priority: -1, scheduledFor: 1 });
+  // Atomic claim: find + mark as processing in one operation to prevent double-claiming
+  return AutoApplyQueue.findOneAndUpdate(
+    {
+      userId,
+      status: 'queued',
+      scheduledFor: { $lte: now },
+    },
+    {
+      $set: {
+        status: 'processing',
+        lockedAt: now,
+        lockedBy: `worker-${process.pid}`,
+        startedAt: now,
+      },
+    },
+    {
+      new: true,
+      sort: { priority: -1, scheduledFor: 1 },
+    }
+  );
 }
 
 export async function updateApplicationStatus(
@@ -423,13 +438,13 @@ export async function updateApplicationStatus(
     update.lastError = error;
   }
   
-  await ApplicationQueue.findByIdAndUpdate(id, update);
+  await AutoApplyQueue.findByIdAndUpdate(id, update);
 }
 
 export async function retryApplication(id: string): Promise<IApplicationQueue | null> {
   await initializeModels();
   
-  const application = await ApplicationQueue.findById(id);
+  const application = await AutoApplyQueue.findById(id);
   if (!application) return null;
   
   if (application.retryCount >= application.maxRetries) {
@@ -811,7 +826,7 @@ export async function findMatchingJobsForAutoApply(
   // Return jobs up to the limit and remaining quota
   const availableToApply = Math.min(limit, remaining.hourly, remaining.daily);
   
-  return ApplicationQueue.find(matchQuery)
+  return AutoApplyQueue.find(matchQuery)
     .sort({ priority: -1, scheduledFor: 1 })
     .limit(availableToApply);
 }

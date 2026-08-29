@@ -115,8 +115,16 @@ async function checkExternalServices(): Promise<{
      }
    }
 
-   // Check Email Service (basic validation)
-   if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
+   // Check Email Service (Stalwart SMTP connection test)
+   if (process.env.STALWART_SMTP_HOST) {
+     try {
+       const { testStalwartConnection } = await import('@/lib/services/applicationEmailService');
+       const emailCheck = await testStalwartConnection();
+       services.email = emailCheck.success ? 'healthy' : 'unhealthy';
+     } catch {
+       services.email = 'unhealthy';
+     }
+   } else if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
      services.email = 'healthy';
    } else {
      services.email = 'unhealthy';

@@ -399,8 +399,8 @@ export default function JobsDashboard() {
       } else {
         const res = await fetch('/api/jobs', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json' },            body: JSON.stringify({
+            jobId: job._id || job.id || undefined,
             jobTitle: job.title,
             company: job.company,
             location: job.location,
@@ -586,8 +586,8 @@ export default function JobsDashboard() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(job.title, job.company, true, resData.message, job._id);
-        updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
+        applyProgress.completeApply(job.title, job.company, true, resData.message, job._id, resData.status);
+        updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${job.title}!` : `Documents ready for ${job.title}`, 'progress');
       } else {
         // Genuine submission failure on employer site
         applyProgress.completeApply(job.title, job.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", job._id);

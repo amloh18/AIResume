@@ -17,7 +17,12 @@ import {
   Zap,
   Briefcase,
   DollarSign,
-  X
+  X,
+  Flame,
+  FileText,
+  Send,
+  AlertCircle,
+  FileCheck2,
 } from 'lucide-react';
 
 export interface JobCardProps {
@@ -243,7 +248,7 @@ export function JobCard({
 
             {/* Bottom Section: Readiness & Action Journey */}
             <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 space-y-2.5">
-              {/* Status info */}
+              {/* Dynamic stage info */}
               <div className="flex items-center justify-between text-xs">
                 {isSaved ? (
                   <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
@@ -258,9 +263,24 @@ export function JobCard({
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                     <Sparkles className="w-3 h-3 text-lime-500" />
-                    Tailored CV supported
+                    Ready to apply
                   </span>
                 )}
+
+                {/* Freshness indicator for recently posted jobs */}
+                {job.postedDate && (() => {
+                  const ageMs = Date.now() - new Date(job.postedDate).getTime();
+                  const ageHours = ageMs / (1000 * 60 * 60);
+                  if (ageHours < 24) {
+                    return (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                        <Flame className="w-3 h-3" />
+                        {ageHours < 1 ? 'Just posted' : `${Math.round(ageHours)}h ago`}
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Primary Action Buttons */}

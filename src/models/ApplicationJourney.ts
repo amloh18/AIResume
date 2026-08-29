@@ -55,6 +55,40 @@ export interface IApplicationJourney extends Document {
     };
     updatedAt: string;
   };
+  // Application automation artifacts
+  artifacts?: {
+    atsType?: string;
+    detectedFields?: Array<{
+      label: string;
+      type: string;
+      required: boolean;
+      filled: boolean;
+      fillMethod: 'deterministic' | 'ai' | 'skipped' | 'error';
+      value?: string;
+      error?: string;
+    }>;
+    screenshots?: Array<{
+      url: string;
+      capturedAt: Date;
+      context: 'before_submit' | 'on_error' | 'captcha_detected' | 'field_detection';
+    }>;
+    fillAudit?: {
+      totalFields: number;
+      filledFields: number;
+      skippedFields: number;
+      errorFields: number;
+      filledAt: Date;
+      duration: number; // milliseconds
+    };
+    submissionAttempt?: {
+      attemptedAt: Date;
+      success: boolean;
+      error?: string;
+      httpStatusCode?: number;
+      responseSnippet?: string;
+    };
+    dryRun?: boolean;
+  };
   metadata: {
     createdAt: Date;
     updatedAt: Date;
@@ -195,6 +229,53 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   },
   generationState: {
     type: Schema.Types.Mixed
+  },
+  artifacts: {
+    atsType: {
+      type: String,
+      enum: ['greenhouse', 'lever', 'ashby', 'workday', 'workable', 'icims', 'smartrecruiters', 'unknown'],
+    },
+    detectedFields: [{
+      label: { type: String, required: true },
+      type: { type: String, required: true },
+      required: { type: Boolean, default: false },
+      filled: { type: Boolean, default: false },
+      fillMethod: {
+        type: String,
+        enum: ['deterministic', 'ai', 'skipped', 'error'],
+        default: 'skipped',
+      },
+      value: { type: String },
+      error: { type: String },
+    }],
+    screenshots: [{
+      url: { type: String, required: true },
+      capturedAt: { type: Date, default: Date.now },
+      context: {
+        type: String,
+        enum: ['before_submit', 'on_error', 'captcha_detected', 'field_detection'],
+        required: true,
+      },
+    }],
+    fillAudit: {
+      totalFields: { type: Number, default: 0 },
+      filledFields: { type: Number, default: 0 },
+      skippedFields: { type: Number, default: 0 },
+      errorFields: { type: Number, default: 0 },
+      filledAt: { type: Date },
+      duration: { type: Number, default: 0 },
+    },
+    submissionAttempt: {
+      attemptedAt: { type: Date },
+      success: { type: Boolean, default: false },
+      error: { type: String },
+      httpStatusCode: { type: Number },
+      responseSnippet: { type: String },
+    },
+    dryRun: {
+      type: Boolean,
+      default: false,
+    },
   },
   metadata: {
     createdAt: {

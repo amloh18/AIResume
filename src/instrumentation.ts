@@ -8,6 +8,14 @@ export async function register() {
       enableLogs: true,
       sendDefaultPii: true,
     });
+
+    // Start email worker for application email delivery
+    try {
+      const { startEmailWorker } = await import('./workers/emailWorker');
+      startEmailWorker();
+    } catch (err) {
+      console.warn('[Startup] Email worker failed to start:', err);
+    }
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {

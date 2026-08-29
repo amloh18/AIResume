@@ -7,6 +7,7 @@ import { circuitBreaker } from '../health/circuitBreaker';
 import { SYSTEM_CONSTANTS } from '../config/constants';
 import { env } from '../config/env';
 import { createSourceLogger } from '../utils/logger';
+import { deduplicationService } from '../services/deduplicationService';
 
 export class SourceRunner {
   async runSource(db: Db, source: JobSource): Promise<void> {
@@ -79,12 +80,16 @@ export class SourceRunner {
       createdAt: now,
     });
 
+    // Initialize deduplication service
+    deduplicationService.initialize(db);
+
     const metrics = {
       fetched: 0,
       parsed: 0,
       inserted: 0,
       updated: 0,
       duplicates: 0,
+      crossSourceDuplicates: 0,
       rejected: 0,
       errors: 0,
     };
@@ -110,9 +115,28 @@ export class SourceRunner {
           }
         }
 
-        // Batch Upsert
+        // Cross-Source Deduplication
+        let uniqueBatch = normalizedBatch;
         if (normalizedBatch.length > 0) {
-          const res = await batchProcessor.processBatch(db, normalizedBatch, source.name);
+          try {
+            const dedupResult = await deduplicationService.processBatch(normalizedBatch);
+            uniqueBatch = dedupResult.uniqueJobs;
+            metrics.crossSourceDuplicates += dedupResult.stats.duplicatesFound;
+            
+            if (dedupResult.stats.duplicatesFound > 0) {
+              sourceLogger.info(
+                `Cross-source dedup: ${dedupResult.stats.duplicatesFound} duplicates found, ${uniqueBatch.length} unique jobs remaining`
+              );
+            }
+          } catch (dedupErr: any) {
+            sourceLogger.warn('Cross-source deduplication failed, proceeding with all jobs:', dedupErr.message);
+            // Fall back to processing all jobs if dedup fails
+          }
+        }
+
+        // Batch Upsert
+        if (uniqueBatch.length > 0) {
+          const res = await batchProcessor.processBatch(db, uniqueBatch, source.name);
           metrics.inserted += res.inserted;
           metrics.updated += res.updated;
           metrics.duplicates += res.duplicates;
@@ -120,7 +144,7 @@ export class SourceRunner {
         }
 
         sourceLogger.info(
-          `Batch processed: ${normalizedBatch.length} jobs (Total: ${metrics.inserted} new, ${metrics.updated} updated, ${metrics.duplicates} dupes)`
+          `Batch processed: ${uniqueBatch.length} jobs (Total: ${metrics.inserted} new, ${metrics.updated} updated, ${metrics.duplicates} dupes, ${metrics.crossSourceDuplicates} cross-source)`
         );
       }
 

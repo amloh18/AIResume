@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Loader2, AlertCircle, X, Sparkles, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, X, Sparkles, ArrowRight, FileText, Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { JobLiveStatus, useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 
@@ -60,13 +60,44 @@ export function JobLiveStatusCard({
     pauseAutoClose(status.jobId);
   };
 
+  // Determine the stage icon and label for the current step
+  const stageIcon = (() => {
+    if (isFailed) return <AlertCircle className="w-3.5 h-3.5" />;
+    switch (status.step) {
+      case 'matching':
+        return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
+      case 'tailoring':
+        return <FileText className="w-3.5 h-3.5" />;
+      case 'submitting':
+        return <Send className="w-3.5 h-3.5" />;
+      case 'submitted':
+        return status.success ? <FileText className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />;
+      default:
+        return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
+    }
+  })();
+
+  const stageLabel = (() => {
+    if (isFailed) return 'Failed';
+    switch (status.step) {
+      case 'matching': return 'Matching CV';
+      case 'tailoring': return 'Documents';
+      case 'submitting': return 'Submitting';
+      case 'submitted': return status.success ? 'Ready' : 'Complete';
+      default: return 'Processing';
+    }
+  })();
+
+  // Pipeline stages for the compact progress indicator
+  const pipelineStages = [
+    { key: 'matching', label: 'Match', done: ['tailoring', 'submitting', 'submitted'].includes(status.step) || isFailed },
+    { key: 'tailoring', label: 'Docs', done: ['submitting', 'submitted'].includes(status.step) || isFailed },
+    { key: 'submitting', label: 'Submit', done: status.step === 'submitted' || isFailed },
+  ];
+
   const containerClasses = inline
-    ? `relative flex flex-col justify-between h-full w-full rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/10 overflow-hidden ${
-        isFailed ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-emerald-500'
-      } ${compact ? 'p-3' : 'p-3.5'}`
-    : `relative flex flex-col justify-between h-full w-full rounded-2xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm ${
-        isFailed ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-emerald-500'
-      } ${compact ? 'p-3.5' : 'p-4 sm:p-5'}`;
+    ? `relative flex flex-col justify-between h-full w-full rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/80 dark:border-white/10 overflow-hidden ${compact ? 'p-3' : 'p-3.5'}`
+    : `relative flex flex-col justify-between h-full w-full rounded-2xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 overflow-hidden shadow-sm ${compact ? 'p-3.5' : 'p-4 sm:p-5'}`;
 
   return (
     <motion.div
@@ -79,26 +110,18 @@ export function JobLiveStatusCard({
         {/* Top Header Row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            {/* Status Icon */}
-            {isSuccess && (
-              <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              </div>
-            )}
-            {isInProgress && (
-              <div className="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center shrink-0">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-              </div>
-            )}
-            {isFailed && (
-              <div className="w-6 h-6 rounded-full bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center shrink-0">
-                <AlertCircle className="w-3.5 h-3.5" />
-              </div>
-            )}
+            {/* Stage Icon */}
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+              isFailed
+                ? 'bg-red-500/10 border border-red-500/20 text-red-500'
+                : 'bg-blue-500/10 border border-blue-500/20 text-blue-500'
+            }`}>
+              {stageIcon}
+            </div>
 
             {/* Title */}
             <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">
-              {status.title || (isSuccess ? 'Application Submitted' : isInProgress ? 'Processing Application' : 'Application Failed')}
+              {status.title || (isSuccess ? 'Documents Ready' : isInProgress ? 'Processing Application' : 'Application Failed')}
             </h4>
           </div>
 
@@ -117,9 +140,45 @@ export function JobLiveStatusCard({
         <p className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
           {status.description ||
             (status.company
-              ? `Tailored application prepared for ${status.company}. Review documents in Studio or complete submission.`
+              ? `Tailored application prepared for ${status.company}. Review documents or complete submission.`
               : 'Application is being prepared and synchronized.')}
         </p>
+
+        {/* Pipeline Stage Indicator */}
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+          className="flex items-center gap-1.5 pt-0.5"
+        >
+          {pipelineStages.map((s, i) => (
+            <React.Fragment key={s.key}>
+              {i > 0 && (
+                <span className={`w-3 h-px ${s.done || status.step === s.key ? 'bg-blue-400 dark:bg-blue-500' : 'bg-gray-200 dark:bg-white/10'}`} />
+              )}
+              <div className="flex items-center gap-1">
+                <div className={`w-1.5 h-1.5 rounded-full ${
+                  s.done
+                    ? 'bg-blue-500 dark:bg-blue-400'
+                    : status.step === s.key
+                      ? 'bg-blue-500 dark:bg-blue-400 animate-pulse'
+                      : 'bg-gray-300 dark:bg-white/20'
+                }`} />
+                <span className={`text-[9px] font-semibold uppercase tracking-wide ${
+                  s.done || status.step === s.key
+                    ? 'text-blue-600 dark:text-blue-400'
+                    : 'text-gray-400 dark:text-gray-500'
+                }`}>{s.label}</span>
+              </div>
+            </React.Fragment>
+          ))}
+          {/* Current stage label for in-progress */}
+          {isInProgress && (
+            <span className="ml-1 text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+              {stageLabel}
+            </span>
+          )}
+        </motion.div>
 
         {/* Action CTAs */}
         {status.actions && status.actions.length > 0 ? (

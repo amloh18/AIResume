@@ -9,15 +9,24 @@ const TAG_LENGTH = 16;
  * Key must be 32 bytes (256 bits) for AES-256-GCM
  */
 const getEncryptionKey = (): Buffer => {
-  const secret = process.env.TOKEN_ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || 'cvcircle-secure-default-encryption-salt-2026';
-  
-  if (process.env.TOKEN_ENCRYPTION_KEY && process.env.TOKEN_ENCRYPTION_KEY.length === 64) {
+  const envKey = process.env.TOKEN_ENCRYPTION_KEY;
+
+  if (envKey && envKey.length === 64) {
     try {
-      const key = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY, 'hex');
+      const key = Buffer.from(envKey, 'hex');
       if (key.length === 32) return key;
     } catch {
-      // fallback to sha256
+      // fall through to sha256 derivation below
     }
+  }
+
+  // Prefer TOKEN_ENCRYPTION_KEY, then NEXTAUTH_SECRET, then JWT_SECRET
+  const secret = envKey || process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      'CRITICAL: No encryption key configured. Set TOKEN_ENCRYPTION_KEY, NEXTAUTH_SECRET, or JWT_SECRET environment variable. ' +
+      'Token encryption cannot proceed without a secret.'
+    );
   }
 
   // Derive stable 32-byte key via SHA-256

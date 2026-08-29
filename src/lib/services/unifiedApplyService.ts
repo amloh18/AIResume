@@ -116,7 +116,41 @@ export class UnifiedApplyService {
       screeningAnswers = this.generateScreeningAnswers(context.screeningQuestions, userProfile, context);
     }
 
-    // 6. Route to the appropriate ATS submission handler
+    // 6. Application Quality Gate — verify preconditions before submission
+    const qualityGate = this.runQualityGate(context, jobApp, user, screeningAnswers);
+    if (!qualityGate.passed) {
+      // Quality gate failed — keep in staging with a clear reason
+      const failedChecks = qualityGate.checks.filter(c => c.severity === 'error' && !c.passed);
+      const failReason = failedChecks.map(c => c.message).join('; ');
+
+      await JobApplication.findByIdAndUpdate(jobApp._id, {
+        status: 'created',
+        $push: {
+          statusHistory: {
+            status: 'created',
+            date: new Date(),
+            notes: `Quality gate failed: ${failReason}`,
+          },
+        },
+      });
+
+      if (docResult.journeyId) {
+        await ApplicationJourney.findByIdAndUpdate(docResult.journeyId, {
+          status: 'ready',
+        });
+      }
+
+      return {
+        success: true,
+        atsType: context.atsType,
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message: `Documents prepared. Quality gate flagged: ${failReason}. Please review and submit manually.`,
+        screeningAnswers,
+      };
+    }
+
+    // 7. Route to the appropriate ATS submission handler
     try {
       let applyResult: ApplyResult;
       switch (context.atsType) {
@@ -187,12 +221,27 @@ export class UnifiedApplyService {
             status: 'ready',
           });
         }
+      }      // Record application outcome for success learning
+      try {
+        const { recordApplicationOutcome } = await import('./applicationOutcomeService');
+        await recordApplicationOutcome({
+          userId,
+          jobId: context.jobId,
+          applicationId: jobApp._id.toString(),
+          outcome: applyResult.status === 'applied' ? 'submitted' : 'action_required',
+          atsType: context.atsType,
+          source: context.source,
+          matchScore: context.screeningQuestions?.length ? 50 : 50,
+        });
+      } catch {
+        // Outcome recording is best-effort
       }
 
       return {
         ...applyResult,
         applicationId: jobApp._id.toString(),
       };
+
     } catch (applyErr: any) {
       console.error('ATS submission error:', applyErr);
 
@@ -463,15 +512,123 @@ export class UnifiedApplyService {
     const boardMatch = context.jobUrl.match(/boards\.greenhouse\.io\/([^/]+)/);
     const boardSlug = boardMatch?.[1] || context.company.toLowerCase().replace(/\s+/g, '');
 
-    return {
-      success: true,
-      atsType: 'greenhouse',
-      applicationId: jobApp._id.toString(),
-      status: 'action_required',
-      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
-      screeningAnswers,
-      nextStep: 'Submit tailored resume via Greenhouse application form',
-    };
+    // Attempt Playwright automation for Greenhouse
+    try {
+      const { detectGreenhouseFields, fillGreenhouseFields, submitGreenhouseForm, detectCAPTCHA } = await import('./atsPlaywrightService');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const playwright = require('playwright');
+
+      let browser: any = null;
+      let context: any = null;
+      let page: any = null;
+
+      try {
+        // Browser isolation: new context per application
+        browser = await playwright.chromium.launch({ headless: true });
+        context = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        });
+        page = await context.newPage();
+
+        // Navigate to application URL
+        await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        // CAPTCHA check before any interaction
+        const captchaCheck = await detectCAPTCHA(page);
+        if (captchaCheck.detected) {
+          return {
+            success: true,
+            atsType: 'greenhouse',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA detected on Greenhouse application (${captchaCheck.type}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        // Detect form fields
+        const detection = await detectGreenhouseFields(page);
+        if (!detection.formDetected) {
+          return {
+            success: true,
+            atsType: 'greenhouse',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `No application form detected at ${context.jobUrl}. The job may have been filled or the URL may be incorrect.`,
+            screeningAnswers,
+            nextStep: 'Verify the application URL and submit manually',
+          };
+        }
+
+        // Fill fields with candidate data
+        const user = await User.findById(userId).lean() as any;
+        const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+
+        const fillResult = await fillGreenhouseFields(page, detection.fields, {
+          firstName: user?.firstName || primaryCv?.basics?.name?.split(' ')[0] || '',
+          lastName: user?.lastName || primaryCv?.basics?.name?.split(' ').slice(1).join(' ') || '',
+          email: user?.email || primaryCv?.basics?.email || '',
+          phone: user?.phone || primaryCv?.basics?.phone || '',
+          linkedin: primaryCv?.basics?.url || '',
+        });
+
+        // Submit form
+        const submissionResult = await submitGreenhouseForm(page);
+
+        if (submissionResult.hasCAPTCHA) {
+          return {
+            success: true,
+            atsType: 'greenhouse',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA detected during submission on Greenhouse. Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        if (submissionResult.confirmed) {
+          // Submission verified with evidence
+          return {
+            success: true,
+            atsType: 'greenhouse',
+            applicationId: jobApp._id.toString(),
+            status: 'applied',
+            message: `Successfully submitted to ${context.title} at ${context.company} via Greenhouse${submissionResult.confirmationId ? ` (ID: ${submissionResult.confirmationId})` : ''}`,
+            screeningAnswers,
+          };
+        }
+
+        // Submission attempted but not confirmed — needs user action
+        return {
+          success: true,
+          atsType: 'greenhouse',
+          applicationId: jobApp._id.toString(),
+          status: 'action_required',
+          message: `Application form filled on Greenhouse but submission could not be verified. Please review and submit manually.`,
+          screeningAnswers,
+          nextStep: `Review and submit at ${context.jobUrl}`,
+        };
+      } finally {
+        // Always clean up browser context
+        if (page) await page.close().catch(() => {});
+        if (context) await context.close().catch(() => {});
+        if (browser) await browser.close().catch(() => {});
+      }
+    } catch (playwrightError: any) {
+      // Playwright not available or crashed — fallback to manual
+      console.warn('[Greenhouse] Playwright automation unavailable:', playwrightError.message);
+      return {
+        success: true,
+        atsType: 'greenhouse',
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message: `Tailored documents ready for ${context.company}. Automated submission unavailable. Please submit manually.`,
+        screeningAnswers,
+        nextStep: `Open ${context.jobUrl} and submit your tailored resume`,
+      };
+    }
   }
 
   // ==========================================
@@ -488,9 +645,9 @@ export class UnifiedApplyService {
       atsType: 'lever',
       applicationId: jobApp._id.toString(),
       status: 'action_required',
-      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      message: `Tailored documents ready for ${context.company}. Automated Lever submission requires Playwright worker (not yet connected). Please submit manually.`,
       screeningAnswers,
-      nextStep: 'Submit tailored resume via Lever application form',
+      nextStep: 'Open Lever application form and submit tailored resume',
     };
   }
 
@@ -508,9 +665,9 @@ export class UnifiedApplyService {
       atsType: 'ashby',
       applicationId: jobApp._id.toString(),
       status: 'action_required',
-      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      message: `Tailored documents ready for ${context.company}. Automated Ashby submission requires Playwright worker (not yet connected). Please submit manually.`,
       screeningAnswers,
-      nextStep: 'Submit tailored resume via Ashby application form',
+      nextStep: 'Open Ashby application form and submit tailored resume',
     };
   }
 
@@ -528,9 +685,9 @@ export class UnifiedApplyService {
       atsType: 'workable',
       applicationId: jobApp._id.toString(),
       status: 'action_required',
-      message: `Tailored application prepared for ${context.company}. Review documents in Studio or complete submission.`,
+      message: `Tailored documents ready for ${context.company}. Automated Workable submission requires Playwright worker (not yet connected). Please submit manually.`,
       screeningAnswers,
-      nextStep: 'Submit tailored resume via Workable form',
+      nextStep: 'Open Workable application form and submit tailored resume',
     };
   }
 
@@ -647,7 +804,7 @@ export class UnifiedApplyService {
       atsType: 'adzuna',
       applicationId: jobApp._id.toString(),
       status: 'action_required',
-      message: `Documents staged for ${context.company}. Redirecting to employer application.`,
+      message: `Documents staged for ${context.company}. Please submit on the employer's career page.`,
       screeningAnswers,
     };
   }
@@ -668,6 +825,82 @@ export class UnifiedApplyService {
       status: 'action_required',
       message: `Application documents staged for ${context.company}. Review and submit on employer website.`,
       screeningAnswers,
+    };
+  }
+
+  // ==========================================
+  // APPLICATION QUALITY GATE
+  // ==========================================
+  /**
+   * Lightweight quality gate: verifies preconditions before submission.
+   * Checks candidate, job, URL, resume, required fields, and duplicate status.
+   */
+  private static runQualityGate(
+    context: ApplyJobContext,
+    jobApp: any,
+    user: any,
+    screeningAnswers: { question: string; answer: string | number | boolean; confidence: number }[]
+  ): { passed: boolean; checks: Array<{ name: string; passed: boolean; message: string; severity: 'error' | 'warning' }> } {
+    const checks: Array<{ name: string; passed: boolean; message: string; severity: 'error' | 'warning' }> = [];
+
+    // 1. Correct candidate
+    checks.push({
+      name: 'candidate',
+      passed: Boolean(user?.email),
+      message: user?.email ? `Candidate: ${user.firstName || ''} ${user.lastName || ''} (${user.email})` : 'Candidate not identified',
+      severity: 'error',
+    });
+
+    // 2. Correct job
+    checks.push({
+      name: 'job',
+      passed: Boolean(context.title && context.company),
+      message: context.title ? `${context.title} at ${context.company}` : 'Job not identified',
+      severity: 'error',
+    });
+
+    // 3. Application URL exists
+    checks.push({
+      name: 'url',
+      passed: Boolean(context.jobUrl),
+      message: context.jobUrl ? `URL: ${context.jobUrl}` : 'No application URL',
+      severity: 'error',
+    });
+
+    // 4. Not already applied
+    const alreadyApplied = jobApp.status === 'applied';
+    checks.push({
+      name: 'duplicate',
+      passed: !alreadyApplied,
+      message: alreadyApplied ? 'Already applied to this job' : 'No duplicate',
+      severity: 'error',
+    });
+
+    // 5. Required screening answers present
+    const unansweredRequired = screeningAnswers.filter(a => !a.answer && a.confidence < 0.5);
+    checks.push({
+      name: 'screening',
+      passed: unansweredRequired.length === 0,
+      message: unansweredRequired.length === 0 ? 'All screening answers ready' : `${unansweredRequired.length} unanswered screening question(s)`,
+      severity: 'warning',
+    });
+
+    // 6. CAPTCHA / anti-bot risk assessment
+    const atsTypesWithCaptcha = ['greenhouse', 'lever', 'ashby', 'workable'];
+    const hasCaptchaRisk = atsTypesWithCaptcha.includes(context.atsType);
+    checks.push({
+      name: 'captcha_risk',
+      passed: !hasCaptchaRisk,
+      message: hasCaptchaRisk
+        ? `${context.atsType} forms may require CAPTCHA — automated submission may pause for manual intervention`
+        : 'No known CAPTCHA risk for this ATS',
+      severity: 'warning',
+    });
+
+    const errorChecks = checks.filter(c => c.severity === 'error' && !c.passed);
+    return {
+      passed: errorChecks.length === 0,
+      checks,
     };
   }
 }

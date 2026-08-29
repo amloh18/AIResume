@@ -15,6 +15,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Flame,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -43,6 +44,13 @@ export interface TopMatchJob {
   salary?: string;
   matchReasons?: string[];
   rawJob: JobListing;
+  /** Freshness data if this job is fresh (< 24h) */
+  freshness?: {
+    score: number;
+    ageHours: number;
+  };
+  /** Whether this card is a fresh match */
+  isFresh?: boolean;
 }
 
 const timeAgo = (date: string | Date) => {
@@ -138,39 +146,94 @@ export default function TopJobMatchesSection() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/jobs/discover?limit=10&sortBy=matchScore', { signal });
-      if (!res.ok) {
-        throw new Error('Failed to fetch job matches');
+
+      // Fetch top matches and fresh jobs in parallel
+      const [topRes, freshRes] = await Promise.allSettled([
+        fetch('/api/jobs/discover?limit=10&sortBy=matchScore', { signal }),
+        fetch('/api/jobs/discover?limit=15&sortBy=postedDate', { signal }),
+      ]);
+
+      // Process top matches
+      let enriched: TopMatchJob[] = [];
+      if (topRes.status === 'fulfilled' && topRes.value.ok) {
+        const data = await topRes.value.json();
+        const rawList: JobListing[] = data.jobs || data.data || [];
+
+        enriched = rawList.map((j) => {
+          const salaryText =
+            j.salaryMin || j.salaryMax
+              ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
+                  j.salaryMin && j.salaryMax ? ' - ' : ''
+                }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
+              : undefined;
+
+          return {
+            _id: j._id || j.id || '',
+            title: j.title || 'Untitled Role',
+            company: j.company || 'Confidential',
+            location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
+            experienceYears: j.experienceYears,
+            postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
+            matchScore: j.matchScore || 50,
+            skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
+            companyLogo: j.companyLogo,
+            applyUrl: j.applyUrl || '',
+            source: j.source || 'Aggregator',
+            salary: salaryText,
+            matchReasons: (j as any).matchReasons || ['Strong skills match with your profile'],
+            rawJob: j,
+          };
+        });
       }
-      const data = await res.json();
-      const rawList: JobListing[] = data.jobs || data.data || [];
 
-      // Map to enriched TopMatchJob
-      const enriched: TopMatchJob[] = rawList.map((j) => {
-        const salaryText =
-          j.salaryMin || j.salaryMax
-            ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
-                j.salaryMin && j.salaryMax ? ' - ' : ''
-              }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
-            : undefined;
+      // Process fresh jobs and merge (deduplicate by _id)
+      const topIds = new Set(enriched.map((j) => j._id));
+      if (freshRes.status === 'fulfilled' && freshRes.value.ok) {
+        const freshData = await freshRes.value.json();
+        const rawFresh: JobListing[] = freshData.jobs || freshData.data || [];
+        const now = Date.now();
 
-        return {
-          _id: j._id || j.id || '',
-          title: j.title || 'Untitled Role',
-          company: j.company || 'Confidential',
-          location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
-          experienceYears: j.experienceYears,
-          postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
-          matchScore: j.matchScore || Math.floor(Math.random() * 20) + 75,
-          skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
-          companyLogo: j.companyLogo,
-          applyUrl: j.applyUrl || '',
-          source: j.source || 'Aggregator',
-          salary: salaryText,
-          matchReasons: (j as any).matchReasons || ['Strong skills match with your profile'],
-          rawJob: j,
-        };
-      });
+        for (const j of rawFresh) {
+          const id = j._id || j.id || '';
+          if (!id || topIds.has(id)) continue;
+
+          const postedMs = j.postedDate ? new Date(j.postedDate).getTime() : 0;
+          const ageHours = postedMs > 0 ? (now - postedMs) / (1000 * 60 * 60) : 999;
+
+          // Only include truly fresh jobs (< 48 hours)
+          if (ageHours >= 48) continue;
+
+          const salaryText =
+            j.salaryMin || j.salaryMax
+              ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
+                  j.salaryMin && j.salaryMax ? ' - ' : ''
+                }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
+              : undefined;
+
+          enriched.push({
+            _id: id,
+            title: j.title || 'Untitled Role',
+            company: j.company || 'Confidential',
+            location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
+            experienceYears: j.experienceYears,
+            postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
+            matchScore: j.matchScore || 50,
+            skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
+            companyLogo: j.companyLogo,
+            applyUrl: j.applyUrl || '',
+            source: j.source || 'Aggregator',
+            salary: salaryText,
+            matchReasons: (j as any).matchReasons || ['Recently posted'],
+            rawJob: j,
+            freshness: {
+              score: ageHours < 1 ? 98 : ageHours < 6 ? 90 : ageHours < 24 ? 75 : 50,
+              ageHours,
+            },
+            isFresh: true,
+          });
+          topIds.add(id);
+        }
+      }
 
       setJobs(enriched);
     } catch (err: any) {
@@ -334,8 +397,8 @@ export default function TopJobMatchesSection() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId);
-        updateProgress(appId, 100, `Applied to ${targetJob.title}!`, 'progress');
+        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, resData.status);
+        updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${targetJob.title}!` : `Documents ready for ${targetJob.title}`, 'progress');
       } else {
         // Genuine submission failure
         applyProgress.completeApply(targetJob.title, targetJob.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", jobId);
@@ -545,18 +608,36 @@ export default function TopJobMatchesSection() {
                 {/* Top Row: Match Gauge + Location */}
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2.5">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight ${
-                        job.matchScore >= 90
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
-                          : job.matchScore >= 80
-                          ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30'
-                          : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
-                      }`}
-                    >
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span>{job.matchScore}% Match</span>
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight ${
+                          job.matchScore >= 90
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                            : job.matchScore >= 80
+                            ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30'
+                            : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
+                        }`}
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>{job.matchScore}% Match</span>
+                      </span>
+
+                      {/* Freshness badge */}
+                      {job.isFresh && job.freshness && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
+                            job.freshness.score >= 90
+                              ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
+                              : job.freshness.score >= 70
+                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                              : 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30'
+                          }`}
+                        >
+                          <Flame className="w-2.5 h-2.5" />
+                          <span>{job.freshness.ageHours < 1 ? 'Just posted' : `${Math.round(job.freshness.ageHours)}h ago`}</span>
+                        </span>
+                      )}
+                    </div>
 
                     <span className="text-[11px] text-gray-400 dark:text-gray-500">
                       {job.postedAgo}

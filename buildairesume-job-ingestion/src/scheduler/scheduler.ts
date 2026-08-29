@@ -40,6 +40,15 @@ export class IngestionScheduler {
     }, reconciliationIntervalMs);
     this.intervals.push(reconTimer);
 
+    // 3. Schedule Freshness Score Refresh (every hour)
+    const freshnessIntervalMs = 60 * 60 * 1000; // 1 hour
+    const freshnessTimer = setInterval(() => {
+      ingestionManager.refreshFreshnessScores(db).catch((err) => {
+        logger.error('Scheduled freshness refresh failed:', err);
+      });
+    }, freshnessIntervalMs);
+    this.intervals.push(freshnessTimer);
+
     this.isRunning = true;
     logger.info(`✅ Scheduler initialized with ${this.intervals.length} active triggers.`);
   }
