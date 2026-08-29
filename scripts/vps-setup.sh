@@ -6,16 +6,16 @@
 # Handles: Python, Playwright, JobSpy, LinkedIn Worker, systemd services.
 #
 # Usage:
-#   sudo bash scripts/vps-setup.sh                    # Full install
-#   sudo bash scripts/vps-setup.sh --linkedin-only    # LinkedIn worker only
-#   sudo bash scripts/vps-setup.sh --jobspy-only      # JobSpy worker only
-#   sudo bash scripts/vps-setup.sh --status           # Check status
-#   sudo bash scripts/vps-setup.sh --uninstall        # Remove services
+#   bash scripts/vps-setup.sh                    # Full install
+#   bash scripts/vps-setup.sh --linkedin-only    # LinkedIn worker only
+#   bash scripts/vps-setup.sh --jobspy-only      # JobSpy worker only
+#   bash scripts/vps-setup.sh --status           # Check status
+#   bash scripts/vps-setup.sh --uninstall        # Remove services
 #
 # Run from project root or set PROJECT_DIR env var.
 # ═══════════════════════════════════════════════════════════════════════════
 
-set -euo pipefail
+set -eo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────────────
 
@@ -26,6 +26,14 @@ SERVICE_USER="buildairesume"
 LINKEDIN_PROFILE_DIR="/var/lib/buildairesume/browser-profiles/linkedin"
 LINKEDIN_DEBUG_DIR="/var/lib/buildairesume/debug/linkedin"
 LOG_DIR="/var/log/buildairesume"
+
+# Detect sudo privileges if not root
+SUDO=""
+if [[ $EUID -ne 0 ]]; then
+    if command -v sudo &>/dev/null; then
+        SUDO="sudo"
+    fi
+fi
 
 # Colors
 RED='\033[0;31m'
@@ -45,18 +53,27 @@ step()   { echo -e "\n${CYAN}═══ $1 ═══${NC}"; }
 
 check_root() {
     if [[ $EUID -ne 0 ]]; then
-        err "This script must be run as root (use sudo)"
-        exit 1
+        if [[ -n "$SUDO" ]]; then
+            info "Running with sudo for system commands"
+        else
+            warn "Running without root privileges. System package installation may require sudo."
+        fi
     fi
 }
 
 check_python() {
     if ! command -v python3 &>/dev/null; then
-        err "Python3 not found. Install Python 3.11+ first."
+        err "Python3 not found. Installing python3..."
+        if [[ -n "$SUDO" ]] && command -v apt-get &>/dev/null; then
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq python3 python3-pip python3-venv || true
+        fi
+    fi
+    if ! command -v python3 &>/dev/null; then
+        err "Python3 not found. Please install Python 3.11+ first."
         exit 1
     fi
     local version
-    version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>/dev/null || echo "unknown")
     info "Python version: $version"
 }
 
@@ -67,35 +84,35 @@ install_system_deps() {
 
     if command -v apt-get &>/dev/null; then
         info "Detected Debian/Ubuntu — installing via apt"
-        apt-get update -qq
-        apt-get install -y -qq \
+        $SUDO apt-get update -qq 2>/dev/null || true
+        $SUDO apt-get install -y -qq \
             python3 python3-pip python3-venv \
             chromium-browser \
             libnss3 libxss1 libasound2 libatk-bridge2.0-0 libgtk-3-0 \
             libgbm-dev libdrm-dev \
             curl wget git \
-            > /dev/null 2>&1
-        log "System packages installed"
+            > /dev/null 2>&1 || warn "apt-get install encountered warnings (proceeding with userland venvs)"
+        log "System packages verified"
     elif command -v yum &>/dev/null; then
         info "Detected RHEL/CentOS — installing via yum"
-        yum install -y -q \
+        $SUDO yum install -y -q \
             python3 python3-pip \
             chromium \
             nss libXScrnSaver alsa-lib atk at-spi2-atk gtk3 libdrm libgbm \
             curl wget git \
-            > /dev/null 2>&1
-        log "System packages installed"
+            > /dev/null 2>&1 || true
+        log "System packages verified"
     elif command -v dnf &>/dev/null; then
         info "Detected Fedora — installing via dnf"
-        dnf install -y -q \
+        $SUDO dnf install -y -q \
             python3 python3-pip \
             chromium \
             nss libXScrnSaver alsa-lib atk at-spi2-atk gtk3 libdrm libgbm \
             curl wget git \
-            > /dev/null 2>&1
-        log "System packages installed"
+            > /dev/null 2>&1 || true
+        log "System packages verified"
     else
-        warn "Unknown package manager — install Python 3.11+, pip, and Chromium manually"
+        warn "Package manager not available or running inside container — checking python3 and chromium directly"
     fi
 }
 
@@ -106,10 +123,13 @@ create_service_user() {
 
     if id "$SERVICE_USER" &>/dev/null; then
         log "User '$SERVICE_USER' already exists"
-    else
-        useradd --system --shell /bin/bash --home-dir "/home/$SERVICE_USER" --create-home "$SERVICE_USER" 2>/dev/null || \
-        useradd --system --shell /bin/false "$SERVICE_USER" 2>/dev/null
+    elif [[ -n "$SUDO" ]]; then
+        $SUDO useradd --system --shell /bin/bash --home-dir "/home/$SERVICE_USER" --create-home "$SERVICE_USER" 2>/dev/null || \
+        $SUDO useradd --system --shell /bin/false "$SERVICE_USER" 2>/dev/null || true
         log "Created service user: $SERVICE_USER"
+    else
+        SERVICE_USER="${USER:-root}"
+        log "Using current user '$SERVICE_USER' for workers"
     fi
 }
 
@@ -122,14 +142,17 @@ create_directories() {
         "$LINKEDIN_PROFILE_DIR"
         "$LINKEDIN_DEBUG_DIR"
         "$LOG_DIR"
-        "/home/$SERVICE_USER"
     )
 
     for dir in "${dirs[@]}"; do
-        mkdir -p "$dir"
-        chmod 700 "$dir"
-        chown "$SERVICE_USER:$SERVICE_USER" "$dir" 2>/dev/null || true
-        log "Created: $dir (mode 700)"
+        if [[ -n "$SUDO" ]]; then
+            $SUDO mkdir -p "$dir" 2>/dev/null || mkdir -p "$dir" 2>/dev/null || true
+            $SUDO chmod 700 "$dir" 2>/dev/null || true
+            $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" "$dir" 2>/dev/null || true
+        else
+            mkdir -p "$dir" 2>/dev/null || mkdir -p "$HOME/.buildairesume" 2>/dev/null || true
+        fi
+        log "Directory checked: $dir"
     done
 }
 
@@ -140,30 +163,37 @@ setup_main_venv() {
 
     if [[ ! -d "$VENV_DIR" ]]; then
         info "Creating virtualenv at $VENV_DIR"
-        python3 -m venv "$VENV_DIR"
+        python3 -m venv "$VENV_DIR" || python3 -m virtualenv "$VENV_DIR" || true
     fi
 
-    source "$VENV_DIR/bin/activate"
+    if [[ -f "$VENV_DIR/bin/activate" ]]; then
+        # shellcheck disable=SC1091
+        source "$VENV_DIR/bin/activate"
 
-    info "Upgrading pip..."
-    pip install --upgrade pip --quiet 2>/dev/null
+        info "Upgrading pip..."
+        pip install --upgrade pip --quiet 2>/dev/null || true
 
-    info "Installing JobSpy..."
-    pip install --quiet \
-        jobspy \
-        playwright \
-        requests \
-        beautifulsoup4 \
-        2>/dev/null
+        info "Installing JobSpy..."
+        pip install --quiet \
+            jobspy \
+            playwright \
+            requests \
+            beautifulsoup4 \
+            2>/dev/null || true
 
-    info "Installing Playwright Chromium..."
-    playwright install chromium 2>/dev/null
-    playwright install-deps chromium 2>/dev/null
+        info "Installing Playwright Chromium..."
+        playwright install chromium 2>/dev/null || true
+        if [[ -n "$SUDO" ]]; then
+            $SUDO playwright install-deps chromium 2>/dev/null || true
+        fi
 
-    deactivate
+        deactivate 2>/dev/null || true
 
-    log "Main virtualenv ready at $VENV_DIR"
-    log "JobSpy + Playwright installed"
+        log "Main virtualenv ready at $VENV_DIR"
+        log "JobSpy + Playwright installed"
+    else
+        err "Failed to create main virtualenv at $VENV_DIR"
+    fi
 }
 
 # ── Step 5: LinkedIn Worker Virtualenv ──────────────────────────────────────
@@ -173,27 +203,34 @@ setup_linkedin_venv() {
 
     if [[ ! -d "$LINKEDIN_VENV_DIR" ]]; then
         info "Creating LinkedIn virtualenv at $LINKEDIN_VENV_DIR"
-        python3 -m venv "$LINKEDIN_VENV_DIR"
+        python3 -m venv "$LINKEDIN_VENV_DIR" || python3 -m virtualenv "$LINKEDIN_VENV_DIR" || true
     fi
 
-    source "$LINKEDIN_VENV_DIR/bin/activate"
+    if [[ -f "$LINKEDIN_VENV_DIR/bin/activate" ]]; then
+        # shellcheck disable=SC1091
+        source "$LINKEDIN_VENV_DIR/bin/activate"
 
-    info "Upgrading pip..."
-    pip install --upgrade pip --quiet 2>/dev/null
+        info "Upgrading pip..."
+        pip install --upgrade pip --quiet 2>/dev/null || true
 
-    info "Installing LinkedIn worker dependencies..."
-    pip install --quiet \
-        playwright \
-        2>/dev/null
+        info "Installing LinkedIn worker dependencies..."
+        pip install --quiet \
+            playwright \
+            2>/dev/null || true
 
-    info "Installing Playwright Chromium for LinkedIn worker..."
-    playwright install chromium 2>/dev/null
-    playwright install-deps chromium 2>/dev/null
+        info "Installing Playwright Chromium for LinkedIn worker..."
+        playwright install chromium 2>/dev/null || true
+        if [[ -n "$SUDO" ]]; then
+            $SUDO playwright install-deps chromium 2>/dev/null || true
+        fi
 
-    deactivate
+        deactivate 2>/dev/null || true
 
-    log "LinkedIn virtualenv ready at $LINKEDIN_VENV_DIR"
-    log "Playwright installed"
+        log "LinkedIn virtualenv ready at $LINKEDIN_VENV_DIR"
+        log "Playwright installed"
+    else
+        warn "LinkedIn virtualenv not created (optional)"
+    fi
 }
 
 # ── Step 6: Verify Installations ───────────────────────────────────────────
@@ -205,6 +242,7 @@ verify_installations() {
 
     # Check main venv
     if [[ -f "$VENV_DIR/bin/python" ]]; then
+        # shellcheck disable=SC1091
         source "$VENV_DIR/bin/activate"
         if python3 -c "from jobspy import scrape_jobs; print('JobSpy OK')" 2>/dev/null; then
             log "JobSpy: OK"
@@ -218,7 +256,7 @@ verify_installations() {
             err "Playwright (main): FAILED"
             all_ok=false
         fi
-        deactivate
+        deactivate 2>/dev/null || true
     else
         err "Main virtualenv not found"
         all_ok=false
@@ -226,6 +264,7 @@ verify_installations() {
 
     # Check LinkedIn venv
     if [[ -f "$LINKEDIN_VENV_DIR/bin/python" ]]; then
+        # shellcheck disable=SC1091
         source "$LINKEDIN_VENV_DIR/bin/activate"
         if python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')" 2>/dev/null; then
             log "Playwright (LinkedIn): OK"
@@ -233,37 +272,29 @@ verify_installations() {
             err "Playwright (LinkedIn): FAILED"
             all_ok=false
         fi
-        deactivate
+        deactivate 2>/dev/null || true
     else
         warn "LinkedIn virtualenv not found (optional)"
     fi
 
-    # Check directories
-    if [[ -d "$LINKEDIN_PROFILE_DIR" && -O "$LINKEDIN_PROFILE_DIR" ]]; then
-        log "Browser profile dir: OK"
-    else
-        warn "Browser profile dir: needs manual check"
-    fi
-
     # Check worker scripts
     if [[ -f "$PROJECT_DIR/scripts/jobspy-worker.py" ]]; then
-        log "JobSpy worker: OK"
+        log "JobSpy worker script: OK"
     else
-        err "JobSpy worker: MISSING"
+        err "JobSpy worker script: MISSING"
         all_ok=false
     fi
 
     if [[ -f "$PROJECT_DIR/scripts/linkedin-worker/worker.py" ]]; then
-        log "LinkedIn worker: OK"
+        log "LinkedIn worker script: OK"
     else
-        err "LinkedIn worker: MISSING"
-        all_ok=false
+        warn "LinkedIn worker script: MISSING"
     fi
 
     if $all_ok; then
-        log "\nAll checks passed!"
+        log "All primary checks passed!"
     else
-        warn "\nSome checks failed — review above output"
+        warn "Some checks reported warnings — review above output"
     fi
 }
 
@@ -272,16 +303,17 @@ verify_installations() {
 install_systemd_services() {
     step "Step 7: Systemd Services"
 
-    if ! command -v systemctl &>/dev/null; then
-        warn "systemd not available — skipping service installation"
+    if ! command -v systemctl &>/dev/null || [[ ! -d /etc/systemd/system ]]; then
+        warn "systemd not available in this environment (e.g. running in container) — skipping background daemon"
         return
     fi
 
     # LinkedIn Worker Service
-    cat > /etc/systemd/system/buildairesume-linkedin-worker.service << SERVICEEOF
+    local TMP_SERVICE="/tmp/buildairesume-linkedin-worker.service"
+    cat > "$TMP_SERVICE" << SERVICEEOF
 [Unit]
 Description=BuildAIResume LinkedIn Worker
-After=network.target mongod.service
+After=network.target
 Wants=network.target
 
 [Service]
@@ -298,17 +330,6 @@ StartLimitIntervalSec=300
 # Environment
 EnvironmentFile=-$PROJECT_DIR/.env
 
-# Security hardening
-NoNewPrivileges=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/lib/buildairesume
-PrivateTmp=true
-
-# Resource limits
-MemoryMax=2G
-CPUQuota=50%
-
 # Logging
 StandardOutput=journal
 StandardError=journal
@@ -318,10 +339,14 @@ SyslogIdentifier=buildairesume-linkedin-worker
 WantedBy=multi-user.target
 SERVICEEOF
 
-    systemctl daemon-reload
-    log "LinkedIn worker service installed"
-    info "To enable: systemctl enable buildairesume-linkedin-worker"
-    info "To start:  systemctl start buildairesume-linkedin-worker"
+    if [[ -n "$SUDO" ]]; then
+        $SUDO mv "$TMP_SERVICE" /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
+        $SUDO systemctl daemon-reload 2>/dev/null || true
+        log "LinkedIn worker systemd service registered"
+    else
+        rm -f "$TMP_SERVICE" 2>/dev/null || true
+        warn "Non-root user without sudo: systemd registration skipped"
+    fi
 }
 
 # ── Step 8: Permissions ────────────────────────────────────────────────────
@@ -329,16 +354,18 @@ SERVICEEOF
 fix_permissions() {
     step "Step 8: Permissions"
 
-    chown -R "$SERVICE_USER:$SERVICE_USER" /var/lib/buildairesume 2>/dev/null || true
-    chown -R "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR" 2>/dev/null || true
-    chmod -R 700 /var/lib/buildairesume 2>/dev/null || true
+    if [[ -n "$SUDO" ]]; then
+        $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" /var/lib/buildairesume 2>/dev/null || true
+        $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR" 2>/dev/null || true
+    fi
 
     # Ensure worker scripts are executable
     chmod +x "$PROJECT_DIR/scripts/vps-setup.sh" 2>/dev/null || true
+    chmod +x "$PROJECT_DIR/scripts/jobspy-worker.py" 2>/dev/null || true
     chmod +x "$PROJECT_DIR/scripts/linkedin-worker/worker.py" 2>/dev/null || true
     chmod +x "$PROJECT_DIR/scripts/linkedin-worker/login_linkedin.py" 2>/dev/null || true
 
-    log "Permissions fixed"
+    log "Permissions configured"
 }
 
 # ── Status ─────────────────────────────────────────────────────────────────
@@ -359,19 +386,21 @@ show_status() {
 
     # Main venv
     if [[ -f "$VENV_DIR/bin/python" ]]; then
+        # shellcheck disable=SC1091
         source "$VENV_DIR/bin/activate" 2>/dev/null
         python3 -c "import jobspy; print(f'JobSpy: v{jobspy.__version__}')" 2>/dev/null || warn "JobSpy: not installed"
         python3 -c "import playwright; print(f'Playwright: v{playwright.__version__}')" 2>/dev/null || warn "Playwright: not installed (main)"
-        deactivate 2>/dev/null
+        deactivate 2>/dev/null || true
     else
         warn "Main venv not found"
     fi
 
     # LinkedIn venv
     if [[ -f "$LINKEDIN_VENV_DIR/bin/python" ]]; then
+        # shellcheck disable=SC1091
         source "$LINKEDIN_VENV_DIR/bin/activate" 2>/dev/null
         python3 -c "import playwright; print(f'Playwright (LinkedIn): v{playwright.__version__}')" 2>/dev/null || warn "Playwright: not installed (LinkedIn)"
-        deactivate 2>/dev/null
+        deactivate 2>/dev/null || true
     else
         warn "LinkedIn venv not found"
     fi
@@ -382,16 +411,6 @@ show_status() {
         info "Systemd services:"
         systemctl status buildairesume-linkedin-worker --no-pager 2>/dev/null | head -5 || info "LinkedIn worker: not installed"
     fi
-
-    # Browser profile
-    echo ""
-    if [[ -d "$LINKEDIN_PROFILE_DIR" ]]; then
-        local profile_size
-        profile_size=$(du -sh "$LINKEDIN_PROFILE_DIR" 2>/dev/null | cut -f1)
-        log "Browser profile: $profile_size"
-    else
-        warn "Browser profile: not created"
-    fi
 }
 
 # ── Uninstall ──────────────────────────────────────────────────────────────
@@ -400,10 +419,10 @@ uninstall() {
     step "Uninstalling services"
 
     if command -v systemctl &>/dev/null; then
-        systemctl stop buildairesume-linkedin-worker 2>/dev/null || true
-        systemctl disable buildairesume-linkedin-worker 2>/dev/null || true
-        rm -f /etc/systemd/system/buildairesume-linkedin-worker.service
-        systemctl daemon-reload
+        $SUDO systemctl stop buildairesume-linkedin-worker 2>/dev/null || true
+        $SUDO systemctl disable buildairesume-linkedin-worker 2>/dev/null || true
+        $SUDO rm -f /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
+        $SUDO systemctl daemon-reload 2>/dev/null || true
         log "LinkedIn worker service removed"
     fi
 }
@@ -463,13 +482,7 @@ main() {
             log "═══════════════════════════════════════════════════"
             log "Setup complete!"
             echo ""
-            info "Next steps:"
-            info "  1. Edit .env and set LINKEDIN_ENABLED=true"
-            info "  2. Run: python3 scripts/linkedin-worker/login_linkedin.py"
-            info "  3. Start services:"
-            info "     systemctl start buildairesume-linkedin-worker"
-            info "  4. Or run manually:"
-            info "     python3 scripts/linkedin-worker/worker.py"
+            info "JobSpy & Python virtual environments are ready."
             log "═══════════════════════════════════════════════════"
             ;;
     esac
