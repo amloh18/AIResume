@@ -49,6 +49,7 @@ export interface SourceHealthStatus {
   source: string;
   enabled: boolean;
   healthy: boolean;
+  healthStatus: 'healthy' | 'degraded' | 'stale' | 'failed' | 'config_error' | 'not_initialized' | 'running' | 'paused' | 'disabled';
   lastRunAt: Date | null;
   lastSuccessAt: Date | null;
   lastFailureAt: Date | null;
@@ -224,6 +225,12 @@ export class IngestionScheduler {
       if (jobspyConfig.ready) sources.push('jobspy');
     }
 
+    // Include LinkedIn for high-priority segments (if enabled)
+    if (priority >= 80) {
+      const linkedinConfig = checkSourceConfig('linkedin');
+      if (linkedinConfig.ready) sources.push('linkedin');
+    }
+
     return sources;
   }
 
@@ -240,6 +247,7 @@ export class IngestionScheduler {
       jobspy: 8 * 60 * 60 * 1000,      // 8 hours
       remotive: 8 * 60 * 60 * 1000,    // 8 hours
       remoteok: 8 * 60 * 60 * 1000,    // 8 hours
+      linkedin: 12 * 60 * 60 * 1000,   // 12 hours
     };
 
     const interval = intervals[sourceName] || 6 * 60 * 60 * 1000;
@@ -249,6 +257,11 @@ export class IngestionScheduler {
 
   /**
    * Get health status for all sources.
+   * Health is determined by:
+   * - Whether the source is configured
+   * - Whether the last run succeeded
+   * - Whether there are consecutive failures
+   * - Whether the source is stale (hasn't run in a while)
    */
   static async getSourceHealth(): Promise<SourceHealthStatus[]> {
     await getConnection();
@@ -262,10 +275,14 @@ export class IngestionScheduler {
       const name = source.name;
       const def = SOURCE_REGISTRY[name];
 
+      // Determine health status
+      const healthStatus = IngestionScheduler.determineHealthStatus(source, def);
+
       healthStatuses.push({
         source: name,
         enabled: def?.enabled ?? false,
-        healthy: source.status?.health === 'healthy',
+        healthy: healthStatus === 'healthy',
+        healthStatus,
         lastRunAt: source.status?.lastRunAt || null,
         lastSuccessAt: source.status?.lastSuccessAt || null,
         lastFailureAt: source.status?.lastFailureAt || null,
@@ -283,6 +300,7 @@ export class IngestionScheduler {
           source: name,
           enabled: def.enabled,
           healthy: false,
+          healthStatus: def.enabled ? 'not_initialized' : 'disabled',
           lastRunAt: null,
           lastSuccessAt: null,
           lastFailureAt: null,
@@ -295,5 +313,51 @@ export class IngestionScheduler {
     }
 
     return healthStatuses;
+  }
+
+  /**
+   * Determine the health status of a source based on its run history.
+   */
+  static determineHealthStatus(
+    source: any,
+    def: any
+  ): 'healthy' | 'degraded' | 'stale' | 'failed' | 'config_error' | 'not_initialized' | 'running' | 'paused' | 'disabled' {
+    // Disabled source
+    if (!def?.enabled) return 'disabled';
+
+    // Check if currently running
+    if (source.status?.health === 'running') return 'running';
+
+    // Not configured
+    const config = checkSourceConfig(source.name);
+    if (!config.ready) return 'config_error';
+
+    // Never run
+    if (!source.status?.lastRunAt) return 'not_initialized';
+
+    // Has consecutive failures
+    if (source.status?.consecutiveFailures > 0) {
+      if (source.status.consecutiveFailures >= 5) return 'failed';
+      return 'degraded';
+    }
+
+    // Last run was successful
+    if (source.status?.lastSuccessAt) {
+      const lastSuccess = new Date(source.status.lastSuccessAt).getTime();
+      const hoursSinceSuccess = (Date.now() - lastSuccess) / (1000 * 60 * 60);
+
+      // Stale if hasn't run in 2x the refresh interval
+      if (def?.refreshIntervalMs) {
+        const staleThreshold = (def.refreshIntervalMs * 2) / (1000 * 60 * 60);
+        if (hoursSinceSuccess > staleThreshold) return 'stale';
+      }
+
+      return 'healthy';
+    }
+
+    // Has run but never succeeded
+    if (source.status?.lastFailureAt) return 'degraded';
+
+    return 'not_initialized';
   }
 }

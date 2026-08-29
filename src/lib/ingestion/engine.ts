@@ -21,6 +21,48 @@ function log(tag: string, msg: string, ...args: any[]) {
   console.log(`[INGEST:${tag}] ${msg}`, ...args);
 }
 
+// ── Retry Helper ───────────────────────────────────────────────────────
+//
+// Bounded retry with exponential backoff for transient errors.
+// Only retries on network timeouts, connection resets, and 5xx errors.
+
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; label?: string } = {}
+): Promise<T> {
+  const { maxAttempts = 3, baseDelayMs = 2000, maxDelayMs = 15000, label = 'operation' } = opts;
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+
+      // Don't retry on non-retryable errors
+      if (attempt === maxAttempts) break;
+
+      const isRetryable =
+        err.name === 'TimeoutError' ||
+        err.name === 'AbortError' ||
+        err.code === 'ECONNRESET' ||
+        err.code === 'ECONNREFUSED' ||
+        err.code === 'ETIMEDOUT' ||
+        (err.status && RETRYABLE_STATUS_CODES.has(err.status));
+
+      if (!isRetryable) break;
+
+      const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 1000, maxDelayMs);
+      log('RETRY', `${label}: attempt ${attempt}/${maxAttempts} failed, retrying in ${Math.round(delay)}ms — ${err.message}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 export interface RawJob {
@@ -97,6 +139,12 @@ export interface SourceProgress {
   currentPage?: number;
   totalPages?: number;
   message?: string;
+  /** LinkedIn-specific: current search being processed */
+  currentSearch?: string;
+  /** LinkedIn-specific: search index */
+  currentSearchIndex?: number;
+  /** LinkedIn-specific: total searches */
+  totalSearches?: number;
 }
 
 export type RunStatus =
@@ -126,7 +174,7 @@ export interface RunRecord {
 
 // ── Source Registry (Phase 1) ──────────────────────────────────────────
 
-export type SourceType = 'public_api' | 'api_key' | 'self_hosted_scraper';
+export type SourceType = 'public_api' | 'api_key' | 'self_hosted_scraper' | 'browser_worker';
 
 export interface SourceDefinition {
   id: string;
@@ -197,6 +245,12 @@ export const SOURCE_REGISTRY: Record<string, SourceDefinition> = {
     refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
     description: 'Self-hosted JobSpy scraper (Indeed, LinkedIn, etc.)',
   },
+  linkedin: {
+    id: 'linkedin', name: 'LinkedIn Browser Worker', type: 'browser_worker', enabled: false,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 500, cooldownMs: 3_600_000,
+    refreshIntervalMs: 12 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 15 * 60 * 1000,
+    description: 'Isolated VPS browser worker for LinkedIn job discovery (requires manual auth)',
+  },
 };
 
 export const VALID_SOURCES = Object.keys(SOURCE_REGISTRY);
@@ -225,6 +279,18 @@ export function checkSourceConfig(source: string): ConfigCheck {
       require('fs').accessSync(workerPath);
     } catch {
       return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
+    }
+  }
+
+  if (source === 'linkedin') {
+    if (process.env.LINKEDIN_ENABLED !== 'true') {
+      return { ready: false, reason: 'LinkedIn worker disabled (set LINKEDIN_ENABLED=true to enable)' };
+    }
+    try {
+      const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
+      require('fs').accessSync(workerPath);
+    } catch {
+      return { ready: false, reason: 'scripts/linkedin-worker/worker.py not found' };
     }
   }
 
@@ -298,16 +364,30 @@ const ADZUNA_COUNTRIES = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'nl', 'in'];
 
 async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Greenhouse: fetching ${GREENHOUSE_COMPANIES.length} boards`);
 
   for (const company of GREENHOUSE_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://boards-api.greenhouse.io/v1/boards/${company.token}/jobs?content=true`,
-        { headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://boards-api.greenhouse.io/v1/boards/${company.token}/jobs?content=true`,
+          { headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Greenhouse/${company.token}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (res.status === 403 || res.status === 404) {
+        // Board not found or private — skip silently
+        continue;
+      }
+
+      if (!res.ok) {
+        boardErrors++;
+        log('FETCH', `Greenhouse/${company.token}: HTTP ${res.status}`);
+        continue;
+      }
 
       const data: any = await res.json();
       const rawJobs: any[] = data.jobs || [];
@@ -327,30 +407,49 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departments?.[0]?.name || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      // Only log unexpected errors (not timeouts which are normal for unreachable boards)
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Greenhouse/${company.token}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Greenhouse: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Greenhouse: ${jobs.length} jobs fetched`);
   return jobs;
 }
 
 async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Lever: fetching ${LEVER_COMPANIES.length} companies`);
 
   for (const company of LEVER_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://api.lever.co/v0/postings/${company}?mode=json`,
-        { signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://api.lever.co/v0/postings/${company}?mode=json`,
+          { signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Lever/${company}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (!res.ok) {
+        boardErrors++;
+        continue;
+      }
 
       const data: any[] = await res.json();
-      if (!Array.isArray(data)) continue;
+      if (!Array.isArray(data)) {
+        boardErrors++;
+        continue;
+      }
 
       for (const job of data) {
         if (job.hostedUrl?.includes('deleted') || !job.text) continue;
@@ -369,31 +468,49 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
           category: job.categories?.department || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Lever/${company}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Lever: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Lever: ${jobs.length} jobs fetched`);
   return jobs;
 }
 
 async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Ashby: fetching ${ASHBY_COMPANIES.length} boards`);
 
   for (const company of ASHBY_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://api.ashbyhq.com/api/posting-board/job-postings/${company}`,
-        { signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://api.ashbyhq.com/api/posting-board/job-postings/${company}`,
+          { signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Ashby/${company}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (!res.ok) {
+        boardErrors++;
+        continue;
+      }
 
       const data: any = await res.json();
       const postings = data?.jobPostings || data?.data || [];
-      if (!Array.isArray(postings)) continue;
+      if (!Array.isArray(postings)) {
+        boardErrors++;
+        continue;
+      }
 
       for (const job of postings) {
         jobs.push({
@@ -410,11 +527,18 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departmentName || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Ashby/${company}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Ashby: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Ashby: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -422,14 +546,24 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
   try {
     log('FETCH', 'Remotive: fetching remote jobs');
-    const res = await fetch('https://remotive.com/api/remote-jobs?limit=250', {
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!res.ok) return [];
+    const res = await withRetry(
+      () => fetch('https://remotive.com/api/remote-jobs?limit=250', {
+        signal: AbortSignal.timeout(30000),
+      }),
+      { label: 'Remotive', maxAttempts: 3, baseDelayMs: 2000 }
+    );
+
+    if (!res.ok) {
+      log('FETCH', `Remotive: HTTP ${res.status}`);
+      return [];
+    }
 
     const data: any = await res.json();
     const rawJobs: any[] = data.jobs || data || [];
-    if (!Array.isArray(rawJobs)) return [];
+    if (!Array.isArray(rawJobs)) {
+      log('FETCH', 'Remotive: response is not an array');
+      return [];
+    }
 
     const jobs = rawJobs.map((job: any) => ({
       source: 'remotive' as string,
@@ -447,7 +581,10 @@ async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
 
     log('FETCH', `Remotive: ${jobs.length} jobs fetched`);
     return jobs;
-  } catch {
+  } catch (err: any) {
+    if (err.name !== 'TimeoutError') {
+      log('ERROR', `Remotive: ${err.message}`);
+    }
     return [];
   }
 }
@@ -455,15 +592,26 @@ async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchRemoteOK(signal?: AbortSignal): Promise<RawJob[]> {
   try {
     log('FETCH', 'RemoteOK: fetching remote jobs');
-    const res = await fetch('https://remoteok.com/api', {
-      headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' },
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!res.ok) return [];
+    const res = await withRetry(
+      () => fetch('https://remoteok.com/api', {
+        headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' },
+        signal: AbortSignal.timeout(30000),
+      }),
+      { label: 'RemoteOK', maxAttempts: 3, baseDelayMs: 2000 }
+    );
+
+    if (!res.ok) {
+      log('FETCH', `RemoteOK: HTTP ${res.status}`);
+      return [];
+    }
 
     const data: any[] = await res.json();
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) {
+      log('FETCH', 'RemoteOK: response is not an array');
+      return [];
+    }
 
+    // RemoteOK returns a metadata header as the first element
     const jobs = data.slice(1).filter((job: any) => job.id && job.position).map((job: any) => ({
       source: 'remoteok' as string,
       sourceJobId: String(job.id),
@@ -479,7 +627,10 @@ async function fetchRemoteOK(signal?: AbortSignal): Promise<RawJob[]> {
 
     log('FETCH', `RemoteOK: ${jobs.length} jobs fetched`);
     return jobs;
-  } catch {
+  } catch (err: any) {
+    if (err.name !== 'TimeoutError') {
+      log('ERROR', `RemoteOK: ${err.message}`);
+    }
     return [];
   }
 }
@@ -489,6 +640,7 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
   const MAX_PAGES = 25;
   const PAGE_SIZE = 20;
   const MAX_JOBS_PER_COMPANY = 500;
+  let tenantErrors = 0;
   log('FETCH', `Workday: fetching ${WORKDAY_TENANTS.length} tenants`);
 
   for (const company of WORKDAY_TENANTS) {
@@ -502,21 +654,33 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
       while (pageCount < MAX_PAGES && totalForCompany < MAX_JOBS_PER_COMPANY) {
         if (signal?.aborted) break;
 
-        const res = await fetch(
-          `https://${company.tenant}.wd5.myworkdayjobs.com/wday/cxs/${company.tenant}/${company.site}/jobs`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'CVCircle-Ingestion/1.0',
-              Accept: 'application/json',
-            },
-            body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' }),
-            signal: AbortSignal.timeout(20000),
-          }
+        const res = await withRetry(
+          () => fetch(
+            `https://${company.tenant}.wd5.myworkdayjobs.com/wday/cxs/${company.tenant}/${company.site}/jobs`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'CVCircle-Ingestion/1.0',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' }),
+              signal: AbortSignal.timeout(20000),
+            }
+          ),
+          { label: `Workday/${company.name}`, maxAttempts: 2, baseDelayMs: 1500 }
         );
 
-        if (!res.ok) break;
+        if (res.status === 404 || res.status === 403) {
+          // Tenant/site doesn't exist or is private
+          break;
+        }
+
+        if (!res.ok) {
+          tenantErrors++;
+          log('FETCH', `Workday/${company.name}: HTTP ${res.status}`);
+          break;
+        }
 
         const data = await res.json();
         const postings = data?.jobPostings || [];
@@ -544,11 +708,18 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
 
         if (postings.length < PAGE_SIZE) break;
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      tenantErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Workday/${company.name}: ${err.message}`);
+      }
     }
   }
 
+  if (tenantErrors > 0) {
+    log('FETCH', `Workday: ${tenantErrors} tenants failed`);
+  }
   log('FETCH', `Workday: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -565,27 +736,43 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
   const MAX_PAGES = parseInt(process.env.ADZUNA_MAX_PAGES_PER_RUN || '5', 10);
   const RESULTS_PER_PAGE = 50;
   const RATE_LIMIT_DELAY_MS = parseInt(process.env.ADZUNA_RATE_LIMIT_MS || '1200', 10);
+  let countryErrors = 0;
   log('FETCH', `Adzuna: fetching ${ADZUNA_COUNTRIES.length} countries, max ${MAX_PAGES} pages each`);
 
   for (const country of ADZUNA_COUNTRIES) {
     if (signal?.aborted) break;
 
+    let rateLimited = false;
     for (let page = 1; page <= MAX_PAGES; page++) {
       if (signal?.aborted) break;
+      if (rateLimited) break;
 
       try {
-        const res = await fetch(
-          `http://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${appId}&app_key=${appKey}&what=software+engineer&results_per_page=${RESULTS_PER_PAGE}&content-type=application/json`,
-          { signal: AbortSignal.timeout(15000) }
+        const res = await withRetry(
+          () => fetch(
+            `http://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${appId}&app_key=${appKey}&what=software+engineer&results_per_page=${RESULTS_PER_PAGE}&content-type=application/json`,
+            { signal: AbortSignal.timeout(15000) }
+          ),
+          { label: `Adzuna/${country}/${page}`, maxAttempts: 2, baseDelayMs: 1000 }
         );
 
         if (res.status === 429) {
           log('FETCH', `Adzuna: rate limited on ${country} page ${page}, backing off`);
+          rateLimited = true;
           await new Promise((r) => setTimeout(r, 5000));
           break;
         }
 
-        if (!res.ok) break;
+        if (res.status === 401 || res.status === 403) {
+          log('FETCH', `Adzuna: authentication error on ${country} (HTTP ${res.status})`);
+          countryErrors++;
+          break;
+        }
+
+        if (!res.ok) {
+          countryErrors++;
+          break;
+        }
 
         const data = await res.json();
         const results = data?.results || [];
@@ -610,12 +797,20 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
         if (page < MAX_PAGES) {
           await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
         }
-      } catch {
+      } catch (err: any) {
+        if (signal?.aborted) break;
+        countryErrors++;
+        if (err.name !== 'TimeoutError') {
+          log('FETCH', `Adzuna/${country}: ${err.message}`);
+        }
         break;
       }
     }
   }
 
+  if (countryErrors > 0) {
+    log('FETCH', `Adzuna: ${countryErrors} country requests failed`);
+  }
   log('FETCH', `Adzuna: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -733,6 +928,150 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
 
 // ── SOURCE_FETCHERS ────────────────────────────────────────────────────
 
+const activeLinkedInProcesses = new Map<string, ChildProcess>();
+
+async function fetchLinkedIn(signal?: AbortSignal): Promise<RawJob[]> {
+  const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
+  log('FETCH', `LinkedIn: spawning worker at ${workerPath}`);
+
+  return new Promise((resolve) => {
+    const processId = `linkedin-${Date.now()}`;
+
+    const child = spawn('python3', [workerPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        LINKEDIN_ENABLED: process.env.LINKEDIN_ENABLED || 'false',
+        LINKEDIN_BROWSER_PROFILE_DIR: process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
+        LINKEDIN_MAX_SEARCHES_PER_RUN: process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5',
+        LINKEDIN_MAX_PAGES_PER_SEARCH: process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2',
+        LINKEDIN_MAX_JOBS_PER_SEARCH: process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100',
+        LINKEDIN_MAX_RUNTIME_SECONDS: process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600',
+        LINKEDIN_DRY_RUN: process.env.LINKEDIN_DRY_RUN || 'false',
+        LINKEDIN_DEBUG: process.env.LINKEDIN_DEBUG || 'false',
+      },
+      timeout: 900_000, // 15 min max
+    });
+
+    activeLinkedInProcesses.set(processId, child);
+
+    // Send search tasks via stdin
+    const input = JSON.stringify({
+      tasks: [
+        {
+          keyword: process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
+          location: process.env.LINKEDIN_DEFAULT_LOCATION || 'United States',
+          remote: process.env.LINKEDIN_DEFAULT_REMOTE === 'true',
+          postedWithinHours: parseInt(process.env.LINKEDIN_DEFAULT_POSTED_WITHIN_HOURS || '168', 10),
+        },
+      ],
+    });
+    child.stdin.write(input);
+    child.stdin.end();
+
+    let stdout = '';
+    let stderr = '';
+    let killed = false;
+
+    const timeout = setTimeout(() => {
+      killed = true;
+      log('FETCH', 'LinkedIn: timeout reached, killing worker');
+      child.kill('SIGTERM');
+      setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+    }, 900_000);
+
+    const onAbort = () => {
+      killed = true;
+      log('FETCH', 'LinkedIn: cancellation requested, killing worker');
+      child.kill('SIGTERM');
+      setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+    };
+    signal?.addEventListener('abort', onAbort);
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+      if (stdout.length > 50 * 1024 * 1024) { // 50MB limit
+        killed = true;
+        child.kill('SIGKILL');
+      }
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      // Forward worker logs
+      const lines = chunk.toString().split('\n').filter((l: string) => l.trim());
+      for (const line of lines) {
+        log('LINKEDIN-WORKER', line);
+      }
+    });
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      activeLinkedInProcesses.delete(processId);
+
+      if (killed) {
+        log('ERROR', 'LinkedIn: worker killed/timed out');
+        resolve([]);
+        return;
+      }
+
+      if (code !== 0) {
+        log('ERROR', `LinkedIn: worker exited code=${code}, stderr=${stderr.slice(0, 500)}`);
+        resolve([]);
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout);
+        if (!result.success) {
+          log('FETCH', `LinkedIn: worker reported failure — ${result.error || result.status || 'unknown'}`);
+          resolve([]);
+          return;
+        }
+
+        if (!Array.isArray(result.jobs)) {
+          log('FETCH', 'LinkedIn: no jobs array in result');
+          resolve([]);
+          return;
+        }
+
+        const jobs: RawJob[] = result.jobs.map((job: any) => ({
+          source: 'linkedin',
+          sourceJobId: job.id || job.job_id || `linkedin-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          url: job.url || job.linkedin_url || '',
+          title: job.title || 'Untitled',
+          companyName: job.company || 'Unknown',
+          rawHtmlDescription: job.description || job.snippet || '',
+          locationString: job.location || '',
+          isRemote: job.location?.toLowerCase().includes('remote') || job.remote || false,
+          postedDate: job.posted_date || job.date_posted ? new Date(job.posted_date || job.date_posted) : new Date(),
+          applicationUrl: job.apply_url || job.url || '',
+          sourceMetadata: {
+            source: 'linkedin',
+            searchKeyword: job.search_keyword,
+            linkedinJobId: job.linkedin_job_id,
+          },
+        }));
+
+        log('FETCH', `LinkedIn: ${jobs.length} jobs fetched`);
+        resolve(jobs);
+      } catch (e) {
+        log('ERROR', `LinkedIn: malformed JSON from worker: ${stdout.slice(0, 300)}`);
+        resolve([]);
+      }
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      activeLinkedInProcesses.delete(processId);
+      log('ERROR', `LinkedIn: spawn error: ${err.message}`);
+      resolve([]);
+    });
+  });
+}
+
 const SOURCE_FETCHERS: Record<string, (signal?: AbortSignal) => Promise<RawJob[]>> = {
   greenhouse: fetchGreenhouse,
   lever: fetchLever,
@@ -742,6 +1081,7 @@ const SOURCE_FETCHERS: Record<string, (signal?: AbortSignal) => Promise<RawJob[]
   workday: fetchWorkday,
   adzuna: fetchAdzuna,
   jobspy: fetchJobSpy,
+  linkedin: fetchLinkedIn,
 };
 
 // ── Normalization Pipeline ──────────────────────────────────────────────
@@ -1340,9 +1680,16 @@ export async function executeSourceRun(
           'status.lastSuccessAt': finishedAt,
           'status.health': 'healthy',
           'status.consecutiveFailures': 0,
+          'status.lastErrorMessage': null,
           updatedAt: finishedAt,
         },
-        $inc: { 'statistics.totalRuns': 1, 'statistics.totalJobsFound': rawJobs.length },
+        $inc: {
+          'statistics.totalRuns': 1,
+          'statistics.totalJobsFound': rawJobs.length,
+          'statistics.totalJobsInserted': inserted,
+          'statistics.totalJobsUpdated': updated,
+          'statistics.totalDuplicates': duplicates,
+        },
         $setOnInsert: { createdAt: finishedAt },
       },
       { upsert: true }
@@ -1354,17 +1701,40 @@ export async function executeSourceRun(
     const finishedAt = new Date();
     const durationMs = finishedAt.getTime() - (progress.startedAt?.getTime() || finishedAt.getTime());
 
-    log('ERROR', `${sourceName}: failed — ${err.message}`);
+    // Classify error type for better diagnostics
+    let errorCode = 'UNKNOWN';
+    let errorMessage = err.message || 'Unknown error';
+
+    if (err.message?.includes('NOT_CONFIGURED') || err.message?.includes('Missing')) {
+      errorCode = 'CONFIG_ERROR';
+    } else if (err.name === 'TimeoutError' || err.message?.includes('timeout')) {
+      errorCode = 'TIMEOUT';
+    } else if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+      errorCode = 'NETWORK_ERROR';
+    } else if (err.message?.includes('CAPTCHA') || err.message?.includes('challenge')) {
+      errorCode = 'CAPTCHA_DETECTED';
+    } else if (err.message?.includes('AUTH_REQUIRED') || err.message?.includes('login')) {
+      errorCode = 'AUTH_REQUIRED';
+    } else if (err.message?.includes('access') && err.message?.includes('restricted')) {
+      errorCode = 'ACCESS_RESTRICTED';
+    } else if (err.message?.includes('parser') || err.message?.includes('JSON')) {
+      errorCode = 'PARSER_ERROR';
+    } else if (err.message?.includes('selector') || err.message?.includes('element')) {
+      errorCode = 'SELECTOR_CHANGED';
+    }
+
+    log('ERROR', `${sourceName}: failed [${errorCode}] — ${errorMessage}`);
     await updateProgress({
       status: 'failed',
-      error: err.message,
+      error: errorMessage,
+      errorCode,
       finishedAt,
       durationMs,
     });
 
     await sourcesColl.updateOne(
       { name: sourceName },
-      { $set: { 'status.health': 'failing', 'status.lastFailureAt': finishedAt }, $inc: { 'status.consecutiveFailures': 1 } },
+      { $set: { 'status.health': 'failing', 'status.lastFailureAt': finishedAt, 'status.lastErrorMessage': errorMessage }, $inc: { 'status.consecutiveFailures': 1 } },
       { upsert: true }
     );
 
@@ -1372,11 +1742,19 @@ export async function executeSourceRun(
   }
 }
 
-// ── Kill JobSpy Processes (for cancellation) ────────────────────────────
+// ── Kill Active Processes (for cancellation) ──────────────────────────
 
 export function killJobSpyProcesses() {
   for (const [id, child] of activeJobSpyProcesses) {
     log('SOURCE', `Killing JobSpy process ${id}`);
+    child.kill('SIGTERM');
+    setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+  }
+}
+
+export function killLinkedInProcesses() {
+  for (const [id, child] of activeLinkedInProcesses) {
+    log('SOURCE', `Killing LinkedIn process ${id}`);
     child.kill('SIGTERM');
     setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
   }

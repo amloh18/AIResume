@@ -187,14 +187,18 @@ export async function GET(request: NextRequest) {
 
     // ── Candidate Retrieval ────────────────────────────────────────────────
     let candidates;
-    const effectiveSearch = hasSearchQuery
+    const effectiveSearch: string | string[] = hasSearchQuery
       ? effectiveQuery
-      : (userProfile?.targetRoles?.[0] || 'Software Engineer');
+      : (userProfile?.targetRoles && userProfile.targetRoles.length > 0
+          ? userProfile.targetRoles
+          : (userProfile?.roleFamilies && userProfile.roleFamilies.length > 0
+              ? userProfile.roleFamilies
+              : 'Software Engineer'));
 
     if (hasSearchQuery || userProfile) {
       candidates = await retrieveCandidates(effectiveSearch, {
         limit: Math.min(limit * 3, 150), // Fetch more than needed for scoring
-        remoteOnly: userProfile?.hardConstraints.remoteOnly || remoteOnly,
+        remoteOnly: userProfile?.hardConstraints?.remoteOnly || remoteOnly,
         countryFilter: countryList.length > 0 ? countryList : undefined,
         excludeJobIds,
       });
@@ -203,6 +207,13 @@ export async function GET(request: NextRequest) {
       const { getDb: getDbFn } = await import('@/lib/db');
       const dbConn = await getDbFn();
       const jobsColl = dbConn.collection('jobs');
+      const { buildLocationAndCountryFilter, mapToCandidate } = await import('@/lib/search/candidateRetrieval');
+
+      const locationClauses = buildLocationAndCountryFilter({
+        limit,
+        countryFilter: countryList.length > 0 ? countryList : undefined,
+        remoteOnly,
+      });
 
       const rawJobs = await jobsColl
         .find({
@@ -210,37 +221,15 @@ export async function GET(request: NextRequest) {
             { status: { $in: ['new', 'active'] } },
             { status: { $exists: false } },
           ],
+          ...(locationClauses.length > 0 ? { $and: locationClauses } : {}),
         })
-        .sort({ postedAt: -1 })
+        .sort({ postedAt: -1, postedDate: -1, createdAt: -1 })
         .limit(limit * 2)
         .toArray();
 
       // Convert to candidates with EXACT tier (they're all "broad match")
       candidates = {
-        exact: rawJobs.map((j: any) => ({
-          _id: j._id.toString(),
-          title: j.title || 'Untitled',
-          normalizedTitle: j.normalizedTitle || '',
-          company: j.company?.name || j.company || 'Unknown',
-          companyLogo: j.company?.logoUrl,
-          location: j.location?.city
-            ? [j.location.city, j.location.country].filter(Boolean).join(', ')
-            : 'Unknown',
-          remote: j.location?.remote ?? false,
-          country: j.location?.country || '',
-          salaryMin: j.salary?.min,
-          salaryMax: j.salary?.max,
-          salaryCurrency: j.salary?.currency,
-          source: j.source?.primary || 'unknown',
-          atsType: j.source?.primary || 'unknown',
-          applyUrl: j.source?.applicationUrl || j.source?.sourceUrl || '',
-          postedDate: j.postedAt,
-          description: (j.descriptionText || j.description || '').slice(0, 800),
-          keywords: j.skills || [],
-          matchTier: 'EXACT' as const,
-          roleFamily: j.roleFamily,
-          seniority: j.seniority,
-        })),
+        exact: rawJobs.map((j: any) => mapToCandidate(j, 'EXACT')),
         close: [],
         related: [],
         adjacent: [],

@@ -23,6 +23,7 @@ import CvTailoringModeToggle from '@/components/jobs/CvTailoringModeToggle';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
 import Link from 'next/link';
+import { Button, Pill, SearchInput } from '@/components/ui';
 
 interface FiltersBarProps {
   filters: JobsFilter;
@@ -332,9 +333,9 @@ export default function FiltersBar({
           </div>
 
           {/* Right: Auto-Apply Status + Compact Edit Preferences */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0 self-start lg:self-center">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 shrink-0 self-start lg:self-center">
             {/* Real Status Strip */}
-            <div className="px-3.5 py-2 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 flex items-center gap-3 text-xs">
+            <div className="h-10 px-3.5 rounded-xl bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/90 dark:border-white/10 flex items-center gap-3 text-xs shadow-2xs">
               <div className="flex items-center gap-2">
                 <span
                   className={`w-2 h-2 rounded-full shrink-0 ${
@@ -370,14 +371,14 @@ export default function FiltersBar({
             </div>
 
             {/* Edit Preferences Action */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="md"
               onClick={onOpenSettings}
-              className="px-3.5 py-2 rounded-2xl border border-gray-200 dark:border-white/10 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 bg-white dark:bg-[#141810] text-xs font-bold text-gray-700 dark:text-gray-300 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors flex items-center gap-1.5 shadow-2xs shrink-0"
+              rightIcon={<ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
             >
-              <span>Edit Preferences</span>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
-            </button>
+              Edit Preferences
+            </Button>
           </div>
         </div>
 
@@ -387,28 +388,17 @@ export default function FiltersBar({
         <div className="flex flex-col xl:flex-row items-stretch xl:items-center gap-3">
           {/* Search Input (Expands on wide desktop viewports) */}
           <div className="relative flex-1 min-w-[280px] sm:min-w-[340px] lg:min-w-[420px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
+            <SearchInput
               value={filters.searchText || ''}
               onChange={(e) => onChange({ searchText: e.target.value || undefined })}
+              onClear={() => onChange({ searchText: undefined })}
               placeholder="Search jobs, companies, skills..."
-              className="w-full h-11 pl-10 pr-9 bg-gray-50/80 dark:bg-white/[0.03] border border-gray-200/90 dark:border-white/10 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-[#013f2e] dark:focus:border-[#36D39B] focus:bg-white dark:focus:bg-[#141810] transition-all shadow-2xs"
+              size="md"
             />
-            {filters.searchText && (
-              <button
-                type="button"
-                onClick={() => onChange({ searchText: undefined })}
-                aria-label="Clear search input"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
 
           {/* Center: Result Segment Navigation Switcher */}
-          <div className="flex items-center bg-gray-100/90 dark:bg-white/5 p-1 rounded-2xl border border-gray-200/50 dark:border-white/5 shrink-0 self-start xl:self-auto h-11">
+          <div className="flex items-center bg-gray-100/90 dark:bg-white/5 p-1 rounded-xl border border-gray-200/50 dark:border-white/5 shrink-0 self-start xl:self-auto h-10 shadow-2xs">
             <button
               type="button"
               onClick={() =>
@@ -419,9 +409,9 @@ export default function FiltersBar({
                   matchScoreMin: undefined,
                 })
               }
-              className={`px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'recommended'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs font-bold'
+                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
@@ -439,9 +429,9 @@ export default function FiltersBar({
                   matchScoreMin: 0,
                 })
               }
-              className={`px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'all'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs font-bold'
+                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
@@ -459,9 +449,9 @@ export default function FiltersBar({
                   matchScoreMin: undefined,
                 })
               }
-              className={`px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'latest'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs font-bold'
+                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
@@ -472,9 +462,9 @@ export default function FiltersBar({
             <button
               type="button"
               onClick={() => onChange({ savedOnly: true })}
-              className={`px-3.5 py-1.5 rounded-xl text-xs transition-all flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'saved'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-2xs font-bold'
+                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
@@ -489,7 +479,7 @@ export default function FiltersBar({
           </div>
 
           {/* Right: Location Selector & Auto CV Mode */}
-          <div className="flex items-center gap-2 shrink-0 h-11">
+          <div className="flex items-center gap-2 shrink-0 h-10">
             <CountrySelector value={countries} onChange={onCountriesChange} align="right" />
             {onCvTailoringModeChange && (
               <CvTailoringModeToggle value={cvTailoringMode} onChange={onCvTailoringModeChange} />
@@ -524,40 +514,22 @@ export default function FiltersBar({
             </div>
 
             {/* Auto-Apply Supported Chip */}
-            <button
-              type="button"
+            <Pill
+              selected={Boolean(filters.easyApplyOnly)}
               onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
-              className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-                filters.easyApplyOnly
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
-              }`}
+              leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
             >
-              <Zap
-                className={`w-3.5 h-3.5 ${
-                  filters.easyApplyOnly
-                    ? 'text-[#36D39B] dark:text-black fill-current'
-                    : 'text-[#013f2e] dark:text-[#36D39B]'
-                }`}
-              />
-              <span>Auto-Apply supported</span>
-              {filters.easyApplyOnly && <Check className="w-3 h-3 ml-0.5" />}
-            </button>
+              Auto-Apply supported
+            </Pill>
 
             {/* Visa Sponsorship Chip */}
-            <button
-              type="button"
+            <Pill
+              selected={Boolean(filters.sponsorsVisa)}
               onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
-              className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 ${
-                filters.sponsorsVisa
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
-              }`}
+              leftIcon={<Shield className="w-3.5 h-3.5 opacity-70" />}
             >
-              <Shield className="w-3.5 h-3.5 opacity-70" />
-              <span>Visa Sponsorship</span>
-              {filters.sponsorsVisa && <Check className="w-3 h-3 ml-0.5" />}
-            </button>
+              Visa Sponsorship
+            </Pill>
 
             {/* Experience Dropdown */}
             <div className="relative">

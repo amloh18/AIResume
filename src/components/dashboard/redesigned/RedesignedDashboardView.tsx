@@ -526,7 +526,7 @@ function MyCvsPanel() {
       actions={
         <>
           <button
-            onClick={() => router.push('/editor?mode=create')}
+            onClick={() => router.push('/editor?action=create&tab=cvs')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3.5 py-2 text-xs hover:bg-[#025c43] transition-colors shadow-sm"
           >
             <Plus size={14} strokeWidth={2} />
@@ -649,6 +649,8 @@ function MyCvsPanel() {
         onClose={() => setPreviewCv(null)}
         documentType="cv"
         documentData={previewCv?.cvData || previewCv}
+        documentId={previewCv?._id || previewCv?.id}
+        documentTitle={previewCv?.title}
         cvData={previewCv?.cvData}
         template={previewCv?.template || null}
       />

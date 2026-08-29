@@ -13,7 +13,12 @@ interface SourceProgress {
   duplicates: number;
   errors: number;
   error?: string;
+  errorCode?: string;
   durationMs?: number;
+  message?: string;
+  currentSearch?: string;
+  currentSearchIndex?: number;
+  totalSearches?: number;
 }
 
 interface RunRecord {
@@ -45,22 +50,41 @@ function SourceProgressRow({ name, progress }: { name: string; progress: SourceP
   };
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 text-xs font-mono">
-      <span className="w-20 font-bold text-white/70 uppercase tracking-wide text-[10px]">{name}</span>
-      <span className={`w-16 ${statusColors[progress.status]}`}>
-        {progress.status === 'running' ? (
-          <span className="flex items-center gap-1">
-            <Clock className="w-3 h-3 animate-spin" /> run
+    <div className="px-3 py-1.5 text-xs font-mono">
+      <div className="flex items-center gap-3">
+        <span className="w-20 font-bold text-white/70 uppercase tracking-wide text-[10px]">{name}</span>
+        <span className={`w-16 ${statusColors[progress.status]}`}>
+          {progress.status === 'running' ? (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3 animate-spin" /> run
+            </span>
+          ) : progress.status}
+        </span>
+        <span className="text-white/60 w-12 text-right">{progress.fetched}</span>
+        <span className="text-emerald-400 w-12 text-right">+{progress.inserted}</span>
+        <span className="text-blue-400 w-12 text-right">{progress.updated}</span>
+        <span className="text-amber-400 w-12 text-right">{progress.duplicates}</span>
+        <span className="text-rose-400 w-12 text-right">{progress.errors}</span>
+        {progress.error && (
+          <span className="text-rose-400/60 text-[10px] truncate max-w-[200px]" title={progress.error}>
+            {progress.errorCode ? `[${progress.errorCode}] ` : ''}{progress.error}
           </span>
-        ) : progress.status}
-      </span>
-      <span className="text-white/60 w-12 text-right">{progress.fetched}</span>
-      <span className="text-emerald-400 w-12 text-right">+{progress.inserted}</span>
-      <span className="text-blue-400 w-12 text-right">{progress.updated}</span>
-      <span className="text-amber-400 w-12 text-right">{progress.duplicates}</span>
-      <span className="text-rose-400 w-12 text-right">{progress.errors}</span>
-      {progress.error && (
-        <span className="text-rose-400/60 text-[10px] truncate max-w-[200px]">{progress.error}</span>
+        )}
+      </div>
+      {/* LinkedIn-specific progress: show current search */}
+      {name === 'linkedin' && progress.status === 'running' && progress.currentSearch && (
+        <div className="flex items-center gap-2 mt-1 text-[10px] text-white/40">
+          <span>
+            Search {progress.currentSearchIndex || 1}/{progress.totalSearches || '?'}:
+            {progress.currentSearch}
+          </span>
+        </div>
+      )}
+      {/* Show message for running sources */}
+      {progress.status === 'running' && progress.message && !progress.currentSearch && (
+        <div className="flex items-center gap-2 mt-1 text-[10px] text-white/40">
+          <span>{progress.message}</span>
+        </div>
       )}
     </div>
   );

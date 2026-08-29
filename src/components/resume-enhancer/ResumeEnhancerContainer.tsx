@@ -17,7 +17,7 @@ import Step2Template from './steps/Step2Template';
 import Step3CV from './steps/Step3CV';
 import Step4CoverLetter from './steps/Step4CoverLetter';
 import Step5Review from './steps/Step5Review';
-import BottomStepBar from './BottomStepBar';
+
 
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -2300,9 +2300,12 @@ export default function ResumeEnhancerContainer({
 
     setCompletedSteps([...completedSteps, 3]);
 
-    // Guest mode: Save draft before moving to Step 4
+    // Route immediately
+    goToStepSafely(4, { silent: true });
+
+    // Save in background
     if (isGuestMode) {
-      await guestCVService.saveGuestDraft({
+      guestCVService.saveGuestDraft({
         cvData: state.cvData,
         currentStep: 4,
         completedSteps: [...completedSteps, 3],
@@ -2313,10 +2316,8 @@ export default function ResumeEnhancerContainer({
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
     } else if (hasUnsavedChanges) {
-      await handleSmartSave();
+      handleSmartSave().catch(() => {});
     }
-
-    goToStepSafely(4, { silent: true });
   };
 
   const handleStep4Complete = () => {
@@ -3012,10 +3013,7 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStepNavigation = async (targetStep: number, openOverlay: boolean) => {
-    // Save CV first
-    await handleSmartSave();
-    
-    // Perform navigation
+    // Route immediately, save in background
     setTemplateOverlayOpen(openOverlay);
     if (targetStep === 3) {
       goToStepSafely(3);
@@ -3024,6 +3022,8 @@ export default function ResumeEnhancerContainer({
     } else if (targetStep === 5) {
       goToStepSafely(5);
     }
+    // Fire-and-forget save (auto-save useEffect also handles this)
+    handleSmartSave().catch(() => {});
   };
 
   // Auto save CV on step transition for authenticated users
@@ -3339,7 +3339,31 @@ export default function ResumeEnhancerContainer({
             <Skeleton className="h-9 w-9 rounded-lg" />
             <Skeleton className="h-9 w-9 rounded-lg" />
           </div>
-        </header>
+      </header>
+
+      {/* Floating Next Button (desktop only, steps 3+) */}
+      {(state.currentStep >= 3 && !state.isTemplateOverlayOpen) && (
+        <div className="hidden lg:flex fixed bottom-6 right-6 z-[70]">
+          {state.currentStep === 3 && (
+            <button
+              onClick={handleStep3Complete}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-lime-500 dark:bg-[#013f2e] text-white font-bold text-sm shadow-lg shadow-lime-500/25 transition-all hover:scale-105 active:scale-95"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+          {state.currentStep === 4 && (
+            <button
+              onClick={handleStep4Complete}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-lime-500 dark:bg-[#013f2e] text-white font-bold text-sm shadow-lg shadow-lime-500/25 transition-all hover:scale-105 active:scale-95"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
         {/* CV canvas step: A4 preview sheet + control panel */}
         {isCanvasStep && (
@@ -3490,133 +3514,86 @@ export default function ResumeEnhancerContainer({
         <header className={`editor-header relative h-14 flex items-center justify-between gap-2 px-3 sm:px-6 bg-[var(--header-bg)] sticky top-0 z-[60] ${state.currentStep === 1 ? 'flex-wrap py-2 sm:py-0 min-h-14' : ''}`}>
           {(state.currentStep > 1 || state.isTemplateOverlayOpen) ? (
             <>
-              {/* Left Column: Home Button & CV Title Inline Editor & Save Status - all inline */}
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 lg:flex-initial">
+              {/* Left: Breadcrumb with all steps */}
+              <div className="hidden lg:flex items-center gap-1.5 min-w-0 shrink-0">
                 {!isFromOnboarding && (
                   <button
                     onClick={handleHomeStepClick}
-                    className="flex w-9 h-9 rounded-xl bg-white dark:bg-[#1a2312] border border-lime-200 dark:border-lime-900/30 items-center justify-center text-lime-600 dark:text-lime-400 hover:bg-lime-50 dark:hover:bg-lime-950/20 active:scale-95 transition-all duration-200 flex-shrink-0 shadow-sm"
+                    className="flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-lime-600 dark:hover:text-lime-400 transition-all hover:scale-105 shrink-0 bg-transparent border-none outline-none p-0 shadow-none focus:ring-0"
                     title="Back to Step 1"
                   >
-                    <Home className="w-4 h-4 text-lime-600 dark:text-lime-400" />
+                    <Home className="w-3.5 h-3.5" />
                   </button>
                 )}
-                
-                <div className="flex items-center gap-2 min-w-0 flex-wrap sm:flex-nowrap">
-                  {/* Title editor */}
-                  <div className="flex items-center gap-1 group min-w-0 shrink">
-                    {isEditingTitle ? (
-                      <input
-                        type="text"
-                        value={tempTitle}
-                        onChange={(e) => setTempTitle(e.target.value)}
-                        onBlur={saveTitle}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveTitle();
-                          if (e.key === 'Escape') setIsEditingTitle(false);
-                        }}
-                        className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b border-lime-500 focus:outline-none px-1 py-0.5 max-w-[150px] sm:max-w-[220px]"
-                        autoFocus
-                      />
-                    ) : (
-                      <>
-                        <span 
-                          onClick={startEditingTitle}
-                          className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white cursor-pointer hover:text-lime-500 dark:hover:text-lime-400 transition-colors truncate max-w-[140px] sm:max-w-[220px]"
-                          title="Click to edit"
-                        >
-                          {state.cvTitle || 'Untitled CV'}
-                        </span>
-                        <button
-                          onClick={startEditingTitle}
-                          className="p-0.5 text-lime-600/70 dark:text-lime-400/70 hover:text-lime-600 dark:hover:text-lime-400 hover:scale-110 transition-all shrink-0"
-                          aria-label="Edit title"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                      </>
+                <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600 shrink-0" />
+                {getHeaderSteps().map((step, index) => (
+                  <React.Fragment key={step.id}>
+                    <button
+                      onClick={() => handleStepNavigation(step.targetStep, !!step.openTemplateOverlay)}
+                      className={`text-[11px] font-semibold transition-all hover:scale-105 shrink-0 bg-transparent border-none outline-none p-0 shadow-none focus:ring-0 ${
+                        step.isActive
+                          ? 'text-lime-700 dark:text-lime-400'
+                          : step.isCompleted
+                          ? 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                          : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      {step.label}
+                    </button>
+                    {index < getHeaderSteps().length - 1 && (
+                      <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600 shrink-0" />
                     )}
-                  </div>
-                  
-                  {/* CV type chip */}
-                  <div className="relative group/chip cursor-help z-50 shrink-0 hidden sm:block">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
-                      state.cvType === 'master'
-                        ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
-                        : state.cvType === 'journey'
-                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                        : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
-                    }`}>
-                      {state.cvType === 'master' ? '⭐ Primary CV' : state.cvType === 'journey' ? '🎯 Job-Tailored' : '✦ Custom CV'}
-                    </span>
-
-                    {/* Detail Popup Card */}
-                    <div className="absolute left-0 top-full mt-2 w-80 p-4 rounded-xl bg-white dark:bg-[#11160d] border border-gray-200 dark:border-lime-500/20 shadow-2xl backdrop-blur-md opacity-0 pointer-events-none group-hover/chip:opacity-100 group-hover/chip:pointer-events-auto transition-all duration-200 transform translate-y-1 group-hover/chip:translate-y-0 text-left">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-lime-500/10">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-lime-400">CV Classification Guide</span>
-                        </div>
-                        
-                        <div className="space-y-2.5 text-[11px] leading-relaxed">
-                          {/* Primary */}
-                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'master' ? 'bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20' : 'opacity-60'}`}>
-                            <div className="font-black text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
-                              <span>⭐ Primary CV</span>
-                              {state.cvType === 'master' && <span className="text-[8px] px-1 bg-blue-500/15 rounded text-blue-600 dark:text-blue-400 font-bold uppercase">Active</span>}
-                            </div>
-                            <p className="text-gray-600 dark:text-gray-300 mt-1">Your main CV and master source of truth. Contains your complete history. All tailored versions are derived from this.</p>
-                          </div>
-
-                          {/* Journey */}
-                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'journey' ? 'bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20' : 'opacity-60'}`}>
-                            <div className="font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                              <span>🎯 Job-Tailored</span>
-                              {state.cvType === 'journey' && <span className="text-[8px] px-1 bg-amber-500/15 rounded text-amber-600 dark:text-amber-400 font-bold uppercase">Active</span>}
-                            </div>
-                            <p className="text-gray-600 dark:text-gray-300 mt-1">A version customized for a specific job tracking journey. Optimized for a specific Job Description (JD) to maximize ATS score.</p>
-                          </div>
-
-                          {/* Standalone */}
-                          <div className={`p-2 rounded-lg transition-colors ${state.cvType === 'standalone' ? 'bg-cyan-500/5 dark:bg-cyan-500/10 border border-cyan-500/20' : 'opacity-60'}`}>
-                            <div className="font-black text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
-                              <span>✦ Custom CV</span>
-                              {state.cvType === 'standalone' && <span className="text-[8px] px-1 bg-cyan-500/15 rounded text-cyan-600 dark:text-cyan-400 font-bold uppercase">Active</span>}
-                            </div>
-                            <p className="text-gray-600 dark:text-gray-300 mt-1">A standalone clone or custom draft. Perfect for general editing, experimentation, or targeting a new niche without tracking a job.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Save status inline */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      saveStatus === 'error' ? 'bg-red-500' :
-                      saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
-                      'bg-lime-500 dark:bg-[#013f2e]'
-                    }`} />
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                      {saveStatus === 'saving' ? 'Saving...' :
-                       saveStatus === 'success' ? 'Saved' :
-                       saveStatus === 'offline' ? 'Saved offline' :
-                       saveStatus === 'error' ? 'Failed to save' :
-                       'Saved'}
-                    </span>
-                  </div>
-                </div>
+                  </React.Fragment>
+                ))}
               </div>
 
-              {/* Center: Step Control Navigation (Centered strictly to the full top bar) */}
-              <div className="hidden lg:flex items-center justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-10 origin-center">
-                <div className="pointer-events-auto flex items-center justify-center origin-center">
-                  <BottomStepBar
-                    steps={getHeaderSteps()}
-                    currentStep={state.currentStep}
-                    isTemplateOverlayOpen={state.isTemplateOverlayOpen}
-                    onNavigate={(targetStep, openOverlay) => handleStepNavigation(targetStep, openOverlay)}
+              {/* Center: Document name, save status, CV type (inline) */}
+              <div className="flex items-center gap-2 sm:gap-3 flex-1 lg:flex-initial justify-center">
+                {isEditingTitle ? (
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={saveTitle}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveTitle();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
+                    }}
+                    className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white bg-transparent border-b border-lime-500 focus:outline-none px-1 py-0.5 min-w-[200px]"
+                    autoFocus
                   />
+                ) : (
+                  <button
+                    onClick={startEditingTitle}
+                    className="flex items-center gap-1 text-xs sm:text-sm font-bold text-gray-900 dark:text-white hover:text-lime-600 dark:hover:text-lime-400 transition-all hover:scale-105 group bg-transparent border-none outline-none p-0 shadow-none focus:ring-0"
+                  >
+                    <span className="truncate max-w-[20ch]">{state.cvTitle || 'Untitled CV'}</span>
+                    <Edit2 className="w-3 h-3 text-gray-400 dark:text-gray-500 group-hover:text-lime-600 dark:group-hover:text-lime-400 shrink-0" />
+                  </button>
+                )}
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    saveStatus === 'error' ? 'bg-red-500' :
+                    saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
+                    'bg-lime-500 dark:bg-[#013f2e]'
+                  }`} />
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    {saveStatus === 'saving' ? 'Saving...' :
+                     saveStatus === 'success' ? 'Saved' :
+                     saveStatus === 'offline' ? 'Saved offline' :
+                     saveStatus === 'error' ? 'Failed' :
+                     'Saved'}
+                  </span>
                 </div>
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider shrink-0 ${
+                  state.cvType === 'master'
+                    ? 'bg-blue-500/15 text-blue-500 dark:text-blue-400 border border-blue-500/30'
+                    : state.cvType === 'journey'
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30'
+                }`}>
+                  {state.cvType === 'master' ? 'Primary' : state.cvType === 'journey' ? 'Tailored' : 'Custom'}
+                </span>
               </div>
 
             </>
@@ -3625,7 +3602,7 @@ export default function ResumeEnhancerContainer({
               <div className="flex items-center gap-4">
                 <button
                   onClick={toggleSidebar}
-                  className="p-2 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer lg:hidden"
+                  className="p-2 rounded-xl bg-transparent border-none outline-none hover:scale-105 transition-all cursor-pointer lg:hidden shadow-none focus:ring-0"
                   aria-label="Toggle menu"
                 >
                   <svg className="w-5 h-5 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
