@@ -948,7 +948,16 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
 
 const activeLinkedInProcesses = new Map<string, ChildProcess>();
 
-async function fetchLinkedIn(signal?: AbortSignal): Promise<RawJob[]> {
+export interface LinkedInFetchOptions {
+  /** Specific regions to search (country codes). If empty, worker uses region rotation. */
+  regions?: string[];
+  /** Search keyword override. If empty, uses LINKEDIN_DEFAULT_KEYWORD env. */
+  keyword?: string;
+  /** Run index for round-robin rotation. */
+  runIndex?: number;
+}
+
+async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOptions): Promise<RawJob[]> {
   const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
   log('FETCH', `LinkedIn: spawning worker at ${workerPath}`);
 
@@ -969,24 +978,35 @@ async function fetchLinkedIn(signal?: AbortSignal): Promise<RawJob[]> {
         LINKEDIN_MAX_RUNTIME_SECONDS: process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600',
         LINKEDIN_DRY_RUN: process.env.LINKEDIN_DRY_RUN || 'false',
         LINKEDIN_DEBUG: process.env.LINKEDIN_DEBUG || 'false',
+        LINKEDIN_REGION_STRATEGY: process.env.LINKEDIN_REGION_STRATEGY || 'demand',
+        LINKEDIN_REGIONS: process.env.LINKEDIN_REGIONS || '',
+        LINKEDIN_MAX_REGIONS_PER_RUN: process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3',
+        LINKEDIN_DEFAULT_KEYWORD: process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
       },
       timeout: 900_000, // 15 min max
     });
 
     activeLinkedInProcesses.set(processId, child);
 
-    // Send search tasks via stdin
-    const input = JSON.stringify({
-      tasks: [
-        {
-          keyword: process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
-          location: process.env.LINKEDIN_DEFAULT_LOCATION || 'United States',
-          remote: process.env.LINKEDIN_DEFAULT_REMOTE === 'true',
-          postedWithinHours: parseInt(process.env.LINKEDIN_DEFAULT_POSTED_WITHIN_HOURS || '168', 10),
-        },
-      ],
-    });
-    child.stdin.write(input);
+    // Build stdin input — supports both demand-driven tasks and region rotation
+    const inputPayload: Record<string, any> = {};
+
+    if (options?.regions && options.regions.length > 0) {
+      // Scheduler provided specific regions — worker auto-generates tasks
+      inputPayload.regions = options.regions;
+      inputPayload.runIndex = options.runIndex || 0;
+      if (options.keyword) inputPayload.keyword = options.keyword;
+      log('FETCH', `LinkedIn: sending regions to worker: ${options.regions.join(', ')}`);
+    } else if (options?.keyword) {
+      // Just a keyword override — let worker handle region rotation
+      inputPayload.keyword = options.keyword;
+      inputPayload.runIndex = options.runIndex || 0;
+    } else {
+      // No options — worker uses its own region rotation strategy
+      inputPayload.runIndex = options?.runIndex || 0;
+    }
+
+    child.stdin.write(JSON.stringify(inputPayload));
     child.stdin.end();
 
     let stdout = '';
@@ -1151,10 +1171,20 @@ function normalizeLocation(location?: string): NormalizedJob['location'] {
   else if (lower.includes('france') || lower.includes('paris')) { country = 'France'; countryCode = 'FR'; }
   else if (lower.includes('india') || lower.includes('bangalore') || lower.includes('mumbai')) { country = 'India'; countryCode = 'IN'; }
   else if (lower.includes('canada') || lower.includes('toronto')) { country = 'Canada'; countryCode = 'CA'; }
-  else if (lower.includes('australia') || lower.includes('sydney')) { country = 'Australia'; countryCode = 'AU'; }
+  else if (lower.includes('australia') || lower.includes('sydney') || lower.includes('melbourne')) { country = 'Australia'; countryCode = 'AU'; }
   else if (lower.includes('netherlands') || lower.includes('amsterdam')) { country = 'Netherlands'; countryCode = 'NL'; }
   else if (lower.includes('singapore')) { country = 'Singapore'; countryCode = 'SG'; }
   else if (lower.includes('japan') || lower.includes('tokyo')) { country = 'Japan'; countryCode = 'JP'; }
+  else if (lower.includes('united arab emirates') || lower.includes('dubai') || lower.includes('abu dhabi')) { country = 'United Arab Emirates'; countryCode = 'AE'; }
+  else if (lower.includes('ireland') || lower.includes('dublin')) { country = 'Ireland'; countryCode = 'IE'; }
+  else if (lower.includes('switzerland') || lower.includes('zurich') || lower.includes('geneva')) { country = 'Switzerland'; countryCode = 'CH'; }
+  else if (lower.includes('sweden') || lower.includes('stockholm')) { country = 'Sweden'; countryCode = 'SE'; }
+  else if (lower.includes('poland') || lower.includes('warsaw') || lower.includes('krakow')) { country = 'Poland'; countryCode = 'PL'; }
+  else if (lower.includes('spain') || lower.includes('madrid') || lower.includes('barcelona')) { country = 'Spain'; countryCode = 'ES'; }
+  else if (lower.includes('south korea') || lower.includes('seoul')) { country = 'South Korea'; countryCode = 'KR'; }
+  else if (lower.includes('brazil') || lower.includes('sao paulo') || lower.includes('rio de janeiro')) { country = 'Brazil'; countryCode = 'BR'; }
+  else if (lower.includes('south africa') || lower.includes('cape town') || lower.includes('johannesburg')) { country = 'South Africa'; countryCode = 'ZA'; }
+  else if (lower.includes('new zealand') || lower.includes('auckland') || lower.includes('wellington')) { country = 'New Zealand'; countryCode = 'NZ'; }
 
   const cityParts = clean.split(',')[0]?.trim() || clean;
 
@@ -1621,7 +1651,8 @@ export async function executeSourceRun(
   db: mongoose.Connection['db'],
   sourceName: string,
   runId: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  fetchOptions?: Record<string, any>
 ): Promise<SourceProgress> {
   if (!db) throw new Error('DB not connected');
 
@@ -1651,11 +1682,11 @@ export async function executeSourceRun(
       return progress;
     }
 
-    // Fetch
+    // Fetch — pass options for sources that support them (e.g. LinkedIn)
     log('SOURCE', `Starting ${sourceName} for run ${runId}`);
     await updateProgress({ status: 'running', message: 'Fetching...' });
     const fetcher = SOURCE_FETCHERS[sourceName];
-    const rawJobs = await fetcher!(signal);
+    const rawJobs = await (fetcher as any)(signal, fetchOptions);
 
     if (signal.aborted) {
       log('SOURCE', `${sourceName}: cancelled`);

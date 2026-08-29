@@ -479,7 +479,7 @@ export const CommunicationSidebar: React.FC<CommunicationSidebarProps> = ({
   return (
     <div 
       ref={sidebarRef}
-      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden"
+      className="fixed right-3 top-3 bottom-3 h-auto w-[450px] bg-white dark:bg-[#141810] shadow-2xl z-[100002] flex flex-col rounded-2xl overflow-hidden"
     >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#191f15] flex-shrink-0">

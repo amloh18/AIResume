@@ -49,15 +49,15 @@ export default function LinkedInProjectsCard({ data, showEnhanced = true }: Link
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+            className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] overflow-hidden"
         >
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-5 sm:px-6 py-4 border-b border-[var(--border-primary)] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <FolderGit2 className="w-5 h-5 text-gray-700" />
-                    <h2 className="text-h3 font-semibold text-gray-900">Projects</h2>
+                    <FolderGit2 className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                    <h2 className="text-xs font-bold text-[var(--text-primary)]">Projects</h2>
                 </div>
                 <CopyAllButton content={allContent} label="Copy All" />
             </div>

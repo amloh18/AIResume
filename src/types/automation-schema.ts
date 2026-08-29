@@ -258,6 +258,7 @@ export interface JobsFilter {
   jobTypes?: string[];
   savedOnly?: boolean;
   easyApplyOnly?: boolean;
+  unpersonalized?: boolean;
 }
 
 export interface PaginatedJobsResponse {

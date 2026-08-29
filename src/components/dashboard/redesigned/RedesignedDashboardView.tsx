@@ -264,7 +264,7 @@ function GhostButton({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors ${className}`}
+      className={`inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer ${className}`}
     >
       {children}
     </button>
@@ -521,19 +521,24 @@ function MyCvsPanel() {
     <Panel
       title="My CVs"
       subtitle="Your CVs and their performance overview."
-      count={cvs.length}
       noPadding
       actions={
         <>
           <button
             onClick={() => router.push('/editor?action=create&tab=cvs')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3.5 py-2 text-xs hover:bg-[#025c43] transition-colors shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3.5 py-2 text-xs hover:bg-[#025c43] transition-colors shadow-sm cursor-pointer"
           >
             <Plus size={14} strokeWidth={2} />
             Create CV
           </button>
           <GhostButton onClick={() => router.push('/editor')}>
-            View all <ArrowUpRight size={13} />
+            <span>View all</span>
+            {cvs.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+                {cvs.length}
+              </span>
+            )}
+            <ArrowUpRight size={13} />
           </GhostButton>
         </>
       }
@@ -783,11 +788,16 @@ function RecentJobsPanel() {
     <Panel
       title="Recent Jobs"
       subtitle="Jobs you're tracking and their current status."
-      count={effectiveJobs.length}
       noPadding
       actions={
         <GhostButton onClick={() => router.push('/dashboard/jobs?tab=applications')}>
-          View all <ArrowUpRight size={13} />
+          <span>View all</span>
+          {effectiveJobs.length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+              {effectiveJobs.length}
+            </span>
+          )}
+          <ArrowUpRight size={13} />
         </GhostButton>
       }
     >
