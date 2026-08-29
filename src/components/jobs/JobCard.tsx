@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import type { JobListing } from '@/types/automation-schema';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { timeAgo } from '@/lib/utils/format-utils';
@@ -115,7 +116,10 @@ export function JobCard({
   const isAutoApplyCapable = ['naukri', 'indeed'].includes((job.source || '').toLowerCase());
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={onOpen}
       className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-200 bg-white dark:bg-[#141810] hover:border-lime-500/40 hover:shadow-xl hover:scale-[1.01] min-h-[300px]"
     >
@@ -132,6 +136,22 @@ export function JobCard({
         >
           <X className="w-3.5 h-3.5" />
         </button>
+      )}
+
+      {/* High-match glow ring */}
+      {score >= 90 && (
+        <div className="absolute inset-0 rounded-2xl ring-2 ring-emerald-500/20 pointer-events-none" />
+      )}
+
+      {/* Live status pulse */}
+      {liveStatus && (
+        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500" />
+          </span>
+          <span className="text-[10px] font-bold text-lime-600 dark:text-lime-400 uppercase tracking-wide">Live</span>
+        </div>
       )}
 
       <div className="flex flex-col h-full gap-3.5">
@@ -282,6 +302,6 @@ export function JobCard({
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

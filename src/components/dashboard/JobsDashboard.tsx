@@ -312,7 +312,7 @@ export default function JobsDashboard() {
             next.delete(dbJobId);
             return next;
           });
-          toast({ title: 'Removed from saved jobs' });
+          toast({ title: 'Removed from saved jobs', company: job.company, logoUrl: job.companyLogo });
         } else {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData?.error || 'Failed to remove saved job');
@@ -372,6 +372,8 @@ export default function JobsDashboard() {
           toast({
             title: 'Job saved successfully',
             description: 'Added to your applications shortlist',
+            company: job.company,
+            logoUrl: job.companyLogo,
           });
         } else {
           const data = await res.json().catch(() => ({}));
@@ -383,6 +385,8 @@ export default function JobsDashboard() {
         title: 'Error updating saved job',
         description: err.message,
         variant: 'destructive',
+        company: job.company,
+        logoUrl: job.companyLogo,
       });
     } finally {
       setSavingId(null);

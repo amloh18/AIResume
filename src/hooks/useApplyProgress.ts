@@ -2,11 +2,12 @@
 
 import { useCallback, useRef } from 'react';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { toast } from '@/hooks/use-toast';
 
 /**
  * Hook for managing real-time progress during the job apply flow.
- * Instead of showing floating corner toasts, it synchronizes state with
- * useJobLiveStatusStore so status cards render inline inside JobCard, Tracker, and Sidebar.
+ * Shows both inline status cards (JobLiveStatusCard) and toast notifications
+ * at key pipeline milestones for maximum visibility.
  */
 export function useApplyProgress() {
   const { setStatus, updateStep, clearStatus } = useJobLiveStatusStore();
@@ -24,6 +25,13 @@ export function useApplyProgress() {
         progress: 25,
         company,
         jobTitle,
+      });
+
+      toast({
+        title: 'Application started',
+        description: `Matching CV for ${company || jobTitle}...`,
+        company,
+        duration: 3000,
       });
 
       return jobId;
@@ -46,6 +54,13 @@ export function useApplyProgress() {
         company,
         jobTitle,
       });
+
+      toast({
+        title: 'Documents tailoring',
+        description: `Generating tailored CV & cover letter for ${company}...`,
+        company,
+        duration: 4000,
+      });
     },
     [updateStep]
   );
@@ -59,6 +74,13 @@ export function useApplyProgress() {
         description: `Sending application to ${company}...`,
         progress: 85,
         company,
+      });
+
+      toast({
+        title: 'Submitting application',
+        description: `Sending application to ${company}...`,
+        company,
+        duration: 3000,
       });
     },
     [updateStep]
@@ -96,6 +118,16 @@ export function useApplyProgress() {
             },
           ],
         });
+
+        toast({
+          title: 'Application ready',
+          description: message && !isTechnical
+            ? message
+            : `Tailored application prepared for ${company}. Review and submit.`,
+          variant: 'success',
+          company,
+          duration: 6000,
+        });
       } else {
         updateStep(jobId, {
           step: 'failed',
@@ -114,6 +146,16 @@ export function useApplyProgress() {
               href: '/dashboard/jobs?tab=applications',
             },
           ],
+        });
+
+        toast({
+          title: 'Application failed',
+          description: isTechnical
+            ? `Could not save this application. Please try again.`
+            : message || `Failed to apply to ${jobTitle}. Please try again.`,
+          variant: 'destructive',
+          company,
+          duration: 6000,
         });
       }
     },
