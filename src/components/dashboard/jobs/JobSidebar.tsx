@@ -9,7 +9,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save, Edit2
+  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save, Edit2, Bookmark, CheckCircle2
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -21,6 +21,7 @@ import DocumentPreviewSidebar from './DocumentPreviewSidebar';
 import { CommunicationSidebar } from './CommunicationSidebar';
 import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import toast from 'react-hot-toast';
+import { haptic } from '@/lib/utils/haptic';
 import { Button } from '@/components/ui';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
@@ -864,12 +865,54 @@ ${userName}`
   const stageItems = useMemo(() => {
     const normalizedTimelineStatus = job.status === 'screening' ? 'applied' : job.status;
     const items = [
-      { key: 'draft', label: 'Draft' },
-      { key: 'created', label: 'Staging' },
-      { key: 'applied', label: 'Applied' },
-      { key: 'interview', label: 'Interview' },
-      { key: 'offer', label: 'Offer' },
-      { key: job.status === 'rejected' ? 'rejected' : 'accepted', label: job.status === 'rejected' ? 'Rejected' : 'Accepted' }
+      {
+        key: 'draft',
+        label: 'Saved',
+        info: 'Job bookmarked to tracker',
+        icon: Bookmark,
+        activeColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30',
+        completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
+      {
+        key: 'created',
+        label: 'Staging',
+        info: 'Tailoring CV & Cover Letter',
+        icon: Sparkles,
+        activeColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30',
+        completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
+      {
+        key: 'applied',
+        label: 'Applied',
+        info: job.status === 'screening' ? 'In recruiter screening' : 'Application submitted',
+        icon: Send,
+        activeColor: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30',
+        completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
+      {
+        key: 'interview',
+        label: 'Interview',
+        info: 'Interview rounds & prep',
+        icon: Calendar,
+        activeColor: 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/30',
+        completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
+      {
+        key: 'offer',
+        label: 'Offer',
+        info: 'Offer package review & terms',
+        icon: Target,
+        activeColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+        completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
+      {
+        key: job.status === 'rejected' ? 'rejected' : 'accepted',
+        label: job.status === 'rejected' ? 'Rejected' : 'Accepted',
+        info: job.status === 'rejected' ? 'Application closed' : 'Offer accepted & confirmed',
+        icon: job.status === 'rejected' ? X : CheckCircle2,
+        activeColor: job.status === 'rejected' ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+        completedColor: job.status === 'rejected' ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+      },
     ];
 
     const currentIndex = items.findIndex(item => item.key === normalizedTimelineStatus);
@@ -1315,6 +1358,24 @@ ${userName}`
     await executeMoveToCreated();
   };
 
+  const handleQuickStatusChange = async (newStatus: string) => {
+    try {
+      const targetJobId = job._id || job.id;
+      const res = await authenticatedFetchWithUserId(`/api/jobs/${targetJobId}`, user?.id || '', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        toast.success(`Job stage updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}!`);
+        await onRefresh();
+      } else {
+        toast.error('Failed to update stage');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update stage');
+    }
+  };
 
   const handleDeleteJourney = async (journeyId: string) => {
     try {
@@ -1730,6 +1791,278 @@ ${userName}`
     }
   }, [handleOpenInterviewCoach, handleOpenEditModal, job.status, openContext, sidebarConfig.actionPayloads]);
 
+  const atsType = ((job as any).atsType && (job as any).atsType !== 'unknown') ? (job as any).atsType : null;
+  const isAtsSupported = Boolean(atsType);
+  const hasCvReady = Boolean(primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId);
+  const hasCoverLetterReady = Boolean(primaryJourney?.coverLetterId || (job as any).coverLetterId);
+
+  interface GuidanceAction {
+    label: string;
+    icon?: any;
+    onClick: () => void;
+    disabled?: boolean;
+  }
+
+  interface GuidanceHubData {
+    badgeText: string;
+    badgeClasses: string;
+    toneClasses: string;
+    title: string;
+    description: string;
+    primaryAction?: GuidanceAction;
+    secondaryActions: GuidanceAction[];
+  }
+
+  const guidanceHub: GuidanceHubData = useMemo(() => {
+    const stage = job.status as string;
+
+    if (stage === 'draft' || stage === 'saved') {
+      return {
+        badgeText: 'Draft Saved',
+        badgeClasses: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40',
+        toneClasses: 'border-blue-200/80 bg-gradient-to-b from-blue-50/30 to-white dark:border-blue-500/20 dark:from-blue-950/20 dark:to-[#131810]',
+        title: 'Tailor Your Application to Stand Out',
+        description: isAtsSupported
+          ? `This role supports 1-click Auto-Apply (${atsType?.toUpperCase()}). Generate tailored documents now to maximize keyword alignment and submit automatically.`
+          : 'This position requires a direct company application. Generate tailored documents to download your custom CV and cover letter before applying on the company portal.',
+        primaryAction: {
+          label: isAtsSupported ? 'Tailor & Auto-Apply' : 'Tailor Application',
+          icon: Sparkles,
+          onClick: () => void handleTailorAndApply(),
+          disabled: isCreatingJourney || isMovingToCreated,
+        },
+        secondaryActions: [
+          {
+            label: 'Move to Staging',
+            icon: ArrowRight,
+            onClick: () => void handleMoveToCreated(),
+          },
+          {
+            label: 'Edit Job',
+            icon: Pencil,
+            onClick: () => handleOpenEditModal(),
+          },
+        ],
+      };
+    }
+
+    if (stage === 'created') {
+      if (hasCvReady || hasCoverLetterReady) {
+        return {
+          badgeText: 'Tailored Docs Ready',
+          badgeClasses: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40',
+          toneClasses: 'border-emerald-200/80 bg-gradient-to-b from-emerald-50/30 to-white dark:border-emerald-500/20 dark:from-emerald-950/20 dark:to-[#131810]',
+          title: isAtsSupported ? 'Tailored Documents Ready for Auto-Apply' : 'Tailored Documents Ready for Application',
+          description: isAtsSupported
+            ? `Your CV and cover letter are tailored and calibrated for ${atsType?.toUpperCase()}. Click Submit Auto-Apply to send your application, or review and refine your CV in the editor.`
+            : 'Your tailored documents are ready. Open the company job portal to complete the direct application, or download and fine-tune your CV in the editor.',
+          primaryAction: isAtsSupported
+            ? {
+                label: 'Submit Auto-Apply',
+                icon: Sparkles,
+                onClick: () => void handleTailorAndApply(),
+                disabled: isCreatingJourney,
+              }
+            : job.jobUrl
+            ? {
+                label: 'Apply on Company Site',
+                icon: ExternalLink,
+                onClick: () => {
+                  window.open(job.jobUrl, '_blank');
+                },
+              }
+            : {
+                label: 'Mark as Applied',
+                icon: CheckCircle,
+                onClick: () => void handleQuickStatusChange('applied'),
+              },
+          secondaryActions: [
+            ...(hasCvReady && primaryJourney
+              ? [
+                  {
+                    label: 'Edit Tailored CV',
+                    icon: Edit2,
+                    onClick: () => handleContinueJourney(primaryJourney as any),
+                  },
+                ]
+              : []),
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+            ...(!isAtsSupported && job.jobUrl
+              ? [
+                  {
+                    label: 'Mark as Applied',
+                    icon: Check,
+                    onClick: () => void handleQuickStatusChange('applied'),
+                  },
+                ]
+              : []),
+          ],
+        };
+      }
+
+      return {
+        badgeText: 'Documents In Progress',
+        badgeClasses: 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/40',
+        toneClasses: 'border-purple-200/80 bg-gradient-to-b from-purple-50/30 to-white dark:border-purple-500/20 dark:from-purple-950/20 dark:to-[#131810]',
+        title: 'Preparing Tailored Application',
+        description: 'Your tailored application journey is underway. We are calibrating your resume and cover letter against the job description.',
+        primaryAction: {
+          label: 'Generate Tailored Documents',
+          icon: Sparkles,
+          onClick: () => void handleTailorAndApply(),
+          disabled: isCreatingJourney,
+        },
+        secondaryActions: [
+          {
+            label: 'View Job Details',
+            icon: Briefcase,
+            onClick: () => setActiveTab('details'),
+          },
+        ],
+      };
+    }
+
+    if (stage === 'applied' || stage === 'screening') {
+      return {
+        badgeText: stage === 'screening' ? 'In Screening' : 'Application Submitted',
+        badgeClasses: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40',
+        toneClasses: 'border-blue-200/80 bg-gradient-to-b from-blue-50/30 to-white dark:border-blue-500/20 dark:from-blue-950/20 dark:to-[#131810]',
+        title: 'Application Active — Recruiter Review',
+        description: 'Your application has been recorded. Check recruiter emails in the Communication tab or practice role-specific interview questions to stay prepared.',
+        primaryAction: {
+          label: 'AI Interview Coach',
+          icon: Sparkles,
+          onClick: () => handleOpenInterviewCoach(),
+        },
+        secondaryActions: [
+          {
+            label: 'Communication & Emails',
+            icon: Mail,
+            onClick: () => setActiveTab('communication'),
+          },
+          {
+            label: 'Move to Interview Stage',
+            icon: ArrowRight,
+            onClick: () => void handleQuickStatusChange('interview'),
+          },
+        ],
+      };
+    }
+
+    if (stage === 'interview') {
+      return {
+        badgeText: 'Interview Active',
+        badgeClasses: 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800/40',
+        toneClasses: 'border-orange-200/80 bg-gradient-to-b from-orange-50/30 to-white dark:border-orange-500/20 dark:from-orange-950/20 dark:to-[#131810]',
+        title: 'Interview Preparation Active',
+        description: 'Ace your upcoming interview rounds with tailored question analysis, AI coaching feedback, and talking points.',
+        primaryAction: {
+          label: 'Launch Interview Coach',
+          icon: Sparkles,
+          onClick: () => handleOpenInterviewCoach(),
+        },
+        secondaryActions: [
+          {
+            label: 'Add Interview Notes',
+            icon: FileText,
+            onClick: () => setActiveTab('notes'),
+          },
+          {
+            label: 'Move to Offer Stage',
+            icon: ArrowRight,
+            onClick: () => void handleQuickStatusChange('offer'),
+          },
+        ],
+      };
+    }
+
+    if (stage === 'offer') {
+      return {
+        badgeText: 'Offer Received',
+        badgeClasses: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40',
+        toneClasses: 'border-emerald-200/80 bg-gradient-to-b from-emerald-50/30 to-white dark:border-emerald-500/20 dark:from-emerald-950/20 dark:to-[#131810]',
+        title: 'Job Offer Received — Review & Finalize',
+        description: 'Congratulations on receiving an offer! Review compensation, benefits, and start date before formally accepting.',
+        primaryAction: {
+          label: 'Accept Offer',
+          icon: CheckCircle,
+          onClick: () => void handleQuickStatusChange('accepted'),
+        },
+        secondaryActions: [
+          {
+            label: 'Review Notes & Terms',
+            icon: FileText,
+            onClick: () => setActiveTab('notes'),
+          },
+        ],
+      };
+    }
+
+    if (stage === 'accepted') {
+      return {
+        badgeText: 'Offer Accepted',
+        badgeClasses: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40',
+        toneClasses: 'border-emerald-200/80 bg-gradient-to-b from-emerald-50/30 to-white dark:border-emerald-500/20 dark:from-emerald-950/20 dark:to-[#131810]',
+        title: 'Journey Successfully Completed!',
+        description: `You've accepted the offer and finalized your application for ${job.jobTitle} at ${job.company}. Great work!`,
+        primaryAction: {
+          label: 'View Documents',
+          icon: FileCheck,
+          onClick: () => setActiveTab('documents'),
+        },
+        secondaryActions: [
+          {
+            label: 'View Notes',
+            icon: FileText,
+            onClick: () => setActiveTab('notes'),
+          },
+        ],
+      };
+    }
+
+    // Rejected / Withdrawn / Closed
+    return {
+      badgeText: stage === 'withdrawn' ? 'Withdrawn' : 'Application Closed',
+      badgeClasses: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40',
+      toneClasses: 'border-rose-200/80 bg-gradient-to-b from-rose-50/30 to-white dark:border-rose-500/20 dark:from-rose-950/20 dark:to-[#131810]',
+      title: stage === 'withdrawn' ? 'Application Withdrawn' : 'Application Archived',
+      description: 'This application has been closed. All notes and tailored documents remain saved in your history for future opportunities.',
+      primaryAction: {
+        label: 'View Archived Notes',
+        icon: FileText,
+        onClick: () => setActiveTab('notes'),
+      },
+      secondaryActions: [
+        {
+          label: 'View Documents',
+          icon: FileCheck,
+          onClick: () => setActiveTab('documents'),
+        },
+      ],
+    };
+  }, [
+    job.status,
+    job.jobTitle,
+    job.company,
+    job.jobUrl,
+    isAtsSupported,
+    atsType,
+    hasCvReady,
+    hasCoverLetterReady,
+    isCreatingJourney,
+    isMovingToCreated,
+    primaryJourney,
+    handleTailorAndApply,
+    handleMoveToCreated,
+    handleOpenEditModal,
+    handleContinueJourney,
+    handleOpenInterviewCoach,
+  ]);
+
   const journeyCardData = sidebarConfig.journeyCard;
 
   if (!mounted || typeof document === 'undefined') return null;
@@ -1854,7 +2187,10 @@ ${userName}`
                 </motion.button>
               )}
               <motion.button
-                onClick={onClose}
+                onClick={() => {
+                  haptic('light');
+                  onClose();
+                }}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -1867,7 +2203,7 @@ ${userName}`
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="space-y-6 px-6 py-5 pb-8">
+            <div className="space-y-3 px-5 py-4 pb-6">
               {/* Live Status Card if active for this job */}
               {(() => {
                 const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
@@ -1882,197 +2218,196 @@ ${userName}`
                 );
               })()}
 
-              <section className="space-y-4">
-                {terminalStageLabel && (
-                  <div className="flex items-center justify-end">
-                    <span className="rounded-full bg-red-100 px-3 py-1 text-small font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                      {terminalStageLabel}
-                    </span>
-                  </div>
-                )}
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810] relative overflow-hidden">
-                  {/* Progress Line Background */}
-                  <div className="absolute left-[8.33%] right-[8.33%] top-[28px] h-[2px] bg-gray-150 dark:bg-emerald-500/15" />
-                  
-                  {/* Active Progress Line */}
-                  {(() => {
-                    const currentIndex = stageItems.findIndex(s => s.isCurrent);
-                    const lastCompletedIndex = stageItems.reduce((maxIdx, s, idx) => s.isCompleted ? idx : maxIdx, 0);
-                    const activeIndex = currentIndex > -1 ? currentIndex : lastCompletedIndex;
-                    const progressWidthPercent = (activeIndex / (stageItems.length - 1)) * 83.33;
-                    return (
-                      <div 
-                        className="absolute left-[8.33%] top-[28px] h-[2px] bg-emerald-500 transition-all duration-300"
-                        style={{ width: `${progressWidthPercent}%` }}
-                      />
-                    );
-                  })()}
-
-                  <div className="grid grid-cols-6 relative z-10">
-                    {stageItems.map((stage, index) => {
-                      return (
-                        <div key={stage.key} className="flex flex-col items-center text-center">
-                          {/* Node Circle */}
-                          <div className={`mb-1.5 flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold transition-all duration-200 border ${
-                            stage.isCurrent
-                              ? 'bg-blue-600 text-white border-blue-600 ring-4 ring-blue-500/15 scale-105'
-                              : stage.isCompleted
-                                ? 'bg-emerald-500 text-white border-emerald-500'
-                                : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200 dark:border-white/5'
-                          }`}>
-                            {stage.isCompleted ? <CheckCircle size={12} className="stroke-[2.5]" /> : index + 1}
-                          </div>
-
-                          {/* Stage Label */}
-                          <p className={`text-[11px] font-bold capitalize truncate max-w-full px-1 ${
-                            stage.isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
-                          }`}>
-                            {stage.label}
-                          </p>
-
-                          {/* Status/Date */}
-                          <p className="text-[9px] text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-full px-1">
-                            {stage.stageDate ? formatTimelineDate(stage.stageDate) : stage.statusLabel}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className={`rounded-[24px] border p-5 shadow-sm ${journeyCardData.toneClasses}`}>
-                  <div className="flex flex-col gap-4">
-                    {/* Top Row: Title, Eyebrow & Description */}
-                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${journeyCardData.accentClasses}`}>
-                            {journeyCardData.eyebrow}
-                          </span>
-                          <h4 className="text-small font-black text-gray-900 dark:text-white uppercase tracking-wider">
-                            {journeyCardData.title || (job.status === 'applied' || job.status === 'screening' ? 'Journey Snapshot' : 'Next Steps')}
-                          </h4>
-                        </div>
-                        <p className="text-small text-gray-600 dark:text-gray-300 leading-normal max-w-lg">
-                          {journeyCardData.summary}
-                        </p>
-                      </div>
-
-                      {/* Stats chips row */}
-                      <div className="flex flex-wrap gap-2 shrink-0 md:justify-end">
-                        {journeyCardData.stats.map((stat) => (
-                          <div key={stat.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-white/5 border border-gray-200/50 dark:border-white/5 text-[11px] font-semibold text-gray-800 dark:text-gray-200">
-                            <span className="opacity-60">{stat.label}:</span>
-                            <span className="font-extrabold text-[#013f2e] dark:text-[#013f2e]">{stat.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Previews / Document Indicators Inline */}
-                    {primaryJourney && (primaryJourney.cvId || primaryJourney.coverLetterId) && (
-                      <div className="flex flex-wrap items-center gap-3 bg-white/40 dark:bg-white/5 border border-gray-200/40 dark:border-white/5 rounded-xl p-3">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Ready Previews:</span>
-                        <div className="flex flex-wrap gap-2">
-                          {primaryJourney.cvId && (
-                            <button
-                              onClick={() => void handleOpenDocumentPreview('cv')}
-                              disabled={previewLoading === 'cv'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
-                            >
-                              {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                              CV
-                            </button>
-                          )}
-                          {primaryJourney.coverLetterId && (
-                            <button
-                              onClick={() => void handleOpenDocumentPreview('coverLetter')}
-                              disabled={previewLoading === 'coverLetter'}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/60 dark:border-white/10 bg-white/80 dark:bg-[#1a2015] px-2.5 py-1.5 text-small font-semibold text-gray-700 hover:bg-gray-50 dark:text-[var(--text-secondary)] dark:hover:bg-[var(--bg-tertiary)] transition-colors"
-                            >
-                              {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                              Cover Letter
-                            </button>
-                          )}
-                        </div>
+              {/* Two-Column Main Workspace */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+                {/* Column 1: Small Width & Borderless Vertical Stage Timeline */}
+                <div className="lg:col-span-4 w-full max-w-[260px] shrink-0 space-y-2 lg:sticky lg:top-0">
+                  <div className="px-1 py-0.5">
+                    {terminalStageLabel && (
+                      <div className="mb-4">
+                        <span className="rounded-full bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 px-2.5 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-300">
+                          {terminalStageLabel}
+                        </span>
                       </div>
                     )}
 
-                    {/* Divider */}
-                    <div className="h-[1px] bg-gray-205/60 dark:bg-white/5" />
+                    <div className="relative space-y-4 pl-1">
+                      {/* Connecting Vertical Track */}
+                      <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-gray-200/80 dark:bg-white/10" />
 
-                    {/* Actions and status inline */}
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      {/* Action buttons side-by-side */}
-                      <div className="flex items-center gap-2">
-                        <motion.button
-                          onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
-                          disabled={isMovingToCreated || isCreatingJourney}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] px-4 py-2.5 text-small font-black text-white shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <span>{journeyCardData.primaryLabel}</span>
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </motion.button>
-                        {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
-                          <motion.button
-                            onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-250 bg-white px-4 py-2.5 text-small font-black text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                      {stageItems.map((stage, stageIndex) => {
+                        const isCompleted = stage.isCompleted;
+                        const isCurrent = stage.isCurrent;
+                        const Icon = stage.icon;
+
+                        return (
+                          <motion.div
+                            key={stage.key}
+                            initial={{ opacity: 0, x: -12 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: stageIndex * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                            className="relative flex items-start gap-3.5 group"
                           >
-                            {journeyCardData.secondaryLabel}
-                          </motion.button>
-                        )}
+                            {/* Round Icon Node */}
+                            <div
+                              className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 border ${
+                                isCurrent
+                                  ? `${stage.activeColor} ring-4 ring-current/15 shadow-md scale-105 animate-stage-pulse`
+                                  : isCompleted
+                                  ? `${stage.completedColor} shadow-sm animate-stage-glow`
+                                  : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4 stroke-[2]" />
+                            </div>
 
-                        {/* Tailor & Apply — only for jobs with an ATS type */}
-                        {(job as any).atsType && (job as any).atsType !== 'unknown' && job.status !== 'applied' && job.status !== 'rejected' && job.status !== 'accepted' && (
-                          <motion.button
-                            onClick={() => void handleTailorAndApply()}
-                            disabled={isCreatingJourney || isMovingToCreated}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#013f2e] dark:bg-lime-500 px-4 py-2.5 text-small font-black text-white dark:text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            <span>Tailor & Apply</span>
-                          </motion.button>
-                        )}
-
-                        {/* Manual Apply Required — for unknown ATS */}
-                        {((job as any).atsType === 'unknown' || !(job as any).atsType) && job.status === 'draft' && (
-                          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-small font-semibold text-amber-700 dark:text-amber-400">
-                            <AlertCircle className="h-3.5 w-3.5" />
-                            <span>Manual Application Required</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Journey Status Nudge */}
-                      {primaryJourney ? (
-                        <div className="flex items-center gap-1.5 text-small text-gray-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] animate-pulse shrink-0" />
-                          <span>Status: <strong className="capitalize text-gray-700 dark:text-gray-300">{primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}</strong></span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-small text-gray-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                          <span>Journey not started</span>
-                        </div>
-                      )}
+                            {/* Stage Text & Info Details */}
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <p
+                                className={`text-xs font-bold leading-tight ${
+                                  isCurrent
+                                    ? 'text-gray-900 dark:text-white'
+                                    : isCompleted
+                                    ? 'text-gray-800 dark:text-gray-200'
+                                    : 'text-gray-500 dark:text-gray-400'
+                                }`}
+                              >
+                                {stage.label}
+                              </p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                                {stage.info}
+                              </p>
+                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
+                                {stage.stageDate ? formatTimelineDate(stage.stageDate) : stage.statusLabel}
+                              </p>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
-              </section>
+
+                {/* Column 2: Journey Card & Tab Content */}
+                <div className="lg:col-span-8 space-y-3 min-w-0">
+                  {/* Guiding Section: Application Guidance Hub */}
+                  <section className="space-y-2">
+                    <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all ${guidanceHub.toneClasses}`}>
+                      {/* Header Strip: Mode pill, Stage pill, Document health badges */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-gray-200/60 dark:border-white/10">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Application Mode Pill */}
+                          {isAtsSupported ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 shadow-2xs">
+                              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <span>Auto-Apply ({atsType?.toUpperCase()})</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 shadow-2xs">
+                              <ExternalLink className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                              <span>Direct / Manual Apply</span>
+                            </span>
+                          )}
+
+                          {/* Current State Pill */}
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold ${guidanceHub.badgeClasses}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            <span>{guidanceHub.badgeText}</span>
+                          </span>
+                        </div>
+
+                        {/* Document Health Pills */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                              hasCvReady
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
+                                : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10'
+                            }`}
+                          >
+                            {hasCvReady ? <Check className="w-3 h-3 stroke-[2.5]" /> : <Clock className="w-3 h-3" />}
+                            <span>CV: {hasCvReady ? 'Ready' : 'Not generated'}</span>
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                              hasCoverLetterReady
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
+                                : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10'
+                            }`}
+                          >
+                            {hasCoverLetterReady ? <Check className="w-3 h-3 stroke-[2.5]" /> : <Clock className="w-3 h-3" />}
+                            <span>Cover Letter: {hasCoverLetterReady ? 'Ready' : 'Not generated'}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Context Message */}
+                      <div className="space-y-1 mb-3">
+                        <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white tracking-tight">
+                          {guidanceHub.title}
+                        </h3>
+                        <p className="text-xs sm:text-small text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
+                          {guidanceHub.description}
+                        </p>
+                      </div>
+
+                      {/* Action Bar */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-gray-200/60 dark:border-white/10">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {/* Primary Action Button */}
+                          {guidanceHub.primaryAction && (
+                            <motion.button
+                              type="button"
+                              onClick={() => {
+                                haptic('medium');
+                                guidanceHub.primaryAction!.onClick();
+                              }}
+                              disabled={guidanceHub.primaryAction.disabled}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.97 }}
+                              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#013f2e] text-white text-xs font-black shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
+                            >
+                              {guidanceHub.primaryAction.icon && (
+                                <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
+                              )}
+                              <span>{guidanceHub.primaryAction.label}</span>
+                              <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+                            </motion.button>
+                          )}
+
+                          {/* Secondary Actions */}
+                          {guidanceHub.secondaryActions.map((action, idx) => (
+                            <motion.button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                haptic('light');
+                                action.onClick();
+                              }}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.97 }}
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-250 bg-white text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all shadow-2xs"
+                            >
+                              {action.icon && <action.icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
+                              <span>{action.label}</span>
+                            </motion.button>
+                          ))}
+                        </div>
+
+                        {/* Stage Status Nudge */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Current Stage: <strong className="text-gray-900 dark:text-white capitalize">{job.status}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
               {/* 5 Tab Navigation: Job Details, Insights, Communication, Notes, Documents */}
-              <section className="space-y-4">
+              <section className="space-y-2">
                 {/* Tab Bar */}
-                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200/80 dark:border-white/10 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1 p-1 rounded-2xl bg-gray-100/60 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/[0.06] backdrop-blur-sm overflow-x-auto scrollbar-none">
                   {[
                     { id: 'details', label: 'Job Details', icon: Briefcase },
                     { id: 'insights', label: 'Insights', icon: Sparkles, badge: typeof keywordMatchScore === 'number' && keywordMatchScore > 0 ? `${keywordMatchScore}%` : undefined },
@@ -2083,38 +2418,52 @@ ${userName}`
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
                     return (
-                      <button
+                      <motion.button
                         key={tab.id}
                         type="button"
-                        onClick={() => setActiveTab(tab.id as SidebarTab)}
-                        className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex-1 ${
+                        onClick={() => {
+                          haptic('selection');
+                          setActiveTab(tab.id as SidebarTab);
+                        }}
+                        whileTap={{ scale: 0.97 }}
+                        className={`relative flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-200 whitespace-nowrap flex-1 ${
                           isActive
                             ? 'bg-white dark:bg-[#1a2315] text-gray-900 dark:text-white shadow-sm border border-gray-200/80 dark:border-white/10'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] border border-transparent'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#013f2e] dark:text-[#013f2e]' : ''}`} />
+                        <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors duration-200 ${isActive ? 'text-[#013f2e] dark:text-[#013f2e]' : ''}`} />
                         <span>{tab.label}</span>
                         {tab.badge && (
-                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            isActive 
-                              ? 'bg-[#013f2e]/20 text-emerald-800 dark:text-[#013f2e]' 
-                              : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400'
-                          }`}>
+                          <motion.span
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
+                              isActive 
+                                ? 'bg-[#013f2e]/15 text-[#013f2e] dark:text-[#013f2e]' 
+                                : 'bg-gray-200/80 dark:bg-white/10 text-gray-500 dark:text-gray-400'
+                            }`}
+                          >
                             {tab.badge}
-                          </span>
+                          </motion.span>
                         )}
-                      </button>
+                      </motion.button>
                     );
                   })}
                 </div>
 
                 {/* Tab 1: Job Details */}
                 {activeTab === 'details' && (
-                  <div className="space-y-5">
+                  <motion.div
+                    key="tab-details"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-3"
+                  >
                     {/* Core Metadata Card */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="mb-4 flex items-center justify-between gap-3 border-b border-gray-100 dark:border-white/5 pb-3">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="mb-3 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2.5">
                         <div>
                           <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Information</p>
                           <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">{job.jobTitle}</h3>
@@ -2195,7 +2544,7 @@ ${userName}`
                     </div>
 
                     {/* Job Description */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Job Description</h4>
                       <div className="max-h-[350px] overflow-y-auto pr-2 border border-gray-100 dark:border-white/5 rounded-xl p-4 bg-gray-50/50 dark:bg-white/[0.02]">
                         <FormattedJobDescription content={job.jobDescription || fallbacks.defaultJobDescription} />
@@ -2204,7 +2553,7 @@ ${userName}`
 
                     {/* Requirements & Skills if parsed */}
                     {job.extractedJd?.role_content && (
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
                         <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Role Requirements</h4>
                         {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
                           <div>
@@ -2237,7 +2586,7 @@ ${userName}`
 
                     {/* Technical Skills */}
                     {job.extractedJd?.skills?.skills_technical?.length > 0 && (
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                         <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Key Technical Skills</h4>
                         <div className="flex flex-wrap gap-2">
                           {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
@@ -2255,12 +2604,18 @@ ${userName}`
                         </div>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Tab 2: Insights */}
                 {activeTab === 'insights' && (
-                  <div className="space-y-5">
+                  <motion.div
+                    key="tab-insights"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-3"
+                  >
                     {/* Performance & Score Card */}
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
@@ -2297,7 +2652,7 @@ ${userName}`
                     </div>
 
                     {/* Market & Trend Insights */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
                       <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Market Intelligence & Trends</h4>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
@@ -2315,7 +2670,7 @@ ${userName}`
 
                     {/* JD Quality Audit & Flags */}
                     {job.extractedJd?.jd_quality && (
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
                           <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Job Posting Quality Audit</h4>
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
@@ -2343,14 +2698,20 @@ ${userName}`
                         )}
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Tab 3: Communication */}
                 {activeTab === 'communication' && (
-                  <div className="space-y-5">
+                  <motion.div
+                    key="tab-communication"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-3"
+                  >
                     {/* Recruiter Outreach Action Card */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
                       <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-white/5 pb-3">
                         <div>
                           <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
@@ -2409,7 +2770,7 @@ ${userName}`
                     </div>
 
                     {/* Integrated Inbox & Emails Sync */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-emerald-500" />
@@ -2437,12 +2798,18 @@ ${userName}`
                         Open Communication Threads Drawer <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Tab 4: Notes */}
                 {activeTab === 'notes' && (
-                  <div className="space-y-5">
+                  <motion.div
+                    key="tab-notes"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                    className="space-y-3"
+                  >
                     {!isEditingNotes && !jobNotes?.trim() ? (
                       /* 1. Empty State: Shown as clean CTA */
                       <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50/50 p-6 dark:border-white/10 dark:bg-[#131810]/50 transition-all hover:border-gray-300 dark:hover:border-white/20 text-center space-y-3">
@@ -2468,7 +2835,7 @@ ${userName}`
                       </div>
                     ) : !isEditingNotes && Boolean(jobNotes?.trim()) ? (
                       /* 2. Notes Present: Show saved notes preview with Edit CTA */
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
                           <div>
                             <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
@@ -2490,7 +2857,7 @@ ${userName}`
                       </div>
                     ) : (
                       /* 3. Editing State: Live Interactive Notes Editor */
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4 animate-in fade-in duration-150">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4 animate-in fade-in duration-150">
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
                           <div>
                             <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
@@ -2554,7 +2921,7 @@ ${userName}`
                     )}
 
                     {/* Job Tags Manager */}
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
                       <div className="flex items-center gap-2">
                         <Tag className="w-4 h-4 text-gray-500" />
                         <h4 className="text-small font-bold text-gray-900 dark:text-white">Custom Job Tags</h4>
@@ -2569,8 +2936,11 @@ ${userName}`
                             {tag}
                             <button
                               type="button"
-                              onClick={() => handleRemoveTag(tag)}
-                              className="hover:text-red-500"
+                              onClick={() => {
+                                haptic('light');
+                                handleRemoveTag(tag);
+                              }}
+                              className="hover:text-red-500 transition-colors"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -2594,14 +2964,17 @@ ${userName}`
                         />
                         <button
                           type="button"
-                          onClick={handleAddTag}
-                          className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white"
+                          onClick={() => {
+                            haptic('success');
+                            handleAddTag();
+                          }}
+                          className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
                         >
                           Add Tag
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Tab 5: Documents */}
@@ -2613,9 +2986,15 @@ ${userName}`
                   const hasCoverLetter = Boolean(resolvedCoverLetterId);
 
                   return (
-                    <div className="space-y-5">
+                    <motion.div
+                      key="tab-documents"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                      className="space-y-3"
+                    >
                       {/* Applied / Tailored CV Card */}
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-xl bg-lime-50 dark:bg-[#013f2e]/10 text-emerald-600 dark:text-[#013f2e]">
@@ -2687,7 +3066,7 @@ ${userName}`
                       </div>
 
                       {/* Tailored / Applied Cover Letter Card */}
-                      <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
@@ -2748,7 +3127,7 @@ ${userName}`
 
                       {/* Application Submission Evidence & Verified Receipt */}
                       {isAdvancedStage && (
-                        <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                           <div className="flex items-center gap-2 mb-3">
                             <Shield className="w-4 h-4 text-emerald-500" />
                             <h4 className="text-small font-bold text-gray-900 dark:text-white">Application Submission Evidence</h4>
@@ -2769,10 +3148,12 @@ ${userName}`
                           </div>
                         </div>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })()}
               </section>
+                </div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2783,7 +3164,7 @@ ${userName}`
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1001] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100005] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2852,7 +3233,7 @@ ${userName}`
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[10001] bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-[100001] bg-black/50 backdrop-blur-sm"
               onClick={() => setShowDetailsModal(false)}
             />
 
@@ -2862,7 +3243,7 @@ ${userName}`
               animate={{ x: 0 }}
               exit={{ x: 'calc(100% + 12px)' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 left-0 md:left-auto md:top-3 md:right-3 md:bottom-3 w-full md:w-[calc(70vw-24px)] md:max-w-[70vw] bg-white dark:bg-[#141810] shadow-2xl z-[10002] flex flex-col rounded-none md:rounded-2xl overflow-hidden"
+              className="fixed top-0 right-0 bottom-0 left-0 md:left-auto md:top-3 md:right-3 md:bottom-3 w-full md:w-[calc(70vw-24px)] md:max-w-[70vw] bg-white dark:bg-[#141810] shadow-2xl z-[100002] flex flex-col rounded-none md:rounded-2xl overflow-hidden"
             >
               <div className="p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0 flex items-start justify-between gap-4">
                 <div>

@@ -133,12 +133,23 @@ export class IngestionScheduler {
           // Create a run for this source
           const { runId: sourceRunId } = await createRun(db, sourceName, `${runId}-${sourceName}`);
 
-          // Execute
+          // Execute — pass region context for LinkedIn
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 min timeout
 
           try {
-            const progress = await executeSourceRun(db, sourceName, sourceRunId, controller.signal);
+            // Build fetch options for region-aware sources
+            const fetchOptions: Record<string, any> = {};
+            if (sourceName === 'linkedin' && segment.country) {
+              // Use the demand segment's country to determine LinkedIn search region
+              fetchOptions.regions = [segment.country];
+              fetchOptions.keyword = segment.roleFamily
+                ? segment.roleFamily.replace(/_/g, ' ')
+                : undefined;
+              console.log('[SCHEDULER]', `LinkedIn: will search region=${segment.country}, keyword=${fetchOptions.keyword || 'default'}`);
+            }
+
+            const progress = await executeSourceRun(db, sourceName, sourceRunId, controller.signal, fetchOptions);
             totalJobsFound += progress.fetched;
 
             if (progress.status === 'failed') {

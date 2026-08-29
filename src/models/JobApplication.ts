@@ -480,14 +480,19 @@ const jobApplicationSchema = new Schema<IJobApplication>({
 });
 
 // Indexes for better query performance
-// Indexes for better query performance
-// CRITICAL: Simple userId index for fast lookups (most common query pattern)
-jobApplicationSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time significantly
+jobApplicationSchema.index({ userId: 1 }); // Primary index for user queries
 jobApplicationSchema.index({ userId: 1, status: 1 });
 jobApplicationSchema.index({ userId: 1, applicationDate: -1 });
 jobApplicationSchema.index({ userId: 1, company: 1 });
 jobApplicationSchema.index({ userId: 1, isArchived: 1 });
 jobApplicationSchema.index({ 'contacts.email': 1 });
+
+// Dedup: compound unique index prevents duplicate jobs per user
+// Sparse so null jobUrls don't conflict
+jobApplicationSchema.index(
+  { userId: 1, jobTitle: 1, company: 1 },
+  { unique: true, name: 'user_job_dedup' }
+);
 
 jobApplicationSchema.pre('validate', function (next) {
   this.source = sanitizeJobApplicationSource(this.source);

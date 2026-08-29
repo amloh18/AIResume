@@ -113,7 +113,30 @@ export class BaselineScheduler {
         const timeout = setTimeout(() => controller.abort(), schedule.maxDurationMs);
 
         try {
-          const progress = await executeSourceRun(db, schedule.source, createdRunId, controller.signal);
+          // Build fetch options for region-aware sources
+          const fetchOptions: Record<string, any> = {};
+          if (schedule.source === 'linkedin') {
+            // Use round-robin rotation across configured regions
+            const regionEnv = process.env.LINKEDIN_REGIONS || '';
+            const allRegions = regionEnv
+              ? regionEnv.split(',').map(r => r.trim()).filter(Boolean)
+              : ['US', 'CA', 'GB', 'IN', 'AU'];
+            const maxRegions = parseInt(process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3', 10);
+
+            // Simple rotation: use current timestamp to pick regions
+            const runIndex = Math.floor(Date.now() / (12 * 60 * 60 * 1000)); // changes every 12h
+            const start = (runIndex * maxRegions) % allRegions.length;
+            const selectedRegions = [];
+            for (let i = 0; i < maxRegions; i++) {
+              selectedRegions.push(allRegions[(start + i) % allRegions.length]);
+            }
+
+            fetchOptions.regions = selectedRegions;
+            fetchOptions.runIndex = runIndex;
+            console.log(`[BaselineScheduler] LinkedIn: rotating to regions [${selectedRegions.join(', ')}] (run #${runIndex})`);
+          }
+
+          const progress = await executeSourceRun(db, schedule.source, createdRunId, controller.signal, fetchOptions);
 
           if (progress.status === 'completed' || progress.status === 'not_configured') {
             result.ran.push(schedule.source);

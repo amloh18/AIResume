@@ -2,6 +2,7 @@
 LinkedIn Worker Configuration
 
 All configuration via environment variables. No hardcoded credentials.
+Supports demand-driven region rotation for global job discovery.
 """
 
 import os
@@ -10,6 +11,41 @@ import sys
 
 def log(msg):
     print(f"[LinkedIn Config] {msg}", file=sys.stderr)
+
+
+# Default region pool — countries where users actually search for jobs.
+# This list is intentionally broad; the scheduler picks a rotating subset
+# based on demand.  The worker never searches ALL regions in one run.
+DEFAULT_REGIONS = [
+    "US", "CA", "GB", "IN", "AU",
+    "DE", "FR", "NL", "SG", "AE",
+    "IE", "CH", "SE", "PL", "ES",
+    "JP", "KR", "BR", "ZA", "NZ",
+]
+
+# Country code -> LinkedIn search location string
+REGION_LOCATION_MAP = {
+    "US": "United States",
+    "CA": "Canada",
+    "GB": "United Kingdom",
+    "IN": "India",
+    "AU": "Australia",
+    "DE": "Germany",
+    "FR": "France",
+    "NL": "Netherlands",
+    "SG": "Singapore",
+    "AE": "United Arab Emirates",
+    "IE": "Ireland",
+    "CH": "Switzerland",
+    "SE": "Sweden",
+    "PL": "Poland",
+    "ES": "Spain",
+    "JP": "Japan",
+    "KR": "South Korea",
+    "BR": "Brazil",
+    "ZA": "South Africa",
+    "NZ": "New Zealand",
+}
 
 
 class LinkedInConfig:
@@ -47,9 +83,54 @@ class LinkedInConfig:
             "/var/lib/buildairesume/debug/linkedin",
         )
 
+        # ── Region rotation ────────────────────────────────────────────────
+        # Strategy: "demand" ( scheduler-driven ) | "round-robin" | "fixed"
+        self.region_strategy = os.environ.get("LINKEDIN_REGION_STRATEGY", "demand")
+
+        # Comma-separated country codes.  Worker resolves each to a LinkedIn
+        # search location via REGION_LOCATION_MAP.
+        raw_regions = os.environ.get("LINKEDIN_REGIONS", "")
+        self.regions = (
+            [r.strip() for r in raw_regions.split(",") if r.strip()]
+            if raw_regions
+            else list(DEFAULT_REGIONS)
+        )
+
+        # How many regions to search per run (rotation window).
+        self.max_regions_per_run = int(os.environ.get("LINKEDIN_MAX_REGIONS_PER_RUN", "3"))
+
+        # Default keyword used when the scheduler doesn't provide one.
+        self.default_keyword = os.environ.get("LINKEDIN_DEFAULT_KEYWORD", "software engineer")
+
         # Validate
         if not self.enabled:
             log("LinkedIn worker is DISABLED (set LINKEDIN_ENABLED=true to enable)")
+
+    def resolve_region_location(self, region_code: str) -> str:
+        """Map a country code to a LinkedIn search location string."""
+        return REGION_LOCATION_MAP.get(region_code.upper(), region_code)
+
+    def get_rotation_regions(self, run_index: int = 0) -> list[str]:
+        """Return the subset of regions to search for this run.
+
+        - demand: worker trusts the tasks list from stdin (scheduler provides regions)
+        - round-robin: rotate through the region pool
+        - fixed: always use the full region list (capped by max_regions_per_run)
+        """
+        if self.region_strategy == "demand":
+            # Scheduler sends the exact tasks; worker doesn't override.
+            # Return empty list — tasks are provided via stdin.
+            return []
+
+        if self.region_strategy == "fixed":
+            return self.regions[: self.max_regions_per_run]
+
+        # round-robin (default fallback)
+        start = (run_index * self.max_regions_per_run) % len(self.regions)
+        selected = []
+        for i in range(self.max_regions_per_run):
+            selected.append(self.regions[(start + i) % len(self.regions)])
+        return selected
 
     def ensure_dirs(self):
         """Create required directories with restrictive permissions."""
@@ -90,4 +171,8 @@ class LinkedInConfig:
             "max_runtime_seconds": self.max_runtime_seconds,
             "cooldown_seconds": self.cooldown_seconds,
             "worker_concurrency": self.worker_concurrency,
+            "region_strategy": self.region_strategy,
+            "regions": self.regions,
+            "max_regions_per_run": self.max_regions_per_run,
+            "default_keyword": self.default_keyword,
         }

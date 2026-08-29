@@ -1,20 +1,24 @@
 """
 LinkedIn Worker — Main Entry Point
 
-Standalone background worker for LinkedIn job discovery.
-Reads search tasks from stdin, performs browser-based scraping,
-and outputs normalized jobs to stdout.
+Standby background worker for LinkedIn job discovery.
+Reads search tasks from stdin (or auto-generates from region rotation),
+performs browser-based scraping, and outputs normalized jobs to stdout.
 
 Architecture:
   Node.js (engine.ts fetchLinkedIn) spawns this worker
-  -> Worker reads search tasks from stdin
+  -> Worker reads search tasks from stdin (demand-driven) or auto-generates
   -> Worker uses Playwright to scrape LinkedIn
   -> Worker normalizes jobs
   -> Worker writes JSON results to stdout
   -> Worker exits
 
 Protocol:
-  Input (stdin): JSON { tasks: [{ keyword, location, remote, postedWithinHours }] }
+  Input (stdin): JSON {
+    tasks: [{ keyword, location, remote, postedWithinHours }],
+    regions: ["US", "GB", ...],       // optional: override region rotation
+    runIndex: 0,                       // optional: for round-robin
+  }
   Output (stdout): JSON { success, jobs: [...], stats: {...}, status: "..." }
   Logs: stderr (not parsed by Node)
 
@@ -36,7 +40,7 @@ from datetime import datetime, timezone
 # Ensure the worker directory is in the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import LinkedInConfig
+from config import LinkedInConfig, REGION_LOCATION_MAP
 from scraper import LinkedInScraper, LinkedInAuthState
 
 
@@ -56,6 +60,26 @@ def emit_result(success, jobs=None, stats=None, status=None, error=None):
     if error:
         result["error"] = error
     print(json.dumps(result), flush=True)
+
+
+def build_tasks_from_regions(config, regions, keyword=None):
+    """Auto-generate search tasks from a list of region codes.
+
+    Used for round-robin / fixed strategies when the scheduler doesn't
+    provide explicit tasks.
+    """
+    kw = keyword or config.default_keyword
+    tasks = []
+    for code in regions:
+        location = REGION_LOCATION_MAP.get(code.upper(), code)
+        tasks.append({
+            "keyword": kw,
+            "location": location,
+            "remote": False,
+            "postedWithinHours": 168,
+            "regionCode": code.upper(),
+        })
+    return tasks
 
 
 class LinkedInWorker:
@@ -133,6 +157,7 @@ class LinkedInWorker:
             all_jobs = []
             total_discovered = 0
             searches_completed = 0
+            regions_searched = []
 
             for i, task in enumerate(tasks):
                 if self._cancelled:
@@ -149,12 +174,13 @@ class LinkedInWorker:
                     log(f"Reached runtime limit ({self.config.max_runtime_seconds}s)")
                     break
 
-                keyword = task.get("keyword", "software engineer")
+                keyword = task.get("keyword", self.config.default_keyword)
                 location = task.get("location", "United States")
                 remote = task.get("remote", False)
                 posted_within = task.get("postedWithinHours", 168)
+                region_code = task.get("regionCode", "")
 
-                log(f"Task {i + 1}/{len(tasks)}: '{keyword}' in '{location}' (remote={remote})")
+                log(f"Task {i + 1}/{len(tasks)}: '{keyword}' in '{location}' (remote={remote}, region={region_code})")
 
                 try:
                     jobs = await self.scraper.discover_jobs(
@@ -168,12 +194,19 @@ class LinkedInWorker:
 
                     total_discovered += len(jobs)
                     searches_completed += 1
+                    if region_code and region_code not in regions_searched:
+                        regions_searched.append(region_code)
+
+                    # Tag jobs with region metadata
+                    for job in jobs:
+                        if region_code:
+                            job["regionCode"] = region_code
 
                     # Filter out already-seen jobs
                     new_jobs = [j for j in jobs if j.get("sourceJobId")]
                     all_jobs.extend(new_jobs)
 
-                    log(f"Task {i + 1}: {len(new_jobs)} jobs discovered")
+                    log(f"Task {i + 1}: {len(new_jobs)} jobs discovered in {location}")
 
                     # Cooldown between searches
                     if i < len(tasks) - 1 and not self._cancelled:
@@ -192,10 +225,11 @@ class LinkedInWorker:
                 "discovered": total_discovered,
                 "enriched": len(all_jobs),
                 "searchesCompleted": searches_completed,
+                "regionsSearched": regions_searched,
                 "durationSeconds": round(duration, 1),
             }
 
-            log(f"Completed: {len(all_jobs)} jobs in {duration:.1f}s")
+            log(f"Completed: {len(all_jobs)} jobs across {len(regions_searched)} regions in {duration:.1f}s")
             emit_result(True, jobs=all_jobs, stats=stats, status="completed")
 
         except Exception as e:
@@ -224,8 +258,32 @@ async def main():
         return
 
     tasks = config.get("tasks", [])
+    worker_cfg = LinkedInConfig()
+
+    # If no explicit tasks, auto-generate from region rotation
     if not tasks:
-        log("No search tasks provided")
+        regions_override = config.get("regions", [])
+        run_index = config.get("runIndex", 0)
+        keyword = config.get("keyword")
+
+        if regions_override:
+            # Scheduler provided specific regions
+            tasks = build_tasks_from_regions(worker_cfg, regions_override, keyword)
+            log(f"Auto-generated {len(tasks)} tasks from scheduler-provided regions: {regions_override}")
+        else:
+            # Use region rotation strategy
+            rotation_regions = worker_cfg.get_rotation_regions(run_index)
+            if rotation_regions:
+                tasks = build_tasks_from_regions(worker_cfg, rotation_regions, keyword)
+                log(f"Auto-generated {len(tasks)} tasks from rotation (run #{run_index}): {rotation_regions}")
+            else:
+                # demand strategy with no tasks = nothing to do
+                log("No tasks provided and region strategy is 'demand' — nothing to do")
+                emit_result(False, error="No search tasks provided and no regions to rotate")
+                return
+
+    if not tasks:
+        log("No search tasks after resolution")
         emit_result(False, error="No search tasks provided")
         return
 

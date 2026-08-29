@@ -58,9 +58,10 @@ interface CountrySelectorProps {
   onChange: (countries: string[]) => void;
   disabled?: boolean;
   align?: 'left' | 'right';
+  variant?: 'default' | 'pill';
 }
 
-export function CountrySelector({ value, onChange, disabled, align = 'right' }: CountrySelectorProps) {
+export function CountrySelector({ value, onChange, disabled, align = 'right', variant = 'default' }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -105,6 +106,8 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
 
   // Selected Country objects
   const selectedObjects = COUNTRIES_LIST.filter((c) => value.includes(c.name));
+  const isPill = variant === 'pill';
+  const isNonDefault = value.length > 0 && !value.includes('Worldwide / Remote');
 
   return (
     <div ref={dropdownRef} className="relative select-none">
@@ -113,16 +116,24 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ease-out border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 shadow-2xs ${
-          isOpen
-            ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-[#013f2e] dark:border-lime-500 ring-2 ring-lime-500/20'
-            : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.985] hover:scale-[1.015]'}`}
+        className={
+          isPill
+            ? `rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none ${
+                isOpen || isNonDefault
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
+                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`
+            : `flex items-center gap-2 h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ease-out border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 shadow-2xs ${
+                isOpen
+                  ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-[#013f2e] dark:border-lime-500 ring-2 ring-lime-500/20'
+                  : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.985] hover:scale-[1.015]'}`
+        }
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {selectedObjects.length === 1 ? (
             <>
-              <span className="text-sm">{selectedObjects[0].flag}</span>
+              <span className="text-xs">{selectedObjects[0].flag}</span>
               <span>{selectedObjects[0].name}</span>
             </>
           ) : selectedObjects.length > 1 ? (
@@ -138,12 +149,12 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
             </>
           ) : (
             <>
-              <Globe className="w-3.5 h-3.5 text-lime-600" />
-              <span>Select Countries & Regions</span>
+              <Globe className="w-3.5 h-3.5 opacity-70" />
+              <span>Region</span>
             </>
           )}
         </div>
-        <ChevronDown className="w-3 h-3 text-gray-400 opacity-80 ml-0.5" />
+        <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5" />
       </button>
 
       {/* Dropdown Menu */}

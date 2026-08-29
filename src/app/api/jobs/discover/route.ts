@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       .filter(Boolean) || [];
 
     const remoteOnly = searchParams.get('remoteOnly') === 'true';
+    const unpersonalized = searchParams.get('unpersonalized') === 'true';
     const countriesParam = searchParams.get('countries');
     const countryList = countriesParam ? countriesParam.split(',').map((c) => c.trim()).filter(Boolean) : [];
 
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // ── Get exclude set (passed/dismissed jobs) ───────────────────────────
+    // ── Get exclude set (passed/dismissed & saved jobs) ───────────────────
     const excludeJobIds = new Set<string>();
     const savedIds = new Set<string>();
     if (userId) {
@@ -183,9 +184,320 @@ export async function GET(request: NextRequest) {
       } catch {
         // Ignore
       }
+      try {
+        const userObjId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+        const trackerQuery = userObjId
+          ? { $or: [{ userId: userObjId }, { userId: String(userId) }] }
+          : { userId: String(userId) };
+        const appDocs = await db
+          .collection('jobapplications')
+          .find(trackerQuery)
+          .project({ _id: 1, jobId: 1, externalId: 1 })
+          .toArray();
+        for (const a of appDocs) {
+          if (a.externalId) savedIds.add(a.externalId);
+          if (a.jobId) savedIds.add(a.jobId.toString());
+          if (a._id) savedIds.add(a._id.toString());
+        }
+      } catch {
+        // Ignore
+      }
+
+      // If not viewing the Saved feed, exclude all saved jobs from all other feeds
+      if (!savedOnlyFilter) {
+        for (const id of savedIds) {
+          excludeJobIds.add(id);
+        }
+      }
     }
 
-    // ── Candidate Retrieval ────────────────────────────────────────────────
+    // ── Determine Mode: All (Catalog Mode) vs Recommended (Personalized Tiered Mode) ──
+    const isAllMode = unpersonalized || (!hasSearchQuery && (!userProfile || !userProfile.targetRoles?.length));
+
+    if (isAllMode) {
+      const { getDb: getDbFn } = await import('@/lib/db');
+      const dbConn = await getDbFn();
+      const jobsColl = dbConn.collection('jobs');
+      const { buildLocationAndCountryFilter, mapToCandidate } = await import('@/lib/search/candidateRetrieval');
+
+      const andClauses: Record<string, any>[] = [
+        {
+          $or: [
+            { status: { $in: ['new', 'active'] } },
+            { status: { $exists: false } },
+          ],
+        },
+      ];
+
+      // Location & Country filter
+      const locationClauses = buildLocationAndCountryFilter({
+        limit,
+        countryFilter: countryList.length > 0 ? countryList : undefined,
+        remoteOnly,
+      });
+      if (locationClauses.length > 0) {
+        andClauses.push(...locationClauses);
+      }
+
+      // Exclude passed/dismissed and saved jobs (when in All, Recommended, or Latest mode)
+      if (excludeJobIds.size > 0) {
+        const validExcludeObjectIds = Array.from(excludeJobIds)
+          .filter((id) => ObjectId.isValid(id))
+          .map((id) => new ObjectId(id));
+        if (validExcludeObjectIds.length > 0) {
+          andClauses.push({ _id: { $nin: validExcludeObjectIds } });
+        }
+      }
+
+      // Saved only filter
+      if (savedOnlyFilter && userId) {
+        const validSavedObjectIds = Array.from(savedIds)
+          .filter((id) => ObjectId.isValid(id))
+          .map((id) => new ObjectId(id));
+        if (validSavedObjectIds.length > 0) {
+          andClauses.push({ _id: { $in: validSavedObjectIds } });
+        } else {
+          andClauses.push({ _id: null });
+        }
+      }
+
+      // Search text / keywords filter
+      if (effectiveQuery.trim()) {
+        const searchPattern = effectiveQuery.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(searchPattern, 'i');
+        andClauses.push({
+          $or: [
+            { title: { $regex: searchRegex } },
+            { normalizedTitle: { $regex: searchRegex } },
+            { company: { $regex: searchRegex } },
+            { 'company.name': { $regex: searchRegex } },
+            { keywords: { $in: [searchRegex] } },
+            { skills: { $in: [searchRegex] } },
+            { description: { $regex: searchRegex } },
+            { descriptionText: { $regex: searchRegex } },
+          ],
+        });
+      }
+
+      // Company filter
+      if (companyFilter.length > 0) {
+        const compRegex = new RegExp(companyFilter.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+        andClauses.push({
+          $or: [
+            { company: { $regex: compRegex } },
+            { 'company.name': { $regex: compRegex } },
+          ],
+        });
+      }
+
+      // Location filter
+      if (locationFilter.length > 0) {
+        const locRegex = new RegExp(locationFilter.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+        andClauses.push({
+          $or: [
+            { location: { $regex: locRegex } },
+            { 'location.city': { $regex: locRegex } },
+            { country: { $regex: locRegex } },
+          ],
+        });
+      }
+
+      // Source filter
+      if (sourceFilter.length > 0) {
+        andClauses.push({
+          $or: [
+            { source: { $in: sourceFilter } },
+            { 'source.primary': { $in: sourceFilter } },
+            { atsType: { $in: sourceFilter } },
+          ],
+        });
+      }
+
+      // ATS filter
+      if (atsFilter.length > 0) {
+        andClauses.push({ atsType: { $in: atsFilter } });
+      }
+
+      // Workplace filter
+      if (workplaceFilter.length > 0) {
+        const wpClauses: any[] = [];
+        if (workplaceFilter.includes('remote')) {
+          wpClauses.push(
+            { remote: true },
+            { 'location.remote': true },
+            { location: { $regex: 'remote', $options: 'i' } }
+          );
+        }
+        if (workplaceFilter.includes('onsite')) {
+          wpClauses.push({
+            remote: false,
+            'location.remote': { $ne: true },
+            location: { $not: { $regex: 'remote', $options: 'i' } },
+          });
+        }
+        if (workplaceFilter.includes('hybrid')) {
+          wpClauses.push(
+            { location: { $regex: 'hybrid', $options: 'i' } },
+            { workplaceType: 'hybrid' }
+          );
+        }
+        if (wpClauses.length > 0) {
+          andClauses.push({ $or: wpClauses });
+        }
+      }
+
+      // Role filter
+      if (roleFilter.length > 0) {
+        const roleRegex = new RegExp(roleFilter.map((r) => r.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+        andClauses.push({
+          $or: [
+            { title: { $regex: roleRegex } },
+            { normalizedTitle: { $regex: roleRegex } },
+          ],
+        });
+      }
+
+      // Job type filter
+      if (jobTypeFilter.length > 0) {
+        const jtRegex = new RegExp(jobTypeFilter.map((j) => j.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+        andClauses.push({
+          $or: [
+            { employmentType: { $regex: jtRegex } },
+            { jobType: { $regex: jtRegex } },
+          ],
+        });
+      }
+
+      // Experience level filter
+      if (experienceFilter.length > 0) {
+        const expRegex = new RegExp(experienceFilter.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+        andClauses.push({
+          $or: [
+            { experienceLevel: { $regex: expRegex } },
+            { seniority: { $regex: expRegex } },
+          ],
+        });
+      }
+
+      // Date posted filter
+      if (datePostedFilter && datePostedFilter !== 'all') {
+        const now = Date.now();
+        const maxAgeMs =
+          datePostedFilter === '24h' ? 24 * 60 * 60 * 1000 :
+          datePostedFilter === '7d' ? 7 * 24 * 60 * 60 * 1000 :
+          30 * 24 * 60 * 60 * 1000;
+        const cutoff = new Date(now - maxAgeMs);
+        andClauses.push({
+          $or: [
+            { postedDate: { $gte: cutoff } },
+            { postedAt: { $gte: cutoff } },
+            { createdAt: { $gte: cutoff } },
+          ],
+        });
+      }
+
+      // Visa sponsorship filter
+      if (sponsorsVisaFilter) {
+        andClauses.push({
+          $or: [
+            { sponsorsVisa: true },
+            { visaSponsorship: true },
+            { sponsorsVisa: 'true' },
+            { visaSponsorship: 'true' },
+          ],
+        });
+      }
+
+      const mongoFilter = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
+
+      // Count the TRUE total from MongoDB
+      const total = await jobsColl.countDocuments(mongoFilter);
+
+      // Sorting
+      let sortObj: any = { postedAt: -1, postedDate: -1, createdAt: -1 };
+      if (sortBy === 'postedDate') {
+        sortObj = { postedAt: sortOrder === 'asc' ? 1 : -1, postedDate: sortOrder === 'asc' ? 1 : -1, createdAt: sortOrder === 'asc' ? 1 : -1 };
+      } else if (sortBy === 'salary') {
+        sortObj = { salaryMax: sortOrder === 'asc' ? 1 : -1, salaryMin: sortOrder === 'asc' ? 1 : -1 };
+      } else if (sortBy === 'company') {
+        sortObj = { company: sortOrder === 'asc' ? 1 : -1 };
+      }
+
+      const rawJobs = await jobsColl
+        .find(mongoFilter)
+        .sort(sortObj)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .toArray();
+
+      const flatCandidates = rawJobs.map((j: any) => mapToCandidate(j, 'EXACT'));
+
+      const scoredListings: (JobListing & { matchTier: string })[] = flatCandidates.map((candidate) => {
+        let matchScore = 50;
+        if (candidateProfile) {
+          try {
+            const scoreResult = scoreJobForCandidate(
+              {
+                title: candidate.title,
+                normalizedTitle: candidate.normalizedTitle,
+                skills: candidate.keywords,
+                location: { city: candidate.location, country: candidate.country, remote: candidate.remote },
+                salary: { min: candidate.salaryMin, max: candidate.salaryMax, currency: candidate.salaryCurrency },
+                experience: { level: candidate.seniority },
+                roleFamily: candidate.roleFamily,
+                seniority: candidate.seniority,
+                description: candidate.description,
+              },
+              candidateProfile
+            );
+            matchScore = Math.min(98, Math.max(5, scoreResult.score));
+          } catch {
+            matchScore = 50;
+          }
+        }
+        return {
+          _id: candidate._id,
+          title: candidate.title,
+          company: candidate.company,
+          companyLogo: candidate.companyLogo,
+          location: candidate.location,
+          remote: candidate.remote,
+          salaryMin: candidate.salaryMin,
+          salaryMax: candidate.salaryMax,
+          salaryCurrency: candidate.salaryCurrency,
+          matchScore,
+          source: candidate.source as any,
+          atsType: candidate.atsType as any,
+          applyUrl: candidate.applyUrl,
+          postedDate: candidate.postedDate,
+          userId: userId || '',
+          country: candidate.country,
+          description: candidate.description,
+          keywords: candidate.keywords,
+          matchTier: candidate.matchTier,
+        } as JobListing & { matchTier: string };
+      });
+
+      const response: DiscoverResponse = {
+        jobs: scoredListings,
+        total,
+        page,
+        pageSize: limit,
+        hasMore: page * limit < total,
+        tiers: {
+          exact: total,
+          close: 0,
+          related: 0,
+          adjacent: 0,
+        },
+        profileUsed: !!candidateProfile,
+        suggestedSearches: [],
+      };
+
+      return NextResponse.json(response);
+    }
+
+    // ── Candidate Retrieval (Recommended / Role-targeted Mode) ────────────
     let candidates;
     const effectiveSearch: string | string[] = hasSearchQuery
       ? effectiveQuery
@@ -195,62 +507,12 @@ export async function GET(request: NextRequest) {
               ? userProfile.roleFamilies
               : 'Software Engineer'));
 
-    if (hasSearchQuery || userProfile) {
-      candidates = await retrieveCandidates(effectiveSearch, {
-        limit: Math.min(limit * 3, 150), // Fetch more than needed for scoring
-        remoteOnly: userProfile?.hardConstraints?.remoteOnly || remoteOnly,
-        countryFilter: countryList.length > 0 ? countryList : undefined,
-        excludeJobIds,
-      });
-    } else {
-      // No query, no profile: broad feed from recent jobs
-      const { getDb: getDbFn } = await import('@/lib/db');
-      const dbConn = await getDbFn();
-      const jobsColl = dbConn.collection('jobs');
-      const { buildLocationAndCountryFilter, mapToCandidate } = await import('@/lib/search/candidateRetrieval');
-
-      const locationClauses = buildLocationAndCountryFilter({
-        limit,
-        countryFilter: countryList.length > 0 ? countryList : undefined,
-        remoteOnly,
-      });
-
-      const rawJobs = await jobsColl
-        .find({
-          $or: [
-            { status: { $in: ['new', 'active'] } },
-            { status: { $exists: false } },
-          ],
-          ...(locationClauses.length > 0 ? { $and: locationClauses } : {}),
-        })
-        .sort({ postedAt: -1, postedDate: -1, createdAt: -1 })
-        .limit(limit * 2)
-        .toArray();
-
-      // Convert to candidates with EXACT tier (they're all "broad match")
-      candidates = {
-        exact: rawJobs.map((j: any) => mapToCandidate(j, 'EXACT')),
-        close: [],
-        related: [],
-        adjacent: [],
-        totalCandidates: rawJobs.length,
-        searchMeta: {
-          query: {
-            original: '',
-            normalized: '',
-            tokens: [],
-            roleFamily: null,
-            relatedFamilies: [],
-            keywords: [],
-            isExactRoleMatch: false,
-            matchTier: 'EXACT' as const,
-          },
-          tiersUsed: ['broad'],
-          fallbackTriggered: false,
-          totalInDatabase: rawJobs.length,
-        },
-      };
-    }
+    candidates = await retrieveCandidates(effectiveSearch, {
+      limit: Math.max(limit * 8, 250), // Fetch a rich candidate pool for personalized scoring
+      remoteOnly: userProfile?.hardConstraints?.remoteOnly || remoteOnly,
+      countryFilter: countryList.length > 0 ? countryList : undefined,
+      excludeJobIds,
+    });
 
     // ── Personalized Scoring ───────────────────────────────────────────────
     const flatCandidates = flattenTieredCandidates(candidates);
@@ -392,10 +654,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Saved only filter
+    // Saved only filter vs Exclude saved jobs from other feeds
     if (savedOnlyFilter && userId) {
       filteredListings = filteredListings.filter((job) => {
-        return savedIds.has(job._id) || savedIds.has((job as any).id);
+        return savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId);
+      });
+    } else if (userId && savedIds.size > 0) {
+      filteredListings = filteredListings.filter((job) => {
+        return !savedIds.has(job._id) && !savedIds.has((job as any).id) && !savedIds.has((job as any).externalId);
       });
     }
 

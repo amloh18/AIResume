@@ -8,6 +8,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 
 interface NotificationCenterProps {
   variant?: 'default' | 'pill';
@@ -318,7 +319,15 @@ export default function NotificationCenter({ variant = 'default' }: Notification
                                         : 'bg-emerald-100/80 text-emerald-700 dark:bg-[#013f2e]/15 dark:text-[#013f2e]'
                                     }`}
                                   >
-                                    <Bell size={15} />
+                                    {n.metadata?.company ? (
+                                      <CompanyLogo
+                                        company={n.metadata.company}
+                                        size={28}
+                                        className="rounded-md"
+                                      />
+                                    ) : (
+                                      <Bell size={15} />
+                                    )}
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <h4

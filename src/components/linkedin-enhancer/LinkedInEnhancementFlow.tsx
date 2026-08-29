@@ -17,7 +17,6 @@ import LinkedInProjectsCard from './LinkedInProjectsCard';
 import LinkedInSkillsCard from './LinkedInSkillsCard';
 import LinkedInLanguagesCard from './LinkedInLanguagesCard';
 import LinkedInRecommendationsSidebar from './LinkedInRecommendationsSidebar';
-import LinkedInLeftSidebar from './LinkedInLeftSidebar';
 import { PanelRightClose, PanelRightOpen, CheckSquare, X } from 'lucide-react';
 import BrowserExtensionModal from './BrowserExtensionModal';
 import SuccessFeedbackModal from './SuccessFeedbackModal';
@@ -31,7 +30,9 @@ import { LINKEDIN_COLORS } from '@/types/linkedin';
 export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackToDashboard?: () => void }) {
     const router = useRouter();
     const { state, dispatch, setTone, selectCv, triggerEnhancement } = useLinkedInEnhancer();
-     const [availableCvs, setAvailableCvs] = useState<CVSelectionItem[]>([]);
+    const [availableCvs, setAvailableCvs] = useState<CVSelectionItem[]>([]);
+    const activeCvId = state.selectedCvId || availableCvs[0]?.id || null;
+    const activeCvType = state.selectedCvType || availableCvs[0]?.type || 'master';
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
     const [showInsights, setShowInsights] = useState(true);
@@ -417,37 +418,31 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     }
 
     return (
-        /* Same rounded-card-with-margins shell as the dashboard: white workspace,
-           off-white card with margins (this page is standalone — no sidebar — so
-           the inset is even on all sides); content scrolls inside the card. */
-        <div
-            className="h-macro flex flex-col dashboard-workspace overflow-hidden linkedin-enhancer"
-        >
-             {/* Header */}
-            <LinkedInHeader
-                availableCvs={availableCvs}
-                selectedCvId={state.selectedCvId}
-                onCvSelect={handleCvSelect}
-                onRegenerate={handleRegenerate}
-                isEnhancing={state.isEnhancing}
-                currentTone={state.user_context.tone_selection}
-                onToneChange={setTone}
-                onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
-                onFetchFromLinkedIn={handleFetchFromLinkedIn}
-                isFetchingFromLinkedIn={isFetchingFromLinkedIn}
-                showMoriChat={showMoriChat}
-                setShowMoriChat={setShowMoriChat}
-                showInsights={showInsights}
-                setShowInsights={setShowInsights}
-            />
+        <>
+            <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+                <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-5 md:px-8">
+                    <div className="max-w-[1400px] w-full mx-auto flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-5 md:py-8 space-y-6">
 
-            {/* Main Content — dashboard-style card with margins */}
-            <main className="flex-1 min-h-0 overflow-hidden">
-                <div className="h-full min-h-0 flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
-                    <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden">
-                        <div className="flex-1 min-h-0 max-w-[1700px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
-                {/* Loading State */}
-                <AnimatePresence mode="wait">
+                        {/* Header */}
+                        <LinkedInHeader
+                        availableCvs={availableCvs}
+                        selectedCvId={state.selectedCvId}
+                        onCvSelect={handleCvSelect}
+                        onRegenerate={handleRegenerate}
+                        isEnhancing={state.isEnhancing}
+                        currentTone={state.user_context.tone_selection}
+                        onToneChange={setTone}
+                        onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
+                        onFetchFromLinkedIn={handleFetchFromLinkedIn}
+                        isFetchingFromLinkedIn={isFetchingFromLinkedIn}
+                        showMoriChat={showMoriChat}
+                        setShowMoriChat={setShowMoriChat}
+                        showInsights={showInsights}
+                        setShowInsights={setShowInsights}
+                    />
+
+                    {/* Loading State */}
+                    <AnimatePresence mode="wait">
                     {state.isLoading ? (
                         <motion.div
                             key="loading"
@@ -556,19 +551,45 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                             )}
 
                             <div className="flex-1 flex flex-col lg:flex-row gap-6 items-start">
-                                {/* Left Sidebar */}
-                                <div className="w-full lg:w-72 flex-shrink-0 sticky top-6">
-                                    <LinkedInLeftSidebar userProfileImage={userProfileImage} />
-                                </div>
                                 {/* Main Content - Cards */}
-                                <div className="flex-1 max-w-[750px] min-w-0 space-y-4">
+                                <div className="flex-1 min-w-0 space-y-4">
                                     {/* Toolbar */}
-                                    <div className="flex justify-between items-center bg-white dark:bg-[#141810] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 transition-colors">
+                                    <div className="flex flex-wrap justify-between items-center bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-4 gap-3 transition-colors">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-small font-medium text-gray-700 dark:text-gray-300">Preview Changes</span>
-                                            <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-small font-semibold">
-                                                {Object.values(state.sections).filter(s => s.status === 'ACCEPTED').length} accepted
+                                            <span className="text-xs font-bold text-[var(--text-primary)]">AI Enhancement Plan</span>
+                                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800/40">
+                                                {Object.values(state.sections).filter(s => (s as any).status === 'ACCEPTED').length} accepted
                                             </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setShowMoriChat(true);
+                                                    setShowInsights(false);
+                                                }}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                                    showMoriChat
+                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50'
+                                                        : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)]'
+                                                }`}
+                                            >
+                                                <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-lime-400" />
+                                                <span>Mori Assistant</span>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowInsights(!showInsights || showMoriChat);
+                                                    setShowMoriChat(false);
+                                                }}
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                                    showInsights && !showMoriChat
+                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50'
+                                                        : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)]'
+                                                }`}
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-lime-400" />
+                                                <span>Insights</span>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -582,15 +603,15 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                     <div id="section-languages"><LinkedInLanguagesCard data={state.sections.languages} /></div>
 
                                     {/* "Ready to apply?" CTA block */}
-                                    <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30 p-6 transition-colors">
+                                    <div className="mt-8 bg-[var(--bg-secondary)] rounded-2xl border border-[var(--border-primary)] p-6 shadow-xs transition-colors">
                                         <div className="mb-4 text-center">
-                                            <h3 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">Ready to apply these changes?</h3>
-                                            <p className="text-gray-600 dark:text-gray-400 text-small">
+                                            <h3 className="text-sm font-bold text-[var(--text-primary)] mb-1">Ready to apply these changes?</h3>
+                                            <p className="text-[var(--text-secondary)] text-xs">
                                                 Select the sections you want to apply. Our browser extension will safely guide you through updating your LinkedIn profile.
                                             </p>
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6">
                                             {Object.entries({
                                                 hero: 'Headline & Info',
                                                 about: 'About Summary',
@@ -611,11 +632,11 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                                 return (
                                                     <label 
                                                         key={key} 
-                                                        className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
-                                                            !isModified ? 'opacity-50 grayscale cursor-not-allowed bg-gray-50 dark:bg-gray-800/20 border-gray-100 dark:border-gray-800' :
+                                                        className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                                                            !isModified ? 'opacity-50 grayscale cursor-not-allowed bg-[var(--bg-tertiary)]/40 border-[var(--border-primary)]' :
                                                             selectedSections[key] 
-                                                                ? 'bg-white dark:bg-gray-800 border-blue-500 shadow-sm ring-1 ring-blue-500' 
-                                                                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                                                                ? 'bg-[var(--bg-tertiary)] border-emerald-500 text-emerald-700 dark:text-lime-400 shadow-xs ring-1 ring-emerald-500' 
+                                                                : 'bg-[var(--bg-tertiary)] border-[var(--border-primary)] hover:border-emerald-500/50'
                                                         }`}
                                                     >
                                                         <input 
@@ -623,9 +644,9 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                                             checked={selectedSections[key]}
                                                             disabled={!isModified}
                                                             onChange={(e) => setSelectedSections(prev => ({...prev, [key]: e.target.checked}))}
-                                                            className="w-4 h-4 rounded text-blue-600 border-gray-300 dark:border-gray-700 focus:ring-blue-500"
+                                                            className="w-3.5 h-3.5 rounded text-emerald-600 border-[var(--border-primary)] focus:ring-emerald-500"
                                                         />
-                                                        <span className="text-small font-medium text-gray-800 dark:text-gray-200">{label}</span>
+                                                        <span className="text-xs font-semibold text-[var(--text-primary)]">{label}</span>
                                                     </label>
                                                 );
                                             })}
@@ -635,62 +656,62 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                             <motion.button
                                                 onClick={handlePreviewAndApply}
                                                 disabled={getSelectedSectionsCount() === 0}
-                                                className={`flex items-center gap-2 px-8 py-3 font-semibold rounded-full shadow-md transition-colors ${
+                                                className={`flex items-center gap-2 px-8 py-3 font-bold rounded-xl shadow-sm transition-all text-xs active:scale-[0.99] ${
                                                     getSelectedSectionsCount() === 0
-                                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                                        : 'bg-[#0a66c2] hover:bg-[#004182] text-white'
+                                                        ? 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] opacity-50 cursor-not-allowed border border-[var(--border-primary)]'
+                                                        : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
                                                 }`}
-                                                whileHover={getSelectedSectionsCount() > 0 ? { scale: 1.05 } : {}}
-                                                whileTap={getSelectedSectionsCount() > 0 ? { scale: 0.95 } : {}}
+                                                whileHover={getSelectedSectionsCount() > 0 ? { scale: 1.02 } : {}}
+                                                whileTap={getSelectedSectionsCount() > 0 ? { scale: 0.98 } : {}}
                                             >
-                                                <CheckSquare className="w-5 h-5" />
+                                                <CheckSquare className="w-4 h-4" />
                                                 <span>Preview & Apply Changes</span>
                                             </motion.button>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Right Side Panel */}
+                                {/* Right Side Panel - Mori Chat & Profile Insights Sidebar */}
                                 {(showInsights || showMoriChat) && (
-                                    <div className="w-full lg:w-[400px] flex-shrink-0 sticky top-6 h-[calc(100vh-100px)] bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm flex flex-col transition-colors duration-200">
-                                        <div className="p-4 border-b border-gray-150 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-transparent">
-                                            <h3 className="text-small font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                                {showInsights ? (
+                                    <div className="w-full lg:w-[420px] flex-shrink-0 sticky top-4 h-[calc(100vh-140px)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-xs flex flex-col transition-all duration-300">
+                                        <div className="p-4 border-b border-[var(--border-primary)] flex justify-between items-center bg-[var(--bg-tertiary)]/50 shrink-0">
+                                            <h3 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2">
+                                                {showMoriChat ? (
                                                     <>
-                                                        <Sparkles className="w-4 h-4 text-blue-500 animate-pulse" />
-                                                        <span>Profile Insights</span>
+                                                        <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-lime-400 animate-pulse" />
+                                                        <span>Mori AI Assistant</span>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <MessageSquare className="w-4 h-4 text-emerald-500 animate-pulse" />
-                                                        <span>Mori AI Assistant</span>
+                                                        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-lime-400 animate-pulse" />
+                                                        <span>Profile Insights</span>
                                                     </>
                                                 )}
                                             </h3>
                                             <div className="flex items-center gap-2">
-                                                {showInsights ? (
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowMoriChat(true);
-                                                            setShowInsights(false);
-                                                        }}
-                                                        className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 transition-colors flex items-center gap-1 text-small font-semibold"
-                                                        title="Switch to Mori Chat"
-                                                    >
-                                                        <MessageSquare className="w-4 h-4" />
-                                                        <span>Mori</span>
-                                                    </button>
-                                                ) : (
+                                                {showMoriChat ? (
                                                     <button
                                                         onClick={() => {
                                                             setShowInsights(true);
                                                             setShowMoriChat(false);
                                                         }}
-                                                        className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:text-blue-700 transition-colors flex items-center gap-1 text-small font-semibold"
+                                                        className="p-1.5 rounded-lg text-emerald-600 dark:text-lime-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors flex items-center gap-1 text-xs font-bold"
                                                         title="Switch to Insights"
                                                     >
                                                         <Sparkles className="w-4 h-4" />
                                                         <span>Insights</span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => {
+                                                            setShowMoriChat(true);
+                                                            setShowInsights(false);
+                                                        }}
+                                                        className="p-1.5 rounded-lg text-emerald-600 dark:text-lime-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors flex items-center gap-1 text-xs font-bold"
+                                                        title="Switch to Mori Chat"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" />
+                                                        <span>Mori</span>
                                                     </button>
                                                 )}
                                                 <button
@@ -698,14 +719,30 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                                         setShowInsights(false);
                                                         setShowMoriChat(false);
                                                     }}
-                                                    className="p-1.5 rounded-lg hover:bg-gray-150 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 transition-colors"
+                                                    className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
                                         <div className="flex-1 overflow-y-auto min-h-0">
-                                            {showInsights ? (
+                                            {showMoriChat ? (
+                                                activeCvId ? (
+                                                    <LinkedInMoriChatPanel
+                                                        cvId={activeCvId}
+                                                        cvType={activeCvType}
+                                                        onCvUpdated={handleCvUpdated}
+                                                        onClose={() => {
+                                                            setShowInsights(false);
+                                                            setShowMoriChat(false);
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="p-6 text-center text-xs text-[var(--text-secondary)]">
+                                                        Please select a CV to start chatting with Mori.
+                                                    </div>
+                                                )
+                                            ) : (
                                                 <div className="p-4 h-full">
                                                     <LinkedInRecommendationsSidebar
                                                         sideCards={state.side_cards}
@@ -714,18 +751,6 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                                         isLoading={state.isEnhancing}
                                                     />
                                                 </div>
-                                            ) : (
-                                                state.selectedCvId && state.selectedCvType && (
-                                                    <LinkedInMoriChatPanel
-                                                        cvId={state.selectedCvId}
-                                                        cvType={state.selectedCvType}
-                                                        onCvUpdated={handleCvUpdated}
-                                                        onClose={() => {
-                                                            setShowInsights(false);
-                                                            setShowMoriChat(false);
-                                                        }}
-                                                    />
-                                                )
                                             )}
                                         </div>
                                     </div>
@@ -734,10 +759,9 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                         </motion.div>
                     )}
                         </AnimatePresence>
-                        </div>
                     </div>
                 </div>
-            </main>
+            </div>
 
             <BrowserExtensionModal 
                 isOpen={isBrowserModalOpen} 
@@ -757,9 +781,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
             />
-
-
-        </div>
+        </>
     );
 }
 
