@@ -158,39 +158,79 @@ create_directories() {
 
 # ── Step 4: Main Python Virtualenv ─────────────────────────────────────────
 
+create_venv() {
+    local target_dir="$1"
+    if [[ -f "$target_dir/bin/activate" ]]; then
+        return 0
+    fi
+    rm -rf "$target_dir" 2>/dev/null || true
+
+    # Try standard venv
+    if python3 -m venv "$target_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # Try virtualenv
+    if command -v virtualenv &>/dev/null && virtualenv "$target_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # Try python3 -m virtualenv
+    if python3 -m virtualenv "$target_dir" 2>/dev/null; then
+        return 0
+    fi
+
+    # Try installing system venv packages
+    if [[ -n "$SUDO" ]] && command -v apt-get &>/dev/null; then
+        $SUDO apt-get update -qq 2>/dev/null || true
+        $SUDO apt-get install -y -qq python3-venv python3-full python3-pip virtualenv 2>/dev/null || true
+        if python3 -m venv "$target_dir" 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    # Try venv without pip, then bootstrap pip
+    if python3 -m venv --without-pip "$target_dir" 2>/dev/null; then
+        curl -sS https://bootstrap.pypa.io/get-pip.py 2>/dev/null | "$target_dir/bin/python3" >/dev/null 2>&1 || true
+        return 0
+    fi
+
+    return 1
+}
+
 setup_main_venv() {
     step "Step 4: Main Python Virtualenv (JobSpy)"
 
-    if [[ ! -d "$VENV_DIR" ]]; then
-        info "Creating virtualenv at $VENV_DIR"
-        python3 -m venv "$VENV_DIR" || python3 -m virtualenv "$VENV_DIR" || true
-    fi
+    info "Setting up virtualenv at $VENV_DIR..."
+    if create_venv "$VENV_DIR"; then
+        if [[ -f "$VENV_DIR/bin/activate" ]]; then
+            # shellcheck disable=SC1091
+            source "$VENV_DIR/bin/activate"
 
-    if [[ -f "$VENV_DIR/bin/activate" ]]; then
-        # shellcheck disable=SC1091
-        source "$VENV_DIR/bin/activate"
+            info "Upgrading pip..."
+            pip install --upgrade pip --quiet 2>/dev/null || true
 
-        info "Upgrading pip..."
-        pip install --upgrade pip --quiet 2>/dev/null || true
+            info "Installing JobSpy..."
+            pip install --quiet \
+                jobspy \
+                playwright \
+                requests \
+                beautifulsoup4 \
+                2>/dev/null || true
 
-        info "Installing JobSpy..."
-        pip install --quiet \
-            jobspy \
-            playwright \
-            requests \
-            beautifulsoup4 \
-            2>/dev/null || true
+            info "Installing Playwright Chromium..."
+            playwright install chromium 2>/dev/null || true
+            if [[ -n "$SUDO" ]]; then
+                $SUDO playwright install-deps chromium 2>/dev/null || true
+            fi
 
-        info "Installing Playwright Chromium..."
-        playwright install chromium 2>/dev/null || true
-        if [[ -n "$SUDO" ]]; then
-            $SUDO playwright install-deps chromium 2>/dev/null || true
+            deactivate 2>/dev/null || true
+
+            log "Main virtualenv ready at $VENV_DIR"
+            log "JobSpy + Playwright installed"
+        else
+            err "Failed to activate main virtualenv at $VENV_DIR"
         fi
-
-        deactivate 2>/dev/null || true
-
-        log "Main virtualenv ready at $VENV_DIR"
-        log "JobSpy + Playwright installed"
     else
         err "Failed to create main virtualenv at $VENV_DIR"
     fi
@@ -201,33 +241,33 @@ setup_main_venv() {
 setup_linkedin_venv() {
     step "Step 5: LinkedIn Worker Virtualenv"
 
-    if [[ ! -d "$LINKEDIN_VENV_DIR" ]]; then
-        info "Creating LinkedIn virtualenv at $LINKEDIN_VENV_DIR"
-        python3 -m venv "$LINKEDIN_VENV_DIR" || python3 -m virtualenv "$LINKEDIN_VENV_DIR" || true
-    fi
+    info "Setting up LinkedIn virtualenv at $LINKEDIN_VENV_DIR..."
+    if create_venv "$LINKEDIN_VENV_DIR"; then
+        if [[ -f "$LINKEDIN_VENV_DIR/bin/activate" ]]; then
+            # shellcheck disable=SC1091
+            source "$LINKEDIN_VENV_DIR/bin/activate"
 
-    if [[ -f "$LINKEDIN_VENV_DIR/bin/activate" ]]; then
-        # shellcheck disable=SC1091
-        source "$LINKEDIN_VENV_DIR/bin/activate"
+            info "Upgrading pip..."
+            pip install --upgrade pip --quiet 2>/dev/null || true
 
-        info "Upgrading pip..."
-        pip install --upgrade pip --quiet 2>/dev/null || true
+            info "Installing LinkedIn worker dependencies..."
+            pip install --quiet \
+                playwright \
+                2>/dev/null || true
 
-        info "Installing LinkedIn worker dependencies..."
-        pip install --quiet \
-            playwright \
-            2>/dev/null || true
+            info "Installing Playwright Chromium for LinkedIn worker..."
+            playwright install chromium 2>/dev/null || true
+            if [[ -n "$SUDO" ]]; then
+                $SUDO playwright install-deps chromium 2>/dev/null || true
+            fi
 
-        info "Installing Playwright Chromium for LinkedIn worker..."
-        playwright install chromium 2>/dev/null || true
-        if [[ -n "$SUDO" ]]; then
-            $SUDO playwright install-deps chromium 2>/dev/null || true
+            deactivate 2>/dev/null || true
+
+            log "LinkedIn virtualenv ready at $LINKEDIN_VENV_DIR"
+            log "Playwright installed"
+        else
+            warn "LinkedIn virtualenv not activated"
         fi
-
-        deactivate 2>/dev/null || true
-
-        log "LinkedIn virtualenv ready at $LINKEDIN_VENV_DIR"
-        log "Playwright installed"
     else
         warn "LinkedIn virtualenv not created (optional)"
     fi
@@ -241,7 +281,7 @@ verify_installations() {
     local all_ok=true
 
     # Check main venv
-    if [[ -f "$VENV_DIR/bin/python" ]]; then
+    if [[ -f "$VENV_DIR/bin/activate" ]]; then
         # shellcheck disable=SC1091
         source "$VENV_DIR/bin/activate"
         if python3 -c "from jobspy import scrape_jobs; print('JobSpy OK')" 2>/dev/null; then
@@ -263,7 +303,7 @@ verify_installations() {
     fi
 
     # Check LinkedIn venv
-    if [[ -f "$LINKEDIN_VENV_DIR/bin/python" ]]; then
+    if [[ -f "$LINKEDIN_VENV_DIR/bin/activate" ]]; then
         # shellcheck disable=SC1091
         source "$LINKEDIN_VENV_DIR/bin/activate"
         if python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')" 2>/dev/null; then
