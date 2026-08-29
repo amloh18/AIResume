@@ -6,11 +6,11 @@
 # Handles: Python, Playwright, JobSpy, LinkedIn Worker, systemd services.
 #
 # Usage:
-#   bash scripts/vps-setup.sh                    # Full install
-#   bash scripts/vps-setup.sh --linkedin-only    # LinkedIn worker only
-#   bash scripts/vps-setup.sh --jobspy-only      # JobSpy worker only
-#   bash scripts/vps-setup.sh --status           # Check status
-#   bash scripts/vps-setup.sh --uninstall        # Remove services
+#   sudo bash scripts/vps-setup.sh                    # Full install
+#   sudo bash scripts/vps-setup.sh --linkedin-only    # LinkedIn worker only
+#   sudo bash scripts/vps-setup.sh --jobspy-only      # JobSpy worker only
+#   sudo bash scripts/vps-setup.sh --status           # Check status
+#   sudo bash scripts/vps-setup.sh --uninstall        # Remove services
 #
 # Run from project root or set PROJECT_DIR env var.
 # ═══════════════════════════════════════════════════════════════════════════
@@ -27,13 +27,18 @@ LINKEDIN_PROFILE_DIR="/var/lib/buildairesume/browser-profiles/linkedin"
 LINKEDIN_DEBUG_DIR="/var/lib/buildairesume/debug/linkedin"
 LOG_DIR="/var/log/buildairesume"
 
-# Detect sudo privileges if not root
-SUDO=""
-if [[ $EUID -ne 0 ]]; then
-    if command -v sudo &>/dev/null; then
-        SUDO="sudo"
+# ── Sudo / Privilege Helper ────────────────────────────────────────────────
+# Executes command with root privileges whether running as root or via sudo
+
+run_sudo() {
+    if [[ $EUID -eq 0 ]]; then
+        "$@"
+    elif command -v sudo &>/dev/null; then
+        sudo "$@"
+    else
+        "$@"
     fi
-fi
+}
 
 # Colors
 RED='\033[0;31m'
@@ -53,19 +58,21 @@ step()   { echo -e "\n${CYAN}═══ $1 ═══${NC}"; }
 
 check_root() {
     if [[ $EUID -ne 0 ]]; then
-        if [[ -n "$SUDO" ]]; then
-            info "Running with sudo for system commands"
+        if command -v sudo &>/dev/null; then
+            info "Running as non-root ($USER) — using sudo for privileged commands"
         else
             warn "Running without root privileges. System package installation may require sudo."
         fi
+    else
+        info "Running with full root privileges"
     fi
 }
 
 check_python() {
     if ! command -v python3 &>/dev/null; then
-        err "Python3 not found. Installing python3..."
-        if [[ -n "$SUDO" ]] && command -v apt-get &>/dev/null; then
-            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq python3 python3-pip python3-venv || true
+        err "Python3 not found. Attempting to install python3..."
+        if command -v apt-get &>/dev/null; then
+            run_sudo apt-get update -qq && run_sudo apt-get install -y -qq python3 python3-pip python3-venv python3-full || true
         fi
     fi
     if ! command -v python3 &>/dev/null; then
@@ -83,36 +90,36 @@ install_system_deps() {
     step "Step 1: System Dependencies"
 
     if command -v apt-get &>/dev/null; then
-        info "Detected Debian/Ubuntu — installing via apt"
-        $SUDO apt-get update -qq 2>/dev/null || true
-        $SUDO apt-get install -y -qq \
-            python3 python3-pip python3-venv \
+        info "Detected Debian/Ubuntu — installing system dependencies with sudo"
+        run_sudo apt-get update -qq 2>/dev/null || true
+        run_sudo apt-get install -y \
+            python3 python3-pip python3-venv python3-full virtualenv \
             chromium-browser \
             libnss3 libxss1 libasound2 libatk-bridge2.0-0 libgtk-3-0 \
             libgbm-dev libdrm-dev \
             curl wget git \
-            > /dev/null 2>&1 || warn "apt-get install encountered warnings (proceeding with userland venvs)"
-        log "System packages verified"
+            2>/dev/null || warn "apt-get install reported warnings (proceeding with Python setup)"
+        log "System packages installed/verified"
     elif command -v yum &>/dev/null; then
         info "Detected RHEL/CentOS — installing via yum"
-        $SUDO yum install -y -q \
+        run_sudo yum install -y -q \
             python3 python3-pip \
             chromium \
             nss libXScrnSaver alsa-lib atk at-spi2-atk gtk3 libdrm libgbm \
             curl wget git \
-            > /dev/null 2>&1 || true
-        log "System packages verified"
+            2>/dev/null || true
+        log "System packages installed/verified"
     elif command -v dnf &>/dev/null; then
         info "Detected Fedora — installing via dnf"
-        $SUDO dnf install -y -q \
+        run_sudo dnf install -y -q \
             python3 python3-pip \
             chromium \
             nss libXScrnSaver alsa-lib atk at-spi2-atk gtk3 libdrm libgbm \
             curl wget git \
-            > /dev/null 2>&1 || true
-        log "System packages verified"
+            2>/dev/null || true
+        log "System packages installed/verified"
     else
-        warn "Package manager not available or running inside container — checking python3 and chromium directly"
+        warn "Package manager not found (e.g. running in container) — verifying python3 & chromium directly"
     fi
 }
 
@@ -123,13 +130,16 @@ create_service_user() {
 
     if id "$SERVICE_USER" &>/dev/null; then
         log "User '$SERVICE_USER' already exists"
-    elif [[ -n "$SUDO" ]]; then
-        $SUDO useradd --system --shell /bin/bash --home-dir "/home/$SERVICE_USER" --create-home "$SERVICE_USER" 2>/dev/null || \
-        $SUDO useradd --system --shell /bin/false "$SERVICE_USER" 2>/dev/null || true
-        log "Created service user: $SERVICE_USER"
     else
-        SERVICE_USER="${USER:-root}"
-        log "Using current user '$SERVICE_USER' for workers"
+        run_sudo useradd --system --shell /bin/bash --home-dir "/home/$SERVICE_USER" --create-home "$SERVICE_USER" 2>/dev/null || \
+        run_sudo useradd --system --shell /bin/false "$SERVICE_USER" 2>/dev/null || true
+
+        if id "$SERVICE_USER" &>/dev/null; then
+            log "Created service user: $SERVICE_USER"
+        else
+            SERVICE_USER="${USER:-root}"
+            log "Using current user '$SERVICE_USER' for workers"
+        fi
     fi
 }
 
@@ -145,18 +155,14 @@ create_directories() {
     )
 
     for dir in "${dirs[@]}"; do
-        if [[ -n "$SUDO" ]]; then
-            $SUDO mkdir -p "$dir" 2>/dev/null || mkdir -p "$dir" 2>/dev/null || true
-            $SUDO chmod 700 "$dir" 2>/dev/null || true
-            $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" "$dir" 2>/dev/null || true
-        else
-            mkdir -p "$dir" 2>/dev/null || mkdir -p "$HOME/.buildairesume" 2>/dev/null || true
-        fi
-        log "Directory checked: $dir"
+        run_sudo mkdir -p "$dir" 2>/dev/null || mkdir -p "$dir" 2>/dev/null || mkdir -p "$HOME/.buildairesume" 2>/dev/null || true
+        run_sudo chmod 700 "$dir" 2>/dev/null || true
+        run_sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$dir" 2>/dev/null || true
+        log "Directory verified: $dir"
     done
 }
 
-# ── Step 4: Main Python Virtualenv ─────────────────────────────────────────
+# ── Step 4: Virtualenv Builder ─────────────────────────────────────────────
 
 create_venv() {
     local target_dir="$1"
@@ -165,31 +171,32 @@ create_venv() {
     fi
     rm -rf "$target_dir" 2>/dev/null || true
 
-    # Try standard venv
+    # 1. Standard python3 -m venv
     if python3 -m venv "$target_dir" 2>/dev/null; then
         return 0
     fi
 
-    # Try virtualenv
+    # 2. virtualenv command
     if command -v virtualenv &>/dev/null && virtualenv "$target_dir" 2>/dev/null; then
         return 0
     fi
 
-    # Try python3 -m virtualenv
+    # 3. python3 -m virtualenv
     if python3 -m virtualenv "$target_dir" 2>/dev/null; then
         return 0
     fi
 
-    # Try installing system venv packages
-    if [[ -n "$SUDO" ]] && command -v apt-get &>/dev/null; then
-        $SUDO apt-get update -qq 2>/dev/null || true
-        $SUDO apt-get install -y -qq python3-venv python3-full python3-pip virtualenv 2>/dev/null || true
+    # 4. Install python3-venv / python3-full via apt with sudo
+    if command -v apt-get &>/dev/null; then
+        info "Installing python3-venv packages with sudo..."
+        run_sudo apt-get update -qq 2>/dev/null || true
+        run_sudo apt-get install -y python3-venv python3-full python3-pip virtualenv 2>/dev/null || true
         if python3 -m venv "$target_dir" 2>/dev/null; then
             return 0
         fi
     fi
 
-    # Try venv without pip, then bootstrap pip
+    # 5. Fallback: venv without pip, bootstrap pip with get-pip
     if python3 -m venv --without-pip "$target_dir" 2>/dev/null; then
         curl -sS https://bootstrap.pypa.io/get-pip.py 2>/dev/null | "$target_dir/bin/python3" >/dev/null 2>&1 || true
         return 0
@@ -210,7 +217,7 @@ setup_main_venv() {
             info "Upgrading pip..."
             pip install --upgrade pip --quiet 2>/dev/null || true
 
-            info "Installing JobSpy..."
+            info "Installing JobSpy and scraping tools..."
             pip install --quiet \
                 jobspy \
                 playwright \
@@ -218,11 +225,9 @@ setup_main_venv() {
                 beautifulsoup4 \
                 2>/dev/null || true
 
-            info "Installing Playwright Chromium..."
+            info "Installing Playwright Chromium browser..."
             playwright install chromium 2>/dev/null || true
-            if [[ -n "$SUDO" ]]; then
-                $SUDO playwright install-deps chromium 2>/dev/null || true
-            fi
+            run_sudo playwright install-deps chromium 2>/dev/null || true
 
             deactivate 2>/dev/null || true
 
@@ -257,9 +262,7 @@ setup_linkedin_venv() {
 
             info "Installing Playwright Chromium for LinkedIn worker..."
             playwright install chromium 2>/dev/null || true
-            if [[ -n "$SUDO" ]]; then
-                $SUDO playwright install-deps chromium 2>/dev/null || true
-            fi
+            run_sudo playwright install-deps chromium 2>/dev/null || true
 
             deactivate 2>/dev/null || true
 
@@ -344,7 +347,7 @@ install_systemd_services() {
     step "Step 7: Systemd Services"
 
     if ! command -v systemctl &>/dev/null || [[ ! -d /etc/systemd/system ]]; then
-        warn "systemd not available in this environment (e.g. running in container) — skipping background daemon"
+        warn "systemd not available in this environment (e.g. inside Docker) — skipping service registration"
         return
     fi
 
@@ -379,14 +382,9 @@ SyslogIdentifier=buildairesume-linkedin-worker
 WantedBy=multi-user.target
 SERVICEEOF
 
-    if [[ -n "$SUDO" ]]; then
-        $SUDO mv "$TMP_SERVICE" /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
-        $SUDO systemctl daemon-reload 2>/dev/null || true
-        log "LinkedIn worker systemd service registered"
-    else
-        rm -f "$TMP_SERVICE" 2>/dev/null || true
-        warn "Non-root user without sudo: systemd registration skipped"
-    fi
+    run_sudo mv "$TMP_SERVICE" /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
+    run_sudo systemctl daemon-reload 2>/dev/null || true
+    log "LinkedIn worker systemd service registered"
 }
 
 # ── Step 8: Permissions ────────────────────────────────────────────────────
@@ -394,10 +392,8 @@ SERVICEEOF
 fix_permissions() {
     step "Step 8: Permissions"
 
-    if [[ -n "$SUDO" ]]; then
-        $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" /var/lib/buildairesume 2>/dev/null || true
-        $SUDO chown -R "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR" 2>/dev/null || true
-    fi
+    run_sudo chown -R "$SERVICE_USER:$SERVICE_USER" /var/lib/buildairesume 2>/dev/null || true
+    run_sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$LOG_DIR" 2>/dev/null || true
 
     # Ensure worker scripts are executable
     chmod +x "$PROJECT_DIR/scripts/vps-setup.sh" 2>/dev/null || true
@@ -425,7 +421,7 @@ show_status() {
     python3 --version 2>/dev/null || warn "Python3 not found"
 
     # Main venv
-    if [[ -f "$VENV_DIR/bin/python" ]]; then
+    if [[ -f "$VENV_DIR/bin/activate" ]]; then
         # shellcheck disable=SC1091
         source "$VENV_DIR/bin/activate" 2>/dev/null
         python3 -c "import jobspy; print(f'JobSpy: v{jobspy.__version__}')" 2>/dev/null || warn "JobSpy: not installed"
@@ -436,7 +432,7 @@ show_status() {
     fi
 
     # LinkedIn venv
-    if [[ -f "$LINKEDIN_VENV_DIR/bin/python" ]]; then
+    if [[ -f "$LINKEDIN_VENV_DIR/bin/activate" ]]; then
         # shellcheck disable=SC1091
         source "$LINKEDIN_VENV_DIR/bin/activate" 2>/dev/null
         python3 -c "import playwright; print(f'Playwright (LinkedIn): v{playwright.__version__}')" 2>/dev/null || warn "Playwright: not installed (LinkedIn)"
@@ -459,10 +455,10 @@ uninstall() {
     step "Uninstalling services"
 
     if command -v systemctl &>/dev/null; then
-        $SUDO systemctl stop buildairesume-linkedin-worker 2>/dev/null || true
-        $SUDO systemctl disable buildairesume-linkedin-worker 2>/dev/null || true
-        $SUDO rm -f /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
-        $SUDO systemctl daemon-reload 2>/dev/null || true
+        run_sudo systemctl stop buildairesume-linkedin-worker 2>/dev/null || true
+        run_sudo systemctl disable buildairesume-linkedin-worker 2>/dev/null || true
+        run_sudo rm -f /etc/systemd/system/buildairesume-linkedin-worker.service 2>/dev/null || true
+        run_sudo systemctl daemon-reload 2>/dev/null || true
         log "LinkedIn worker service removed"
     fi
 }
