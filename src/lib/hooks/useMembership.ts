@@ -107,8 +107,8 @@ async function fetchMembershipInfo(): Promise<MembershipInfo> {
         limits,
         // Free tier (free + starter_monthly) is always active — no subscription expiry
         isSubscriptionActive: (planKey === 'free' || planKey === 'starter_monthly') ? true : isActive,
-        expiresAt: data.subscription?.endDate
-            ? new Date(data.subscription.endDate)
+        expiresAt: data.subscription?.accessExpiresAt || data.subscription?.currentPeriodEnd
+            ? new Date(data.subscription.accessExpiresAt || data.subscription.currentPeriodEnd)
             : null,
     };
 }

@@ -2,12 +2,19 @@ import Link from 'next/link';
 import Footer from '@/components/landing/Footer';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Tag, BookOpen, Sparkles, CheckCircle, FileText, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
-import { getArticleBySlug, getAllArticles } from '@/data/blogs';
+import { getArticleBySlug, getAllArticles, getAllSlugs } from '@/data/blogs';
 import type { BlogArticleMeta } from '@/data/blogs';
 import TableOfContentsClient from '@/components/blog/TableOfContentsClient';
 import { MotionDiv, MotionH1 } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 import { Metadata } from 'next';
+
+export async function generateStaticParams() {
+  const slugs = getAllSlugs();
+  return slugs.map((slug) => ({
+    slug,
+  }));
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
@@ -143,6 +150,11 @@ const categoryColors: Record<string, string> = {
   'Resume Guides': 'bg-green-900/30 text-green-300 border-green-700/30',
   'Resume Mistakes': 'bg-red-900/30 text-red-300 border-red-700/30',
   'Resume Writing': 'bg-cyan-900/30 text-cyan-300 border-cyan-700/30',
+  'Job Discovery': 'bg-emerald-900/30 text-emerald-300 border-emerald-700/30',
+  'Application Documents': 'bg-indigo-900/30 text-indigo-300 border-indigo-700/30',
+  'Interview Prep': 'bg-orange-900/30 text-orange-300 border-orange-700/30',
+  'Career Strategy': 'bg-teal-900/30 text-teal-300 border-teal-700/30',
+  'Job Applications': 'bg-rose-900/30 text-rose-300 border-rose-700/30',
 };
 
 function ArticleNavigation({ currentSlug, articles }: { currentSlug: string, articles: BlogArticleMeta[] }) {

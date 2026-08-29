@@ -1,0 +1,48 @@
+{
+  "id": "blog-020",
+  "slug": "complete-job-search-workflow-guide",
+  "title": "The Complete Job Search Workflow: From Resume to Interview",
+  "subtitle": "The 5-stage blueprint for modern career advancement — connecting Master CV creation, AI job matching, 1-click tailored applications, and interview coaching.",
+  "excerpt": "Disorganized job hunting leads to burnout. Learn how top professionals structure their entire search into a seamless 5-stage pipeline that cuts application time by 60% and triples interview callback rates.",
+  "category": "Career Strategy",
+  "readTime": "15 min read",
+  "date": "2026-06-26",
+  "featuredImage": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80",
+  "featuredImageAlt": "Structured flowchart showing complete job search workflow from Master CV to interview offer",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "complete job search workflow",
+    "job search strategy 2026",
+    "career advancement",
+    "job application tracking",
+    "interview preparation"
+  ],
+  "sections": [
+    {
+      "id": "fragmented-tools-problem",
+      "heading": "Why Disconnected Job Hunting Tools Cause Burnout",
+      "content": "<p class=\"text-gray-300 mb-4\">The average job seeker uses between 5 and 8 disconnected tools during an active search: one website for building resumes, separate job boards for searching (LinkedIn, Indeed), a messy spreadsheet for tracking applications, and generic AI chat tools for interview prep.</p><p class=\"text-gray-300 mb-4\">This fragmented workflow creates cognitive friction, lost follow-up opportunities, and inconsistent messaging across application touchpoints. To land competitive offers in 2026, you need an integrated pipeline where every stage feeds data into the next.</p>"
+    },
+    {
+      "id": "five-stage-pipeline",
+      "heading": "The 5-Stage Job Search Pipeline",
+      "content": "<p class=\"text-gray-300 mb-4\">The modern job search is structured into five sequential phases:</p><div class=\"space-y-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Stage 1: Master CV Architecture</h4><p class=\"text-gray-300 text-sm\">Consolidate your full career history, technical proficiencies, project outcomes, and metrics into one central source of truth.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-blue-400 font-bold mb-1\">Stage 2: Semantic Discovery & Match Scoring</h4><p class=\"text-gray-300 text-sm\">Automatically surface high-compatibility jobs across multiple portals and evaluate your compatibility score before applying.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-purple-400 font-bold mb-1\">Stage 3: 1-Click Tailoring & Cover Letter Generation</h4><p class=\"text-gray-300 text-sm\">Generate customized, ATS-compliant CVs and tailored cover letters matching the target posting in minutes.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-amber-400 font-bold mb-1\">Stage 4: Centralized Kanban Journey Tracking</h4><p class=\"text-gray-300 text-sm\">Manage saved roles, submitted applications, screening calls, and technical rounds on a visual drag-and-drop tracker.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-cyan-400 font-bold mb-1\">Stage 5: Contextual AI Interview Coaching</h4><p class=\"text-gray-300 text-sm\">Practice voice and text mock interviews tailored specifically to the company's job description and your tailored resume claims.</p></div></div>"
+    },
+    {
+      "id": "measuring-conversion",
+      "heading": "Measuring Your Pipeline Conversion Metrics",
+      "content": "<p class=\"text-gray-300 mb-4\">Treat your job hunt like an optimized conversion funnel. Healthy benchmarks for an optimized search pipeline include:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 mb-4\"><li><strong>Application-to-Screening Rate:</strong> 12% to 20% (if below 10%, review ATS compliance and tailoring).</li><li><strong>Screening-to-Technical Interview Rate:</strong> 60% to 75% (if low, practice elevator pitch and communication clarity).</li><li><strong>Technical-to-Final Offer Rate:</strong> 30% to 50% (if low, practice JD-specific scenario questions and STAR examples).</li></ul>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "fragmented-tools-problem", "title": "Why Disconnected Job Hunting Tools Cause Burnout" },
+    { "id": "five-stage-pipeline", "title": "The 5-Stage Job Search Pipeline" },
+    { "id": "measuring-conversion", "title": "Measuring Your Pipeline Conversion Metrics" }
+  ],
+  "faqs": [
+    {
+      "question": "How many jobs should I apply to per week using this workflow?",
+      "answer": "Quality vastly outperforms quantity. Aim for 10 to 15 highly tailored, high-fit applications per week rather than 100 generic blast submissions."
+    }
+  ]
+}
