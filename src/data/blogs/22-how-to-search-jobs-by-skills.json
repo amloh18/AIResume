@@ -1,0 +1,48 @@
+{
+  "id": "blog-022",
+  "slug": "how-to-search-jobs-by-skills",
+  "title": "How to Search for Jobs by Skills Instead of Job Titles",
+  "subtitle": "A step-by-step masterclass on boolean skill querying, capability-based matching, and discovering lucrative cross-functional roles.",
+  "excerpt": "Tired of repetitive search results? Learn how to structure skills-based search strings, use semantic AI tools, and target high-paying cross-industry roles tailored to your exact capabilities.",
+  "category": "Job Discovery",
+  "readTime": "11 min read",
+  "date": "2026-07-10",
+  "featuredImage": "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=1920&q=80",
+  "featuredImageAlt": "Candidate analyzing technical skills matrix across diverse job sectors",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "search jobs by skills",
+    "skills based job search",
+    "boolean search for jobs",
+    "career change by skills",
+    "transferable skills"
+  ],
+  "sections": [
+    {
+      "id": "the-skills-first-revolution",
+      "heading": "The Rise of Skills-Based Hiring in 2026",
+      "content": "<p class=\"text-gray-300 mb-4\">The global labor market is experiencing a profound shift away from pedigree and rigid tenure toward demonstrable competency. According to recent talent surveys, over <strong>72% of employers now prioritize verifiable skills over specific degree titles or previous linear job titles</strong>.</p><p class=\"text-gray-300 mb-4\">When you search by skills rather than titles, you uncover high-value hybrid roles that traditional search queries miss entirely.</p>"
+    },
+    {
+      "id": "how-to-construct-skill-queries",
+      "heading": "How to Construct Advanced Boolean Skill Queries",
+      "content": "<p class=\"text-gray-300 mb-4\">When searching on conventional job boards or Google Jobs, use structured Boolean search operators to filter by capability stacks rather than title strings:</p><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5 space-y-3 font-mono text-xs text-emerald-300 my-6\"><div>(\"Python\" OR \"TypeScript\") AND (\"PostgreSQL\" OR \"MongoDB\") AND (\"REST API\" OR \"GraphQL\") -\"Senior Manager\"</div><div>(\"Product Analytics\" OR \"SQL\" OR \"Tableau\") AND (\"A/B Testing\" OR \"Conversion Rate\") AND \"Remote\"</div></div><p class=\"text-gray-300\">These queries return listings across Engineering, Product, Growth, and Data teams where your actual hands-on technical skills are in high demand.</p>"
+    },
+    {
+      "id": "automated-skills-discovery",
+      "heading": "Automated Skills Discovery with BuildAIResume",
+      "content": "<p class=\"text-gray-300 mb-4\">Rather than manually writing complex Boolean strings every day, <a href=\"/dashboard\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume's Discover Engine</a> automatically analyzes your Master CV, extracts your hard and soft capability clusters, and queries thousands of fresh job postings in the background.</p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "the-skills-first-revolution", "title": "The Rise of Skills-Based Hiring in 2026" },
+    { "id": "how-to-construct-skill-queries", "title": "How to Construct Advanced Boolean Skill Queries" },
+    { "id": "automated-skills-discovery", "title": "Automated Skills Discovery with BuildAIResume" }
+  ],
+  "faqs": [
+    {
+      "question": "Can I use skills-based search for non-technical roles?",
+      "answer": "Yes. Operations, sales, marketing, and HR roles benefit equally from searching by competency clusters (e.g., 'Pipeline Management', 'Contract Negotiation', 'SLA Optimization')."
+    }
+  ]
+}

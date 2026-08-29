@@ -17,6 +17,20 @@ export const ARTICLE_SLUGS = [
   'primary-cv-method',
   'ai-cover-letter-generator-guide',
   'career-gap-resume-guide',
+  'how-to-build-ats-friendly-resume',
+  'find-jobs-matching-skills-not-job-titles',
+  'how-ats-resume-scoring-works',
+  'how-to-tailor-resume-for-every-job',
+  'how-to-find-hidden-job-opportunities',
+  'complete-job-search-workflow-guide',
+  'what-is-a-good-resume-match-score',
+  'how-to-search-jobs-by-skills',
+  'prepare-for-interview-using-job-description',
+  'why-you-keep-applying-getting-no-interviews',
+  'how-ai-helps-apply-for-jobs-without-spam',
+  'resume-vs-job-description-skills-gap-analysis',
+  'prepare-for-technical-behavioral-interviews-with-ai',
+  'modern-job-search-all-in-one-workflow',
 ] as const;
 
 export type ArticleSlug = (typeof ARTICLE_SLUGS)[number];
@@ -37,6 +51,20 @@ import article11 from './11-modern-cv-editor-platform-concepts.json';
 import article12 from './12-primary-cv-method.json';
 import article13 from './13-ai-cover-letter-generator-guide.json';
 import article14 from './14-career-gap-resume-guide.json';
+import article15 from './15-how-to-build-ats-friendly-resume.json';
+import article16 from './16-find-jobs-matching-skills-not-job-titles.json';
+import article17 from './17-how-ats-resume-scoring-works.json';
+import article18 from './18-how-to-tailor-resume-for-every-job.json';
+import article19 from './19-how-to-find-hidden-job-opportunities.json';
+import article20 from './20-complete-job-search-workflow-guide.json';
+import article21 from './21-what-is-a-good-resume-match-score.json';
+import article22 from './22-how-to-search-jobs-by-skills.json';
+import article23 from './23-prepare-for-interview-using-job-description.json';
+import article24 from './24-why-you-keep-applying-getting-no-interviews.json';
+import article25 from './25-how-ai-helps-apply-for-jobs-without-spam.json';
+import article26 from './26-resume-vs-job-description-skills-gap-analysis.json';
+import article27 from './27-prepare-for-technical-behavioral-interviews-with-ai.json';
+import article28 from './28-modern-job-search-all-in-one-workflow.json';
 
 const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'why-ai-resume-beats-cakecv': article01,
@@ -53,6 +81,20 @@ const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'primary-cv-method': article12,
   'ai-cover-letter-generator-guide': article13,
   'career-gap-resume-guide': article14,
+  'how-to-build-ats-friendly-resume': article15,
+  'find-jobs-matching-skills-not-job-titles': article16,
+  'how-ats-resume-scoring-works': article17,
+  'how-to-tailor-resume-for-every-job': article18,
+  'how-to-find-hidden-job-opportunities': article19,
+  'complete-job-search-workflow-guide': article20,
+  'what-is-a-good-resume-match-score': article21,
+  'how-to-search-jobs-by-skills': article22,
+  'prepare-for-interview-using-job-description': article23,
+  'why-you-keep-applying-getting-no-interviews': article24,
+  'how-ai-helps-apply-for-jobs-without-spam': article25,
+  'resume-vs-job-description-skills-gap-analysis': article26,
+  'prepare-for-technical-behavioral-interviews-with-ai': article27,
+  'modern-job-search-all-in-one-workflow': article28,
 };
 
 /**

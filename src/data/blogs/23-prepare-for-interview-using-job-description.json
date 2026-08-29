@@ -1,0 +1,48 @@
+{
+  "id": "blog-023",
+  "slug": "prepare-for-interview-using-job-description",
+  "title": "How to Prepare for a Job Interview Using the Actual Job Description",
+  "subtitle": "The 4-step framework for deconstructing a job spec into predicted technical questions, behavioral prompts, and winning STAR stories.",
+  "excerpt": "The job description is not just a requirements list — it is a cheat sheet containing every question the interview panel will ask. Learn how to reverse-engineer interview questions directly from the job specification.",
+  "category": "Interview Prep",
+  "readTime": "12 min read",
+  "date": "2026-07-17",
+  "featuredImage": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=1920&q=80",
+  "featuredImageAlt": "Professional preparing for job interview with job description notes and STAR framework",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "prepare for interview using job description",
+    "interview preparation from JD",
+    "predict interview questions",
+    "STAR method interview prep",
+    "job interview cheat sheet"
+  ],
+  "sections": [
+    {
+      "id": "jd-as-cheat-sheet",
+      "heading": "Why the Job Description Is Your Ultimate Interview Cheat Sheet",
+      "content": "<p class=\"text-gray-300 mb-4\">Hiring managers do not invent interview questions at random. In structured interview processes, interviewers are provided with an evaluation rubric derived directly from the published job description responsibilities and requirements.</p><p class=\"text-gray-300 mb-4\">Every bullet point in the job spec corresponds to a specific capability the panel is evaluated on scoring. By reverse-engineering each line item beforehand, you can prepare exact, metric-backed STAR stories (Situation, Task, Action, Result) for 90% of the questions you will face.</p>"
+    },
+    {
+      "id": "four-step-deconstruction",
+      "heading": "The 4-Step Job Description Deconstruction Framework",
+      "content": "<p class=\"text-gray-300 mb-4\">Follow this systematic process 48 hours before your interview:</p><div class=\"space-y-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Step 1: Identify the Core Pain Point</h4><p class=\"text-gray-300 text-sm\">Underline the active problem statements (e.g., <em>\"Lead migration of monolithic systems to AWS microservices\"</em>). Formulate an opening story demonstrating how you executed a similar migration in your past.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Step 2: Map 5 Core Competency STAR Stories</h4><p class=\"text-gray-300 text-sm\">Match each required competency to a concise 90-second story covering the Situation, Task, Action, and quantifiable Business Result.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Step 3: Anticipate Behavioral Prompts</h4><p class=\"text-gray-300 text-sm\">Look for cross-functional phrases (e.g., <em>\"Collaborate across product and design\"</em>) and prepare conflict resolution and prioritization examples.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Step 4: Draft 3 Strategic Questions for the Panel</h4><p class=\"text-gray-300 text-sm\">Ask high-level questions about the technical challenges highlighted in the job spec to show deep industry command.</p></div></div>"
+    },
+    {
+      "id": "mock-practice-ai",
+      "heading": "Simulating the Interview with AI",
+      "content": "<p class=\"text-gray-300 mb-4\">Once your stories are mapped, practice speaking them aloud using <a href=\"/interview-coach\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume's AI Interview Coach</a>. The AI analyzes your target job description and simulates real-time conversational interviews, scoring your answer structure, conciseness, and technical precision.</p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "jd-as-cheat-sheet", "title": "Why the Job Description Is Your Ultimate Interview Cheat Sheet" },
+    { "id": "four-step-deconstruction", "title": "The 4-Step Job Description Deconstruction Framework" },
+    { "id": "mock-practice-ai", "title": "Simulating the Interview with AI" }
+  ],
+  "faqs": [
+    {
+      "question": "How long should a STAR interview answer be?",
+      "answer": "Aim for 90 to 120 seconds. Keep the Situation and Task brief (20 seconds), dedicate 50 seconds to your specific Actions, and finish with 20 seconds on the measurable Results."
+    }
+  ]
+}

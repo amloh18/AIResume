@@ -32,6 +32,19 @@ export interface JobCardProps {
 }
 
 const formatSalary = (job: JobListing): string => {
+  // Handle nested salary object from recommended/tracker APIs
+  const salaryObj = (job as any).salary;
+  if (salaryObj && typeof salaryObj === 'object') {
+    const min = salaryObj.min;
+    const max = salaryObj.max;
+    const cur = salaryObj.currency ? ` ${salaryObj.currency}` : '';
+    if (!min && !max) return '';
+    const minStr = min ? `${min.toLocaleString()}${cur}` : '';
+    const maxStr = max ? `${max.toLocaleString()}${cur}` : '';
+    if (minStr && maxStr) return `${minStr} – ${maxStr}`;
+    return minStr || maxStr;
+  }
+  // Handle flat fields from discover API
   if (!job.salaryMin && !job.salaryMax) return '';
   const cur = job.salaryCurrency ? ` ${job.salaryCurrency}` : '';
   const min = job.salaryMin ? `${job.salaryMin.toLocaleString()}${cur}` : '';
