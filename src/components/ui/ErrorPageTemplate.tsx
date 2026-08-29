@@ -101,7 +101,7 @@ const ErrorPageTemplate: React.FC<ErrorPageTemplateProps> = ({
 
         {showHome && (
           <Link href="/">
-            <Button className="bg-[#013f2e] hover:bg-[#02523c] text-black font-semibold px-8">
+            <Button className="bg-[#013f2e] hover:bg-[#02523c] text-white font-semibold px-8">
               <Home className="mr-2 w-4 h-4" />
               Return Home
             </Button>

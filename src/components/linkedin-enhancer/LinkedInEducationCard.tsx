@@ -14,13 +14,13 @@ export default function LinkedInEducationCard({ data }: LinkedInEducationCardPro
     if (data.length === 0) {
         return (
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 sm:p-6"
             >
-                <h2 className="text-h3 font-semibold text-gray-900 mb-4">Education</h2>
-                <p className="text-gray-500 text-small">No education data available</p>
+                <h2 className="text-xs font-bold text-[var(--text-primary)] mb-3">Education</h2>
+                <p className="text-[var(--text-tertiary)] text-xs">No education data available</p>
             </motion.div>
         );
     }
@@ -36,16 +36,16 @@ export default function LinkedInEducationCard({ data }: LinkedInEducationCardPro
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 sm:p-6"
         >
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-h3 font-semibold text-gray-900">Education</h2>
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-small font-medium border border-gray-200">
+                    <h2 className="text-xs font-bold text-[var(--text-primary)]">Education</h2>
+                    <span className="px-2 py-0.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] rounded-md text-[10px] font-semibold border border-[var(--border-primary)]">
                         Original (No AI Optimization Needed)
                     </span>
                 </div>

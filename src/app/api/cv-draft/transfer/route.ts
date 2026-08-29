@@ -130,18 +130,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Get template from draft or use default
-    let templateId = (draft as any).templateId || draft.cvData?.templateId || 'executive-professional-layout-template';
-    let templateName = 'Executive Professional';
+    let templateId = (draft as any).templateId || draft.cvData?.templateId || 'modern-minimal-v2';
+    let templateName = 'Modern Minimal';
     
     if (!templateId || templateId === 'executive-professional-layout-template' || templateId === 'professional-extended-v2') {
       const { getAllTemplates } = await import('@/lib/templates/template-utils');
       const templates = getAllTemplates();
-      const executiveProfessional = templates.find(
-        t => t.id === 'professional-extended-v2' || t.name === 'Professional Extended'
+      const modernMinimal = templates.find(
+        t => t.id === 'modern-minimal-v2' || t.name === 'Modern Minimal'
       );
-      if (executiveProfessional) {
-        templateId = executiveProfessional.id || executiveProfessional._id;
-        templateName = executiveProfessional.name || 'Executive Professional';
+      if (modernMinimal) {
+        templateId = modernMinimal.id || modernMinimal._id;
+        templateName = modernMinimal.name || 'Modern Minimal';
       }
     } else if ((draft as any).template?.name) {
       templateName = (draft as any).template.name;

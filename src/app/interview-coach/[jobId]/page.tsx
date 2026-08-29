@@ -1,32 +1,22 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { useParams } from 'next/navigation';
-import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
-import RouteGuard from '@/components/auth/RouteGuard';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
-import SessionHub from '@/components/interview-coach/SessionHub';
-
-function SessionHubPageContent() {
-    const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
-    const params = useParams();
-    const jobId = params.jobId as string;
-
-    if (authLoading) {
-        return <LoadingAnimation progress={0.5} showProgressBar={false} />;
-    }
-
-    return (
-        <RouteGuard requireAuth={true}>
-            <SessionHub userId={user?.id || ''} jobId={jobId} />
-        </RouteGuard>
-    );
-}
+import React, { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function SessionHubPage() {
-    return (
-        <Suspense fallback={<LoadingAnimation progress={0.3} showProgressBar={false} />}>
-            <SessionHubPageContent />
-        </Suspense>
-    );
+  const params = useParams();
+  const router = useRouter();
+  const jobId = params.jobId as string;
+
+  useEffect(() => {
+    if (jobId) {
+      router.replace(`/dashboard/interview/${jobId}`);
+    }
+  }, [jobId, router]);
+
+  return (
+    <div className="absolute inset-0 dashboard-workspace flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-emerald-600 dark:border-lime-500 border-t-transparent animate-spin" />
+    </div>
+  );
 }

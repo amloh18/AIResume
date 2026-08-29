@@ -141,8 +141,8 @@ export default function SponsorshipManager() {
                 <div className="p-10">
                     <Tabs value={country} onValueChange={(v) => setCountry(v as 'uk' | 'us')} className="space-y-10">
                         <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl w-fit">
-                            <TabsTrigger value="uk" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-white/40">UK Records</TabsTrigger>
-                            <TabsTrigger value="us" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-white/40">USA Records</TabsTrigger>
+                            <TabsTrigger value="uk" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-white/40">UK Records</TabsTrigger>
+                            <TabsTrigger value="us" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-white/40">USA Records</TabsTrigger>
                         </TabsList>
 
                         <AnimatePresence mode="wait">
@@ -184,7 +184,7 @@ export default function SponsorshipManager() {
                                         type="file"
                                         accept=".csv"
                                         onChange={handleFileChange}
-                                        className="bg-white/5 border-white/5 text-white/40 file:bg-white/10 file:text-white file:border-0 file:rounded-xl file:px-6 file:py-2 file:mr-4 hover:file:bg-emerald-500 hover:file:text-black transition-all cursor-pointer h-16 flex items-center max-w-sm mx-auto"
+                                        className="bg-white/5 border-white/5 text-white/40 file:bg-white/10 file:text-white file:border-0 file:rounded-xl file:px-6 file:py-2 file:mr-4 hover:file:bg-emerald-500 hover:file:text-white transition-all cursor-pointer h-16 flex items-center max-w-sm mx-auto"
                                     />
                                     <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-6">Maximum File Size: 4MB</p>
                                 </div>
@@ -216,7 +216,7 @@ export default function SponsorshipManager() {
                             <Button
                                 onClick={handleUpload}
                                 disabled={!file || loading}
-                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl py-8 shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs transition-all"
+                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl py-8 shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs transition-all"
                             >
                                 {loading ? (
                                     <>

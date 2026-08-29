@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Search, Check, Globe, X, Sparkles, MapPin } from 'lucide-react';
+import { ChevronDown, Search, Check, Globe } from 'lucide-react';
 import { COUNTRIES_LIST, type CountryOption } from '@/lib/config/job-constants';
 
 export type { CountryOption };
@@ -58,18 +58,13 @@ interface CountrySelectorProps {
   onChange: (countries: string[]) => void;
   disabled?: boolean;
   align?: 'left' | 'right';
+  variant?: 'default' | 'pill';
 }
 
-export function CountrySelector({ value, onChange, disabled, align = 'right' }: CountrySelectorProps) {
+export function CountrySelector({ value, onChange, disabled, align = 'right', variant = 'default' }: CountrySelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const [userDetectedCountry, setUserDetectedCountry] = useState<CountryOption>(COUNTRIES_LIST[0]);
-
-  useEffect(() => {
-    setUserDetectedCountry(detectUserCountry());
-  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -111,6 +106,8 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
 
   // Selected Country objects
   const selectedObjects = COUNTRIES_LIST.filter((c) => value.includes(c.name));
+  const isPill = variant === 'pill';
+  const isNonDefault = value.length > 0 && !value.includes('Worldwide / Remote');
 
   return (
     <div ref={dropdownRef} className="relative select-none">
@@ -119,16 +116,24 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 ${
-          isOpen
-            ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-gray-300 dark:border-white/20 shadow-2xs'
-            : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:border-gray-300 dark:hover:border-white/20'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={
+          isPill
+            ? `rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none ${
+                isOpen || isNonDefault
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
+                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`
+            : `flex items-center gap-2 h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ease-out border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 shadow-2xs ${
+                isOpen
+                  ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-[#013f2e] dark:border-lime-500 ring-2 ring-lime-500/20'
+                  : 'bg-white dark:bg-[#141810] border-gray-200/90 dark:border-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 hover:border-gray-300 dark:hover:border-white/20'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-[0.985] hover:scale-[1.015]'}`
+        }
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           {selectedObjects.length === 1 ? (
             <>
-              <span className="text-sm">{selectedObjects[0].flag}</span>
+              <span className="text-xs">{selectedObjects[0].flag}</span>
               <span>{selectedObjects[0].name}</span>
             </>
           ) : selectedObjects.length > 1 ? (
@@ -144,12 +149,12 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
             </>
           ) : (
             <>
-              <Globe className="w-3.5 h-3.5 text-lime-600" />
-              <span>Select Countries & Regions</span>
+              <Globe className="w-3.5 h-3.5 opacity-70" />
+              <span>Region</span>
             </>
           )}
         </div>
-        <ChevronDown className="w-3 h-3 text-gray-400 opacity-80 ml-0.5" />
+        <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5" />
       </button>
 
       {/* Dropdown Menu */}
@@ -170,34 +175,6 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
               placeholder="Search country, continent (e.g. Europe, Asia, China)..."
               className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-lime-500"
             />
-          </div>
-
-          {/* User's Detected Country (Pinned on Top) */}
-          <div className="p-2 rounded-xl bg-lime-500/10 border border-lime-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">{userDetectedCountry.flag}</span>
-              <div>
-                <div className="text-[10px] uppercase font-bold text-lime-700 dark:text-lime-400 flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5" />
-                  Your Location
-                </div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white">
-                  {userDetectedCountry.name}
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => handleToggleCountry(userDetectedCountry.name)}
-              className={`px-2 py-1 text-[11px] font-semibold rounded-lg transition-colors ${
-                value.includes(userDetectedCountry.name)
-                  ? 'bg-lime-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-lime-500'
-              }`}
-            >
-              {value.includes(userDetectedCountry.name) ? 'Selected' : '+ Add'}
-            </button>
           </div>
 
           {/* List of Continents & Countries */}
@@ -304,10 +281,10 @@ export function CountrySelector({ value, onChange, disabled, align = 'right' }: 
             </button>
             <button
               type="button"
-              onClick={() => onChange([userDetectedCountry.name])}
+              onClick={() => onChange(['Worldwide / Remote'])}
               className="text-lime-600 dark:text-lime-400 font-semibold hover:underline"
             >
-              Reset to {userDetectedCountry.name}
+              Reset to Worldwide
             </button>
           </div>
         </div>

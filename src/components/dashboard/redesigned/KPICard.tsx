@@ -26,11 +26,12 @@ export default function KPICard({
   return (
     <motion.div
       layout
-      whileHover={{ y: -4, scale: 1.01 }}
+      whileHover={{ scale: 1.015 }}
+      whileTap={{ scale: 0.985 }}
       onClick={onClick}
       style={{ backgroundColor: cardColor }}
       className={cn(
-        'relative overflow-hidden rounded-[32px] p-6 flex flex-col justify-between group cursor-pointer min-h-[160px] border border-white/20 shadow-sm',
+        'relative overflow-hidden rounded-[32px] p-6 flex flex-col justify-between group cursor-pointer min-h-[160px] border border-white/20 shadow-sm transition-shadow hover:shadow-md',
         className
       )}
     >

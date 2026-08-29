@@ -492,7 +492,7 @@ export default function ExploreStudioClient() {
                     }}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                       active
-                        ? 'bg-[#013f2e] text-black shadow-sm font-extrabold'
+                        ? 'bg-[#013f2e] text-white shadow-sm font-extrabold'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -561,7 +561,7 @@ export default function ExploreStudioClient() {
                           }}
                           className={`p-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
                             active
-                              ? 'bg-[#013f2e] text-black font-extrabold shadow-sm'
+                              ? 'bg-[#013f2e] text-white font-extrabold shadow-sm'
                               : 'bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10'
                           }`}
                         >
@@ -596,7 +596,7 @@ export default function ExploreStudioClient() {
 
                           <button
                             onClick={() => handleSwapSnippet(snip.id, snip.category)}
-                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-[#013f2e] text-white hover:text-black text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer"
+                            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-[#013f2e] text-white hover:text-white text-xs font-bold transition-all shrink-0 flex items-center gap-1 cursor-pointer"
                           >
                             <span>Swap</span>
                             <ArrowRight className="w-3 h-3" />
@@ -735,7 +735,7 @@ export default function ExploreStudioClient() {
             <div className="p-3 border-t border-white/10 bg-black/40">
               <button
                 onClick={() => router.push(`/welcome?template=${activeTemplate.id || activeTemplate._id}`)}
-                className="w-full py-3 rounded-2xl bg-[#013f2e] hover:bg-[#6ed600] text-black font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(1, 63, 46,0.25)] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-[#013f2e] hover:bg-[#6ed600] text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(1, 63, 46,0.25)] flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Build Resume With This Template</span>
                 <ArrowRight className="w-4 h-4" />

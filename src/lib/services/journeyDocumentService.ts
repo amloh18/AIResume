@@ -203,15 +203,15 @@ export async function createJourneyDocuments(
           // Duplicate master CV
           const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
 
-          // Use Executive Professional template as default if master CV doesn't have templateId
+          // Use Modern Minimal template as default if master CV doesn't have templateId
           let templateId = masterCV.templateId;
           let templateName = masterCV.templateName;
           let templateData = masterCV.templateData;
 
           if (!templateId) {
-            templateId = 'executive-professional-layout-template';
-            templateName = 'Executive Professional';
-            console.log('✅ Journey Document Service - Using Executive Professional template as default');
+            templateId = 'modern-minimal-v2';
+            templateName = 'Modern Minimal';
+            console.log('✅ Journey Document Service - Using Modern Minimal template as default');
           }
 
           // Deep copy cvData to preserve structure/content map.
@@ -328,8 +328,8 @@ export async function createJourneyDocuments(
             isMaster: false,
             journeyId: currentJourney._id.toString(),
             cvType: 'journey',
-            templateId: 'executive-professional-layout-template',
-            templateName: 'Executive Professional',
+            templateId: 'modern-minimal-v2',
+            templateName: 'Modern Minimal',
             userId: new mongoose.Types.ObjectId(userId),
             metadata: {
               isMaster: false,

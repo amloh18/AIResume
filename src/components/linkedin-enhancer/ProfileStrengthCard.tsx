@@ -17,21 +17,20 @@ export default function ProfileStrengthCard() {
 
     if (!hasProfileData) {
         return (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full animate-pulse">
-                <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6"></div>
+            <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 flex flex-col h-full animate-pulse">
+                <div className="h-5 bg-[var(--bg-tertiary)] rounded w-1/2 mb-4"></div>
                 <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-                    <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full border-4 border-gray-200 dark:border-gray-600"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mt-4"></div>
+                    <div className="w-20 h-20 bg-[var(--bg-tertiary)] rounded-full border-4 border-[var(--border-primary)]"></div>
+                    <div className="h-4 bg-[var(--bg-tertiary)] rounded w-3/4"></div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full relative overflow-hidden">
-            <div className="flex justify-between items-start mb-6 z-10 relative">
-                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Profile Strength</h3>
+        <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 flex flex-col h-full relative overflow-hidden">
+            <div className="flex justify-between items-start mb-4 z-10 relative">
+                <h3 className="text-xs font-bold text-[var(--text-primary)]">Profile Strength</h3>
             </div>
             
             <div className="flex-1 flex items-center justify-center z-10 relative gap-6">

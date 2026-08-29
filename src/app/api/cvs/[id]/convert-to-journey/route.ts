@@ -7,6 +7,7 @@ import { JobApplication, CoverLetter } from '@/models';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import mongoose from 'mongoose';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
+import { checkForDuplicate } from '@/lib/jobs/deduplicate';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -135,23 +136,35 @@ export async function POST(
     if (!jobId && jobData) {
       console.log('📝 Creating new job application...');
       try {
-        job = await JobApplication.create({
-          userId: new mongoose.Types.ObjectId(userId),
-          jobTitle: jobData.title || 'Unknown Role',
-          company: jobData.company || 'Unknown Company',
-          jobDescription: jobData.description || jobData.jobDescription,
-          status: 'created',
-          source: 'cv-builder-pro',
-          priority: 'medium',
-          tags: [],
-          contacts: [],
-          interviews: [],
-          followUps: [],
-          attachments: [],
-          isArchived: false
-        });
-        finalJobId = job._id.toString();
-        console.log('✅ Job created:', finalJobId);
+        // Dedup check: prevent duplicate jobs per user
+        const dedup = await checkForDuplicate(
+          new mongoose.Types.ObjectId(userId),
+          jobData.title || 'Unknown Role',
+          jobData.company || 'Unknown Company'
+        );
+        if (dedup.isDuplicate && dedup.existingJob) {
+          job = dedup.existingJob;
+          finalJobId = job._id.toString();
+          console.log('⚠️ Duplicate job found, reusing existing:', finalJobId);
+        } else {
+          job = await JobApplication.create({
+            userId: new mongoose.Types.ObjectId(userId),
+            jobTitle: jobData.title || 'Unknown Role',
+            company: jobData.company || 'Unknown Company',
+            jobDescription: jobData.description || jobData.jobDescription,
+            status: 'created',
+            source: 'cv-builder-pro',
+            priority: 'medium',
+            tags: [],
+            contacts: [],
+            interviews: [],
+            followUps: [],
+            attachments: [],
+            isArchived: false
+          });
+          finalJobId = job._id.toString();
+          console.log('✅ Job created:', finalJobId);
+        }
       } catch (jobError) {
         // EDGE CASE 3: Job creation fails - don't proceed with CV conversion
         console.error('❌ Convert-to-Journey API - Job creation failed:', jobError);

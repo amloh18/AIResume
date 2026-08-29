@@ -18,14 +18,19 @@ import {
   Save,
   Loader2,
   Sparkles,
+  Edit2,
+  Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { MatchBreakdownBars } from './MatchBreakdownBars';
 import { renderRichText, timeAgo } from '@/lib/utils/format-utils';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 
 export interface JobDetailModalProps {
   job: JobListing | null;
@@ -81,6 +86,7 @@ export function JobDetailModal({
   const [jobTags, setJobTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -88,6 +94,7 @@ export function JobDetailModal({
 
   // Initialize and fetch notes whenever a new job is selected
   useEffect(() => {
+    setIsEditingNotes(false);
     if (!job) {
       setJobNotes('');
       setJobTags([]);
@@ -188,6 +195,7 @@ export function JobDetailModal({
 
       if (res.ok) {
         toast.success('Notes & tags saved to your tracker!');
+        setIsEditingNotes(false);
         if (!isSaved && typeof onSave === 'function') {
           onSave();
         }
@@ -300,6 +308,21 @@ export function JobDetailModal({
 
             {/* Body */}
             <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Live Status Card if active for this job */}
+              {(() => {
+                const targetId = String(job._id || job.id || '');
+                const liveStatus = targetId ? useJobLiveStatusStore.getState().statuses[targetId] : undefined;
+                if (!liveStatus) return null;
+                return (
+                  <div className="rounded-2xl overflow-hidden shadow-sm">
+                    <JobLiveStatusCard
+                      status={liveStatus}
+                      onClose={() => useJobLiveStatusStore.getState().clearStatus(targetId)}
+                    />
+                  </div>
+                );
+              })()}
+
               {/* Match breakdown */}
               <section>
                 <h4 className="flex items-center gap-2 text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
@@ -310,100 +333,177 @@ export function JobDetailModal({
               </section>
 
               {/* Personal Notes & Tags Section */}
-              <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-500" />
-                    <h4 className="text-small font-bold text-gray-900 dark:text-white">Personal Job Notes</h4>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveNotes}
-                    disabled={isSavingNotes}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#013f2e] px-3.5 py-1.5 text-xs font-black text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
-                  >
-                    {isSavingNotes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    Save Notes
-                  </button>
-                </div>
-
-                {/* Quick Template Buttons */}
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { label: '+ Recruiter Call', text: '\n\n--- Recruiter Call Takeaways ---\n- Recruiter Name:\n- Salary Mentioned:\n- Next Stage Timeline:' },
-                    { label: '+ Interview Prep', text: '\n\n--- Interview Preparation ---\n- Key Projects to Highlight:\n- System Design Points:\n- Tech Stack Overlap:' },
-                    { label: '+ Questions for Team', text: '\n\n--- Questions for Interviewer ---\n1. What does the day-to-day look like?\n2. What are the key engineering challenges this quarter?' },
-                    { label: '+ Salary Target', text: '\n\n--- Compensation & Target ---\n- Target Base:\n- Target Equity:\n- Deadlines:' },
-                    { label: '+ Referral & Contacts', text: '\n\n--- Contact & Referral ---\n- Person:\n- Connection:\n- Date Followed Up:' },
-                  ].map((prompt, idx) => (
-                    <button
-                      key={idx}
+              {!isEditingNotes && !jobNotes?.trim() ? (
+                /* 1. Empty State: Shown as clean CTA */
+                <section className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-4 dark:border-white/10 dark:bg-[#131810]/50 transition-all hover:border-gray-300 dark:hover:border-white/20">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-lime-500/10 dark:text-lime-400 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-small font-bold text-gray-900 dark:text-white">Personal Job Notes</h4>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">Keep interview takeaways, recruiter details, or referral contacts handy</p>
+                      </div>
+                    </div>
+                    <Button
                       type="button"
-                      onClick={() => setJobNotes((prev) => (prev ? prev + prompt.text : prompt.text.trim()))}
-                      className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsEditingNotes(true)}
+                      leftIcon={<Plus className="w-3.5 h-3.5" />}
                     >
-                      {prompt.label}
-                    </button>
-                  ))}
-                </div>
-
-                <textarea
-                  value={jobNotes}
-                  onChange={(e) => setJobNotes(e.target.value)}
-                  placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
-                  rows={4}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
-                />
-
-                {/* Custom Tags */}
-                <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-white/5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    <Tag className="w-3.5 h-3.5" />
-                    <span>Tags</span>
+                      Add Notes
+                    </Button>
+                  </div>
+                </section>
+              ) : !isEditingNotes && Boolean(jobNotes?.trim()) ? (
+                /* 2. Notes Present: Show saved notes preview with Edit CTA */
+                <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-500" />
+                      <h4 className="text-small font-bold text-gray-900 dark:text-white">Personal Job Notes</h4>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setIsEditingNotes(true)}
+                      leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                    >
+                      Edit Notes
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto pr-1">
+                    {jobNotes}
+                  </div>
+                  {jobTags.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-gray-100 dark:border-white/5">
+                      {jobTags.map((tag, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ) : (
+                /* 3. Editing State: Interactive input interface */
+                <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-emerald-500" />
+                      <h4 className="text-small font-bold text-gray-900 dark:text-white">Personal Job Notes</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setJobNotes((job as any)?.notes || '');
+                          setIsEditingNotes(false);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={handleSaveNotes}
+                        isLoading={isSavingNotes}
+                        loadingText="Saving..."
+                        leftIcon={<Save className="w-3.5 h-3.5" />}
+                      >
+                        Save Notes
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {jobTags.map((tag, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                  {/* Quick Template Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: '+ Recruiter Call', text: '\n\n--- Recruiter Call Takeaways ---\n- Recruiter Name:\n- Salary Mentioned:\n- Next Stage Timeline:' },
+                      { label: '+ Interview Prep', text: '\n\n--- Interview Preparation ---\n- Key Projects to Highlight:\n- System Design Points:\n- Tech Stack Overlap:' },
+                      { label: '+ Questions for Team', text: '\n\n--- Questions for Interviewer ---\n1. What does the day-to-day look like?\n2. What are the key engineering challenges this quarter?' },
+                      { label: '+ Salary Target', text: '\n\n--- Compensation & Target ---\n- Target Base:\n- Target Equity:\n- Deadlines:' },
+                      { label: '+ Referral & Contacts', text: '\n\n--- Contact & Referral ---\n- Person:\n- Connection:\n- Date Followed Up:' },
+                    ].map((prompt, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setJobNotes((prev) => (prev ? prev + prompt.text : prompt.text.trim()))}
+                        className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
                       >
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(tag)}
-                          className="hover:text-red-500"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
+                        {prompt.label}
+                      </button>
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="text"
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddTag();
-                        }
-                      }}
-                      placeholder="Add tag (e.g. Referral, High Priority)..."
-                      className="flex-1 rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white"
-                    >
-                      Add Tag
-                    </button>
+                  <textarea
+                    value={jobNotes}
+                    onChange={(e) => setJobNotes(e.target.value)}
+                    placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
+                    rows={4}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
+                  />
+
+                  {/* Custom Tags */}
+                  <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-white/5">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      <Tag className="w-3.5 h-3.5" />
+                      <span>Tags</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {jobTags.map((tag, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tag)}
+                            className="hover:text-red-500"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddTag();
+                          }
+                        }}
+                        placeholder="Add tag (e.g. Referral, High Priority)..."
+                        className="flex-1 rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-1.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAddTag}
+                      >
+                        Add Tag
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </section>
+                </section>
+              )}
 
               {/* Description */}
               <section>
@@ -426,31 +526,38 @@ export function JobDetailModal({
             </div>
 
             {/* Footer */}
-            <div className="p-6 pt-4 border-t border-gray-100 dark:border-gray-800 gap-2 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 flex-shrink-0">
-              <button
+            <div className="p-6 pt-4 border-t border-gray-100 dark:border-white/10 gap-2 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 flex-shrink-0">
+              <Button
+                variant="primary"
+                size="md"
                 onClick={onApply}
-                className="flex-1 inline-flex items-center justify-center gap-2 bg-lime-500 hover:bg-lime-600 text-black font-semibold py-2.5 px-4 rounded-lg transition-colors"
+                leftIcon={<ExternalLink className="w-4 h-4" />}
+                className="flex-1"
               >
-                <ExternalLink className="w-4 h-4" />
                 Apply Now
-              </button>
+              </Button>
               {isSaved ? (
-                <button
+                <Button
+                  variant="secondary"
+                  size="md"
                   disabled
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold py-2.5 px-4 rounded-lg"
+                  leftIcon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                  className="flex-1 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
                   Saved to Tracker
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
+                  variant="secondary"
+                  size="md"
                   onClick={onSave}
-                  disabled={saving}
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  isLoading={saving}
+                  loadingText="Saving…"
+                  leftIcon={<Briefcase className="w-4 h-4" />}
+                  className="flex-1"
                 >
-                  <Briefcase className="w-4 h-4" />
-                  {saving ? 'Saving…' : 'Save to Tracker'}
-                </button>
+                  Save to Tracker
+                </Button>
               )}
             </div>
           </motion.div>

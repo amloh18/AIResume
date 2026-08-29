@@ -1,231 +1,308 @@
+'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MoreHorizontal, Trophy, Sparkles, Target, Flame, Play } from 'lucide-react';
+import {
+  ArrowLeft,
+  Trophy,
+  Sparkles,
+  Target,
+  Flame,
+  Play,
+  Clock,
+  Briefcase,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  BookOpen,
+} from 'lucide-react';
 import ReadinessChart from './ReadinessChart';
 import ModuleList from './ModuleList';
 
 interface InterviewHubProps {
-    session: any;
-    questionsByModule: any;
+  session: any;
+  questionsByModule: any;
 }
 
-const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule }) => {
-    const router = useRouter();
+export default function InterviewHub({ session, questionsByModule }: InterviewHubProps) {
+  const router = useRouter();
 
-    const targetRole = session?.targetRole || 'Interview Prep';
-    const jobId = session?.jobId?._id || session?.jobId || session?._id || '';
-    const company = session?.jobId?.company || '';
-    const readinessScore = session?.readinessScore || 0; 
-    const currentStreak = session?.currentStreak || 0;
-    const modules = session?.modules || [];
+  const targetRole = session?.targetRole || 'Interview Prep';
+  const jobId = session?.jobId?._id || session?.jobId || session?._id || '';
+  const company = session?.jobId?.company || '';
+  const readinessScore = session?.readinessScore || 0;
+  const currentStreak = session?.currentStreak || 0;
+  const modules = session?.modules || [];
 
-    // Find the next best question (first pending/drafted question)
-    let nextQuestion = null;
-    let nextModuleId = null;
-    if (modules && questionsByModule) {
-        for (const mod of modules) {
-            const qs = questionsByModule[mod.id] || [];
-            const pending = qs.find((q: any) => q.status !== 'completed' && q.userAnswer?.status !== 'analyzed');
-            if (pending) {
-                nextQuestion = pending;
-                nextModuleId = mod.id;
-                break;
-            }
-        }
+  // Find the next best question (first pending/drafted question)
+  let nextQuestion: any = null;
+  let nextModuleId: string | null = null;
+  if (modules && questionsByModule) {
+    for (const mod of modules) {
+      const qs = questionsByModule[mod.id] || [];
+      const pending = qs.find(
+        (q: any) => q.status !== 'completed' && q.userAnswer?.status !== 'analyzed'
+      );
+      if (pending) {
+        nextQuestion = pending;
+        nextModuleId = mod.id;
+        break;
+      }
     }
+  }
 
-    return (
-        <div className="h-full app-page-bg min-h-screen font-sans">
-            {/* Header */}
-            <div className="bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10 px-6 py-4">
-                <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => router.push('/dashboard/interview')}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
+  return (
+    <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+      <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-5 md:px-8">
+        <div className="max-w-[1400px] w-full mx-auto flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-5 md:py-8 space-y-6">
+
+          {/* 1. Header (Headings & Actions Inline) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+            <div>
+              <div className="text-[11px] font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1.5">
+                <span
+                  className="cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+                  onClick={() => router.push('/dashboard')}
+                >
+                  Dashboard
+                </span>
+                <span>›</span>
+                <span
+                  className="cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+                  onClick={() => router.push('/dashboard/interview')}
+                >
+                  Interview Coach
+                </span>
+                <span>›</span>
+                <span className="text-[var(--text-primary)] font-semibold truncate max-w-[240px]">
+                  {targetRole}
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+                  {targetRole}
+                </h1>
+                {company && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                    <Building2 className="w-3.5 h-3.5" />
+                    {company}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/40">
+                  <Sparkles className="w-3 h-3 text-emerald-600 dark:text-lime-400" />
+                  {modules.length} Modules Active
+                </span>
+              </div>
+              <p className="text-xs md:text-sm text-[var(--text-secondary)] mt-1">
+                Step-by-step role competency learning path and mock question scenarios.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 self-start sm:self-center shrink-0">
+              <button
+                onClick={() => router.push('/dashboard/interview')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] text-xs font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Opportunities
+              </button>
+              {nextQuestion && (
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/dashboard/interview/practice/${nextQuestion.id || nextQuestion._id}?jobId=${jobId}`
+                    )
+                  }
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs shadow-sm transition-all active:scale-95"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  Resume Session
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Main 2-Column Workspace */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left Rail: Stats & Coaching Widgets (4 Cols) */}
+            <div className="lg:col-span-4 space-y-5">
+              
+              {/* Readiness Card */}
+              <div className="bg-[var(--bg-secondary)] rounded-2xl p-5 sm:p-6 border border-[var(--border-primary)] shadow-xs flex flex-col items-center text-center">
+                <div className="flex items-center justify-between w-full mb-4">
+                  <h3 className="font-bold text-xs sm:text-sm text-[var(--text-primary)] flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-emerald-700 dark:text-lime-400" />
+                    Target Readiness
+                  </h3>
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                    Live Score
+                  </span>
+                </div>
+
+                <div className="my-2">
+                  <ReadinessChart score={readinessScore} />
+                </div>
+
+                <p className="text-xs text-[var(--text-secondary)] mt-3 mb-4 leading-relaxed max-w-xs">
+                  {readinessScore >= 80
+                    ? 'Your responses demonstrate strong role readiness. Keep fine-tuning edge questions.'
+                    : 'Practice 2–3 more questions in high-impact modules to boost your readiness score.'}
+                </p>
+
+                {nextQuestion && (
+                  <button
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/interview/practice/${nextQuestion.id || nextQuestion._id}?jobId=${jobId}`
+                      )
+                    }
+                    className="w-full py-2.5 px-4 rounded-xl bg-[var(--bg-tertiary)] hover:bg-emerald-500/10 text-emerald-700 dark:text-lime-400 border border-[var(--border-primary)] hover:border-emerald-500/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    Continue Practice Round
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* AI Coach Focus Insight */}
+              <div className="bg-[#013f2e] text-white rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+                    <Sparkles className="w-3.5 h-3.5 text-lime-300" />
+                  </div>
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-lime-300">
+                    AI Coach Tip
+                  </h4>
+                </div>
+                <p className="text-xs text-white/90 leading-relaxed mb-4">
+                  Focus on specific metrics and business impact when answering technical depth questions. Use quantifiable results to stand out.
+                </p>
+                <div className="text-[11px] text-white/70 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Tailored to {targetRole} competency map
+                </div>
+              </div>
+
+              {/* Practice Streak Card */}
+              <div className="bg-[var(--bg-secondary)] rounded-2xl p-5 border border-[var(--border-primary)] shadow-xs">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <Flame className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-[var(--text-primary)]">Practice Streak</h4>
+                      <p className="text-[10px] text-[var(--text-secondary)]">Daily consistency</p>
+                    </div>
+                  </div>
+                  <span className="text-sm font-black text-[var(--text-primary)] tabular-nums">
+                    {currentStreak} {currentStreak === 1 ? 'day' : 'days'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1.5 text-center">
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
+                    const isActive = i < Math.min(currentStreak, 7) || (currentStreak > 0 && i === 0);
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1.5">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+                            isActive
+                              ? 'bg-emerald-600 dark:bg-lime-500 text-white dark:text-black font-black'
+                              : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]'
+                          }`}
                         >
-                            <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                {targetRole} {company ? `| ${company} Prep` : 'Prep'}
-                            </h1>
-                            <p className="text-sm text-gray-500 font-medium">a Time • {modules.length} Modules</p>
+                          {isActive ? <CheckCircle2 className="w-3.5 h-3.5" /> : day}
                         </div>
+                        <span className="text-[9px] font-semibold text-[var(--text-tertiary)]">{day}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Hero Banner & Module Learning Path (8 Cols) */}
+            <div className="lg:col-span-8 space-y-6">
+
+              {/* Continue Where You Left Off Hero Banner */}
+              {nextQuestion && (
+                <div className="bg-[var(--bg-secondary)] border border-emerald-600/30 dark:border-lime-500/30 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-lime-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      <Sparkles className="w-3 h-3" />
+                      Next Best Question
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-[var(--text-primary)] leading-snug mb-3">
+                        {nextQuestion.question || nextQuestion.content?.question || 'Question prompt'}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase border ${
+                            (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'hard'
+                              ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
+                              : (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'medium'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                          }`}
+                        >
+                          {nextQuestion.difficulty || nextQuestion.content?.difficulty || 'Medium'}
+                        </span>
+                        {(nextQuestion.category || nextQuestion.content?.tags?.[0]) && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-[var(--bg-tertiary)] text-[var(--text-secondary)] rounded-md border border-[var(--border-primary)] uppercase">
+                            {nextQuestion.category || nextQuestion.content?.tags?.[0]}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors border border-gray-200 dark:border-gray-700">
-                        <MoreHorizontal className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/interview/practice/${nextQuestion.id || nextQuestion._id}?jobId=${jobId}`
+                        )
+                      }
+                      className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs shadow-sm transition-all active:scale-95 shrink-0"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Start Answering
                     </button>
+                  </div>
                 </div>
+              )}
+
+              {/* Learning Path Header */}
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-[var(--text-primary)]">
+                    Your Learning Path
+                  </h2>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Master key question categories tailored to this role.
+                  </p>
+                </div>
+              </div>
+
+              {/* Module Accordion List */}
+              <ModuleList
+                modules={modules}
+                questionsByModule={questionsByModule}
+                jobId={jobId}
+              />
+
             </div>
 
-            <div className="max-w-[1400px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Stats & Widgets */}
-                <div className="lg:col-span-3 space-y-6">
-                    {/* Your Readiness */}
-                    <div className="bg-white dark:bg-[#141810] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-center text-center">
-                        <h2 className="font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2 self-start">
-                            <Trophy className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                            Your Readiness
-                        </h2>
-                        
-                        <div className="flex justify-center mb-6">
-                            <ReadinessChart score={readinessScore} />
-                        </div>
-                        
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            You're <span className="font-bold text-purple-600 dark:text-purple-400">2 sessions</span> away from feeling interview-ready.
-                        </p>
+          </div>
 
-                        <button className="w-full py-3 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-700 dark:text-purple-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
-                            Keep practicing to improve your score! 
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
-                        </button>
-                    </div>
-
-                    {/* AI Coach */}
-                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-3xl p-6 shadow-sm text-white relative overflow-hidden">
-                        <Sparkles className="absolute top-4 right-4 w-6 h-6 text-yellow-300 opacity-80" />
-                        <div className="flex items-center gap-3 mb-4 relative z-10">
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>
-                            </div>
-                            <h3 className="font-bold text-lg">AI Coach</h3>
-                        </div>
-                        <p className="text-sm text-purple-100 mb-6 leading-relaxed relative z-10 font-medium">
-                            You've skipped high-impact questions in Talent Acquisition. Completing 2-3 more hard questions will boost your readiness faster.
-                        </p>
-                        <button className="w-full py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold rounded-xl transition-colors flex items-center justify-between px-4 text-sm relative z-10">
-                            Focus on High Impact Questions
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                        </button>
-                    </div>
-
-                    {/* Today's Goal */}
-                    <div className="bg-white dark:bg-[#141810] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                            <h3 className="font-bold text-gray-900 dark:text-white">Today's Goal</h3>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 ml-8">Answer 3 questions</p>
-                        <div className="flex items-center gap-4">
-                            <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-600 rounded-full" style={{ width: '33%' }} />
-                            </div>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">1/3</span>
-                        </div>
-                    </div>
-
-                    {/* Your Streak */}
-                    <div className="bg-white dark:bg-[#141810] rounded-3xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Flame className="w-6 h-6 text-orange-500 fill-current" />
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white">Your Streak</h3>
-                                <p className="text-sm font-medium text-gray-500"><span className="text-xl font-black text-gray-900 dark:text-white mr-1">{currentStreak}</span> days</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
-                                // For visual placeholder: highlight days based on currentStreak mod 7
-                                const isActive = i < Math.min(currentStreak, 7) || (currentStreak > 0 && i === 0);
-                                return (
-                                    <div key={i} className="flex flex-col items-center gap-2">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                            isActive 
-                                            ? 'bg-purple-600 text-white' 
-                                            : 'bg-gray-100 dark:bg-gray-800 text-transparent'
-                                        }`}>
-                                            {isActive && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>}
-                                        </div>
-                                        <span className="text-[10px] font-bold text-gray-400">{day}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Need help getting started? */}
-                    <div className="bg-white dark:bg-[#141810] rounded-3xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm flex items-center justify-between cursor-pointer hover:border-purple-200 transition-colors group">
-                        <div>
-                            <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-1">Need help getting started?</h3>
-                            <p className="text-xs text-gray-500">See how Interview Coach works</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                            <Play className="w-4 h-4 text-blue-500 fill-current" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Modules List */}
-                <div className="lg:col-span-9 space-y-8">
-                    
-                    {/* Continue Where You Left Off */}
-                    {nextQuestion && (
-                        <div className="bg-white dark:bg-[#141810] rounded-3xl p-6 md:p-8 border border-purple-100 dark:border-purple-900/30 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-400 to-blue-500"></div>
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                                    <Sparkles className="w-5 h-5 text-blue-500" />
-                                </div>
-                                <h2 className="font-bold text-gray-900 dark:text-white text-sm tracking-wide">Continue Where You Left Off</h2>
-                            </div>
-                            
-                            <div className="bg-white dark:bg-[#0a0c08] border border-gray-100 dark:border-gray-800 rounded-2xl p-6 md:p-8 shadow-sm">
-                                <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-4 block">Next Best Question</span>
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                    <div className="flex-1">
-                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 leading-snug">
-                                            {nextQuestion.question || nextQuestion.content?.question || 'Question text not available'}
-                                        </h3>
-                                        <div className="flex flex-wrap gap-2">
-                                            <span className={`px-3 py-1 text-xs font-bold rounded-md uppercase ${
-                                                (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'hard' 
-                                                ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
-                                                : (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'medium'
-                                                ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
-                                                : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'
-                                            }`}>
-                                                {nextQuestion.difficulty || nextQuestion.content?.difficulty || 'Medium'}
-                                            </span>
-                                            {(nextQuestion.category || nextQuestion.content?.tags?.[0]) && (
-                                                <span className="px-3 py-1 text-xs font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-md">
-                                                    {nextQuestion.category || nextQuestion.content?.tags?.[0]}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => router.push(`/dashboard/interview/practice/${nextQuestion.id || nextQuestion._id}?jobId=${jobId}`)}
-                                        className="w-full md:w-auto px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap active:scale-95"
-                                    >
-                                        <Play className="w-4 h-4 fill-current" />
-                                        Start Answering
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Learning Path</h2>
-                        <button className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2 bg-white dark:bg-[#141810]">
-                            Expand All
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-                        </button>
-                    </div>
-
-                    <ModuleList
-                        modules={modules}
-                        questionsByModule={questionsByModule}
-                        jobId={jobId}
-                    />
-                </div>
-            </div>
         </div>
-    );
-};
-
-export default InterviewHub;
+      </div>
+    </div>
+  );
+}

@@ -269,7 +269,73 @@
   --text-4xl:  2.5rem;    /* 40px */
   --text-5xl:  3.5rem;    /* 56px */
 
-  /* Light theme colors */
+  /* =========================================================================
+     BUILDAIRESUME GLOBAL DESIGN TOKENS (LIGHT THEME)
+     ========================================================================= */
+
+  /* Primary Action Colors (BuildAIResume Green) */
+  --color-primary: #013f2e;
+  --color-primary-hover: #02523c;
+  --color-primary-active: #012e22;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: rgba(1, 63, 46, 0.08);
+  --color-primary-soft-hover: rgba(1, 63, 46, 0.14);
+
+  /* Primary Accent Highlight (Jobs Hub Vibrant Green / Lime) */
+  --color-accent-green: #84cc16; /* lime-500 */
+  --color-accent-green-hover: #65a30d;
+  --color-accent-green-soft: rgba(132, 204, 22, 0.15);
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-subtle: #f9fafb;
+  --color-surface-muted: #f3f4f6;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-subtle: #f3f4f6;
+  --color-border-strong: #d1d5db;
+
+  /* Typography */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+  --color-text-tertiary: #d1d5db;
+
+  /* Semantic Status Tokens */
+  --status-success: #10b981;
+  --status-success-soft: rgba(16, 185, 129, 0.12);
+  --status-success-text: #047857;
+  --status-warning: #f59e0b;
+  --status-warning-soft: rgba(245, 158, 11, 0.12);
+  --status-warning-text: #b45309;
+  --status-danger: #ef4444;
+  --status-danger-soft: rgba(239, 68, 68, 0.12);
+  --status-danger-text: #b91c1c;
+  --status-info: #0ea5e9;
+  --status-info-soft: rgba(14, 165, 233, 0.12);
+  --status-info-text: #0369a1;
+
+  /* Sizing & Heights Scale (Strict 3-tier Control Heights) */
+  --control-height-sm: 2rem;     /* 32px */
+  --control-height-md: 2.5rem;   /* 40px */
+  --control-height-lg: 2.875rem; /* 46px */
+
+  /* Border Radii */
+  --radius-xs: 0.25rem;   /* 4px */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.625rem;  /* 10px */
+  --radius-lg: 1rem;      /* 16px */
+  --radius-xl: 1.5rem;    /* 24px */
+  --radius-full: 9999px;  /* Pills, badges, rounded CTAs */
+
+  /* Standard Motion */
+  --motion-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-slow: 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Light theme colors (backward compatibility) */
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --bg-tertiary: #f3f4f6;
@@ -327,6 +393,43 @@
 }
 
 .dark {
+  /* =========================================================================
+     BUILDAIRESUME GLOBAL DESIGN TOKENS (DARK THEME)
+     ========================================================================= */
+  --color-primary: #84cc16; /* Vibrant Lime in dark mode for contrast */
+  --color-primary-hover: #a3e635;
+  --color-primary-active: #65a30d;
+  --color-primary-foreground: #000000;
+  --color-primary-soft: rgba(132, 204, 22, 0.15);
+  --color-primary-soft-hover: rgba(132, 204, 22, 0.25);
+
+  --color-surface: #141810;
+  --color-surface-elevated: #1a201a;
+  --color-surface-subtle: #191c1b;
+  --color-surface-muted: rgba(255, 255, 255, 0.05);
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-strong: rgba(255, 255, 255, 0.2);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-text-tertiary: #4b5563;
+
+  --status-success: #34d399;
+  --status-success-soft: rgba(52, 211, 153, 0.15);
+  --status-success-text: #6ee7b7;
+  --status-warning: #fbbf24;
+  --status-warning-soft: rgba(251, 191, 36, 0.15);
+  --status-warning-text: #fde68a;
+  --status-danger: #f87171;
+  --status-danger-soft: rgba(248, 113, 113, 0.15);
+  --status-danger-text: #fca5a5;
+  --status-info: #38bdf8;
+  --status-info-soft: rgba(56, 189, 248, 0.15);
+  --status-info-text: #7dd3fc;
+
   /* Dark theme colors - Updated specifications */
   --bg-primary: #191c1b;
   --bg-secondary: #141810;
@@ -376,6 +479,36 @@
   --input: 82 22% 18%;
   --ring: 164 97% 13%;
   --radius: 0.75rem;
+}
+
+/* =========================================================================
+   GLOBAL INTERACTION UTILITIES
+   ========================================================================= */
+
+.btn-scale-interactive {
+  transition: transform var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast), box-shadow var(--motion-fast), opacity var(--motion-fast);
+}
+.btn-scale-interactive:hover:not(:disabled) {
+  transform: scale(1.015);
+}
+.btn-scale-interactive:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.dropdown-menu-animate {
+  animation: dropdownFadeIn var(--motion-fast) forwards;
+  transform-origin: top left;
 }
 
 /* Editor step one: token-driven dashboard surfaces */
@@ -2154,6 +2287,92 @@ nav {
   }
 }
 
+/* Waveform bar animation for voice interview */
+.waveform-bar {
+  height: 4px;
+  animation: waveform-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes waveform-pulse {
+  0% { height: 4px; opacity: 0.3; }
+  100% { height: 20px; opacity: 0.7; }
+}
+
+/* Status pipeline stage animations */
+@keyframes stage-enter {
+  0% { opacity: 0; transform: translateX(-12px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+  50% { box-shadow: 0 0 0 6px transparent; }
+}
+
+@keyframes stage-glow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+
+@keyframes stage-track-fill {
+  0% { transform: scaleY(0); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes tab-slide-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-hover-lift {
+  0% { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  100% { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+}
+
+@keyframes badge-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer-border {
+  0% { border-color: rgba(1, 63, 46, 0.15); }
+  50% { border-color: rgba(1, 63, 46, 0.35); }
+  100% { border-color: rgba(1, 63, 46, 0.15); }
+}
+
+.animate-stage-enter {
+  animation: stage-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-stage-pulse {
+  animation: stage-pulse 2s ease-in-out infinite;
+}
+
+.animate-stage-glow {
+  animation: stage-glow 2.5s ease-in-out infinite;
+}
+
+.animate-tab-slide {
+  animation: tab-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-card-lift {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-card-lift:hover {
+  animation: card-hover-lift 0.2s ease-out forwards;
+}
+
+.animate-badge-pop {
+  animation: badge-pop 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-shimmer-border {
+  animation: shimmer-border 2s ease-in-out infinite;
+}
+
 /* Custom scrollbar styles */
 .scrollbar-thin {
   scrollbar-width: thin;
@@ -3341,5 +3560,13 @@ mark[data-type="highlight"] {
 :focus-visible {
   outline: 2px solid #013f2e;
   outline-offset: 2px;
+}
+
+/* Inputs and textareas manage their own border/ring focus styles */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
 }
 

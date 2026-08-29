@@ -56,15 +56,15 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`bg-white rounded-xl overflow-hidden shadow-sm border ${data.status === 'ACCEPTED' ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'}`}
+            className={`bg-[var(--bg-secondary)] rounded-2xl overflow-hidden shadow-xs border ${data.status === 'ACCEPTED' ? 'border-emerald-500/40 ring-1 ring-emerald-500/20' : 'border-[var(--border-primary)]'}`}
         >
-            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-gray-100">
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[var(--border-primary)]">
                 {/* Original Column */}
-                <div className="flex-1 p-6 bg-gray-50/50">
+                <div className="flex-1 p-5 sm:p-6 bg-[var(--bg-tertiary)]/30">
                     <div className="flex items-center justify-between mb-4">
-                        <span className="text-small font-semibold uppercase tracking-wider text-gray-500">Original Profile</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Original Profile</span>
                         {data.current.headline && (
                             <button
                                 onClick={() => {
@@ -72,7 +72,7 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                                         detail: { path: 'basics.label', text: data.current.headline }
                                     }));
                                 }}
-                                className="text-small text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md transition-colors"
+                                className="text-xs text-emerald-700 dark:text-lime-400 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg transition-colors border border-emerald-500/20"
                             >
                                 <Sparkles className="w-3 h-3" /> Edit with Mori
                             </button>
@@ -184,10 +184,10 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
 
                             {/* Actions Footer */}
                             {!isEditing && (
-                                <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+                                <div className="flex items-center justify-between pt-4 mt-4 border-t border-[var(--border-primary)]">
                                     <div className="flex flex-wrap gap-1.5">
                                         {data.enhanced.seo_keywords_used.map((keyword, idx) => (
-                                            <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-medium border border-gray-200">
+                                            <span key={idx} className="px-2 py-0.5 bg-[var(--bg-tertiary)] text-[var(--text-secondary)] rounded-md text-[10px] font-semibold border border-[var(--border-primary)]">
                                                 {keyword}
                                             </span>
                                         ))}
@@ -195,14 +195,14 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <button 
                                             onClick={() => setIsEditing(true)}
-                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                            className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
                                             title="Edit"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button 
                                             onClick={handleRetry}
-                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                            className="p-1.5 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
                                             title="Regenerate"
                                         >
                                             <RefreshCw className="w-4 h-4" />
@@ -210,7 +210,7 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                                         {data.status !== 'ACCEPTED' && (
                                             <button 
                                                 onClick={handleAccept}
-                                                className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded-md text-small font-semibold transition-colors"
+                                                className="flex items-center gap-1 px-3 py-1.5 bg-[#013f2e] text-white hover:bg-[#025c43] rounded-xl text-xs font-bold transition-all shadow-xs"
                                             >
                                                 <Check className="w-3.5 h-3.5" /> Accept
                                             </button>
@@ -220,7 +220,7 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                             )}
                         </div>
                     ) : (
-                        <div className="text-small text-gray-500 italic flex-1 flex items-center justify-center">No enhancements generated yet.</div>
+                        <div className="text-xs text-[var(--text-tertiary)] italic flex-1 flex items-center justify-center">No enhancements generated yet.</div>
                     )}
                 </div>
             </div>

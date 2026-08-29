@@ -28,6 +28,8 @@ import {
 import CompanyLogo from "@/components/ui/CompanyLogo";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
+import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
+import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
 
 interface JobApplication {
   id: string;
@@ -657,23 +659,33 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const nudge = getFollowUpNudge(job as any);
   const successProb = calculateSuccessProbability(job as any);
 
+  const jobId = String(job.id || job._id || '');
+  const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
+  const { clearStatus } = useJobLiveStatusStore();
+
   return (
-    <div
-      draggable={canDrag}
-      onDragStart={(e) => onDragStart(e, job.id)}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onClick={() => onClick(job)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`group relative overflow-hidden bg-white dark:bg-[#141810] rounded-xl border transition-all duration-300 ${
-        isSelected
-          ? "ring-2 ring-blue-500 ring-opacity-50"
-          : "border-gray-200 dark:border-white/20"
-      } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-      ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
-      `}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
     >
+      <div
+        draggable={canDrag}
+        onDragStart={(e) => onDragStart(e, job.id)}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+        onClick={() => onClick(job)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`group relative overflow-hidden bg-white dark:bg-[#141810] rounded-xl border transition-all duration-300 ${
+          isSelected
+            ? "ring-2 ring-blue-500 ring-opacity-50"
+            : "border-gray-200 dark:border-white/20"
+        } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
+        ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
+        `}
+      >
       <div className="p-3">
         {isStale && (
           <div className="mb-3 flex items-center justify-between bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-2 py-1.5 rounded text-small font-medium border border-red-100 dark:border-red-900/30">
@@ -724,41 +736,53 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           </div>
         </div>
 
-        {/* Stage Specific Content */}
-        <div className="mt-1">
-          {stage === "saved" && renderDraftContent()}
-          {stage === "created" && renderCreatedContent()}
-          {stage === "applied" && renderAppliedContent()}
-          {stage === "interview" && renderInterviewContent()}
-          {stage === "offer" && renderOfferContent()}
-          {stage === "rejected" && (
-            <div className="mt-2 text-small text-red-500 font-medium">
-              Application Rejected
-            </div>
-          )}
-
-          {/* Inline ATS + Deadline Display for Staging (created), Applied, and Interview stages */}
-          {["created", "applied", "interview"].includes(stage) && (
-            <div className="flex items-center justify-between text-[11px] mt-2.5 pt-2.5 border-t border-gray-100 dark:border-white/5 gap-2">
-              <div className="flex items-center gap-1">
-                <span className="text-gray-500 dark:text-gray-400 font-bold">ATS Score:</span>
-                <span className={`font-black ${atsScore && atsScore >= 80 ? 'text-green-600 dark:text-green-400' : atsScore && atsScore > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
-                  {atsScore && atsScore > 0 ? `${atsScore}%` : 'N/A'}
-                </span>
+        {/* Live Status OR Stage Specific Content */}
+        {liveStatus ? (
+          <div className="mt-2.5">
+            <JobLiveStatusCard
+              status={liveStatus}
+              onClose={() => clearStatus(jobId)}
+              inline={true}
+              compact={true}
+            />
+          </div>
+        ) : (
+          <div className="mt-1">
+            {stage === "saved" && renderDraftContent()}
+            {stage === "created" && renderCreatedContent()}
+            {stage === "applied" && renderAppliedContent()}
+            {stage === "interview" && renderInterviewContent()}
+            {stage === "offer" && renderOfferContent()}
+            {stage === "rejected" && (
+              <div className="mt-2 text-small text-red-500 font-medium">
+                Application Rejected
               </div>
-              {job.deadline && (
-                <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                  <Calendar size={11} className="shrink-0" />
-                  <span className="truncate">
-                    Due {new Date(job.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            )}
+
+            {/* Inline ATS + Deadline Display for Staging (created), Applied, and Interview stages */}
+            {["created", "applied", "interview"].includes(stage) && (
+              <div className="flex items-center justify-between text-[11px] mt-2.5 pt-2.5 border-t border-gray-100 dark:border-white/5 gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500 dark:text-gray-400 font-bold">ATS Score:</span>
+                  <span className={`font-black ${atsScore && atsScore >= 80 ? 'text-green-600 dark:text-green-400' : atsScore && atsScore > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                    {atsScore && atsScore > 0 ? `${atsScore}%` : 'N/A'}
                   </span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+                {job.deadline && (
+                  <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                    <Calendar size={11} className="shrink-0" />
+                    <span className="truncate">
+                      Due {new Date(job.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 

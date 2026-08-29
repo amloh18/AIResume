@@ -57,6 +57,12 @@ async function createIndexes() {
     { key: { 'source.primary': 1, status: 1 }, name: 'jobs_source_status' },
     // Search: text index on title + descriptionText
     { key: { title: 'text', descriptionText: 'text', 'company.name': 'text' }, name: 'jobs_text_search' },
+    // Role family queries (BuildAIResume - Sprint 1)
+    { key: { roleFamily: 1, status: 1, postedAt: -1 }, name: 'jobs_roleFamily_status_postedAt' },
+    // Normalized title search
+    { key: { normalizedTitle: 1, status: 1 }, name: 'jobs_normalizedTitle_status' },
+    // Compound: role family + location for candidate retrieval
+    { key: { roleFamily: 1, 'location.countryCode': 1, 'location.remote': 1, postedAt: -1 }, name: 'jobs_roleFamily_country_remote_postedAt' },
   ];
 
   // ── Ingestion runs collection ──────────────────────────────────────
@@ -84,6 +90,26 @@ async function createIndexes() {
     { key: { jobId: 1, createdAt: -1 }, name: 'events_jobId_createdAt' },
     { key: { canonicalId: 1 }, name: 'events_canonicalId' },
     { key: { eventType: 1, createdAt: -1 }, name: 'events_type_createdAt' },
+  ];
+
+  // ── Job demand collection (BuildAIResume) ─────────────────────────
+  const demandColl = db.collection('jobDemand');
+
+  const demandIndexes = [
+    { key: { roleFamily: 1, country: 1, remote: 1 }, name: 'demand_roleFamily_country_remote_unique', unique: true },
+    { key: { priority: -1, nextEligibleFetchAt: 1, status: 1 }, name: 'demand_priority_fetchAt_status' },
+    { key: { status: 1, priority: -1 }, name: 'demand_status_priority' },
+    { key: { lastRequestedAt: -1 }, name: 'demand_lastRequestedAt' },
+    { key: { lastFetchedAt: -1 }, name: 'demand_lastFetchedAt' },
+    { key: { roleFamily: 1 }, name: 'demand_roleFamily' },
+  ];
+
+  // ── Ingestion locks collection (BuildAIResume) ────────────────────
+  const locksColl = db.collection('ingestionLocks');
+
+  const locksIndexes = [
+    { key: { segmentKey: 1 }, name: 'locks_segmentKey_unique', unique: true },
+    { key: { expiresAt: 1 }, name: 'locks_expiresAt_ttl', expireAfterSeconds: 0 },
   ];
 
   // ── Apply indexes ──────────────────────────────────────────────────
@@ -117,6 +143,8 @@ async function createIndexes() {
   await applyIndexes('ingestionRuns', runsColl as any, runsIndexes);
   await applyIndexes('jobSources', sourcesColl as any, sourcesIndexes);
   await applyIndexes('jobEvents', eventsColl as any, eventsIndexes);
+  await applyIndexes('jobDemand', demandColl as any, demandIndexes);
+  await applyIndexes('ingestionLocks', locksColl as any, locksIndexes);
 
   console.log(dryRun ? '\n💡 Run with --apply to create indexes' : '\n✅ Done');
   await mongoose.connection.close();

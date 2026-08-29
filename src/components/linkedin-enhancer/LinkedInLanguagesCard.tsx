@@ -22,16 +22,16 @@ export default function LinkedInLanguagesCard({ data }: LinkedInLanguagesCardPro
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+            className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 sm:p-6"
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-h3 font-semibold text-gray-900">Languages</h2>
+                    <Globe className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                    <h2 className="text-xs font-bold text-[var(--text-primary)]">Languages</h2>
                 </div>
                 <CopyAllButton content={allContent} label="Copy All" />
             </div>

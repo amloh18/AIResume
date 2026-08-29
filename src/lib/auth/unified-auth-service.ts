@@ -14,7 +14,6 @@ import User from '@/models/User';
 import { headers } from 'next/headers';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
-import fetch from 'node-fetch';
 
 /**
  * Unified Authentication Service

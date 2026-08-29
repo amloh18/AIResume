@@ -4,6 +4,7 @@ import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import JobApplication from '@/models/JobApplication';
 import { NaukriApplyService } from '@/lib/services/naukriApplyService';
+import { checkForDuplicate } from '@/lib/jobs/deduplicate';
 
 /**
  * POST /api/jobs/naukri/auto-apply
@@ -85,6 +86,19 @@ export async function POST(request: NextRequest) {
     );
 
     // 3. Create or update JobApplication in Tracker
+    // Dedup check: prevent duplicate jobs per user
+    const dedup = await checkForDuplicate(auth.userId, title, company, jobUrl);
+    if (dedup.isDuplicate && dedup.existingJob) {
+      return NextResponse.json({
+        success: true,
+        duplicate: true,
+        existingJob: dedup.existingJob,
+        matchType: dedup.matchType,
+        message: 'This job already exists in your tracker',
+        screeningAnswers: answers,
+      });
+    }
+
     const jobData = {
       userId: auth.userId,
       jobTitle: title,

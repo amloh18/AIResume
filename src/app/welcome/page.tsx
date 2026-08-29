@@ -631,15 +631,15 @@ function WelcomePageContent() {
           profileUpdates.locations = locations;
         }
         if (currentStep === 7) {
-          profileUpdates.salary = { min: salaryMin, currency: salaryCurrency };
+          profileUpdates.minSalary = salaryMin;
+          profileUpdates.salaryCurrency = salaryCurrency;
         }
         if (currentStep === 8) {
-          profileUpdates.experience = experienceYears;
+          profileUpdates.experienceYears = experienceYears;
           profileUpdates.maxNoticePeriodDays = maxNoticePeriodDays;
         }
         if (currentStep === 9) profileUpdates.searchIntensity = searchIntensity;
         if (currentStep === 10) profileUpdates.expectedApplicationsPerMonth = expectedApplicationsPerMonth;
-        if (currentStep === 11 && trackerInterest) profileUpdates.trackerInterest = trackerInterest;
         if (currentStep === 12) profileUpdates.applicationMode = applicationMode;
 
         if (Object.keys(profileUpdates).length > 0) {
@@ -1304,7 +1304,7 @@ function WelcomePageContent() {
           {currentStep === 1 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Goal Alignment</span>
                   <h1 className="onboarding-title">
                     What are you trying to accomplish?
                   </h1>
@@ -1389,7 +1389,7 @@ function WelcomePageContent() {
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Career Profile</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, let's build your profile` : `Let's build your career profile`}
                   </h1>
@@ -1554,7 +1554,7 @@ function WelcomePageContent() {
                             <div key={stepIdx} className={`flex items-center gap-3 ${isCompleted ? 'text-gray-900 font-bold' : isActive ? 'text-gray-900 font-extrabold' : 'text-gray-400'}`}>
                               <div className="flex-shrink-0">
                                 {isCompleted ? (
-                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-black shadow-sm">
+                                  <div className="w-5 h-5 rounded-full bg-[#013f2e] flex items-center justify-center text-white shadow-sm">
                                     <Check size={11} strokeWidth={4} />
                                   </div>
                                 ) : isActive ? (
@@ -1628,7 +1628,7 @@ function WelcomePageContent() {
             {currentStep === 3 && (
               <div className="space-y-6 max-w-3xl mx-auto text-gray-900">
                 <div className="space-y-2 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Analysis &amp; Insights</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `What AIResume discovered about your career, ${candidateName}` : 'What AIResume discovered about your background'}
                   </h1>
@@ -1839,7 +1839,7 @@ function WelcomePageContent() {
             {currentStep === 5 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Target Roles</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, what roles are you targeting?` : 'What roles are you targeting?'}
                   </h1>
@@ -1961,7 +1961,7 @@ function WelcomePageContent() {
             {currentStep === 6 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Workplace + Location</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, where do you want to work?` : 'Where do you want to work?'}
                   </h1>
@@ -2024,7 +2024,7 @@ function WelcomePageContent() {
             {currentStep === 7 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Salary Expectations</span>
                   <h1 className="onboarding-title">
                     What&apos;s your target salary?
                   </h1>
@@ -2120,7 +2120,7 @@ function WelcomePageContent() {
             {currentStep === 8 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Experience + Availability</span>
                   <h1 className="onboarding-title">
                     Tell us about your experience
                   </h1>
@@ -2237,7 +2237,7 @@ function WelcomePageContent() {
             {currentStep === 9 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Search Intensity</span>
                   <h1 className="onboarding-title">
                     {candidateName ? `${candidateName}, how actively are you searching?` : 'How actively are you looking?'}
                   </h1>
@@ -2279,7 +2279,7 @@ function WelcomePageContent() {
             {currentStep === 10 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Volume</span>
                   <h1 className="onboarding-title">
                     How many applications per month?
                   </h1>
@@ -2327,7 +2327,7 @@ function WelcomePageContent() {
             {currentStep === 11 && (
               <div className="space-y-6 max-w-2xl mx-auto py-2">
                 <div className="space-y-2 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">
                     Pipeline Autopilot
                   </span>
                   <h1 className="onboarding-title">
@@ -2561,7 +2561,7 @@ function WelcomePageContent() {
             {currentStep === 12 && (
               <div className="space-y-8">
                 <div className="space-y-3 text-center">
-                  <span className="onboarding-step-label text-black bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">Application Mode</span>
                   <h1 className="onboarding-title">
                     How much should AIResume handle?
                   </h1>
@@ -2690,7 +2690,7 @@ function WelcomePageContent() {
               disabled={!isStepValid}
               className={`${
                 currentStep === 3 
-                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-black font-extrabold shadow-md' 
+                  ? 'bg-[#013f2e] hover:bg-[#02523c] text-white font-extrabold shadow-md' 
                   : 'bg-black text-white hover:bg-slate-900 font-bold'
               } flex items-center gap-1.5 rounded-xl px-5 py-2.5 shadow-sm disabled:opacity-35 transition-all`}
             >

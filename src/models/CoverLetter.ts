@@ -67,21 +67,21 @@ const coverLetterSchema = new Schema<ICoverLetter>({
   },
   status: {
     type: String,
-    enum: ['draft', 'published', 'archived'],
+    enum: ['draft', 'final', 'published', 'archived'],
     default: 'draft'
   },
   jobId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.Mixed,
     ref: 'Job',
     required: false
   },
   cvId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.Mixed,
     ref: 'CV',
     required: false
   },
   journeyId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.Mixed,
     ref: 'ApplicationJourney',
     required: false
   },

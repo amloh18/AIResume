@@ -220,7 +220,7 @@ export default function AutomationOverview() {
           disabled={toggling}
           className={`px-6 py-3 rounded-2xl font-bold text-xs flex items-center gap-2 transition-all shadow-xl disabled:opacity-50 ${
             killSwitchActive
-              ? 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-emerald-500/20'
+              ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-emerald-500/20'
               : 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
           }`}
         >

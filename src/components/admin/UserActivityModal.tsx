@@ -736,7 +736,7 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
                       activeDialog.onConfirm(dialogInput1, dialogInput2);
                       setActiveDialog(null);
                     }}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all"
                   >
                     Confirm
                   </button>

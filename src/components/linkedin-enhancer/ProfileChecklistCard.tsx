@@ -19,23 +19,23 @@ export default function ProfileChecklistCard() {
     const progress = Math.round((completedCount / checklistItems.length) * 100);
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col h-full relative overflow-hidden">
-            <div className="flex justify-between items-center mb-6 z-10 relative">
-                <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Profile Checklist</h3>
-                <span className="text-small font-medium text-gray-600 dark:text-gray-400">{completedCount}/{checklistItems.length}</span>
+        <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-5 flex flex-col h-full relative overflow-hidden">
+            <div className="flex justify-between items-center mb-4 z-10 relative">
+                <h3 className="text-xs font-bold text-[var(--text-primary)]">Profile Checklist</h3>
+                <span className="text-[11px] font-semibold text-[var(--text-secondary)]">{completedCount}/{checklistItems.length}</span>
             </div>
 
-            <div className="mb-6 z-10 relative">
-                <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="mb-4 z-10 relative">
+                <div className="h-1.5 w-full bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
                     <div 
-                        className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-500 ease-out"
+                        className="h-full bg-emerald-600 dark:bg-lime-500 rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 z-10 relative">
-                <ul className="space-y-3">
+            <div className="flex-1 overflow-y-auto pr-1 z-10 relative">
+                <ul className="space-y-2">
                     {checklistItems.map(item => (
                         <li key={item.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-50 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-700/30">
                             <div className="flex items-center space-x-3">

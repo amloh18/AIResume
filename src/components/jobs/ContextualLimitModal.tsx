@@ -127,7 +127,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
               <Link
                 href="/dashboard/billing"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-black shadow-md transition-all flex items-center justify-center gap-1.5 mt-2"
+                className="w-full py-2.5 rounded-xl text-xs font-black bg-[#013f2e] hover:brightness-95 text-white shadow-md transition-all flex items-center justify-center gap-1.5 mt-2"
               >
                 <span>Upgrade to Focused</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -155,7 +155,7 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
                     onClose();
                     onManualApplyFallback();
                   }}
-                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-black dark:bg-[#013f2e] text-white dark:text-black transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gray-900 hover:bg-black dark:bg-[#013f2e] text-white transition-all flex items-center justify-center gap-1.5"
                 >
                   Apply Manually Instead
                   <ChevronRight className="w-3.5 h-3.5" />

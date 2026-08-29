@@ -119,7 +119,7 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
                 />
                 <button
                   onClick={() => addKeyword(index)}
-                  className="px-4 py-3 bg-[#013f2e] text-black rounded-none hover:bg-[#02523c] transition-colors"
+                  className="px-4 py-3 bg-[#013f2e] text-white rounded-none hover:bg-[#02523c] transition-colors"
                 >
                   <Plus size={16} />
                 </button>

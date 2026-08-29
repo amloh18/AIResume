@@ -13,11 +13,70 @@ import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
+import { resolveRoleFamily, getFamilySearchTerms, ROLE_TAXONOMY } from '@/lib/taxonomy/roleTaxonomy';
 
 // ── Structured Logging ─────────────────────────────────────────────────
 
 function log(tag: string, msg: string, ...args: any[]) {
   console.log(`[INGEST:${tag}] ${msg}`, ...args);
+}
+
+// ── Retry Helper ───────────────────────────────────────────────────────
+//
+// Bounded retry with exponential backoff for transient errors.
+// Only retries on network timeouts, connection resets, and 5xx errors.
+
+const RETRYABLE_STATUS_CODES = new Set([502, 503, 504]);
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  opts: { maxAttempts?: number; baseDelayMs?: number; maxDelayMs?: number; label?: string } = {}
+): Promise<T> {
+  const { maxAttempts = 3, baseDelayMs = 2000, maxDelayMs = 15000, label = 'operation' } = opts;
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
+
+      // Don't retry on non-retryable errors
+      if (attempt === maxAttempts) break;
+
+      const isRetryable =
+        err.name === 'TimeoutError' ||
+        err.name === 'AbortError' ||
+        err.code === 'ECONNRESET' ||
+        err.code === 'ECONNREFUSED' ||
+        err.code === 'ETIMEDOUT' ||
+        (err.status && RETRYABLE_STATUS_CODES.has(err.status));
+
+      if (!isRetryable) break;
+
+      const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 1000, maxDelayMs);
+      log('RETRY', `${label}: attempt ${attempt}/${maxAttempts} failed, retrying in ${Math.round(delay)}ms — ${err.message}`);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+// ── Python Resolver ─────────────────────────────────────────────────────
+//
+// On VPS the service sets the correct python. Locally, prefer scripts/.venv
+// so we pick up packages like jobspy without touching the system python.
+
+function resolvePython(): string {
+  const fs = require('fs');
+  const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python3');
+  try {
+    fs.accessSync(venvPython, fs.constants.X_OK);
+    return venvPython;
+  } catch {
+    return 'python3';
+  }
 }
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -65,6 +124,8 @@ export interface NormalizedJob {
   salary: { min?: number; max?: number; currency?: string; period?: string };
   skills: string[];
   seniority?: string;
+  roleFamily?: string;
+  roleFamilyKeywords?: string[];
   industry?: string;
   status: string;
   postedAt: Date;
@@ -94,6 +155,12 @@ export interface SourceProgress {
   currentPage?: number;
   totalPages?: number;
   message?: string;
+  /** LinkedIn-specific: current search being processed */
+  currentSearch?: string;
+  /** LinkedIn-specific: search index */
+  currentSearchIndex?: number;
+  /** LinkedIn-specific: total searches */
+  totalSearches?: number;
 }
 
 export type RunStatus =
@@ -123,7 +190,7 @@ export interface RunRecord {
 
 // ── Source Registry (Phase 1) ──────────────────────────────────────────
 
-export type SourceType = 'public_api' | 'api_key' | 'self_hosted_scraper';
+export type SourceType = 'public_api' | 'api_key' | 'self_hosted_scraper' | 'browser_worker';
 
 export interface SourceDefinition {
   id: string;
@@ -135,17 +202,71 @@ export interface SourceDefinition {
   defaultLimit: number;
   maxLimit: number;
   cooldownMs: number;
+  /** Minimum refresh interval in ms (baseline schedule) */
+  refreshIntervalMs: number;
+  /** Max jobs to fetch per run */
+  maxResults: number;
+  /** Max execution time in ms before timeout */
+  maxDurationMs: number;
+  /** Human-readable description */
+  description: string;
 }
 
 export const SOURCE_REGISTRY: Record<string, SourceDefinition> = {
-  greenhouse: { id: 'greenhouse', name: 'Greenhouse ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  lever: { id: 'lever', name: 'Lever ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  ashby: { id: 'ashby', name: 'Ashby ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000 },
-  remotive: { id: 'remotive', name: 'Remotive', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 250, maxLimit: 250, cooldownMs: 3_600_000 },
-  remoteok: { id: 'remoteok', name: 'RemoteOK', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 3_600_000 },
-  workday: { id: 'workday', name: 'Workday ATS', type: 'public_api', enabled: true, requiresApiKey: false, supportsPagination: true, defaultLimit: 20, maxLimit: 20, cooldownMs: 600_000 },
-  adzuna: { id: 'adzuna', name: 'Adzuna', type: 'api_key', enabled: true, requiresApiKey: true, supportsPagination: true, defaultLimit: 50, maxLimit: 50, cooldownMs: 600_000 },
-  jobspy: { id: 'jobspy', name: 'JobSpy Aggregator', type: 'self_hosted_scraper', enabled: true, requiresApiKey: false, supportsPagination: false, defaultLimit: 20, maxLimit: 100, cooldownMs: 600_000 },
+  greenhouse: {
+    id: 'greenhouse', name: 'Greenhouse ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Greenhouse job board API (200k+ companies)',
+  },
+  lever: {
+    id: 'lever', name: 'Lever ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Lever job board API',
+  },
+  ashby: {
+    id: 'ashby', name: 'Ashby ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 600_000,
+    refreshIntervalMs: 3 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 5 * 60 * 1000,
+    description: 'Public Ashby job board API',
+  },
+  remotive: {
+    id: 'remotive', name: 'Remotive', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 250, maxLimit: 250, cooldownMs: 3_600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 250, maxDurationMs: 3 * 60 * 1000,
+    description: 'Curated remote-only job board',
+  },
+  remoteok: {
+    id: 'remoteok', name: 'RemoteOK', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 0, maxLimit: 0, cooldownMs: 3_600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 3 * 60 * 1000,
+    description: 'Remote-only job aggregator',
+  },
+  workday: {
+    id: 'workday', name: 'Workday ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: true, defaultLimit: 20, maxLimit: 20, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Enterprise Workday ATS (configurable tenant list)',
+  },
+  adzuna: {
+    id: 'adzuna', name: 'Adzuna', type: 'api_key', enabled: true,
+    requiresApiKey: true, supportsPagination: true, defaultLimit: 50, maxLimit: 50, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Global job aggregator (requires API key)',
+  },
+  jobspy: {
+    id: 'jobspy', name: 'JobSpy Aggregator', type: 'self_hosted_scraper', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 20, maxLimit: 100, cooldownMs: 600_000,
+    refreshIntervalMs: 8 * 60 * 60 * 1000, maxResults: 200, maxDurationMs: 10 * 60 * 1000,
+    description: 'Self-hosted JobSpy scraper (Indeed, LinkedIn, etc.)',
+  },
+  linkedin: {
+    id: 'linkedin', name: 'LinkedIn Browser Worker', type: 'browser_worker', enabled: false,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 500, cooldownMs: 3_600_000,
+    refreshIntervalMs: 12 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 15 * 60 * 1000,
+    description: 'Isolated VPS browser worker for LinkedIn job discovery (requires manual auth)',
+  },
 };
 
 export const VALID_SOURCES = Object.keys(SOURCE_REGISTRY);
@@ -174,6 +295,18 @@ export function checkSourceConfig(source: string): ConfigCheck {
       require('fs').accessSync(workerPath);
     } catch {
       return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
+    }
+  }
+
+  if (source === 'linkedin') {
+    if (process.env.LINKEDIN_ENABLED !== 'true') {
+      return { ready: false, reason: 'LinkedIn worker disabled (set LINKEDIN_ENABLED=true to enable)' };
+    }
+    try {
+      const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
+      require('fs').accessSync(workerPath);
+    } catch {
+      return { ready: false, reason: 'scripts/linkedin-worker/worker.py not found' };
     }
   }
 
@@ -247,16 +380,30 @@ const ADZUNA_COUNTRIES = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'nl', 'in'];
 
 async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Greenhouse: fetching ${GREENHOUSE_COMPANIES.length} boards`);
 
   for (const company of GREENHOUSE_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://boards-api.greenhouse.io/v1/boards/${company.token}/jobs?content=true`,
-        { headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://boards-api.greenhouse.io/v1/boards/${company.token}/jobs?content=true`,
+          { headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Greenhouse/${company.token}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (res.status === 403 || res.status === 404) {
+        // Board not found or private — skip silently
+        continue;
+      }
+
+      if (!res.ok) {
+        boardErrors++;
+        log('FETCH', `Greenhouse/${company.token}: HTTP ${res.status}`);
+        continue;
+      }
 
       const data: any = await res.json();
       const rawJobs: any[] = data.jobs || [];
@@ -276,30 +423,49 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departments?.[0]?.name || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      // Only log unexpected errors (not timeouts which are normal for unreachable boards)
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Greenhouse/${company.token}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Greenhouse: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Greenhouse: ${jobs.length} jobs fetched`);
   return jobs;
 }
 
 async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Lever: fetching ${LEVER_COMPANIES.length} companies`);
 
   for (const company of LEVER_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://api.lever.co/v0/postings/${company}?mode=json`,
-        { signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://api.lever.co/v0/postings/${company}?mode=json`,
+          { signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Lever/${company}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (!res.ok) {
+        boardErrors++;
+        continue;
+      }
 
       const data: any[] = await res.json();
-      if (!Array.isArray(data)) continue;
+      if (!Array.isArray(data)) {
+        boardErrors++;
+        continue;
+      }
 
       for (const job of data) {
         if (job.hostedUrl?.includes('deleted') || !job.text) continue;
@@ -318,31 +484,49 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
           category: job.categories?.department || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Lever/${company}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Lever: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Lever: ${jobs.length} jobs fetched`);
   return jobs;
 }
 
 async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
+  let boardErrors = 0;
   log('FETCH', `Ashby: fetching ${ASHBY_COMPANIES.length} boards`);
 
   for (const company of ASHBY_COMPANIES) {
     if (signal?.aborted) break;
     try {
-      const res = await fetch(
-        `https://api.ashbyhq.com/api/posting-board/job-postings/${company}`,
-        { signal: AbortSignal.timeout(15000) }
+      const res = await withRetry(
+        () => fetch(
+          `https://api.ashbyhq.com/api/posting-board/job-postings/${company}`,
+          { signal: AbortSignal.timeout(15000) }
+        ),
+        { label: `Ashby/${company}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
-      if (!res.ok) continue;
+
+      if (!res.ok) {
+        boardErrors++;
+        continue;
+      }
 
       const data: any = await res.json();
       const postings = data?.jobPostings || data?.data || [];
-      if (!Array.isArray(postings)) continue;
+      if (!Array.isArray(postings)) {
+        boardErrors++;
+        continue;
+      }
 
       for (const job of postings) {
         jobs.push({
@@ -359,11 +543,18 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departmentName || undefined,
         });
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      boardErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Ashby/${company}: ${err.message}`);
+      }
     }
   }
 
+  if (boardErrors > 0) {
+    log('FETCH', `Ashby: ${boardErrors} boards failed`);
+  }
   log('FETCH', `Ashby: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -371,14 +562,24 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
   try {
     log('FETCH', 'Remotive: fetching remote jobs');
-    const res = await fetch('https://remotive.com/api/remote-jobs?limit=250', {
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!res.ok) return [];
+    const res = await withRetry(
+      () => fetch('https://remotive.com/api/remote-jobs?limit=250', {
+        signal: AbortSignal.timeout(30000),
+      }),
+      { label: 'Remotive', maxAttempts: 3, baseDelayMs: 2000 }
+    );
+
+    if (!res.ok) {
+      log('FETCH', `Remotive: HTTP ${res.status}`);
+      return [];
+    }
 
     const data: any = await res.json();
     const rawJobs: any[] = data.jobs || data || [];
-    if (!Array.isArray(rawJobs)) return [];
+    if (!Array.isArray(rawJobs)) {
+      log('FETCH', 'Remotive: response is not an array');
+      return [];
+    }
 
     const jobs = rawJobs.map((job: any) => ({
       source: 'remotive' as string,
@@ -396,7 +597,10 @@ async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
 
     log('FETCH', `Remotive: ${jobs.length} jobs fetched`);
     return jobs;
-  } catch {
+  } catch (err: any) {
+    if (err.name !== 'TimeoutError') {
+      log('ERROR', `Remotive: ${err.message}`);
+    }
     return [];
   }
 }
@@ -404,15 +608,26 @@ async function fetchRemotive(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchRemoteOK(signal?: AbortSignal): Promise<RawJob[]> {
   try {
     log('FETCH', 'RemoteOK: fetching remote jobs');
-    const res = await fetch('https://remoteok.com/api', {
-      headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' },
-      signal: AbortSignal.timeout(30000),
-    });
-    if (!res.ok) return [];
+    const res = await withRetry(
+      () => fetch('https://remoteok.com/api', {
+        headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' },
+        signal: AbortSignal.timeout(30000),
+      }),
+      { label: 'RemoteOK', maxAttempts: 3, baseDelayMs: 2000 }
+    );
+
+    if (!res.ok) {
+      log('FETCH', `RemoteOK: HTTP ${res.status}`);
+      return [];
+    }
 
     const data: any[] = await res.json();
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) {
+      log('FETCH', 'RemoteOK: response is not an array');
+      return [];
+    }
 
+    // RemoteOK returns a metadata header as the first element
     const jobs = data.slice(1).filter((job: any) => job.id && job.position).map((job: any) => ({
       source: 'remoteok' as string,
       sourceJobId: String(job.id),
@@ -428,7 +643,10 @@ async function fetchRemoteOK(signal?: AbortSignal): Promise<RawJob[]> {
 
     log('FETCH', `RemoteOK: ${jobs.length} jobs fetched`);
     return jobs;
-  } catch {
+  } catch (err: any) {
+    if (err.name !== 'TimeoutError') {
+      log('ERROR', `RemoteOK: ${err.message}`);
+    }
     return [];
   }
 }
@@ -438,6 +656,7 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
   const MAX_PAGES = 25;
   const PAGE_SIZE = 20;
   const MAX_JOBS_PER_COMPANY = 500;
+  let tenantErrors = 0;
   log('FETCH', `Workday: fetching ${WORKDAY_TENANTS.length} tenants`);
 
   for (const company of WORKDAY_TENANTS) {
@@ -451,21 +670,33 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
       while (pageCount < MAX_PAGES && totalForCompany < MAX_JOBS_PER_COMPANY) {
         if (signal?.aborted) break;
 
-        const res = await fetch(
-          `https://${company.tenant}.wd5.myworkdayjobs.com/wday/cxs/${company.tenant}/${company.site}/jobs`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'CVCircle-Ingestion/1.0',
-              Accept: 'application/json',
-            },
-            body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' }),
-            signal: AbortSignal.timeout(20000),
-          }
+        const res = await withRetry(
+          () => fetch(
+            `https://${company.tenant}.wd5.myworkdayjobs.com/wday/cxs/${company.tenant}/${company.site}/jobs`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'CVCircle-Ingestion/1.0',
+                Accept: 'application/json',
+              },
+              body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' }),
+              signal: AbortSignal.timeout(20000),
+            }
+          ),
+          { label: `Workday/${company.name}`, maxAttempts: 2, baseDelayMs: 1500 }
         );
 
-        if (!res.ok) break;
+        if (res.status === 404 || res.status === 403) {
+          // Tenant/site doesn't exist or is private
+          break;
+        }
+
+        if (!res.ok) {
+          tenantErrors++;
+          log('FETCH', `Workday/${company.name}: HTTP ${res.status}`);
+          break;
+        }
 
         const data = await res.json();
         const postings = data?.jobPostings || [];
@@ -493,11 +724,18 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
 
         if (postings.length < PAGE_SIZE) break;
       }
-    } catch {
-      // Skip failed companies
+    } catch (err: any) {
+      if (signal?.aborted) break;
+      tenantErrors++;
+      if (err.name !== 'TimeoutError') {
+        log('FETCH', `Workday/${company.name}: ${err.message}`);
+      }
     }
   }
 
+  if (tenantErrors > 0) {
+    log('FETCH', `Workday: ${tenantErrors} tenants failed`);
+  }
   log('FETCH', `Workday: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -514,27 +752,43 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
   const MAX_PAGES = parseInt(process.env.ADZUNA_MAX_PAGES_PER_RUN || '5', 10);
   const RESULTS_PER_PAGE = 50;
   const RATE_LIMIT_DELAY_MS = parseInt(process.env.ADZUNA_RATE_LIMIT_MS || '1200', 10);
+  let countryErrors = 0;
   log('FETCH', `Adzuna: fetching ${ADZUNA_COUNTRIES.length} countries, max ${MAX_PAGES} pages each`);
 
   for (const country of ADZUNA_COUNTRIES) {
     if (signal?.aborted) break;
 
+    let rateLimited = false;
     for (let page = 1; page <= MAX_PAGES; page++) {
       if (signal?.aborted) break;
+      if (rateLimited) break;
 
       try {
-        const res = await fetch(
-          `http://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${appId}&app_key=${appKey}&what=software+engineer&results_per_page=${RESULTS_PER_PAGE}&content-type=application/json`,
-          { signal: AbortSignal.timeout(15000) }
+        const res = await withRetry(
+          () => fetch(
+            `http://api.adzuna.com/v1/api/jobs/${country}/search/${page}?app_id=${appId}&app_key=${appKey}&what=software+engineer&results_per_page=${RESULTS_PER_PAGE}&content-type=application/json`,
+            { signal: AbortSignal.timeout(15000) }
+          ),
+          { label: `Adzuna/${country}/${page}`, maxAttempts: 2, baseDelayMs: 1000 }
         );
 
         if (res.status === 429) {
           log('FETCH', `Adzuna: rate limited on ${country} page ${page}, backing off`);
+          rateLimited = true;
           await new Promise((r) => setTimeout(r, 5000));
           break;
         }
 
-        if (!res.ok) break;
+        if (res.status === 401 || res.status === 403) {
+          log('FETCH', `Adzuna: authentication error on ${country} (HTTP ${res.status})`);
+          countryErrors++;
+          break;
+        }
+
+        if (!res.ok) {
+          countryErrors++;
+          break;
+        }
 
         const data = await res.json();
         const results = data?.results || [];
@@ -559,12 +813,20 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
         if (page < MAX_PAGES) {
           await new Promise((r) => setTimeout(r, RATE_LIMIT_DELAY_MS));
         }
-      } catch {
+      } catch (err: any) {
+        if (signal?.aborted) break;
+        countryErrors++;
+        if (err.name !== 'TimeoutError') {
+          log('FETCH', `Adzuna/${country}: ${err.message}`);
+        }
         break;
       }
     }
   }
 
+  if (countryErrors > 0) {
+    log('FETCH', `Adzuna: ${countryErrors} country requests failed`);
+  }
   log('FETCH', `Adzuna: ${jobs.length} jobs fetched`);
   return jobs;
 }
@@ -578,7 +840,9 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
   return new Promise((resolve) => {
     const processId = `jobspy-${Date.now()}`;
 
-    const child = spawn('python3', [workerPath], {
+    const pythonBin = resolvePython();
+    log('FETCH', `JobSpy: using python at ${pythonBin}`);
+    const child = spawn(pythonBin, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
       timeout: 300_000,
@@ -682,6 +946,172 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
 
 // ── SOURCE_FETCHERS ────────────────────────────────────────────────────
 
+const activeLinkedInProcesses = new Map<string, ChildProcess>();
+
+export interface LinkedInFetchOptions {
+  /** Specific regions to search (country codes). If empty, worker uses region rotation. */
+  regions?: string[];
+  /** Search keyword override. If empty, uses LINKEDIN_DEFAULT_KEYWORD env. */
+  keyword?: string;
+  /** Run index for round-robin rotation. */
+  runIndex?: number;
+}
+
+async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOptions): Promise<RawJob[]> {
+  const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
+  log('FETCH', `LinkedIn: spawning worker at ${workerPath}`);
+
+  return new Promise((resolve) => {
+    const processId = `linkedin-${Date.now()}`;
+
+    const pythonBin = resolvePython();
+    log('FETCH', `LinkedIn: using python at ${pythonBin}`);
+    const child = spawn(pythonBin, [workerPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        LINKEDIN_ENABLED: process.env.LINKEDIN_ENABLED || 'false',
+        LINKEDIN_BROWSER_PROFILE_DIR: process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
+        LINKEDIN_MAX_SEARCHES_PER_RUN: process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5',
+        LINKEDIN_MAX_PAGES_PER_SEARCH: process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2',
+        LINKEDIN_MAX_JOBS_PER_SEARCH: process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100',
+        LINKEDIN_MAX_RUNTIME_SECONDS: process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600',
+        LINKEDIN_DRY_RUN: process.env.LINKEDIN_DRY_RUN || 'false',
+        LINKEDIN_DEBUG: process.env.LINKEDIN_DEBUG || 'false',
+        LINKEDIN_REGION_STRATEGY: process.env.LINKEDIN_REGION_STRATEGY || 'demand',
+        LINKEDIN_REGIONS: process.env.LINKEDIN_REGIONS || '',
+        LINKEDIN_MAX_REGIONS_PER_RUN: process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3',
+        LINKEDIN_DEFAULT_KEYWORD: process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
+      },
+      timeout: 900_000, // 15 min max
+    });
+
+    activeLinkedInProcesses.set(processId, child);
+
+    // Build stdin input — supports both demand-driven tasks and region rotation
+    const inputPayload: Record<string, any> = {};
+
+    if (options?.regions && options.regions.length > 0) {
+      // Scheduler provided specific regions — worker auto-generates tasks
+      inputPayload.regions = options.regions;
+      inputPayload.runIndex = options.runIndex || 0;
+      if (options.keyword) inputPayload.keyword = options.keyword;
+      log('FETCH', `LinkedIn: sending regions to worker: ${options.regions.join(', ')}`);
+    } else if (options?.keyword) {
+      // Just a keyword override — let worker handle region rotation
+      inputPayload.keyword = options.keyword;
+      inputPayload.runIndex = options.runIndex || 0;
+    } else {
+      // No options — worker uses its own region rotation strategy
+      inputPayload.runIndex = options?.runIndex || 0;
+    }
+
+    child.stdin.write(JSON.stringify(inputPayload));
+    child.stdin.end();
+
+    let stdout = '';
+    let stderr = '';
+    let killed = false;
+
+    const timeout = setTimeout(() => {
+      killed = true;
+      log('FETCH', 'LinkedIn: timeout reached, killing worker');
+      child.kill('SIGTERM');
+      setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+    }, 900_000);
+
+    const onAbort = () => {
+      killed = true;
+      log('FETCH', 'LinkedIn: cancellation requested, killing worker');
+      child.kill('SIGTERM');
+      setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+    };
+    signal?.addEventListener('abort', onAbort);
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+      if (stdout.length > 50 * 1024 * 1024) { // 50MB limit
+        killed = true;
+        child.kill('SIGKILL');
+      }
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString();
+      // Forward worker logs
+      const lines = chunk.toString().split('\n').filter((l: string) => l.trim());
+      for (const line of lines) {
+        log('LINKEDIN-WORKER', line);
+      }
+    });
+
+    child.on('close', (code) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      activeLinkedInProcesses.delete(processId);
+
+      if (killed) {
+        log('ERROR', 'LinkedIn: worker killed/timed out');
+        resolve([]);
+        return;
+      }
+
+      if (code !== 0) {
+        log('ERROR', `LinkedIn: worker exited code=${code}, stderr=${stderr.slice(0, 500)}`);
+        resolve([]);
+        return;
+      }
+
+      try {
+        const result = JSON.parse(stdout);
+        if (!result.success) {
+          log('FETCH', `LinkedIn: worker reported failure — ${result.error || result.status || 'unknown'}`);
+          resolve([]);
+          return;
+        }
+
+        if (!Array.isArray(result.jobs)) {
+          log('FETCH', 'LinkedIn: no jobs array in result');
+          resolve([]);
+          return;
+        }
+
+        const jobs: RawJob[] = result.jobs.map((job: any) => ({
+          source: 'linkedin',
+          sourceJobId: job.id || job.job_id || `linkedin-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          url: job.url || job.linkedin_url || '',
+          title: job.title || 'Untitled',
+          companyName: job.company || 'Unknown',
+          rawHtmlDescription: job.description || job.snippet || '',
+          locationString: job.location || '',
+          isRemote: job.location?.toLowerCase().includes('remote') || job.remote || false,
+          postedDate: job.posted_date || job.date_posted ? new Date(job.posted_date || job.date_posted) : new Date(),
+          applicationUrl: job.apply_url || job.url || '',
+          sourceMetadata: {
+            source: 'linkedin',
+            searchKeyword: job.search_keyword,
+            linkedinJobId: job.linkedin_job_id,
+          },
+        }));
+
+        log('FETCH', `LinkedIn: ${jobs.length} jobs fetched`);
+        resolve(jobs);
+      } catch (e) {
+        log('ERROR', `LinkedIn: malformed JSON from worker: ${stdout.slice(0, 300)}`);
+        resolve([]);
+      }
+    });
+
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      activeLinkedInProcesses.delete(processId);
+      log('ERROR', `LinkedIn: spawn error: ${err.message}`);
+      resolve([]);
+    });
+  });
+}
+
 const SOURCE_FETCHERS: Record<string, (signal?: AbortSignal) => Promise<RawJob[]>> = {
   greenhouse: fetchGreenhouse,
   lever: fetchLever,
@@ -691,6 +1121,7 @@ const SOURCE_FETCHERS: Record<string, (signal?: AbortSignal) => Promise<RawJob[]
   workday: fetchWorkday,
   adzuna: fetchAdzuna,
   jobspy: fetchJobSpy,
+  linkedin: fetchLinkedIn,
 };
 
 // ── Normalization Pipeline ──────────────────────────────────────────────
@@ -740,10 +1171,20 @@ function normalizeLocation(location?: string): NormalizedJob['location'] {
   else if (lower.includes('france') || lower.includes('paris')) { country = 'France'; countryCode = 'FR'; }
   else if (lower.includes('india') || lower.includes('bangalore') || lower.includes('mumbai')) { country = 'India'; countryCode = 'IN'; }
   else if (lower.includes('canada') || lower.includes('toronto')) { country = 'Canada'; countryCode = 'CA'; }
-  else if (lower.includes('australia') || lower.includes('sydney')) { country = 'Australia'; countryCode = 'AU'; }
+  else if (lower.includes('australia') || lower.includes('sydney') || lower.includes('melbourne')) { country = 'Australia'; countryCode = 'AU'; }
   else if (lower.includes('netherlands') || lower.includes('amsterdam')) { country = 'Netherlands'; countryCode = 'NL'; }
   else if (lower.includes('singapore')) { country = 'Singapore'; countryCode = 'SG'; }
   else if (lower.includes('japan') || lower.includes('tokyo')) { country = 'Japan'; countryCode = 'JP'; }
+  else if (lower.includes('united arab emirates') || lower.includes('dubai') || lower.includes('abu dhabi')) { country = 'United Arab Emirates'; countryCode = 'AE'; }
+  else if (lower.includes('ireland') || lower.includes('dublin')) { country = 'Ireland'; countryCode = 'IE'; }
+  else if (lower.includes('switzerland') || lower.includes('zurich') || lower.includes('geneva')) { country = 'Switzerland'; countryCode = 'CH'; }
+  else if (lower.includes('sweden') || lower.includes('stockholm')) { country = 'Sweden'; countryCode = 'SE'; }
+  else if (lower.includes('poland') || lower.includes('warsaw') || lower.includes('krakow')) { country = 'Poland'; countryCode = 'PL'; }
+  else if (lower.includes('spain') || lower.includes('madrid') || lower.includes('barcelona')) { country = 'Spain'; countryCode = 'ES'; }
+  else if (lower.includes('south korea') || lower.includes('seoul')) { country = 'South Korea'; countryCode = 'KR'; }
+  else if (lower.includes('brazil') || lower.includes('sao paulo') || lower.includes('rio de janeiro')) { country = 'Brazil'; countryCode = 'BR'; }
+  else if (lower.includes('south africa') || lower.includes('cape town') || lower.includes('johannesburg')) { country = 'South Africa'; countryCode = 'ZA'; }
+  else if (lower.includes('new zealand') || lower.includes('auckland') || lower.includes('wellington')) { country = 'New Zealand'; countryCode = 'NZ'; }
 
   const cityParts = clean.split(',')[0]?.trim() || clean;
 
@@ -780,6 +1221,10 @@ function normalize(raw: RawJob): NormalizedJob {
   const descriptionText = (raw.rawHtmlDescription || '').replace(/<[^>]*>/g, '').substring(0, 50000);
   const description = (raw.rawHtmlDescription || '').substring(0, 50000);
 
+  // Resolve role family from title
+  const roleFamily = resolveRoleFamily(titleRes.title) || undefined;
+  const roleFamilyKeywords = roleFamily ? getFamilySearchTerms(roleFamily) : undefined;
+
   const contentHash = generateContentHash({
     title: titleRes.title,
     description,
@@ -811,6 +1256,8 @@ function normalize(raw: RawJob): NormalizedJob {
     employmentType: 'full_time',
     experience: { minYears: null, maxYears: null, level: titleRes.level },
     seniority: titleRes.level,
+    roleFamily,
+    roleFamilyKeywords,
     salary: {},
     skills: [],
     status: 'new',
@@ -846,6 +1293,23 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     })
     .project({ canonicalId: 1, contentHash: 1, 'source.primary': 1, 'source.sourceJobId': 1 })
     .toArray();
+
+  // Pre-compute freshness for each job
+  function computeFreshness(job: NormalizedJob): { expiresAt: Date; freshnessScore: number } {
+    const now = Date.now();
+    const postedAt = job.postedAt?.getTime() || now;
+    const ageHours = (now - postedAt) / (1000 * 60 * 60);
+
+    // Freshness decays over 14 days (336 hours)
+    const maxAgeHours = 336;
+    const freshnessScore = Math.max(0, 1 - ageHours / maxAgeHours);
+
+    // Expire after 14 days from last seen
+    const lastSeenAt = job.source.lastSeenAt?.getTime() || now;
+    const expiresAt = new Date(lastSeenAt + 14 * 24 * 60 * 60 * 1000);
+
+    return { expiresAt, freshnessScore: Math.round(freshnessScore * 1000) / 1000 };
+  }
 
   // Build lookup: canonicalId → existing contentHash
   const existingHashByCanonical = new Map<string, string>();
@@ -884,96 +1348,112 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   }
 
   // Upsert new jobs (full fields via $setOnInsert + $set)
-  const newOps = newJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $setOnInsert: {
-          canonicalId: job.canonicalId,
-          title: job.title,
-          normalizedTitle: job.normalizedTitle,
-          company: job.company,
-          description: job.description,
-          descriptionText: job.descriptionText,
-          contentHash: job.contentHash,
-          location: job.location,
-          department: job.department,
-          category: job.category,
-          employmentType: job.employmentType,
-          experience: job.experience,
-          seniority: job.seniority,
-          salary: job.salary,
-          skills: job.skills,
-          postedAt: job.postedAt,
-          firstSeenAt: now,
-          status: 'new',
-          createdAt: now,
+  const newOps = newJobs.map((job) => {
+    const { expiresAt, freshnessScore } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
-        $set: {
-          'source.primary': job.source.primary,
-          'source.secondary': job.source.secondary,
-          'source.sourceJobId': job.source.sourceJobId,
-          'source.sourceUrl': job.source.sourceUrl,
-          'source.applicationUrl': job.source.applicationUrl,
-          'source.discoveredAt': job.source.discoveredAt,
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          sourceMetadata: job.sourceMetadata,
-          updatedAt: now,
+        update: {
+          $setOnInsert: {
+            canonicalId: job.canonicalId,
+            title: job.title,
+            normalizedTitle: job.normalizedTitle,
+            company: job.company,
+            description: job.description,
+            descriptionText: job.descriptionText,
+            contentHash: job.contentHash,
+            location: job.location,
+            department: job.department,
+            category: job.category,
+            employmentType: job.employmentType,
+            experience: job.experience,
+            seniority: job.seniority,
+            roleFamily: job.roleFamily,
+            roleFamilyKeywords: job.roleFamilyKeywords,
+            salary: job.salary,
+            skills: job.skills,
+            postedAt: job.postedAt,
+            firstSeenAt: now,
+            status: 'new',
+            expiresAt,
+            freshnessScore,
+            createdAt: now,
+          },
+          $set: {
+            'source.primary': job.source.primary,
+            'source.secondary': job.source.secondary,
+            'source.sourceJobId': job.source.sourceJobId,
+            'source.sourceUrl': job.source.sourceUrl,
+            'source.applicationUrl': job.source.applicationUrl,
+            'source.discoveredAt': job.source.discoveredAt,
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt,
+            freshnessScore,
+            sourceMetadata: job.sourceMetadata,
+            updatedAt: now,
+          },
         },
+        upsert: true,
       },
-      upsert: true,
-    },
-  }));
+    };
+  });
 
   // Upsert content-changed jobs (update content fields)
-  const contentOps = contentChangedJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $set: {
-          title: job.title,
-          normalizedTitle: job.normalizedTitle,
-          company: job.company,
-          description: job.description,
-          descriptionText: job.descriptionText,
-          contentHash: job.contentHash,
-          location: job.location,
-          department: job.department,
-          category: job.category,
-          employmentType: job.employmentType,
-          experience: job.experience,
-          seniority: job.seniority,
-          salary: job.salary,
-          skills: job.skills,
-          'source.primary': job.source.primary,
-          'source.secondary': job.source.secondary,
-          'source.sourceJobId': job.source.sourceJobId,
-          'source.sourceUrl': job.source.sourceUrl,
-          'source.applicationUrl': job.source.applicationUrl,
-          'source.discoveredAt': job.source.discoveredAt,
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          sourceMetadata: job.sourceMetadata,
-          updatedAt: now,
+  const contentOps = contentChangedJobs.map((job) => {
+    const { expiresAt, freshnessScore } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
-        $inc: { 'ingestion.updateCount': 1 },
+        update: {
+          $set: {
+            title: job.title,
+            normalizedTitle: job.normalizedTitle,
+            company: job.company,
+            description: job.description,
+            descriptionText: job.descriptionText,
+            contentHash: job.contentHash,
+            location: job.location,
+            department: job.department,
+            category: job.category,
+            employmentType: job.employmentType,
+            experience: job.experience,
+            seniority: job.seniority,
+            roleFamily: job.roleFamily,
+            roleFamilyKeywords: job.roleFamilyKeywords,
+            salary: job.salary,
+            skills: job.skills,
+            'source.primary': job.source.primary,
+            'source.secondary': job.source.secondary,
+            'source.sourceJobId': job.source.sourceJobId,
+            'source.sourceUrl': job.source.sourceUrl,
+            'source.applicationUrl': job.source.applicationUrl,
+            'source.discoveredAt': job.source.discoveredAt,
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt,
+            freshnessScore,
+            sourceMetadata: job.sourceMetadata,
+            updatedAt: now,
+          },
+          $inc: { 'ingestion.updateCount': 1 },
+        },
+        upsert: true,
       },
-      upsert: true,
-    },
-  }));
+    };
+  });
 
   // Metadata-only updates for duplicates (just touch lastSeenAt/lastVerifiedAt)
   const duplicateJobs = jobs.filter((_, i) => {
@@ -984,25 +1464,29 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     return existingHash !== undefined && existingHash === job.contentHash;
   });
 
-  const metaOps = duplicateJobs.map((job) => ({
-    updateOne: {
-      filter: {
-        $or: [
-          { canonicalId: job.canonicalId },
-          { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-        ],
-      },
-      update: {
-        $set: {
-          'source.lastSeenAt': now,
-          lastSeenAt: now,
-          lastVerifiedAt: now,
-          updatedAt: now,
+  const metaOps = duplicateJobs.map((job) => {
+    const { expiresAt } = computeFreshness(job);
+    return {
+      updateOne: {
+        filter: {
+          $or: [
+            { canonicalId: job.canonicalId },
+            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
+          ],
         },
+        update: {
+          $set: {
+            'source.lastSeenAt': now,
+            lastSeenAt: now,
+            lastVerifiedAt: now,
+            expiresAt, // refresh expiry so actively-seen jobs don't expire early
+            updatedAt: now,
+          },
+        },
+        upsert: false,
       },
-      upsert: false,
-    },
-  }));
+    };
+  });
 
   // Execute all three batches
   const allOps = [...newOps, ...contentOps, ...metaOps];
@@ -1167,7 +1651,8 @@ export async function executeSourceRun(
   db: mongoose.Connection['db'],
   sourceName: string,
   runId: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  fetchOptions?: Record<string, any>
 ): Promise<SourceProgress> {
   if (!db) throw new Error('DB not connected');
 
@@ -1197,11 +1682,11 @@ export async function executeSourceRun(
       return progress;
     }
 
-    // Fetch
+    // Fetch — pass options for sources that support them (e.g. LinkedIn)
     log('SOURCE', `Starting ${sourceName} for run ${runId}`);
     await updateProgress({ status: 'running', message: 'Fetching...' });
     const fetcher = SOURCE_FETCHERS[sourceName];
-    const rawJobs = await fetcher!(signal);
+    const rawJobs = await (fetcher as any)(signal, fetchOptions);
 
     if (signal.aborted) {
       log('SOURCE', `${sourceName}: cancelled`);
@@ -1246,9 +1731,16 @@ export async function executeSourceRun(
           'status.lastSuccessAt': finishedAt,
           'status.health': 'healthy',
           'status.consecutiveFailures': 0,
+          'status.lastErrorMessage': null,
           updatedAt: finishedAt,
         },
-        $inc: { 'statistics.totalRuns': 1, 'statistics.totalJobsFound': rawJobs.length },
+        $inc: {
+          'statistics.totalRuns': 1,
+          'statistics.totalJobsFound': rawJobs.length,
+          'statistics.totalJobsInserted': inserted,
+          'statistics.totalJobsUpdated': updated,
+          'statistics.totalDuplicates': duplicates,
+        },
         $setOnInsert: { createdAt: finishedAt },
       },
       { upsert: true }
@@ -1260,17 +1752,40 @@ export async function executeSourceRun(
     const finishedAt = new Date();
     const durationMs = finishedAt.getTime() - (progress.startedAt?.getTime() || finishedAt.getTime());
 
-    log('ERROR', `${sourceName}: failed — ${err.message}`);
+    // Classify error type for better diagnostics
+    let errorCode = 'UNKNOWN';
+    let errorMessage = err.message || 'Unknown error';
+
+    if (err.message?.includes('NOT_CONFIGURED') || err.message?.includes('Missing')) {
+      errorCode = 'CONFIG_ERROR';
+    } else if (err.name === 'TimeoutError' || err.message?.includes('timeout')) {
+      errorCode = 'TIMEOUT';
+    } else if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED') {
+      errorCode = 'NETWORK_ERROR';
+    } else if (err.message?.includes('CAPTCHA') || err.message?.includes('challenge')) {
+      errorCode = 'CAPTCHA_DETECTED';
+    } else if (err.message?.includes('AUTH_REQUIRED') || err.message?.includes('login')) {
+      errorCode = 'AUTH_REQUIRED';
+    } else if (err.message?.includes('access') && err.message?.includes('restricted')) {
+      errorCode = 'ACCESS_RESTRICTED';
+    } else if (err.message?.includes('parser') || err.message?.includes('JSON')) {
+      errorCode = 'PARSER_ERROR';
+    } else if (err.message?.includes('selector') || err.message?.includes('element')) {
+      errorCode = 'SELECTOR_CHANGED';
+    }
+
+    log('ERROR', `${sourceName}: failed [${errorCode}] — ${errorMessage}`);
     await updateProgress({
       status: 'failed',
-      error: err.message,
+      error: errorMessage,
+      errorCode,
       finishedAt,
       durationMs,
     });
 
     await sourcesColl.updateOne(
       { name: sourceName },
-      { $set: { 'status.health': 'failing', 'status.lastFailureAt': finishedAt }, $inc: { 'status.consecutiveFailures': 1 } },
+      { $set: { 'status.health': 'failing', 'status.lastFailureAt': finishedAt, 'status.lastErrorMessage': errorMessage }, $inc: { 'status.consecutiveFailures': 1 } },
       { upsert: true }
     );
 
@@ -1278,11 +1793,19 @@ export async function executeSourceRun(
   }
 }
 
-// ── Kill JobSpy Processes (for cancellation) ────────────────────────────
+// ── Kill Active Processes (for cancellation) ──────────────────────────
 
 export function killJobSpyProcesses() {
   for (const [id, child] of activeJobSpyProcesses) {
     log('SOURCE', `Killing JobSpy process ${id}`);
+    child.kill('SIGTERM');
+    setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
+  }
+}
+
+export function killLinkedInProcesses() {
+  for (const [id, child] of activeLinkedInProcesses) {
+    log('SOURCE', `Killing LinkedIn process ${id}`);
     child.kill('SIGTERM');
     setTimeout(() => { if (!child.killed) child.kill('SIGKILL'); }, 5000);
   }

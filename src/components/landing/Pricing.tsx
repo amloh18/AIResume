@@ -395,7 +395,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   {/* Focused (Monthly / Yearly) Column - Highlighted Glowing Theme */}
                   <th className="w-[22%] p-6 lg:p-8 text-center align-top border-l border-emerald-500/30 bg-gradient-to-b from-[#36D39B]/20 via-[#14B8A6]/10 to-[#36D39B]/15 relative rounded-tr-3xl">
                     {/* Top edge MOST POPULAR badge - 50% above the border */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#36D39B] text-black text-[9px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(54,211,155,0.7)] whitespace-nowrap">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#36D39B] text-white text-[9px] font-black uppercase tracking-widest shadow-[0_0_18px_rgba(54,211,155,0.7)] whitespace-nowrap">
                       <Sparkles className="w-2.5 h-2.5 fill-current" /> Most Popular
                     </div>
 
@@ -413,7 +413,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             onClick={() => setFocusedBillingInterval('yearly')}
                             className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
                               focusedBillingInterval === 'yearly'
-                                ? 'bg-[#36D39B] text-black shadow-md'
+                                ? 'bg-[#36D39B] text-white shadow-md'
                                 : 'text-gray-400 hover:text-white'
                             }`}
                           >
@@ -424,7 +424,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             onClick={() => setFocusedBillingInterval('monthly')}
                             className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all ${
                               focusedBillingInterval === 'monthly'
-                                ? 'bg-[#36D39B] text-black shadow-md'
+                                ? 'bg-[#36D39B] text-white shadow-md'
                                 : 'text-gray-400 hover:text-white'
                             }`}
                           >
@@ -501,7 +501,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                 onClick={() => setFocusedBillingInterval('yearly')}
                 className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
                   focusedBillingInterval === 'yearly'
-                    ? 'bg-[#36D39B] text-black shadow'
+                    ? 'bg-[#36D39B] text-white shadow'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -512,7 +512,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                 onClick={() => setFocusedBillingInterval('monthly')}
                 className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
                   focusedBillingInterval === 'monthly'
-                    ? 'bg-[#36D39B] text-black shadow'
+                    ? 'bg-[#36D39B] text-white shadow'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >

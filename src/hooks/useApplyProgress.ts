@@ -1,136 +1,176 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useProgressToast } from '@/components/ui/ProgressToaster';
+import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { toast } from '@/hooks/use-toast';
 
 /**
- * Hook for showing real-time progress toasts during the job apply flow.
- * Tracks: CV matching → Document tailoring → Application submission → Completion
- * Also shows contextual premium feature promotions after successful apply.
+ * Hook for managing real-time progress during the job apply flow.
+ * Shows both inline status cards (JobLiveStatusCard) and toast notifications
+ * at key pipeline milestones for maximum visibility.
  */
 export function useApplyProgress() {
-  const toast = useProgressToast();
-  const activeToastId = useRef<string | null>(null);
+  const { setStatus, updateStep, clearStatus } = useJobLiveStatusStore();
+  const activeJobIdRef = useRef<string | null>(null);
 
   const startApplyProgress = useCallback(
-    (jobTitle: string) => {
-      // Dismiss any existing progress toast
-      if (activeToastId.current) {
-        toast.removeToast(activeToastId.current);
-      }
+    (jobTitle: string, company?: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      activeJobIdRef.current = jobId;
 
-      // Step 1: Matching CV
-      const id = toast.progress(
-        'Matching CV',
-        15,
-        `Finding best CV match for ${jobTitle}...`,
-        { duration: 15000 }
-      );
-      activeToastId.current = id;
-      return id;
+      setStatus(jobId, {
+        step: 'matching',
+        title: 'Matching CV',
+        description: `Finding best CV match for ${jobTitle}...`,
+        progress: 25,
+        company,
+        jobTitle,
+      });
+
+      toast({
+        title: 'Application started',
+        description: `Matching CV for ${company || jobTitle}...`,
+        company,
+        duration: 3000,
+      });
+
+      return jobId;
     },
-    [toast]
+    [setStatus]
   );
 
+  const setActiveJobId = useCallback((id: string) => {
+    activeJobIdRef.current = id;
+  }, []);
+
   const updateToTailoring = useCallback(
-    (jobTitle: string, company: string) => {
-      if (activeToastId.current) {
-        toast.updateToast(activeToastId.current, {
-          title: 'Tailoring Documents',
-          description: `Generating tailored CV & cover letter for ${company}...`,
-          progress: 45,
-        });
-      }
+    (jobTitle: string, company: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      updateStep(jobId, {
+        step: 'tailoring',
+        title: 'Tailoring Documents',
+        description: `Generating tailored CV & cover letter for ${company}...`,
+        progress: 60,
+        company,
+        jobTitle,
+      });
+
+      toast({
+        title: 'Documents tailoring',
+        description: `Generating tailored CV & cover letter for ${company}...`,
+        company,
+        duration: 4000,
+      });
     },
-    [toast]
+    [updateStep]
   );
 
   const updateToSubmitting = useCallback(
-    (company: string) => {
-      if (activeToastId.current) {
-        toast.updateToast(activeToastId.current, {
-          title: 'Submitting Application',
-          description: `Sending application to ${company}...`,
-          progress: 80,
-        });
-      }
+    (company: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      updateStep(jobId, {
+        step: 'submitting',
+        title: 'Submitting Application',
+        description: `Sending application to ${company}...`,
+        progress: 85,
+        company,
+      });
+
+      toast({
+        title: 'Submitting application',
+        description: `Sending application to ${company}...`,
+        company,
+        duration: 3000,
+      });
     },
-    [toast]
+    [updateStep]
   );
 
   const completeApply = useCallback(
-    (jobTitle: string, company: string, success: boolean, message?: string) => {
-      if (activeToastId.current) {
-        const isTechnical = Boolean(
-          message && /validation failed|enum value|Internal Server Error|E11000/i.test(message)
-        );
-        const succeeded = success && !isTechnical;
-        const actions = succeeded
-          ? [
-              {
-                label: 'Check tracker',
-                onClick: () => {
-                  window.location.href = '/dashboard/jobs?tab=applications';
-                },
-              },
-              {
-                label: 'Prep for the interview',
-                onClick: () => {
-                  window.location.href = '/dashboard/interview';
-                },
-              },
-            ]
-          : undefined;
+    (jobTitle: string, company: string, success: boolean, message?: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      const isTechnical = Boolean(
+        message && /validation failed|enum value|Internal Server Error|E11000/i.test(message)
+      );
+      const succeeded = success && !isTechnical;
 
-        if (succeeded) {
-          toast.updateToast(activeToastId.current, {
-            variant: 'success',
-            title: 'Application Submitted',
-            description:
-              message && !isTechnical
-                ? message
-                : `Successfully applied to ${jobTitle} at ${company}`,
-            progress: 100,
-            showTimer: true,
-            duration: 8000,
-            action: undefined,
-            actions,
-          });
-        } else {
-          toast.updateToast(activeToastId.current, {
-            variant: 'error',
-            title: 'Application Failed',
-            description: isTechnical
-              ? `Could not save this ${jobTitle} application. Please try again.`
-              : message || `Failed to apply to ${jobTitle}. Please try again.`,
-            duration: 8000,
-            showTimer: true,
-            action: undefined,
-            actions: [
-              {
-                label: 'Check tracker',
-                onClick: () => {
-                  window.location.href = '/dashboard/jobs?tab=applications';
-                },
-              },
-            ],
-          });
-        }
-        activeToastId.current = null;
+      if (succeeded) {
+        updateStep(jobId, {
+          step: 'submitted',
+          title: 'Application Submitted',
+          description:
+            message && !isTechnical
+              ? message
+              : `Tailored application prepared for ${company}. Review documents in Studio or complete submission.`,
+          progress: 100,
+          success: true,
+          company,
+          jobTitle,
+          autoCloseSeconds: 10,
+          actions: [
+            {
+              label: 'Check tracker',
+              href: '/dashboard/jobs?tab=applications',
+            },
+            {
+              label: 'Prep for the interview',
+              href: '/dashboard/interview',
+            },
+          ],
+        });
+
+        toast({
+          title: 'Application ready',
+          description: message && !isTechnical
+            ? message
+            : `Tailored application prepared for ${company}. Review and submit.`,
+          variant: 'success',
+          company,
+          duration: 6000,
+        });
+      } else {
+        updateStep(jobId, {
+          step: 'failed',
+          title: 'Application Failed',
+          description: isTechnical
+            ? `Could not save this ${jobTitle} application. Please try again.`
+            : message || `Failed to apply to ${jobTitle}. Please try again.`,
+          progress: 100,
+          success: false,
+          company,
+          jobTitle,
+          autoCloseSeconds: 10,
+          actions: [
+            {
+              label: 'Check tracker',
+              href: '/dashboard/jobs?tab=applications',
+            },
+          ],
+        });
+
+        toast({
+          title: 'Application failed',
+          description: isTechnical
+            ? `Could not save this application. Please try again.`
+            : message || `Failed to apply to ${jobTitle}. Please try again.`,
+          variant: 'destructive',
+          company,
+          duration: 6000,
+        });
       }
     },
-    [toast]
+    [updateStep]
   );
 
-  const cancelProgress = useCallback(() => {
-    if (activeToastId.current) {
-      toast.removeToast(activeToastId.current);
-      activeToastId.current = null;
-    }
-  }, [toast]);
+  const cancelProgress = useCallback((directJobId?: string) => {
+    const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+    clearStatus(jobId);
+    activeJobIdRef.current = null;
+  }, [clearStatus]);
 
   return {
     startApplyProgress,
+    setActiveJobId,
     updateToTailoring,
     updateToSubmitting,
     completeApply,

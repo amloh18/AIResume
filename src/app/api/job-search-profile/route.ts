@@ -15,6 +15,21 @@ import { getConnection } from '@/lib/database';
 import { JobSearchProfileService } from '@/lib/services/jobSearchProfileService';
 import { isFeatureFlagEnabled, FEATURE_FLAGS } from '@/lib/feature-flags';
 
+// Fields that must never be written by the client
+const SYSTEM_FIELDS = new Set([
+  '_id', 'id', 'userId', '__v', 'profileVersion', 'createdAt', 'updatedAt',
+]);
+
+function stripSystemFields(obj: Record<string, any>): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (!SYSTEM_FIELDS.has(key)) {
+      clean[key] = value;
+    }
+  }
+  return clean;
+}
+
 /**
  * GET /api/job-search-profile
  * Returns the user's job-search profile.
@@ -75,8 +90,11 @@ export async function PATCH(request: NextRequest) {
 
     await getConnection();
 
+    // Strip system fields that must not be written by the client
+    const cleanUpdates = stripSystemFields(updates);
+
     // Validate the updates
-    const validationErrors = JobSearchProfileService.validateProfile(updates);
+    const validationErrors = JobSearchProfileService.validateProfile(cleanUpdates);
     if (validationErrors.length > 0) {
       return NextResponse.json(
         { error: 'Validation failed', details: validationErrors },
@@ -84,7 +102,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const profile = await JobSearchProfileService.patchProfile(auth.userId, updates);
+    const profile = await JobSearchProfileService.patchProfile(auth.userId, cleanUpdates);
 
     return NextResponse.json({
       success: true,
@@ -124,8 +142,11 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
+    // Strip system fields that must not be written by the client
+    const cleanProfileData = stripSystemFields(profileData);
+
     // Validate the profile data
-    const validationErrors = JobSearchProfileService.validateProfile(profileData);
+    const validationErrors = JobSearchProfileService.validateProfile(cleanProfileData);
     if (validationErrors.length > 0) {
       return NextResponse.json(
         { error: 'Validation failed', details: validationErrors },
@@ -133,7 +154,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const profile = await JobSearchProfileService.updateProfile(auth.userId, profileData);
+    const profile = await JobSearchProfileService.updateProfile(auth.userId, cleanProfileData);
 
     return NextResponse.json({
       success: true,

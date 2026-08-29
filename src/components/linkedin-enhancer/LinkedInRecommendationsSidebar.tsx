@@ -77,13 +77,13 @@ export default function LinkedInRecommendationsSidebar({
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.15 }}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-4"
             >
                 <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="w-4 h-4 text-purple-600" />
-                    <h3 className="text-small font-semibold text-gray-900">Recommended Courses</h3>
+                    <BookOpen className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                    <h3 className="text-xs font-bold text-[var(--text-primary)]">Recommended Courses</h3>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                     {[
                         {
                             title: 'LinkedIn Profile Optimization for Recruiter Search',
@@ -115,18 +115,18 @@ export default function LinkedInRecommendationsSidebar({
                             href={course.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                            className="block p-3 bg-[var(--bg-tertiary)]/50 rounded-xl hover:bg-[var(--bg-tertiary)] border border-[var(--border-primary)] transition-colors group"
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div>
-                                    <p className="text-small font-medium text-gray-900 group-hover:text-blue-600">
+                                    <p className="text-xs font-bold text-[var(--text-primary)] group-hover:text-emerald-600 dark:group-hover:text-lime-400 transition-colors">
                                         {course.title}
                                     </p>
-                                    <p className="text-small text-gray-500">{course.provider}</p>
+                                    <p className="text-[11px] text-[var(--text-tertiary)]">{course.provider}</p>
                                 </div>
-                                <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                                <ExternalLink className="w-3.5 h-3.5 text-[var(--text-tertiary)] group-hover:text-emerald-600 dark:group-hover:text-lime-400 flex-shrink-0" />
                             </div>
-                            <p className="text-small text-gray-500 mt-1">{course.logic}</p>
+                            <p className="text-[11px] text-[var(--text-secondary)] mt-1">{course.logic}</p>
                         </a>
                     ))}
                 </div>
@@ -138,17 +138,17 @@ export default function LinkedInRecommendationsSidebar({
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                    className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-4"
                 >
                     <div className="flex items-center gap-2 mb-3">
-                        <Users className="w-4 h-4 text-blue-600" />
-                        <h3 className="text-small font-semibold text-gray-900">Networking Groups</h3>
+                        <Users className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                        <h3 className="text-xs font-bold text-[var(--text-primary)]">Networking Groups</h3>
                     </div>
                     <div className="space-y-2">
                         {sideCards.networking.map((group, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                <span className="text-small text-gray-700">{group.group_name}</span>
-                                <span className="text-small text-gray-500">{group.members} members</span>
+                            <div key={idx} className="flex items-center justify-between p-2.5 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] rounded-xl">
+                                <span className="text-xs font-semibold text-[var(--text-secondary)]">{group.group_name}</span>
+                                <span className="text-[10px] text-[var(--text-tertiary)]">{group.members} members</span>
                             </div>
                         ))}
                     </div>

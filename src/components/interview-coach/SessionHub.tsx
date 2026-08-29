@@ -194,7 +194,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                     </button>
                     <button
                         onClick={() => initSession()}
-                        className="px-4 py-2 bg-lime-500 text-black font-semibold rounded-lg hover:bg-lime-400"
+                        className="px-4 py-2 bg-lime-500 text-white font-semibold rounded-lg hover:bg-lime-400"
                     >
                         Try Again
                     </button>
@@ -323,7 +323,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                                     {/* Start Practice Button */}
                                     <button
                                         onClick={() => handleStartPractice(module.id)}
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-xl transition-colors"
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl transition-colors"
                                     >
                                         <Mic className="w-5 h-5" />
                                         Start Module Practice
@@ -394,7 +394,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
                             <div className="space-y-3">
                                 <button
                                     onClick={() => handleStartPractice()}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-xl transition-colors"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-xl transition-colors"
                                 >
                                     <Mic className="w-5 h-5" />
                                     Start Practice Session

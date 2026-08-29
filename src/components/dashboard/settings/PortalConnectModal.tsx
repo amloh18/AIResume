@@ -352,7 +352,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-white rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   Continue
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -398,7 +398,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
             <button
               type="button"
               onClick={() => setStep('preferences')}
-              className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-white rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
             >
               Set Discovery Preferences
               <ArrowRight className="w-3.5 h-3.5" />
@@ -475,7 +475,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-white rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   Set Preferences
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -539,7 +539,7 @@ export const PortalConnectModal: React.FC<PortalConnectModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-black rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 text-xs font-black bg-[#013f2e] hover:brightness-95 text-white rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -684,7 +684,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                       onClick={() => isCompleted && setCurrentStep(step.id)}
                       className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all duration-500 ${
                         isActive 
-                          ? 'bg-emerald-500 border-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
+                          ? 'bg-emerald-500 border-emerald-400 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' 
                           : isCompleted 
                             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
                             : 'bg-white/5 border-white/5 text-white/20'
@@ -727,9 +727,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                   <div className="flex justify-center mb-8">
                     <Tabs value={activeDesignTab} onValueChange={(v: any) => setActiveDesignTab(v)} className="bg-white/5 p-1 rounded-2xl border border-white/5">
                         <TabsList className="bg-transparent border-0">
-                            <TabsTrigger value="template" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">1. Choose Template</TabsTrigger>
-                            <TabsTrigger value="editor" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">2. Edit Content</TabsTrigger>
-                            <TabsTrigger value="preview" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-black text-[10px] font-black uppercase tracking-widest transition-all">3. Visual Preview</TabsTrigger>
+                            <TabsTrigger value="template" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest transition-all">1. Choose Template</TabsTrigger>
+                            <TabsTrigger value="editor" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest transition-all">2. Edit Content</TabsTrigger>
+                            <TabsTrigger value="preview" className="rounded-xl px-8 data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-[10px] font-black uppercase tracking-widest transition-all">3. Visual Preview</TabsTrigger>
                         </TabsList>
                     </Tabs>
                   </div>
@@ -856,7 +856,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                             onClick={() => handleInputChange("sendType", type)} 
                             className={`py-2 px-3 rounded-xl border text-center transition-all cursor-pointer text-[10px] font-black uppercase tracking-wider ${
                               formData.sendType === type 
-                                ? 'bg-emerald-500 border-emerald-400 text-black' 
+                                ? 'bg-emerald-500 border-emerald-400 text-white' 
                                 : 'bg-black/40 border-white/10 text-white/60 hover:text-white hover:border-white/20'
                             }`}
                           >
@@ -926,7 +926,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                       />
                       <button 
                         onClick={handleAddManualRecipient}
-                        className="px-6 h-10 bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-emerald-500/20"
+                        className="px-6 h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all border border-emerald-500/20"
                       >
                         Add to List
                       </button>
@@ -1021,9 +1021,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
             <div className="flex gap-1.5">{steps.map((s, i) => (<div key={i} className={`w-12 h-1 rounded-full ${i <= currentStepIndex ? 'bg-emerald-500' : 'bg-white/10'}`} />))}</div>
           </div>
           {currentStepIndex < steps.length - 1 ? (
-            <Button onClick={nextStep} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-12 py-6">Next Step <ChevronRight className="w-5 h-5 ml-2" /></Button>
+            <Button onClick={nextStep} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-12 py-6">Next Step <ChevronRight className="w-5 h-5 ml-2" /></Button>
           ) : (
-            <Button onClick={() => handleSave(formData.sendType === "now" ? "sent" : formData.sendType === "recurring" ? "recurring" : "scheduled")} disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-black font-black rounded-2xl px-12 py-6">{loading ? <Loader2 className="animate-spin" /> : <Send className="w-5 h-5 mr-2" />} Dispatch Matrix</Button>
+            <Button onClick={() => handleSave(formData.sendType === "now" ? "sent" : formData.sendType === "recurring" ? "recurring" : "scheduled")} disabled={loading} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-12 py-6">{loading ? <Loader2 className="animate-spin" /> : <Send className="w-5 h-5 mr-2" />} Dispatch Matrix</Button>
           )}
         </div>
       </motion.div >

@@ -168,7 +168,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
           <button className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-sm transition-all backdrop-blur-md">
             Export Data
           </button>
-          <button className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-black font-black text-sm transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+          <button className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">
             + New Task
           </button>
         </div>

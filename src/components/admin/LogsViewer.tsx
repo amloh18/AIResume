@@ -300,7 +300,7 @@ export default function LogsViewer() {
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <div className={`p-2 rounded-lg bg-white/5 transition-all ${expandedLog === log._id ? 'bg-emerald-500 text-black' : 'text-white/20 hover:text-white'}`}>
+                      <div className={`p-2 rounded-lg bg-white/5 transition-all ${expandedLog === log._id ? 'bg-emerald-500 text-white' : 'text-white/20 hover:text-white'}`}>
                         {expandedLog === log._id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </div>
                     </td>

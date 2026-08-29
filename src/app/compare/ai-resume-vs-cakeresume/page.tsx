@@ -161,7 +161,7 @@ export default function ComparisonPage() {
                 </ul>
               </div>
               <div className="p-8 rounded-2xl border border-[#013f2e]/30 bg-[#111611] relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-[#013f2e] text-black text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase">Best Value</div>
+                <div className="absolute top-0 right-0 bg-[#013f2e] text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase">Best Value</div>
                 <h3 className="text-[#013f2e] font-bold mb-4 uppercase">AIResume All-in-One</h3>
                 <p className="text-4xl text-white font-bold mb-6">£149 / year</p>
                 <ul className="text-left space-y-3 text-gray-300 text-sm">
