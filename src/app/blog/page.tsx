@@ -21,6 +21,11 @@ const categoryColors: Record<string, { badge: string; dot: string }> = {
   'Resume Guides':           { badge: 'bg-green-900/40 text-green-300 border-green-700/30',    dot: 'bg-green-400'  },
   'Resume Mistakes':         { badge: 'bg-red-900/40 text-red-300 border-red-700/30',          dot: 'bg-red-400'    },
   'Resume Writing':          { badge: 'bg-cyan-900/40 text-cyan-300 border-cyan-700/30',       dot: 'bg-cyan-400'   },
+  'Job Discovery':           { badge: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/30', dot: 'bg-emerald-400' },
+  'Application Documents':   { badge: 'bg-indigo-900/40 text-indigo-300 border-indigo-700/30',   dot: 'bg-indigo-400'  },
+  'Interview Prep':          { badge: 'bg-orange-900/40 text-orange-300 border-orange-700/30',   dot: 'bg-orange-400'  },
+  'Career Strategy':         { badge: 'bg-teal-900/40 text-teal-300 border-teal-700/30',         dot: 'bg-teal-400'    },
+  'Job Applications':        { badge: 'bg-rose-900/40 text-rose-300 border-rose-700/30',         dot: 'bg-rose-400'    },
 };
 
 export default async function BlogPage(props: {

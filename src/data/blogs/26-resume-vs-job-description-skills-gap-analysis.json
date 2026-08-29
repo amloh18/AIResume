@@ -1,0 +1,48 @@
+{
+  "id": "blog-026",
+  "slug": "resume-vs-job-description-skills-gap-analysis",
+  "title": "Resume vs Job Description: How to Find the Skills You're Missing",
+  "subtitle": "How to perform an instant skills gap analysis on any vacancy — and how to position transferable proficiencies for requirements you don't fully meet.",
+  "excerpt": "Think you are qualified for a role, but the ATS says no? Discover how to run a forensic skills gap analysis between your CV and any job posting, and learn how to address missing requirements honestly.",
+  "category": "ATS Optimization",
+  "readTime": "11 min read",
+  "date": "2026-08-14",
+  "featuredImage": "https://images.unsplash.com/photo-1551836022-4c4c79ecde51?w=1920&q=80",
+  "featuredImageAlt": "Comparative skills gap analysis matrix between candidate resume and job requirements",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "resume vs job description",
+    "skills gap analysis resume",
+    "find missing keywords",
+    "compare resume to job description",
+    "transferable skills"
+  ],
+  "sections": [
+    {
+      "id": "the-hidden-keyword-gap",
+      "heading": "The Hidden Keyword Gap: Why You Feel Qualified When the ATS Disagrees",
+      "content": "<p class=\"text-gray-300 mb-4\">One of the most frustrating experiences in job hunting is reviewing a job description, feeling 100% confident in your ability to perform the role, and receiving an automated rejection email within 20 minutes.</p><p class=\"text-gray-300 mb-4\">This happens because of the <strong>lexical gap</strong>: you have the underlying capability, but your resume describes it using different terminology than what the ATS parser is configured to reward. If the posting requests <em>'Cross-functional stakeholder management'</em> and your CV says <em>'Worked with diverse teams'</em>, the algorithm fails to register a match.</p>"
+    },
+    {
+      "id": "running-gap-analysis",
+      "heading": "Categorizing the Discrepancy: Hard Skills vs Tools vs Methodologies",
+      "content": "<p class=\"text-gray-300 mb-4\">When analyzing a job posting against your Master CV, categorize missing terms into three buckets:</p><div class=\"space-y-4 my-6\"><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-emerald-400 font-bold mb-1\">Bucket 1: Direct Matches (Keep & Highlight)</h4><p class=\"text-gray-300 text-sm\">Technologies and skills you have executed directly. Ensure these appear in both your Skills list and accomplishment bullets.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-blue-400 font-bold mb-1\">Bucket 2: Semantic Equivalents (Re-label)</h4><p class=\"text-gray-300 text-sm\">Capabilities you have practiced under a different industry term. Update your resume's phrasing to match the employer's specific vocabulary.</p></div><div class=\"bg-[#1a1f1a] p-5 rounded-xl border border-white/5\"><h4 class=\"text-amber-400 font-bold mb-1\">Bucket 3: Genuine Skill Gaps (Bridge with Adjacencies)</h4><p class=\"text-gray-300 text-sm\">Tools or frameworks you have not used yet. Bridge the gap by demonstrating adjacent mastery (e.g., highlighting deep PostgreSQL expertise when the job mentions MySQL).</p></div></div>"
+    },
+    {
+      "id": "real-time-skill-comparison",
+      "heading": "Automated Skill Gap Analysis with BuildAIResume",
+      "content": "<p class=\"text-gray-300 mb-4\"><a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">BuildAIResume's Real-Time Skill Scanner</a> instantly compares your document against any job description, color-coding exact matches, partial equivalents, and missing prerequisite tokens with actionable tailoring recommendations.</p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "the-hidden-keyword-gap", "title": "The Hidden Keyword Gap: Why You Feel Qualified When the ATS Disagrees" },
+    { "id": "running-gap-analysis", "title": "Categorizing the Discrepancy: Hard Skills vs Tools vs Methodologies" },
+    { "id": "real-time-skill-comparison", "title": "Automated Skill Gap Analysis with BuildAIResume" }
+  ],
+  "faqs": [
+    {
+      "question": "What should I do if I am missing 30% of the listed requirements?",
+      "answer": "If the missing 30% consists of secondary tools or 'nice-to-haves', apply! Focus your cover letter and summary on your rapid ramp-up track record and mastery of core foundational principles."
+    }
+  ]
+}

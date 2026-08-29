@@ -90,9 +90,9 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            Build a Better Resume <br className="hidden sm:block" />
+            Build. Match. Apply. <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36D39B] via-[#4DDCB0] to-[#86E8D1]">
-              With AI
+              Get hired.
             </span>
           </motion.h1>
 
@@ -102,7 +102,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           >
-            <span className="text-white font-semibold">Create an ATS-friendly resume, tailor it to every job, and apply with confidence using AI-powered resume tools.</span>
+            <span className="text-white font-semibold">Create once. Tailor for every job. Apply manually or let AI automate your applications.</span>
           </motion.p>
 
           <motion.div

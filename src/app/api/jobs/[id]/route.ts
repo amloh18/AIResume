@@ -317,7 +317,7 @@ export async function PUT(
     }
 
     // VALIDATION: Prevent invalid status transitions
-    const validStatuses = ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
+    const validStatuses = ['draft', 'saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
     const newStatus = body.status;
     if (newStatus && !validStatuses.includes(newStatus)) {
       return NextResponse.json(
