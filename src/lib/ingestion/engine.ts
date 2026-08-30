@@ -14,6 +14,7 @@ import crypto from 'crypto';
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import { resolveRoleFamily, getFamilySearchTerms, ROLE_TAXONOMY } from '@/lib/taxonomy/roleTaxonomy';
+import { loadIngestionSettings } from '@/models/WorkerSettings';
 
 // ── Structured Logging ─────────────────────────────────────────────────
 
@@ -278,15 +279,56 @@ interface ConfigCheck {
   reason?: string;
 }
 
+// ── Sync Settings Cache (populated at startup, refreshed periodically) ───
+
+let _syncSettings: any = null;
+let _syncSettingsTs = 0;
+const SYNC_CACHE_TTL = 30_000;
+
+/**
+ * Get cached settings synchronously. Used by checkSourceConfig and fetchers.
+ * Returns defaults if DB hasn't been queried yet.
+ */
+export function getCachedSettings(): any {
+  if (_syncSettings && (Date.now() - _syncSettingsTs) < SYNC_CACHE_TTL) {
+    return _syncSettings;
+  }
+  return null; // Not yet loaded — callers fall back to defaults
+}
+
+/**
+ * Refresh the sync cache. Call from instrumentation or before run cycles.
+ */
+export async function refreshSettingsCache(): Promise<void> {
+  try {
+    _syncSettings = await loadIngestionSettings();
+    _syncSettingsTs = Date.now();
+  } catch {
+    // Keep stale cache on error
+  }
+}
+
+function getSourceEnabled(source: string): boolean {
+  const settings = getCachedSettings();
+  if (settings?.sources?.[source]) return settings.sources[source].enabled;
+  return SOURCE_REGISTRY[source]?.enabled ?? false;
+}
+
+function getLinkedInEnabled(): boolean {
+  const settings = getCachedSettings();
+  if (settings?.linkedin) return settings.linkedin.enabled;
+  return process.env.LINKEDIN_ENABLED === 'true';
+}
+
 export function checkSourceConfig(source: string): ConfigCheck {
   const def = SOURCE_REGISTRY[source];
   if (!def) return { ready: false, reason: `Unknown source: ${source}` };
-  if (!def.enabled) return { ready: false, reason: 'Source disabled' };
+  if (!getSourceEnabled(source)) return { ready: false, reason: 'Source disabled' };
 
   if (source === 'adzuna') {
     const appId = process.env.ADZUNA_APP_ID;
     const appKey = process.env.ADZUNA_APP_KEY;
-    if (!appId || !appKey) return { ready: false, reason: 'Missing ADZUNA_APP_ID or ADZUNA_APP_KEY' };
+    if (!appId || !appKey) return { ready: false, reason: 'Missing ADZUNA_APP_ID or ADZUNA_APP_KEY (set in env)' };
   }
 
   if (source === 'jobspy') {
@@ -299,8 +341,8 @@ export function checkSourceConfig(source: string): ConfigCheck {
   }
 
   if (source === 'linkedin') {
-    if (process.env.LINKEDIN_ENABLED !== 'true') {
-      return { ready: false, reason: 'LinkedIn worker disabled (set LINKEDIN_ENABLED=true to enable)' };
+    if (!getLinkedInEnabled()) {
+      return { ready: false, reason: 'LinkedIn worker disabled (enable in Admin > Worker Settings)' };
     }
     try {
       const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
@@ -319,7 +361,10 @@ export function checkSourceConfig(source: string): ConfigCheck {
 // per-company/per-page so one failure doesn't abort the entire source.
 // A source-level AbortController is passed for cancellation.
 
-const GREENHOUSE_COMPANIES = [
+// ── Company Lists (DB-configurable with hardcoded defaults) ──────────────
+// These read from the settings cache. If DB settings haven't loaded yet, hardcoded defaults are used.
+
+const DEFAULT_GREENHOUSE_COMPANIES = [
   { token: 'stripe', name: 'Stripe' },
   { token: 'airbnb', name: 'Airbnb' },
   { token: 'monzo', name: 'Monzo' },
@@ -347,7 +392,7 @@ const GREENHOUSE_COMPANIES = [
   { token: 'launchdarkly', name: 'LaunchDarkly' },
 ];
 
-const LEVER_COMPANIES = [
+const DEFAULT_LEVER_COMPANIES = [
   'netflix', 'notion', 'figma', 'spotify', 'posthog', 'linear',
   'vercel', 'supabase', 'resend', 'calcom', 'plausible', 'slack',
   'airtable', 'loom', 'webflow', 'intercom', 'zapier', 'asana',
@@ -355,12 +400,12 @@ const LEVER_COMPANIES = [
   'plaid', 'rippling', 'brex',
 ];
 
-const ASHBY_COMPANIES = [
+const DEFAULT_ASHBY_COMPANIES = [
   'notion', 'linear', 'posthog', 'vercel', 'supabase', 'resend',
   'calcom', 'plausible', 'raycast', 'loom', 'webflow', 'intercom',
 ];
 
-const WORKDAY_TENANTS = [
+const DEFAULT_WORKDAY_TENANTS = [
   { tenant: 'wd5', site: 'unity', name: 'Unity' },
   { tenant: 'wd5', site: 'databricks', name: 'Databricks' },
   { tenant: 'wd5', site: 'cloudflare', name: 'Cloudflare' },
@@ -376,11 +421,31 @@ const WORKDAY_TENANTS = [
   { tenant: 'wd5', site: 'intuit', name: 'Intuit' },
 ];
 
-const ADZUNA_COUNTRIES = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'nl', 'in'];
+const DEFAULT_ADZUNA_COUNTRIES = ['us', 'gb', 'de', 'fr', 'ca', 'au', 'nl', 'in'];
+
+// Dynamic getters — read from DB cache, fall back to hardcoded defaults
+function getGreenhouseCompanies() {
+  const settings = getCachedSettings();
+  return settings?.companies?.greenhouse || DEFAULT_GREENHOUSE_COMPANIES;
+}
+function getLeverCompanies() {
+  const settings = getCachedSettings();
+  return settings?.companies?.lever || DEFAULT_LEVER_COMPANIES;
+}
+function getAshbyCompanies() {
+  const settings = getCachedSettings();
+  return settings?.companies?.ashby || DEFAULT_ASHBY_COMPANIES;
+}
+function getWorkdayTenants() {
+  const settings = getCachedSettings();
+  return settings?.companies?.workday || DEFAULT_WORKDAY_TENANTS;
+}
+const ADZUNA_COUNTRIES = DEFAULT_ADZUNA_COUNTRIES;
 
 async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
   let boardErrors = 0;
+  const GREENHOUSE_COMPANIES = getGreenhouseCompanies();
   log('FETCH', `Greenhouse: fetching ${GREENHOUSE_COMPANIES.length} boards`);
 
   for (const company of GREENHOUSE_COMPANIES) {
@@ -443,6 +508,7 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
   let boardErrors = 0;
+  const LEVER_COMPANIES = getLeverCompanies();
   log('FETCH', `Lever: fetching ${LEVER_COMPANIES.length} companies`);
 
   for (const company of LEVER_COMPANIES) {
@@ -503,6 +569,7 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
 async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
   const jobs: RawJob[] = [];
   let boardErrors = 0;
+  const ASHBY_COMPANIES = getAshbyCompanies();
   log('FETCH', `Ashby: fetching ${ASHBY_COMPANIES.length} boards`);
 
   for (const company of ASHBY_COMPANIES) {
@@ -657,6 +724,7 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
   const PAGE_SIZE = 20;
   const MAX_JOBS_PER_COMPANY = 500;
   let tenantErrors = 0;
+  const WORKDAY_TENANTS = getWorkdayTenants();
   log('FETCH', `Workday: fetching ${WORKDAY_TENANTS.length} tenants`);
 
   for (const company of WORKDAY_TENANTS) {
@@ -749,9 +817,11 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
   }
 
   const jobs: RawJob[] = [];
-  const MAX_PAGES = parseInt(process.env.ADZUNA_MAX_PAGES_PER_RUN || '5', 10);
+  const settings = getCachedSettings();
+  const adz = settings?.adzuna || {};
+  const MAX_PAGES = adz.maxPagesPerRun || parseInt(process.env.ADZUNA_MAX_PAGES_PER_RUN || '5', 10);
   const RESULTS_PER_PAGE = 50;
-  const RATE_LIMIT_DELAY_MS = parseInt(process.env.ADZUNA_RATE_LIMIT_MS || '1200', 10);
+  const RATE_LIMIT_DELAY_MS = adz.rateLimitMs || parseInt(process.env.ADZUNA_RATE_LIMIT_MS || '1200', 10);
   let countryErrors = 0;
   log('FETCH', `Adzuna: fetching ${ADZUNA_COUNTRIES.length} countries, max ${MAX_PAGES} pages each`);
 
@@ -850,13 +920,15 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
 
     activeJobSpyProcesses.set(processId, child);
 
-    // Send input via stdin
+    // Send input via stdin — use DB settings
+    const settings = getCachedSettings();
+    const js = settings?.jobspy || {};
     const input = JSON.stringify({
-      sites: ['indeed', 'linkedin', 'zip_recruiter'],
-      searchTerm: 'software engineer',
-      location: 'United States',
-      resultsWanted: 20,
-      hoursOld: 72,
+      sites: js.sites || ['indeed', 'linkedin', 'zip_recruiter'],
+      searchTerm: js.searchTerm || 'software engineer',
+      location: js.location || 'United States',
+      resultsWanted: js.resultsWanted || 20,
+      hoursOld: js.hoursOld || 72,
     });
     child.stdin.write(input);
     child.stdin.end();
@@ -966,22 +1038,24 @@ async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOption
 
     const pythonBin = resolvePython();
     log('FETCH', `LinkedIn: using python at ${pythonBin}`);
+    const settings = getCachedSettings();
+    const li = settings?.linkedin || {};
     const child = spawn(pythonBin, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
-        LINKEDIN_ENABLED: process.env.LINKEDIN_ENABLED || 'false',
-        LINKEDIN_BROWSER_PROFILE_DIR: process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
-        LINKEDIN_MAX_SEARCHES_PER_RUN: process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5',
-        LINKEDIN_MAX_PAGES_PER_SEARCH: process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2',
-        LINKEDIN_MAX_JOBS_PER_SEARCH: process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100',
-        LINKEDIN_MAX_RUNTIME_SECONDS: process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600',
-        LINKEDIN_DRY_RUN: process.env.LINKEDIN_DRY_RUN || 'false',
-        LINKEDIN_DEBUG: process.env.LINKEDIN_DEBUG || 'false',
-        LINKEDIN_REGION_STRATEGY: process.env.LINKEDIN_REGION_STRATEGY || 'demand',
-        LINKEDIN_REGIONS: process.env.LINKEDIN_REGIONS || '',
-        LINKEDIN_MAX_REGIONS_PER_RUN: process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3',
-        LINKEDIN_DEFAULT_KEYWORD: process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
+        LINKEDIN_ENABLED: li.enabled !== undefined ? String(li.enabled) : (process.env.LINKEDIN_ENABLED || 'false'),
+        LINKEDIN_BROWSER_PROFILE_DIR: li.browserProfileDir || process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
+        LINKEDIN_MAX_SEARCHES_PER_RUN: String(li.maxSearchesPerRun || process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5'),
+        LINKEDIN_MAX_PAGES_PER_SEARCH: String(li.maxPagesPerSearch || process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2'),
+        LINKEDIN_MAX_JOBS_PER_SEARCH: String(li.maxJobsPerSearch || process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100'),
+        LINKEDIN_MAX_RUNTIME_SECONDS: String(li.maxRuntimeSeconds || process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600'),
+        LINKEDIN_DRY_RUN: li.dryRun !== undefined ? String(li.dryRun) : (process.env.LINKEDIN_DRY_RUN || 'false'),
+        LINKEDIN_DEBUG: li.debug !== undefined ? String(li.debug) : (process.env.LINKEDIN_DEBUG || 'false'),
+        LINKEDIN_REGION_STRATEGY: li.regionStrategy || process.env.LINKEDIN_REGION_STRATEGY || 'rotation',
+        LINKEDIN_REGIONS: (li.regions || []).join(',') || process.env.LINKEDIN_REGIONS || '',
+        LINKEDIN_MAX_REGIONS_PER_RUN: String(li.maxRegionsPerRun || process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3'),
+        LINKEDIN_DEFAULT_KEYWORD: li.defaultKeyword || process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
       },
       timeout: 900_000, // 15 min max
     });
@@ -1281,18 +1355,21 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   log('UPSERT', `batchUpsert: ${jobs.length} jobs for source=${sourceName}`);
 
   // Phase 12: Pre-check content hashes to track true duplicates vs content updates
+  // Use only canonicalId lookup (efficient $in) — skip the $and on sourcePairs
+  // which explodes for large batches (e.g. 3,397 Greenhouse jobs).
   const canonicalIds = jobs.map((j) => j.canonicalId);
-  const sourcePairs = jobs.map((j) => ({ primary: j.source.primary, sourceJobId: j.source.sourceJobId }));
 
-  const existingDocs = await coll
-    .find({
-      $or: [
-        { canonicalId: { $in: canonicalIds } },
-        { $and: sourcePairs.map((p) => ({ 'source.primary': p.primary, 'source.sourceJobId': p.sourceJobId })) },
-      ],
-    })
-    .project({ canonicalId: 1, contentHash: 1, 'source.primary': 1, 'source.sourceJobId': 1 })
-    .toArray();
+  // Batch the $in query to avoid MongoDB BSON size limits (>16MB)
+  const BATCH_SIZE = 500;
+  const existingDocs: any[] = [];
+  for (let i = 0; i < canonicalIds.length; i += BATCH_SIZE) {
+    const batch = canonicalIds.slice(i, i + BATCH_SIZE);
+    const docs = await coll
+      .find({ canonicalId: { $in: batch } })
+      .project({ canonicalId: 1, contentHash: 1 })
+      .toArray();
+    existingDocs.push(...docs);
+  }
 
   // Pre-compute freshness for each job
   function computeFreshness(job: NormalizedJob): { expiresAt: Date; freshnessScore: number } {
@@ -1313,11 +1390,8 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
 
   // Build lookup: canonicalId → existing contentHash
   const existingHashByCanonical = new Map<string, string>();
-  const existingHashBySource = new Map<string, string>();
   for (const doc of existingDocs) {
     if (doc.canonicalId) existingHashByCanonical.set(doc.canonicalId, doc.contentHash || '');
-    const key = `${doc.source?.primary}::${doc.source?.sourceJobId}`;
-    if (key !== '::') existingHashBySource.set(key, doc.contentHash || '');
   }
 
   // Classify each job: new, content-changed, or metadata-only (duplicate)
@@ -1329,9 +1403,7 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   const newJobs: NormalizedJob[] = [];
 
   for (const job of jobs) {
-    const existingHash =
-      existingHashByCanonical.get(job.canonicalId) ||
-      existingHashBySource.get(`${job.source.primary}::${job.source.sourceJobId}`);
+    const existingHash = existingHashByCanonical.get(job.canonicalId);
 
     if (existingHash === undefined) {
       // New job
@@ -1348,16 +1420,13 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   }
 
   // Upsert new jobs (full fields via $setOnInsert + $set)
+  // Filter by canonicalId only — the $or with source fields caused duplicate
+  // key issues in bulkWrite when multiple jobs shared sourceJobId across companies.
   const newOps = newJobs.map((job) => {
     const { expiresAt, freshnessScore } = computeFreshness(job);
     return {
       updateOne: {
-        filter: {
-          $or: [
-            { canonicalId: job.canonicalId },
-            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-          ],
-        },
+        filter: { canonicalId: job.canonicalId },
         update: {
           $setOnInsert: {
             canonicalId: job.canonicalId,
@@ -1410,12 +1479,7 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     const { expiresAt, freshnessScore } = computeFreshness(job);
     return {
       updateOne: {
-        filter: {
-          $or: [
-            { canonicalId: job.canonicalId },
-            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-          ],
-        },
+        filter: { canonicalId: job.canonicalId },
         update: {
           $set: {
             title: job.title,
@@ -1456,11 +1520,8 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
   });
 
   // Metadata-only updates for duplicates (just touch lastSeenAt/lastVerifiedAt)
-  const duplicateJobs = jobs.filter((_, i) => {
-    const job = jobs[i];
-    const existingHash =
-      existingHashByCanonical.get(job.canonicalId) ||
-      existingHashBySource.get(`${job.source.primary}::${job.source.sourceJobId}`);
+  const duplicateJobs = jobs.filter((job) => {
+    const existingHash = existingHashByCanonical.get(job.canonicalId);
     return existingHash !== undefined && existingHash === job.contentHash;
   });
 
@@ -1468,12 +1529,7 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
     const { expiresAt } = computeFreshness(job);
     return {
       updateOne: {
-        filter: {
-          $or: [
-            { canonicalId: job.canonicalId },
-            { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-          ],
-        },
+        filter: { canonicalId: job.canonicalId },
         update: {
           $set: {
             'source.lastSeenAt': now,
@@ -1490,11 +1546,25 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
 
   // Execute all three batches
   const allOps = [...newOps, ...contentOps, ...metaOps];
-  const res = allOps.length > 0
-    ? await coll.bulkWrite(allOps, { ordered: false })
-    : { upsertedCount: 0, modifiedCount: 0, upsertedIds: {} } as any;
+  log('UPSERT', `${sourceName}: executing ${allOps.length} ops (${newOps.length} new, ${contentOps.length} content, ${metaOps.length} meta)`);
 
-  // Record events for newly inserted jobs
+  let res: any;
+  try {
+    res = allOps.length > 0
+      ? await coll.bulkWrite(allOps, { ordered: false })
+      : { upsertedCount: 0, modifiedCount: 0, upsertedIds: {} } as any;
+    log('UPSERT', `${sourceName}: bulkWrite done — upserted=${res.upsertedCount} modified=${res.modifiedCount}`);
+  } catch (bulkErr: any) {
+    // Log full error details for debugging
+    const errDetails = bulkErr.writeErrors
+      ? bulkErr.writeErrors.slice(0, 5).map((e: any) => `idx=${e.index} code=${e.code} ${e.errmsg}`).join('; ')
+      : bulkErr.message;
+    log('ERROR', `${sourceName}: bulkWrite FAILED — ${errDetails}`);
+    throw bulkErr;
+  }
+
+  // Record events for newly inserted jobs (non-fatal)
+  try {
   if (res.upsertedCount > 0 && res.upsertedIds) {
     const eventOps = Object.entries(res.upsertedIds)
       .filter(([idx]) => parseInt(idx) < newJobs.length)
@@ -1514,8 +1584,12 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
       await eventsColl.bulkWrite(eventOps, { ordered: false }).catch(() => {});
     }
   }
+  } catch (eventErr) {
+    // Event recording is non-fatal — don't fail the whole run
+    log('WARN', `${sourceName}: event recording failed (non-fatal)`);
+  }
 
-  log('UPSERT', `batchUpsert: inserted=${inserted}, contentUpdated=${contentUpdated}, duplicates=${duplicates}`);
+  log('UPSERT', `${sourceName}: done — inserted=${inserted}, contentUpdated=${contentUpdated}, duplicates=${duplicates}`);
   return { inserted, updated: contentUpdated, duplicates };
 }
 
@@ -1573,6 +1647,8 @@ export async function updateRunProgress(
   if (typeof progress.inserted === 'number') setObj['metrics.inserted'] = progress.inserted;
   if (typeof progress.updated === 'number') setObj['metrics.updated'] = progress.updated;
   if (typeof progress.duplicates === 'number') setObj['metrics.duplicates'] = progress.duplicates;
+  if (typeof progress.errors === 'number') setObj['metrics.errors'] = progress.errors;
+  if (progress.status) setObj['metrics.status'] = progress.status;
   if (typeof progress.errors === 'number') setObj['metrics.errors'] = progress.errors;
 
   await runsColl.updateOne({ runId }, { $set: setObj }).catch(() => {});
@@ -1698,7 +1774,14 @@ export async function executeSourceRun(
 
     // Normalize
     log('NORMALIZE', `${sourceName}: normalizing ${rawJobs.length} jobs`);
-    const normalized = rawJobs.map(normalize);
+    let normalized: NormalizedJob[];
+    try {
+      normalized = rawJobs.map(normalize);
+    } catch (normErr: any) {
+      log('ERROR', `${sourceName}: normalize FAILED — ${normErr.message}`);
+      throw normErr;
+    }
+    log('NORMALIZE', `${sourceName}: normalized ${normalized.length} jobs`);
     await updateProgress({ normalized: normalized.length, message: `Normalized ${normalized.length} jobs, upserting...` });
 
     // Upsert
@@ -1775,10 +1858,12 @@ export async function executeSourceRun(
     }
 
     log('ERROR', `${sourceName}: failed [${errorCode}] — ${errorMessage}`);
+    if (err.stack) log('ERROR', `${sourceName}: stack — ${err.stack.split('\n').slice(0, 5).join(' | ')}`);
     await updateProgress({
       status: 'failed',
       error: errorMessage,
       errorCode,
+      errors: 1,
       finishedAt,
       durationMs,
     });

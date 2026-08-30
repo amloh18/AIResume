@@ -513,6 +513,52 @@ fix_permissions() {
     chmod +x "$PROJECT_DIR/scripts/linkedin-worker/login_linkedin.py" 2>/dev/null || true
 
     log "Permissions configured"
+
+    # Write status marker file for admin panel detection
+    write_status_marker
+}
+
+# ── Status Marker File ──────────────────────────────────────────────────────
+# Writes a JSON marker file so the admin panel API can detect installations
+# even when running inside a Docker container with different filesystem view.
+
+write_status_marker() {
+    local STATUS_FILE="$PROJECT_DIR/scripts/.vps-status.json"
+    local main_venv_ok=false
+    local linkedin_venv_ok=false
+    local jobspy_ok=false
+    local linkedin_worker_ok=false
+    local linkedin_login_ok=false
+    local docker_ok=false
+    local stalwart_ok=false
+
+    [[ -f "$VENV_DIR/bin/python3" ]] && main_venv_ok=true
+    [[ -f "$LINKEDIN_VENV_DIR/bin/python3" ]] && linkedin_venv_ok=true
+    [[ -f "$PROJECT_DIR/scripts/jobspy-worker.py" ]] && jobspy_ok=true
+    [[ -f "$PROJECT_DIR/scripts/linkedin-worker/worker.py" ]] && linkedin_worker_ok=true
+    [[ -f "$PROJECT_DIR/scripts/linkedin-worker/login_linkedin.py" ]] && linkedin_login_ok=true
+    command -v docker &>/dev/null && docker_ok=true
+    docker ps --filter name=buildairesume-stalwart --format '{{.Names}}' 2>/dev/null | grep -q buildairesume-stalwart && stalwart_ok=true
+
+    cat > "$STATUS_FILE" << STATUSJSON
+{
+  "updatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "projectDir": "$PROJECT_DIR",
+  "venvDir": "$VENV_DIR",
+  "linkedinVenvDir": "$LINKEDIN_VENV_DIR",
+  "checks": {
+    "mainVenv": $main_venv_ok,
+    "linkedinVenv": $linkedin_venv_ok,
+    "jobspyWorker": $jobspy_ok,
+    "linkedinWorker": $linkedin_worker_ok,
+    "linkedinLogin": $linkedin_login_ok,
+    "docker": $docker_ok,
+    "stalwart": $stalwart_ok
+  }
+}
+STATUSJSON
+    chmod 644 "$STATUS_FILE" 2>/dev/null || true
+    log "Status marker written: $STATUS_FILE"
 }
 
 # ── Status ─────────────────────────────────────────────────────────────────
@@ -637,6 +683,7 @@ main() {
             check_root
             install_docker
             deploy_stalwart
+            write_status_marker
             ;;
         --verify)
             verify_installations

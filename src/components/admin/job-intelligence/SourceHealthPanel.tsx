@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import {
   Activity, CheckCircle2, XCircle, AlertTriangle,
   RefreshCw, Clock, Zap, TrendingUp, ExternalLink, Pause, Play,
-  Lock, Timer, Settings, Sliders,
+  Lock, Timer, Sliders,
 } from 'lucide-react';
 import { CardSkeleton } from './ui-primitives';
 import RunsExplorer from './RunsExplorer';
@@ -91,6 +91,7 @@ export default function SourceHealthPanel() {
   const [selectedSourceForConfig, setSelectedSourceForConfig] = useState<PortalSourceData | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [runningAll, setRunningAll] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -129,6 +130,27 @@ export default function SourceHealthPanel() {
       console.error('Trigger source error:', err);
     } finally {
       setTriggeringSource(null);
+    }
+  };
+
+  const triggerAllSources = async () => {
+    setRunningAll(true);
+    try {
+      // POST with no source triggers all sources via /api/admin/ingest
+      await fetch('/api/admin/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      // Poll for results — runs take time, check every 5s for 2 min
+      for (let i = 0; i < 24; i++) {
+        await new Promise(r => setTimeout(r, 5000));
+        fetchData();
+      }
+    } catch (err) {
+      console.error('Run all error:', err);
+    } finally {
+      setRunningAll(false);
     }
   };
 
@@ -263,6 +285,19 @@ export default function SourceHealthPanel() {
         </div>
       )}
 
+      {/* Run All Button */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold text-white">Source Workers</span>
+        <button
+          onClick={triggerAllSources}
+          disabled={runningAll}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-all disabled:opacity-30"
+        >
+          <Zap className={`w-4 h-4 ${runningAll ? 'animate-pulse' : ''}`} />
+          {runningAll ? 'Running All Workers...' : 'Run All Sources'}
+        </button>
+      </div>
+
       {/* Source Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {sources.map((src) => {
@@ -334,14 +369,6 @@ export default function SourceHealthPanel() {
                   }`}>
                     {src.enabled ? 'Enabled' : 'Disabled'}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSourceForConfig(src as any)}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white transition-colors"
-                    title="Configure Portal Settings"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               </div>
 

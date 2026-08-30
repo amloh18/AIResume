@@ -15,6 +15,7 @@ import {
   checkSourceConfig,
   SOURCE_REGISTRY,
   recoverStaleRuns,
+  getCachedSettings,
 } from '@/lib/ingestion/engine';
 
 // ── Schedule Configuration ──────────────────────────────────────────────────
@@ -71,8 +72,17 @@ export class BaselineScheduler {
     // First, recover any stale runs
     await recoverStaleRuns(db);
 
+    // Read live settings from DB cache — allows runtime changes without redeploy
+    const settings = getCachedSettings();
+
     for (const schedule of BASELINE_SCHEDULES) {
-      if (!schedule.enabled) {
+      // Override enabled/interval/duration from DB settings if available
+      const sourceSettings = settings?.sources?.[schedule.source];
+      const effectiveEnabled = sourceSettings?.enabled ?? schedule.enabled;
+      const effectiveInterval = sourceSettings?.refreshIntervalMs ?? schedule.intervalMs;
+      const effectiveDuration = sourceSettings?.maxDurationMs ?? schedule.maxDurationMs;
+
+      if (!effectiveEnabled) {
         result.skipped.push(schedule.source);
         continue;
       }
@@ -89,7 +99,7 @@ export class BaselineScheduler {
 
       if (lastRunAt) {
         const elapsed = Date.now() - new Date(lastRunAt).getTime();
-        if (elapsed < schedule.intervalMs) {
+        if (elapsed < effectiveInterval) {
           result.skipped.push(schedule.source);
           continue;
         }
@@ -110,18 +120,18 @@ export class BaselineScheduler {
         const { runId: createdRunId } = await createRun(db, schedule.source, runId);
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), schedule.maxDurationMs);
+        const timeout = setTimeout(() => controller.abort(), effectiveDuration);
 
         try {
           // Build fetch options for region-aware sources
           const fetchOptions: Record<string, any> = {};
           if (schedule.source === 'linkedin') {
             // Use round-robin rotation across configured regions
-            const regionEnv = process.env.LINKEDIN_REGIONS || '';
-            const allRegions = regionEnv
-              ? regionEnv.split(',').map(r => r.trim()).filter(Boolean)
+            const li = settings?.linkedin || {};
+            const allRegions = (li.regions && li.regions.length > 0)
+              ? li.regions
               : ['US', 'CA', 'GB', 'IN', 'AU'];
-            const maxRegions = parseInt(process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3', 10);
+            const maxRegions = li.maxRegionsPerRun || 3;
 
             // Simple rotation: use current timestamp to pick regions
             const runIndex = Math.floor(Date.now() / (12 * 60 * 60 * 1000)); // changes every 12h

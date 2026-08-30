@@ -21,6 +21,7 @@ interface VpsStatus {
   };
   docker?: { installed: boolean; version?: string; running?: boolean };
   stalwart?: { running: boolean; status?: string; containerName?: string };
+  _diagnostics?: { projectRoot: string; markerFound: boolean; markerPath: string };
 }
 
 interface DeployAction {
@@ -246,6 +247,23 @@ export default function VpsSetupPanel() {
               detail={status.stalwart?.running ? status.stalwart?.status || 'Running' : 'Not running'}
             />
           </div>
+
+          {/* Diagnostics */}
+          {status._diagnostics && (
+            <div className="mt-4 pt-3 border-t border-white/5">
+              <div className="text-[10px] text-white/30 font-mono space-y-1">
+                <div>Project root: <span className="text-white/50">{status._diagnostics.projectRoot}</span></div>
+                <div>Marker file: <span className={status._diagnostics.markerFound ? 'text-emerald-400/70' : 'text-red-400/70'}>
+                  {status._diagnostics.markerFound ? 'Found' : 'Not found'} — {status._diagnostics.markerPath}
+                </span></div>
+                {!status._diagnostics.markerFound && (
+                  <div className="text-yellow-400/60 mt-2">
+                    Installations not detected. Run on VPS: <code className="text-emerald-400/70">sudo bash scripts/vps-setup.sh</code>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
