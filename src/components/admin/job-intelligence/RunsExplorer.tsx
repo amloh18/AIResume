@@ -118,14 +118,14 @@ export default function RunsExplorer() {
     fetchRuns(page);
   }, [page, fetchRuns]);
 
-  // Auto-refresh when there are running jobs (faster polling for live metrics)
+  // Auto-refresh: 10s general poll + 2.5s when jobs are running
   // Pause polling when tab is hidden to save network
   const hasRunning = runs.some((r) => r.status === 'running');
   useEffect(() => {
-    if (!hasRunning) return;
+    const intervalMs = hasRunning ? 2500 : 10_000;
     const interval = setInterval(() => {
       if (!document.hidden) fetchRuns(page);
-    }, 2500);
+    }, intervalMs);
     return () => clearInterval(interval);
   }, [hasRunning, page, fetchRuns]);
 

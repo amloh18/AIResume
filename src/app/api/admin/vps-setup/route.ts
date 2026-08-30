@@ -59,23 +59,45 @@ function runScript(scriptPath: string, args: string[], timeoutMs = 120000, extra
 
 /**
  * Resolve the actual project root on the deployed VPS.
- * Dokploy deploys to /etc/dokploy/applications/<app-name>/code/
- * Also checks PROJECT_DIR env var and process.cwd() as fallbacks.
+ * Handles Docker containers (Dokploy), direct VPS, and local dev.
+ * Tries multiple strategies:
+ *   1. PROJECT_DIR env var
+ *   2. process.cwd() if it contains the setup script
+ *   3. /app (common Docker WORKDIR)
+ *   4. /etc/dokploy/applications/<app>/code (host-level Dokploy)
+ *   5. Scanning common mount points
+ *   6. Fallback to process.cwd()
  */
 function resolveProjectRoot(): string {
+  const SCRIPT_REL = path.join('scripts', 'vps-setup.sh');
+
   // 1. Explicit env var
-  if (process.env.PROJECT_DIR && fs.existsSync(path.join(process.env.PROJECT_DIR, 'scripts', 'vps-setup.sh'))) {
+  if (process.env.PROJECT_DIR && fs.existsSync(path.join(process.env.PROJECT_DIR, SCRIPT_REL))) {
     return process.env.PROJECT_DIR;
   }
 
-  // 2. Dokploy deployment path (pattern: /etc/dokploy/applications/<app>/code)
+  // 2. process.cwd() — most common in Docker containers and local dev
+  if (fs.existsSync(path.join(process.cwd(), SCRIPT_REL))) {
+    return process.cwd();
+  }
+
+  // 3. Common Docker WORKDIR paths
+  const dockerPaths = ['/app', '/home/node/app', '/srv/app', '/opt/app'];
+  for (const p of dockerPaths) {
+    if (fs.existsSync(path.join(p, SCRIPT_REL))) {
+      return p;
+    }
+  }
+
+  // 4. Dokploy deployment path (host-level, pattern: /etc/dokploy/applications/<app>/code)
+  //    This may not be accessible from inside a container, but worth trying.
   const dokployBase = '/etc/dokploy/applications';
   try {
     const { execSync } = require('child_process');
-    const apps = execSync(`ls ${dokployBase} 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim().split('\n').filter(Boolean);
+    const apps = execSync(`ls "${dokployBase}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim().split('\n').filter(Boolean);
     for (const app of apps) {
       const codeDir = path.join(dokployBase, app, 'code');
-      if (fs.existsSync(path.join(codeDir, 'scripts', 'vps-setup.sh'))) {
+      if (fs.existsSync(path.join(codeDir, SCRIPT_REL))) {
         return codeDir;
       }
     }
@@ -83,12 +105,63 @@ function resolveProjectRoot(): string {
     // Not on Dokploy or ls failed
   }
 
-  // 3. Fallback to process.cwd()
+  // 5. Scan for .vps-status.json in common locations (written by the setup script)
+  //    This helps detect the project root even when the script path isn't directly accessible.
+  const scanPaths = ['/app', '/srv', '/opt', '/home', process.cwd()];
+  for (const base of scanPaths) {
+    try {
+      const markerPath = path.join(base, 'scripts', '.vps-status.json');
+      if (fs.existsSync(markerPath)) {
+        return base;
+      }
+    } catch {
+      // skip
+    }
+  }
+
+  // 6. Final fallback
   return process.cwd();
+}
+
+/**
+ * Try to read the .vps-status.json marker file written by vps-setup.sh.
+ * This is the primary detection method — works even when the API runs inside
+ * a Docker container and can't directly see host-level installations.
+ */
+function readStatusMarker(): Record<string, boolean> | null {
+  const projectRoot = resolveProjectRoot();
+  const markerPath = path.join(projectRoot, 'scripts', '.vps-status.json');
+  try {
+    if (fs.existsSync(markerPath)) {
+      const raw = fs.readFileSync(markerPath, 'utf8');
+      const data = JSON.parse(raw);
+      return data.checks || null;
+    }
+  } catch {
+    // Marker file missing or invalid
+  }
+  return null;
+}
+
+/**
+ * Check if a file exists using shell test command.
+ * More reliable than fs.existsSync when paths cross Docker mount boundaries.
+ */
+function shellFileExists(filePath: string): boolean {
+  try {
+    const { execSync } = require('child_process');
+    execSync(`test -f "${filePath}"`, { timeout: 3000, stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function checkVpsStatus() {
   const projectRoot = resolveProjectRoot();
+  const marker = readStatusMarker();
+
+  // Paths to check (container perspective)
   const setupScript = path.join(projectRoot, 'scripts', 'vps-setup.sh');
   const mainVenv = path.join(projectRoot, 'scripts', '.venv');
   const linkedinVenv = path.join(projectRoot, 'scripts', 'linkedin-worker', '.venv');
@@ -97,8 +170,18 @@ function checkVpsStatus() {
   const linkedinLogin = path.join(projectRoot, 'scripts', 'linkedin-worker', 'login_linkedin.py');
   const profileDir = process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin';
 
+  // Detection: marker file → fs.existsSync → shell test fallback
+  const detect = (filePath: string, markerKey?: string): boolean => {
+    if (markerKey && marker?.[markerKey] === true) return true;
+    if (fs.existsSync(filePath)) return true;
+    return shellFileExists(filePath);
+  };
+
   // Check Docker
   let docker = { installed: false, version: undefined as string | undefined, running: false };
+  if (marker?.docker === true) {
+    docker.installed = true;
+  }
   try {
     const { execSync } = require('child_process');
     const dockerVersion = execSync('docker --version 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
@@ -116,6 +199,9 @@ function checkVpsStatus() {
 
   // Check Stalwart
   let stalwart = { running: false, status: undefined as string | undefined, containerName: 'buildairesume-stalwart' };
+  if (marker?.stalwart === true) {
+    stalwart.running = true;
+  }
   try {
     const { execSync } = require('child_process');
     const psOutput = execSync('docker ps --filter name=buildairesume-stalwart --format "{{.Status}}" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
@@ -129,26 +215,26 @@ function checkVpsStatus() {
 
   return {
     setupScript: {
-      exists: fs.existsSync(setupScript),
+      exists: detect(setupScript),
       path: setupScript,
     },
     mainVenv: {
-      exists: fs.existsSync(mainVenv),
-      python: fs.existsSync(path.join(mainVenv, 'bin', 'python3')),
+      exists: detect(mainVenv, 'mainVenv'),
+      python: detect(path.join(mainVenv, 'bin', 'python3'), 'mainVenv'),
       path: mainVenv,
     },
     linkedinVenv: {
-      exists: fs.existsSync(linkedinVenv),
-      python: fs.existsSync(path.join(linkedinVenv, 'bin', 'python3')),
+      exists: detect(linkedinVenv, 'linkedinVenv'),
+      python: detect(path.join(linkedinVenv, 'bin', 'python3'), 'linkedinVenv'),
       path: linkedinVenv,
     },
     workers: {
-      jobspy: fs.existsSync(jobspyWorker),
-      linkedin: fs.existsSync(linkedinWorker),
-      linkedinLogin: fs.existsSync(linkedinLogin),
+      jobspy: detect(jobspyWorker, 'jobspyWorker'),
+      linkedin: detect(linkedinWorker, 'linkedinWorker'),
+      linkedinLogin: detect(linkedinLogin, 'linkedinLogin'),
     },
     browserProfile: {
-      exists: fs.existsSync(profileDir),
+      exists: detect(profileDir),
       path: profileDir,
     },
     environment: {
@@ -158,6 +244,11 @@ function checkVpsStatus() {
     },
     docker,
     stalwart,
+    _diagnostics: {
+      projectRoot,
+      markerFound: !!marker,
+      markerPath: path.join(projectRoot, 'scripts', '.vps-status.json'),
+    },
   };
 }
 

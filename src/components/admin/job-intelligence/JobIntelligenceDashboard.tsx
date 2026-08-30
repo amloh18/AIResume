@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, RefreshCw, ShieldAlert, TrendingUp, HeartPulse, AlertTriangle, Server } from 'lucide-react';
+import { Globe, RefreshCw, ShieldAlert, TrendingUp, HeartPulse, AlertTriangle, Server, Settings } from 'lucide-react';
 import OverviewKPIs from './OverviewKPIs';
 import LiveJobsBrowser from './LiveJobsBrowser';
 import AutomationOverview from '@/components/admin/automation/AutomationOverview';
 import DemandQueueMonitor from './DemandQueueMonitor';
 import SourceHealthPanel from './SourceHealthPanel';
 import VpsSetupPanel from './VpsSetupPanel';
+import WorkerSettingsPanel from './WorkerSettingsPanel';
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ export default function JobIntelligenceDashboard({
     { id: 'health', label: 'Source Health', icon: HeartPulse },
     { id: 'queue', label: 'Queue & Triage', icon: ShieldAlert },
     { id: 'deploy', label: 'VPS Deploy', icon: Server },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   const currentTab = activeSubTab || 'overview';
@@ -162,6 +164,10 @@ export default function JobIntelligenceDashboard({
 
       <DashboardErrorBoundary fallbackTitle="VPS Setup Error">
         {currentTab === 'deploy' && <VpsSetupPanel />}
+      </DashboardErrorBoundary>
+
+      <DashboardErrorBoundary fallbackTitle="Worker Settings Error">
+        {currentTab === 'settings' && <WorkerSettingsPanel />}
       </DashboardErrorBoundary>
     </div>
   );

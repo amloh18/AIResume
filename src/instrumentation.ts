@@ -16,6 +16,15 @@ export async function register() {
     } catch (err) {
       console.warn('[Startup] Email worker failed to start:', err);
     }
+
+    // Pre-load ingestion worker settings from DB into sync cache
+    try {
+      const { refreshSettingsCache } = await import('./lib/ingestion/engine');
+      await refreshSettingsCache();
+      console.log('[Startup] Ingestion settings loaded from DB');
+    } catch (err) {
+      console.warn('[Startup] Could not load ingestion settings from DB (will use defaults):', err);
+    }
   }
 
   if (process.env.NEXT_RUNTIME === "edge") {
