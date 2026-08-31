@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
     }, {
       headers: {
         'X-Response-Time': `${responseTime}ms`,
-        'Cache-Control': 'private, no-cache, no-store, must-revalidate'
+        'Cache-Control': 'private, max-age=10, stale-while-revalidate=30'
       }
     });
 

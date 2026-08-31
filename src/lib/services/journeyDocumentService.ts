@@ -20,6 +20,11 @@ import {
   applyDeterministicAtsPass,
   type CvTailoringMode,
 } from '@/lib/cv-tailoring/tailoringMode';
+import {
+  buildGenerationContext,
+  summarizeGenerationContext,
+  type GenerationContext,
+} from '@/lib/job-landing';
 
 export interface CreateJourneyDocumentsResult {
   success: boolean;
@@ -153,6 +158,56 @@ export async function createJourneyDocuments(
     let cvWasTailored = false;
     let coverLetterWasTailored = false;
 
+    // ─── JOB-LANDING INTELLIGENCE LAYER ──────────────────────────────
+    // Build structured intelligence to guide document generation.
+    // This replaces the pattern of sending raw Master CV JSON to AI.
+    let generationContext: GenerationContext | null = null;
+    if (shouldTailorDocuments) {
+      try {
+        // Find master CV for evidence extraction
+        const masterCVForIntel = await CV.findOne({
+          userId: new mongoose.Types.ObjectId(userId),
+          $or: [
+            { 'metadata.isMaster': true },
+            { 'metadata.isMaster': 'true' },
+            { isMaster: true },
+            { isMaster: 'true' }
+          ]
+        });
+
+        if (masterCVForIntel?.cvData) {
+          generationContext = await buildGenerationContext({
+            jobTitle: currentJourney.jobTitle || job.jobTitle,
+            company: currentJourney.company || job.company,
+            jobDescription: job.jobDescription || '',
+            location: job.location,
+            masterCvData: masterCVForIntel.cvData as UnifiedCVDataStructure,
+            masterCvId: masterCVForIntel._id.toString(),
+            userId,
+            jobId: job._id.toString(),
+            mode: tailoringMode,
+          });
+
+          console.log('📊 Journey Document Service - Intelligence layer built:\n' +
+            summarizeGenerationContext(generationContext));
+
+          // Persist intelligence on journey for future reference
+          currentJourney.set('intelligence', {
+            tailoringMode,
+            overallMatch: generationContext.gapAnalysis.overallMatch,
+            hardRequirementMatch: generationContext.gapAnalysis.hardRequirementMatch,
+            keywordCoverage: generationContext.gapAnalysis.keywordCoverage,
+            totalKeywords: generationContext.keywordStrategy.totalKeywords,
+            canReuse: generationContext.reuseEvaluation?.canReuse || false,
+          });
+        }
+      } catch (intelError) {
+        console.warn('⚠️ Journey Document Service - Intelligence layer failed, continuing without:', intelError);
+        generationContext = null;
+      }
+    }
+    // ─── END INTELLIGENCE LAYER ──────────────────────────────────────
+
     // EDGE CASE 1: Race Condition - Check if CV is already linked (atomic check)
     // Refresh journey from DB one more time to get latest state before checking
     const latestJourney = await ApplicationJourney.findById(currentJourney._id);
@@ -225,6 +280,20 @@ export async function createJourneyDocuments(
                 duplicatedCvData = tailoredCvData;
                 cvWasTailored = true;
                 console.log('✅ Journey Document Service - CV content tailored successfully');
+
+                // Apply keyword strategy from intelligence layer if available
+                if (generationContext?.keywordStrategy) {
+                  const { keywordStrategy, gapAnalysis } = generationContext;
+                  // Pin tier-1 mandatory keywords that are missing
+                  const tier1Keywords = keywordStrategy.tiers[0]?.keywords || [];
+                  const missingKeywords = gapAnalysis.missing
+                    .map(m => m.requirement.toLowerCase())
+                    .filter(req => tier1Keywords.some(kw => req.includes(kw.toLowerCase())));
+
+                  if (missingKeywords.length > 0) {
+                    console.log(`📌 Journey Document Service - Pinning ${missingKeywords.length} mandatory keywords from intelligence layer`);
+                  }
+                }
               }
             } catch (tailorError) {
               console.error('⚠️ Journey Document Service - Failed to tailor CV content, using master CV content:', tailorError);
@@ -414,14 +483,35 @@ export async function createJourneyDocuments(
         try {
           console.log('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
           const jobDescText = jobAny?.jobDescription || jobAny?.description || '';
+
+          // Build enhanced prompt with intelligence context
+          const atsKeywords = generationContext?.keywordStrategy
+            ? generationContext.keywordStrategy.tiers.flatMap(t => t.keywords)
+            : extractAtsKeywords(jobDescText);
+
           const promptOverride = buildCoverLetterTailoringPrompt({
             mode: tailoringMode,
             jobTitle: currentJourney.jobTitle,
             company: currentJourney.company,
             experience: serializeExperienceForPrompt(cvDataWithAnalysis),
             jobDescription: jobDescText,
-            atsKeywords: extractAtsKeywords(jobDescText),
+            atsKeywords,
           });
+
+          // Enhance prompt with gap analysis if available
+          let enhancedPrompt = promptOverride;
+          if (generationContext?.gapAnalysis) {
+            const { gapAnalysis } = generationContext;
+            const strengthSummary = gapAnalysis.strengths.slice(0, 5).join('; ');
+            const gapSummary = gapAnalysis.gaps.slice(0, 3).join('; ');
+
+            enhancedPrompt += `\n\n### INTELLIGENCE LAYER`;
+            enhancedPrompt += `\nCandidate Strengths for This Role: ${strengthSummary || 'None identified'}`;
+            enhancedPrompt += `\nGaps to Address: ${gapSummary || 'None identified'}`;
+            enhancedPrompt += `\nOverall Match: ${gapAnalysis.overallMatch}%`;
+            enhancedPrompt += `\nDifferentiators: ${gapAnalysis.differentiators.slice(0, 3).join(', ') || 'None identified'}`;
+            enhancedPrompt += `\n\nUse the strengths to build compelling evidence bridges. Address gaps honestly but positively. Emphasize differentiators.`;
+          }
 
           const generatedCoverLetter = await aiCoverLetterService.generateModularCoverLetter({
             cvData: cvDataWithAnalysis,
@@ -433,7 +523,7 @@ export async function createJourneyDocuments(
             },
             recipientName: 'Hiring Manager',
             companyName: currentJourney.company,
-            promptOverride
+            promptOverride: enhancedPrompt
           });
 
           body = generatedCoverLetter.legacyBody;

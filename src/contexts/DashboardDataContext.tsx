@@ -9,6 +9,7 @@ interface DashboardDataContextType {
   cvs: any[];
   coverLetters: any[];
   jobs: any[];
+  journeys: any[];
   analytics: any;
   profileStrength: number;
   streak: {
@@ -70,6 +71,7 @@ interface DashboardDataContextType {
   refreshCVs: () => Promise<void>;
   refreshCoverLetters: () => Promise<void>;
   refreshJobs: () => Promise<void>;
+  refreshJourneys: () => Promise<void>;
   refreshAnalytics: () => Promise<void>;
   refreshProfileStrength: () => Promise<void>;
   refreshStreak: () => Promise<void>;
@@ -97,6 +99,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
   const [cvs, setCvs] = useState<any[]>([]);
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [journeys, setJourneys] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [profileStrength, setProfileStrength] = useState<number>(0);
   const [streak, setStreak] = useState<{
@@ -137,6 +140,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     cvs: false,
     coverLetters: false,
     jobs: false,
+    journeys: false,
     analytics: false,
     profileStrength: false,
     streak: false,
@@ -152,6 +156,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     cvs?: string | null;
     coverLetters?: string | null;
     jobs?: string | null;
+    journeys?: string | null;
     analytics?: string | null;
     profileStrength?: string | null;
     streak?: string | null;
@@ -287,6 +292,45 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       } finally {
         loadingStates.current.set('jobs', false);
         setSecondaryLoading(prev => ({ ...prev, jobs: false }));
+      }
+    });
+  }, []);
+
+  const fetchJourneys = useCallback(async (userId: string) => {
+    const endpoint = `/api/journeys?limit=all`;
+
+    return requestDeduplication.deduplicate(endpoint, async () => {
+      if (loadingStates.current.get('journeys')) {
+        console.log('⏭️ DashboardData - Journeys fetch already in progress, skipping');
+        return;
+      }
+
+      try {
+        loadingStates.current.set('journeys', true);
+        setSecondaryLoading(prev => ({ ...prev, journeys: true }));
+        setErrors(prev => ({ ...prev, journeys: null }));
+        console.log('🔍 DashboardData - Fetching journeys');
+        let response = await authenticatedFetch(endpoint);
+        if (!response || !response.ok) {
+          response = await fetch(endpoint, { cache: 'no-store' });
+        }
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          const journeysList = result.data?.journeys || result.journeys || [];
+          if (Array.isArray(journeysList)) {
+            console.log(`✅ DashboardData - Journeys loaded: ${journeysList.length} items`);
+            setJourneys(journeysList);
+          }
+        } else {
+          throw new Error('Invalid response format');
+        }
+      } catch (err: any) {
+        console.error('❌ DashboardData - Error fetching journeys:', err);
+        setErrors(prev => ({ ...prev, journeys: err.message || 'Failed to fetch journeys' }));
+      } finally {
+        loadingStates.current.set('journeys', false);
+        setSecondaryLoading(prev => ({ ...prev, journeys: false }));
       }
     });
   }, []);
@@ -561,6 +605,13 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [user, fetchJobs]);
 
+  const refreshJourneys = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      await fetchJourneys(userId);
+    }
+  }, [user, fetchJourneys]);
+
   const refreshAnalytics = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (userId) {
@@ -623,6 +674,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       cvs: true,
       coverLetters: true,
       jobs: true,
+      journeys: true,
       analytics: true,
       profileStrength: true,
       streak: true,
@@ -642,6 +694,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       fetchCVs(userId),
       fetchCoverLetters(userId),
       fetchJobs(userId),
+      fetchJourneys(userId),
       fetchAnalytics(userId),
       fetchProfileStrength(userId),
       fetchStreak(userId),
@@ -655,7 +708,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const duration = Math.round(performance.now() - startTime);
     console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
-  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
+  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchJourneys, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
 
   // CRITICAL PATH LOADING: Wait for auth, then load secondary data
   useEffect(() => {
@@ -688,6 +741,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       setCvs([]);
       setCoverLetters([]);
       setJobs([]);
+      setJourneys([]);
       setAnalytics(null);
       setProfileStrength(0);
       setStreak({
@@ -748,6 +802,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         cvs,
         coverLetters,
         jobs,
+        journeys,
         analytics,
         profileStrength,
         streak,
@@ -766,6 +821,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshCVs,
         refreshCoverLetters,
         refreshJobs,
+        refreshJourneys,
         refreshAnalytics,
         refreshProfileStrength,
         refreshStreak,

@@ -15,6 +15,7 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
+import { LayoutDebugOverlay, type DebugBlock, type LayoutDebugInfo } from './LayoutDebugOverlay';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { getCanvasSnippetPreviewData } from '@/lib/templates/canvas-initial-data';
 import { useUserData } from '@/lib/hooks/useUserData';
@@ -514,6 +515,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   const [totalPagesCount, setTotalPagesCount] = useState(1);
   const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<LayoutDebugInfo | null>(null);
+
+  // Detect ?debug=layout URL param
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setDebugMode(params.get('debug') === 'layout');
+    }
+  }, []);
+
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
     height: typeof window === 'undefined' ? 1080 : window.innerHeight,
@@ -1334,10 +1346,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             unitHeights[headerUnitId] = 0;
           }
           
+          // Use measured gap if available, otherwise use design itemGap as fallback
           if (entryElements.length > 1) {
-            unitHeights[`${blockId}_entryGap`] = sumEntryGaps / (entryElements.length - 1);
+            unitHeights[`${blockId}_entryGap`] = Math.max(0, sumEntryGaps / (entryElements.length - 1));
           } else if (unitHeights[`${blockId}_entryGap`] == null) {
-            unitHeights[`${blockId}_entryGap`] = 16;
+            unitHeights[`${blockId}_entryGap`] = design.itemGap || 12;
           }
         } else {
           unitHeights[blockId] = Math.max(unitHeights[blockId] || 0, parentHeight);
@@ -1369,15 +1382,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           if (isList) {
             const collectionName = getCollectionNameForCategory(snippetDef.category);
             const entries = cvData[collectionName] || [];
-            const headerH = unitHeights[`${block.id}_header`] || 40;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+            const headerH = unitHeights[`${block.id}_header`] || 32;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
             let total = headerH;
             entries.forEach((e: any, i: number) => {
-              total += (i > 0 ? entryGap : 0) + (unitHeights[`${block.id}_entry_${e.id}`] || 80);
+              total += (i > 0 ? entryGap : 0) + (unitHeights[`${block.id}_entry_${e.id}`] || 64);
             });
             return { isList, total, headerH, entryGap, entries };
           }
-          return { isList, total: unitHeights[block.id] || 80, headerH: 0, entryGap: 0, entries: [] };
+          return { isList, total: unitHeights[block.id] || 64, headerH: 0, entryGap: 0, entries: [] };
         };
 
         const assignSectionWhole = (block: any, info: any, pageNum: number) => {
@@ -1415,7 +1428,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               newAssignments[`${block.id}_header`] = page;
               used = info.headerH;
               info.entries.forEach((e: any, i: number) => {
-                const eh = unitHeights[`${block.id}_entry_${e.id}`] || 80;
+                const eh = unitHeights[`${block.id}_entry_${e.id}`] || 64;
                 if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
                   page++;
                   used = 0;
@@ -1453,7 +1466,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 newAssignments[`${b.id}_header`] = page;
                 used = info.headerH;
                 info.entries.forEach((e: any, i: number) => {
-                  const eh = unitHeights[`${b.id}_entry_${e.id}`] || 80;
+                  const eh = unitHeights[`${b.id}_entry_${e.id}`] || 64;
                   if (used > 0 && used + (i > 0 ? info.entryGap : 0) + eh > usableHeight) {
                     page++;
                     used = 0;
@@ -1497,10 +1510,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             const entries = cvData[collectionName] || [];
 
             const headerUnitId = `${block.id}_header`;
-            const headerH = unitHeights[headerUnitId] || 40;
+            const headerH = unitHeights[headerUnitId] || 32;
             const firstEntry = entries[0];
-            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 64) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
 
             if (currentGlobalHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentGlobalHeight > 0) {
               globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
@@ -1513,7 +1526,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
             entries.forEach((entry: any, entryIdx: number) => {
               const entryUnitId = `${block.id}_entry_${entry.id}`;
-              const entryH = unitHeights[entryUnitId] || 80;
+              const entryH = unitHeights[entryUnitId] || 64;
 
               if (entryIdx > 0) {
                 if (currentGlobalHeight + entryGap + entryH > usableHeight && currentGlobalHeight > 0) {
@@ -1527,7 +1540,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               if (currentGlobalPage > maxPageNum) maxPageNum = currentGlobalPage;
             });
           } else {
-            const h = unitHeights[block.id] || 80;
+            const h = unitHeights[block.id] || 64;
             if (currentGlobalHeight + gapBefore() + h > usableHeight && currentGlobalHeight > 0) {
               globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
               currentGlobalPage++;
@@ -1565,10 +1578,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             const entries = cvData[collectionName] || [];
 
             const headerUnitId = `${block.id}_header`;
-            const headerH = unitHeights[headerUnitId] || 40;
+            const headerH = unitHeights[headerUnitId] || 32;
             const firstEntry = entries[0];
-            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 80) : 0;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || 16;
+            const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 64) : 0;
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
 
             let neededH = gapBefore() + headerH + firstEntryH;
             let pUsable = getUsableHeightForPage(currentPage);
@@ -1584,7 +1597,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
             entries.forEach((entry: any, entryIdx: number) => {
               const entryUnitId = `${block.id}_entry_${entry.id}`;
-              const entryH = unitHeights[entryUnitId] || 80;
+              const entryH = unitHeights[entryUnitId] || 64;
 
               if (entryIdx > 0) {
                 let pUsableInner = getUsableHeightForPage(currentPage);
@@ -1598,7 +1611,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               if (currentPage > maxPageNum) maxPageNum = currentPage;
             });
           } else {
-            const h = unitHeights[block.id] || 80;
+            const h = unitHeights[block.id] || 64;
             let pUsable = getUsableHeightForPage(currentPage);
             if (currentHeight + gapBefore() + h > pUsable && currentHeight > 0) {
               currentPage++;
@@ -1616,6 +1629,28 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       // 3. Set total pages count state only if changed
       const nextTotalPages = maxPageNum + 1;
       setTotalPagesCount(prev => prev !== nextTotalPages ? nextTotalPages : prev);
+
+      // 3a. Collect debug info if debug mode is active
+      if (debugMode) {
+        const debugBlocks: DebugBlock[] = [];
+        Object.entries(newAssignments).forEach(([unitId, pageNum]) => {
+          const height = unitHeights[unitId] || 0;
+          debugBlocks.push({
+            id: unitId,
+            page: pageNum,
+            height,
+            reason: 'BLOCK_FIT',
+          });
+        });
+        setDebugInfo({
+          pageHeight: H,
+          pageMargin: M,
+          usableHeight,
+          sectionGap,
+          totalPages: nextTotalPages,
+          blocks: debugBlocks,
+        });
+      }
 
       // Cycle oscillation detection
       const assignmentsStr = JSON.stringify(newAssignments);
@@ -2113,11 +2148,25 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           {readOnly ? (
             <div className="cv-document-wrapper relative text-gray-900" style={canvasStyleVars}>
               {renderCanvasLayout()}
+              {debugMode && debugInfo && (
+                <LayoutDebugOverlay
+                  debugInfo={debugInfo}
+                  pageWidth={activePageWidthPx}
+                  pageHeight={activePageHeightPx}
+                />
+              )}
             </div>
           ) : (
             <div key={templateAnimKey} className="transform origin-top h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
               <div className="cv-document-wrapper relative" style={canvasStyleVars}>
                 {renderCanvasLayout()}
+                {debugMode && debugInfo && (
+                  <LayoutDebugOverlay
+                    debugInfo={debugInfo}
+                    pageWidth={activePageWidthPx}
+                    pageHeight={activePageHeightPx}
+                  />
+                )}
               </div>
             </div>
           )}

@@ -2,11 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
-import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
-import {
-  createQueuedGenerationState,
-  getJourneyGenerationEntitlement
-} from '@/lib/utils/journey-generation';
 
 // Extend global type for cache
 declare global {
@@ -38,7 +33,6 @@ function cleanupExpiredCache(cache: Map<string, { data: any; timestamp: number }
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).substr(2, 9);
-  let dbConnection = null;
 
   console.log(`🚀 [${requestId}] Journeys API - Request started`);
 
@@ -48,7 +42,6 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
     const jobId = searchParams.get('jobId'); // Filter by specific job ID
-    const includeUserProfile = searchParams.get('includeUserProfile') === 'true';
 
     if (!userId) {
       return NextResponse.json(
@@ -73,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Establish database connection once
-    dbConnection = await getConnection();
+    await getConnection();
 
     // Build optimized query for CV Journeys
     let journeyQuery: any = { userId };
@@ -112,94 +105,11 @@ export async function GET(request: NextRequest) {
       coverLetterId: journey.coverLetterId
     }));
 
-    // Check for journeys missing CV or cover letter and trigger creation automatically
-    const journeysNeedingDocuments = cvJourneys.filter(journey => {
-      const journeyId = (journey._id as any).toString();
-      const hasNoCV = !journey.cvId;
-      const hasNoCoverLetter = !journey.coverLetterId;
-      const isProcessingOrInProgress = journey.status === 'processing_documents' || journey.status === 'in-progress';
-      
-      return (hasNoCV || hasNoCoverLetter) && isProcessingOrInProgress;
-    });
-
-    // Trigger document creation for journeys missing documents (run in background)
-    if (journeysNeedingDocuments.length > 0) {
-      console.log(`🚀 Journeys API - Found ${journeysNeedingDocuments.length} journeys needing documents, triggering creation...`);
-      
-      journeysNeedingDocuments.forEach(journey => {
-        const journeyId = (journey._id as any).toString();
-        
-        // Refresh queue state so overlay messaging matches the recovery path
-        if (journey.status !== 'processing_documents' || !journey.generationState) {
-          getJourneyGenerationEntitlement(userId)
-            .then((generationEntitlement) => ApplicationJourney.findByIdAndUpdate(journeyId, {
-              status: 'processing_documents',
-              generationState: createQueuedGenerationState(generationEntitlement),
-              'metadata.updatedAt': new Date()
-            }))
-            .catch(err => {
-              console.error(`❌ Journeys API - Failed to update journey status for ${journeyId}:`, err);
-            });
-        }
-        
-        // Trigger document creation in background
-        setImmediate(async () => {
-          try {
-            console.log(`🚀 Journeys API - Auto-triggering document creation for journey: ${journeyId}`);
-            const result = await createJourneyDocuments(journeyId, userId);
-            
-            if (result.success) {
-              console.log(`✅ Journeys API - Auto-created documents for journey ${journeyId}:`, {
-                cvId: result.cvId,
-                coverLetterId: result.coverLetterId
-              });
-            } else {
-              console.error(`❌ Journeys API - Auto-document creation failed for journey ${journeyId}:`, result.error);
-            }
-          } catch (error) {
-            console.error(`❌ Journeys API - Error in auto-document creation for journey ${journeyId}:`, error);
-          }
-        });
-      });
-    }
-
-    let userProfile = null;
-
-    // Fetch user profile data in parallel if requested
-    if (includeUserProfile) {
-      try {
-        const userResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/user`, {
-          headers: {
-            'x-firebase-user-id': userId,
-          },
-        });
-
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.success) {
-            userProfile = userData.user;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        // Continue without user profile data
-      }
-    }
-
     const responseData = {
       success: true,
       data: {
-        journeys,
-        ...(userProfile && { userProfile })
-      },
-      _performance: {
-        queryTime: Date.now() - startTime,
-        journeysCount: journeys.length,
-        totalTime: 0,
-        requestId: requestId,
-        cacheUsed: !!cachedData,
-        dbConnectionTime: 0
-      } as any
+        journeys
+      }
     };
 
     // Cache the response
@@ -213,12 +123,6 @@ export async function GET(request: NextRequest) {
 
     const totalTime = Date.now() - startTime;
     console.log(`✅ [${requestId}] Journeys API - Completed in ${totalTime}ms, found ${journeys.length} journeys`);
-
-    // Add performance metrics to response
-    responseData._performance.totalTime = totalTime;
-    responseData._performance.requestId = requestId;
-    responseData._performance.cacheUsed = !!cachedData;
-    responseData._performance.dbConnectionTime = dbConnection ? Date.now() - startTime - 50 : 0; // Approximate
 
     return NextResponse.json(responseData);
 
@@ -413,5 +317,62 @@ export async function DELETE(request: NextRequest) {
       errorResponse,
       { status: errorResponse.statusCode || 500 }
     );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    await getConnection();
+
+    const body = await request.json();
+    const { userId, action } = body;
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (action === 'fix-documents') {
+      // Find journeys missing CV or cover letter
+      const journeys = await ApplicationJourney.find({
+        userId,
+        status: { $in: ['processing_documents', 'in-progress'] },
+        $or: [{ cvId: { $exists: false } }, { cvId: null }, { coverLetterId: { $exists: false } }, { coverLetterId: null }]
+      }).lean();
+
+      if (journeys.length === 0) {
+        return NextResponse.json({ success: true, message: 'No journeys need fixing', count: 0 });
+      }
+
+      const { createJourneyDocuments } = await import('@/lib/services/journeyDocumentService');
+      const results = await Promise.allSettled(
+        journeys.map(async (j) => {
+          const result = await createJourneyDocuments((j._id as any).toString(), userId);
+          return { journeyId: j._id, ...result };
+        })
+      );
+
+      const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const failed = results.length - succeeded;
+
+      return NextResponse.json({
+        success: true,
+        message: `Fixed ${succeeded} journeys, ${failed} failed`,
+        count: succeeded,
+        failed
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Unknown action' },
+      { status: 400 }
+    );
+
+  } catch (error: any) {
+    console.error('Journeys PATCH error:', error);
+    const errorResponse = createErrorResponse(error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
 }
