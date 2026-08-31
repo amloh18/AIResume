@@ -62,6 +62,7 @@ const testimonialSchema = new Schema<ITestimonial>({
 
 // Index for active testimonials
 testimonialSchema.index({ isActive: 1 });
+testimonialSchema.index({ isActive: 1, createdAt: -1 });
 
 // Export the schema for use in admin models
 export { testimonialSchema };

@@ -40,5 +40,8 @@ const moriChatSchema = new Schema<IMoriChat>({
   timestamps: true
 });
 
+moriChatSchema.index({ userId: 1, updatedAt: -1 });
+moriChatSchema.index({ userId: 1, cvId: 1 });
+
 const MoriChat: Model<IMoriChat> = mongoose.models.MoriChat || mongoose.model<IMoriChat>('MoriChat', moriChatSchema);
 export default MoriChat;

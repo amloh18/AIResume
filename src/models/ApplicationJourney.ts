@@ -55,6 +55,15 @@ export interface IApplicationJourney extends Document {
     };
     updatedAt: string;
   };
+  // Job-Landing Intelligence Layer
+  intelligence?: {
+    tailoringMode: 'standard' | 'standout';
+    overallMatch: number;
+    hardRequirementMatch: number;
+    keywordCoverage: number;
+    totalKeywords: number;
+    canReuse: boolean;
+  };
   // Application automation artifacts
   artifacts?: {
     atsType?: string;
@@ -229,6 +238,11 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   },
   generationState: {
     type: Schema.Types.Mixed
+  },
+  intelligence: {
+    type: Schema.Types.Mixed
+    // Stores Job-Landing Intelligence Layer data:
+    // { tailoringMode, overallMatch, hardRequirementMatch, keywordCoverage, totalKeywords, canReuse }
   },
   artifacts: {
     atsType: {

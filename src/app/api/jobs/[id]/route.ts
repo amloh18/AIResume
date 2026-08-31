@@ -154,7 +154,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: { job: transformedJob },
-      job: transformedJob // Keep for backwards compatibility
+      job: transformedJob
     });
   } catch (error) {
     console.error('Error fetching job:', error);
@@ -1059,12 +1059,11 @@ export async function PUT(
     };
 
     // Return response in format expected by extension
-    // Extension expects response.data to be the job object directly, not nested
     return NextResponse.json({
       success: true,
       trackerGeneration: trackerGenerationPreview,
-      data: serializedJob, // Extension expects data to be the job directly
-      job: serializedJob // Keep for backwards compatibility
+      data: { job: serializedJob },
+      job: serializedJob
     });
   } catch (error) {
     console.error('❌ Job Update API - Error updating job:', error);

@@ -247,7 +247,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   status: {
     type: String,
-    enum: ['saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    enum: ['draft', 'saved', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
     required: true
   },

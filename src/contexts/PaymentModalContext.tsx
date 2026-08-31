@@ -1,7 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
+import React, { createContext, useContext, useState, useCallback, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+
+const UniversalPaymentModal = dynamic(() => import('@/components/payment/UniversalPaymentModal'), { ssr: false });
 
 interface PaymentModalContextType {
   openPaymentModal: (options?: PaymentModalOptions) => void;

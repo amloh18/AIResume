@@ -235,7 +235,6 @@ export async function GET(req: NextRequest) {
         total: enrichedJobs.length,
       },
       total: enrichedJobs.length,
-      latencyMs: Date.now() - startTime,
     });
   } catch (err: any) {
     console.error('Jobs API Error:', err);

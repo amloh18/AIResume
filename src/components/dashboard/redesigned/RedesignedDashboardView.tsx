@@ -704,55 +704,21 @@ function MyCvsPanel() {
 
 function RecentJobsPanel() {
   const router = useRouter();
-  const { jobs: contextJobs, secondaryLoading, refreshJobs } = useDashboardData();
-  const [directJobs, setDirectJobs] = useState<any[]>([]);
-  const [directJourneys, setDirectJourneys] = useState<any[]>([]);
-  const [loadingDirect, setLoadingDirect] = useState(true);
+  const { jobs: contextJobs, journeys: contextJourneys, secondaryLoading, refreshJobs, refreshJourneys } = useDashboardData();
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const { toast } = useToast();
 
-  const fetchDirectData = useCallback(async () => {
-    try {
-      const [jobsRes, journeysRes] = await Promise.all([
-        fetch('/api/jobs?limit=all', { cache: 'no-store' }),
-        fetch('/api/journeys?limit=all', { cache: 'no-store' }),
-      ]);
-      if (jobsRes.ok) {
-        const jobsData = await jobsRes.json();
-        const rawJobs = jobsData?.data?.jobs || (Array.isArray(jobsData?.jobs) ? jobsData.jobs : []);
-        setDirectJobs(
-          rawJobs.map((j: any) => ({
-            ...j,
-            id: j.id || j._id,
-            jobTitle: j.jobTitle || j.title || 'Untitled Role',
-            company: j.company || 'Unknown Company',
-          }))
-        );
-      }
-      if (journeysRes.ok) {
-        const journeysData = await journeysRes.json();
-        const rawJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
-        setDirectJourneys(rawJourneys);
-      }
-    } catch (err) {
-      console.error('Error fetching dashboard recent jobs:', err);
-    } finally {
-      setLoadingDirect(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchDirectData();
     const handleJobUpdate = () => {
-      fetchDirectData();
       refreshJobs();
+      refreshJourneys();
     };
     window.addEventListener('jobUpdated', handleJobUpdate);
     return () => window.removeEventListener('jobUpdated', handleJobUpdate);
-  }, [fetchDirectData, refreshJobs]);
+  }, [refreshJobs, refreshJourneys]);
 
-  const effectiveJobs = directJobs.length > 0 ? directJobs : contextJobs;
-  const effectiveLoading = loadingDirect && secondaryLoading.jobs;
+  const effectiveJobs = contextJobs;
+  const effectiveLoading = secondaryLoading.jobs;
 
   const sorted = useMemo(
     () =>
@@ -766,10 +732,10 @@ function RecentJobsPanel() {
 
   const getJobJourneys = useCallback(
     (jobId: string): CVJourney[] => {
-      const foundInDirect = directJourneys.filter(
+      const foundInContext = contextJourneys.filter(
         (j) => j.jobId === jobId || (j as any).targetJobId === jobId
       );
-      if (foundInDirect.length > 0) return foundInDirect;
+      if (foundInContext.length > 0) return foundInContext;
 
       const job = effectiveJobs.find((j: any) => (j._id?.toString() || j.id?.toString()) === jobId);
       if (job?.journey) {
@@ -777,7 +743,7 @@ function RecentJobsPanel() {
       }
       return [];
     },
-    [directJourneys, effectiveJobs]
+    [contextJourneys, effectiveJobs]
   );
 
   const getJourneyProgress = useCallback((journey: CVJourney): number => {
@@ -807,8 +773,8 @@ function RecentJobsPanel() {
     try {
       const res = await authenticatedFetch(`/api/jobs/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        await fetchDirectData();
         await refreshJobs();
+        await refreshJourneys();
         toast({
           title: 'Job deleted',
           description: `Removed "${job.jobTitle || 'this job'}"${job.company ? ` at ${job.company}` : ''}.`,
@@ -859,8 +825,8 @@ function RecentJobsPanel() {
           journeys={getJobJourneys(selectedJob.id || selectedJob._id)}
           onClose={() => setSelectedJob(null)}
           onRefresh={() => {
-            fetchDirectData();
             refreshJobs();
+            refreshJourneys();
           }}
         />
       )}

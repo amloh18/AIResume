@@ -52,6 +52,10 @@ const feedbackSchema = new Schema<IFeedback>({
   timestamps: true
 });
 
+feedbackSchema.index({ email: 1 });
+feedbackSchema.index({ userId: 1, createdAt: -1 });
+feedbackSchema.index({ createdAt: -1 });
+
 const Feedback: Model<IFeedback> = mongoose.models.Feedback || mongoose.model<IFeedback>('Feedback', feedbackSchema);
 
 export default Feedback;

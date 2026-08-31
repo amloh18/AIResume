@@ -151,6 +151,7 @@ invoiceSchema.index({ userId: 1, status: 1 });
 invoiceSchema.index({ userId: 1, createdAt: -1 });
 invoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 invoiceSchema.index({ subscriptionId: 1 });
+invoiceSchema.index({ 'metadata.polarCheckoutId': 1 }, { sparse: true });
 
 // Schema export removed - no longer needed for admin models
 
