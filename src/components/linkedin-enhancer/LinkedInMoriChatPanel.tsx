@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MoriChatLimitPanel from '@/components/payment/MoriChatLimitPanel';
+import { MoriMessageBubble, MoriLoadingIndicator, MoriSuggestionChips } from '@/components/mori';
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
-  Send, Sparkles, User, Loader2, Trash2, CornerDownRight, 
-  MousePointer2, MessageSquare, History, Edit2, X, Plus, ChevronRight
+  Send, Sparkles, Trash2, MousePointer2, MessageSquare, History, Edit2, X, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sanitizeMoriChatMessage } from '@/lib/utils/mori-chat-response';
@@ -26,6 +26,7 @@ interface Message {
     text: string;
   };
   options?: Option[];
+  isError?: boolean;
 }
 
 interface ChatHistoryItem {
@@ -136,11 +137,19 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
       if (showHistory) setShowHistory(false);
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && currentSelection) {
+        setCurrentSelection(null);
+      }
+    };
+
     window.addEventListener('mori-cv-selection', handleSelection as EventListener);
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('mori-cv-selection', handleSelection as EventListener);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showHistory]);
+  }, [showHistory, currentSelection]);
 
   const handleSend = async (overrideInput?: string) => {
     const textToSend = overrideInput || input;
@@ -228,8 +237,9 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `Error: ${error.message}`,
-        timestamp: Date.now()
+        content: `Sorry, something went wrong. ${error.message || 'Please try again.'}`,
+        timestamp: Date.now(),
+        isError: true
       }]);
     } finally {
       setIsLoading(false);
@@ -424,92 +434,26 @@ export default function LinkedInMoriChatPanel({ cvId, cvType, onCvUpdated, onClo
         {/* Messages Area */}
         <div 
           ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto p-4 space-y-5 hide-scrollbar pb-32"
+          className="absolute inset-0 overflow-y-auto p-4 space-y-4 hide-scrollbar pb-32"
         >
-          {messages.map((m) => (
-            <div 
-              key={m.id}
-              className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
-            >
-              <div className={`flex gap-2 max-w-[90%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 ${m.role === 'user' ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-[var(--bg-primary)]'}`}>
-                  {m.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Sparkles className="w-4 h-4 text-emerald-500" />}
-                </div>
-                <div className="space-y-1">
-                  <div className={`px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
-                    m.role === 'user' 
-                      ? 'bg-emerald-500 text-white rounded-tr-none shadow-sm' 
-                      : 'bg-white dark:bg-[var(--bg-primary)] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[var(--border-primary)] rounded-tl-none shadow-sm'
-                  }`}>
-                    {m.selection && (
-                      <div className="mb-2 pb-2 border-b border-white/20 opacity-90 text-[11px] font-medium flex items-start gap-1.5">
-                        <CornerDownRight className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span className="italic leading-snug">"{m.selection.text.substring(0, 60)}{m.selection.text.length > 60 ? '...' : ''}"</span>
-                      </div>
-                    )}
-                    {m.content}
-                  </div>
-                  <div className={`text-[9px] text-slate-400 px-1 font-medium ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Render Options Cards if available */}
-              {m.options && m.options.length > 0 && (
-                <div className="ml-9 mt-2 flex flex-col gap-2 w-[80%]">
-                  {m.options.map((opt, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(opt.prompt)}
-                      disabled={isLoading}
-                      className="text-left px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-[11px] font-medium text-emerald-800 dark:text-emerald-300 transition-colors flex items-center justify-between group"
-                    >
-                      <span>{opt.label}</span>
-                      <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Predefined Suggestions Chips */}
+          {messages.map((m, idx) => (
+            <div key={m.id} className="group">
+              <MoriMessageBubble
+                message={m}
+                onOptionClick={(prompt) => handleSend(prompt)}
+                isLatest={idx === messages.length - 1 && m.role === 'assistant'}
+                disabled={isLoading}
+              />
               {m.id === 'welcome' && messages.length === 1 && (
-                <div className="ml-9 mt-3 flex flex-wrap gap-2 max-w-[90%] pointer-events-auto">
-                  {SUGGESTIONS.map((sug, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(sug.prompt)}
-                      disabled={isLoading}
-                      className="px-3.5 py-1.5 bg-emerald-50/50 hover:bg-emerald-50 dark:bg-emerald-500/5 dark:hover:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm flex items-center gap-1.5"
-                    >
-                      {sug.label}
-                    </button>
-                  ))}
-                </div>
+                <MoriSuggestionChips
+                  suggestions={SUGGESTIONS}
+                  onSelect={(prompt) => handleSend(prompt)}
+                  disabled={isLoading}
+                />
               )}
             </div>
           ))}
-          {isLoading && (
-            <div className="flex flex-col items-start mt-2">
-              <div className="flex gap-2 max-w-[90%] flex-row">
-                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center mt-1 bg-slate-200 dark:bg-[var(--bg-primary)] shadow-sm">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
-                </div>
-                <div className="space-y-1">
-                  <div className="px-4 py-3.5 rounded-2xl bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-[var(--border-primary)] rounded-tl-none shadow-sm flex items-center h-[38px]">
-                    <div className="flex items-center space-x-1.5">
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-1.5 h-1.5 bg-emerald-400/80 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
-                  <div className="text-[9px] text-slate-400 px-2 font-medium text-left animate-pulse">
-                    Mori is thinking...
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {isLoading && <MoriLoadingIndicator />}
         </div>
       </div>
 

@@ -941,14 +941,14 @@ export default function JobsDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 pt-1 text-xs">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="font-bold text-sm text-gray-900 dark:text-white shrink-0">
-                  {total > 0 ? total.toLocaleString() : displayedJobs.length.toLocaleString()}{' '}
+                  {displayedJobs.length.toLocaleString()}{' '}
                   {filters.savedOnly
-                    ? (total === 1 || displayedJobs.length === 1 ? 'saved job' : 'saved jobs')
+                    ? (displayedJobs.length === 1 ? 'saved job' : 'saved jobs')
                     : filters.matchScoreMin === 0 || filters.unpersonalized
-                    ? (total === 1 || displayedJobs.length === 1 ? 'available job' : 'available jobs')
+                    ? (displayedJobs.length === 1 ? 'available job' : 'available jobs')
                     : filters.sortBy === 'postedDate'
-                    ? (total === 1 || displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
-                    : (total === 1 || displayedJobs.length === 1 ? 'matching job' : 'matching jobs')}
+                    ? (displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
+                    : (displayedJobs.length === 1 ? 'matching job' : 'matching jobs')}
                 </span>
 
                 <span className="text-gray-500 dark:text-gray-400">
@@ -1164,7 +1164,7 @@ export default function JobsDashboard() {
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                    You've viewed all {total > 0 ? total : displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {(total > 0 ? total : displayedJobs.length) === 1 ? 'job' : 'jobs'}
+                    You've viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
                   </div>
                 )}
               </div>

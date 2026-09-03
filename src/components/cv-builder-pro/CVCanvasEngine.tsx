@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo } from 'lucide-react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo, Bug } from 'lucide-react';
 import { CANVAS_TEMPLATES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { TemplateLibraryGrid } from './components/TemplateLibraryGrid';
@@ -518,13 +518,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [debugMode, setDebugMode] = useState(false);
   const [debugInfo, setDebugInfo] = useState<LayoutDebugInfo | null>(null);
 
-  // Detect ?debug=layout URL param
+  // Check if user is admin/superadmin for debug access
+  const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
+
+  // Detect ?debug=layout URL param (admin only)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isAdmin) {
       const params = new URLSearchParams(window.location.search);
-      setDebugMode(params.get('debug') === 'layout');
+      if (params.get('debug') === 'layout') {
+        setDebugMode(true);
+      }
     }
-  }, []);
+  }, [isAdmin]);
 
   const [viewport, setViewport] = useState(() => ({
     width: typeof window === 'undefined' ? 1440 : window.innerWidth,
@@ -711,7 +716,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     '--cv-sidebar-bg': design.sidebarBgColor,
     '--cv-section-gap': `${layoutMetrics.sectionGapPx}px`,
     '--cv-item-gap': `${layoutMetrics.itemGapPx}px`,
-    '--cv-column-gap': `${Math.max(24, layoutMetrics.sectionGapPx + 12)}px`,
+    '--cv-column-gap': `${Math.max(8, layoutMetrics.sectionGapPx + 8)}px`,
     '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee',
   } as React.CSSProperties), [design.accentColor, design.font, design.fontSize, design.itemGap, design.sidebarBgColor, design.spacing, isDarkUI, layoutMetrics.itemGapPx, layoutMetrics.pageGapPx, layoutMetrics.pageHeightCss, layoutMetrics.pageMarginPx, layoutMetrics.pageWidthCss, layoutMetrics.sectionGapPx]);
 
@@ -858,6 +863,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       ...prev,
       sectionGap: template.preferredSectionGap ?? prev.sectionGap,
       itemGap: template.preferredItemGap ?? prev.itemGap,
+      ...(template.preferredSpacing != null ? { spacing: template.preferredSpacing } : {}),
+      ...(template.preferredFontSize != null ? { fontSize: template.preferredFontSize } : {}),
+      ...(template.preferredPageMargin != null ? { pageMargin: template.preferredPageMargin } : {}),
     }));
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
@@ -2256,6 +2264,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                   <Redo size={14} />
                 </button>
               </div>
+
+              {/* Debug Toggle (admin/superadmin only) */}
+              {isAdmin && (
+                <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                  <button
+                    onClick={() => setDebugMode(!debugMode)}
+                    className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${
+                      debugMode
+                        ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                        : 'hover:bg-emerald-500/10 text-emerald-500 hover:text-emerald-400'
+                    }`}
+                    title="Toggle Layout Debug Overlay"
+                  >
+                    <Bug size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2712,7 +2737,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           --cv-page-width: ${layoutMetrics.pageWidthCss};
           --cv-page-height: ${layoutMetrics.pageHeightCss};
           --cv-section-gap: ${layoutMetrics.sectionGapPx}px;
-          --cv-column-gap: ${Math.max(24, layoutMetrics.sectionGapPx + 12)}px;
+          --cv-column-gap: ${Math.max(8, layoutMetrics.sectionGapPx + 8)}px;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -2840,10 +2865,28 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         #cv-document-root.cv-document .pb-4 { padding-bottom: calc(16px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .pb-5 { padding-bottom: calc(20px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .pb-6 { padding-bottom: calc(24px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-0 { margin-bottom: 0 !important; }
+        #cv-document-root.cv-document .mb-0\.5 { margin-bottom: calc(2px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-1 { margin-bottom: calc(4px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-1\.5, #cv-document-root.cv-document .mb-1-5 { margin-bottom: calc(6px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-2 { margin-bottom: calc(8px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-3 { margin-bottom: calc(12px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .mb-4 { margin-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .mb-6 { margin-bottom: calc(24px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-2 { padding-bottom: calc(8px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-3 { padding-bottom: calc(12px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-4 { padding-bottom: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-5 { padding-bottom: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .pb-6 { padding-bottom: calc(24px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .p-4 { padding: calc(16px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .p-5 { padding: calc(20px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .p-6 { padding: calc(24px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-3 { gap: calc(12px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-4 { gap: calc(16px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-5 { gap: calc(20px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-0\.5 { gap: calc(2px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-y-0\.5 { row-gap: calc(2px * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .gap-x-3 { column-gap: calc(12px * var(--cv-spacing)) !important; }
         
         /* Layout formats */
         .cv-format-bullets-only .cv-prose p {
