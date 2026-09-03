@@ -159,6 +159,7 @@ export async function GET(request: NextRequest) {
     const excludeJobIds = new Set<string>();
     const savedIds = new Set<string>();
     const savedJobUrls = new Set<string>();
+    const savedCompanyTitleKeys = new Set<string>();
     if (userId) {
       // Parallelize all three collection queries for performance
       const userObjId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
@@ -186,6 +187,11 @@ export async function GET(request: NextRequest) {
           if (d.jobId) savedIds.add(d.jobId.toString());
           if (d._id) savedIds.add(d._id.toString());
           if (d.jobUrl) savedJobUrls.add(d.jobUrl.trim().toLowerCase());
+          if (d.company && (d.jobTitle || d.title)) {
+            const comp = (d.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            const tit = ((d.jobTitle || d.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            savedCompanyTitleKeys.add(`${comp}___${tit}`);
+          }
         }
       }
       if (appDocs.status === 'fulfilled') {
@@ -194,6 +200,11 @@ export async function GET(request: NextRequest) {
           if (a.jobId) savedIds.add(a.jobId.toString());
           if (a._id) savedIds.add(a._id.toString());
           if (a.jobUrl) savedJobUrls.add(a.jobUrl.trim().toLowerCase());
+          if (a.company && (a.jobTitle || a.title)) {
+            const comp = (a.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            const tit = ((a.jobTitle || a.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+            savedCompanyTitleKeys.add(`${comp}___${tit}`);
+          }
         }
       }
 
@@ -677,9 +688,11 @@ export async function GET(request: NextRequest) {
     if (savedOnlyFilter && userId) {
       filteredListings = filteredListings.filter((job) => {
         if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return true;
-        // Fallback: match by job URL from saved tracker entries
         const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
         if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return true;
+        const comp = ((job as any).company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        const tit = ((job as any).title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        if (comp && tit && savedCompanyTitleKeys.has(`${comp}___${tit}`)) return true;
         return false;
       });
     } else if (userId && savedIds.size > 0) {
@@ -687,6 +700,9 @@ export async function GET(request: NextRequest) {
         if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return false;
         const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
         if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return false;
+        const comp = ((job as any).company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        const tit = ((job as any).title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+        if (comp && tit && savedCompanyTitleKeys.has(`${comp}___${tit}`)) return false;
         return true;
       });
     }

@@ -364,13 +364,13 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const justifyClass = align === 'center' ? 'justify-center' : (align === 'right' ? 'justify-end' : 'justify-start');
 
     return (
-      <div className={`flex flex-col snippet-anim w-full cv-keep-with-next gap-5 pb-4 border-b ${isNarrow ? alignClass : 'items-center'} ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'}`}>
+      <div className={`flex flex-col snippet-anim w-full cv-keep-with-next gap-3 pb-2 ${isNarrow ? alignClass : 'items-center'} ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
         <Title titleKey="header" overrideClass="hidden" />
         <div className={`min-w-0 w-full flex flex-col ${alignClass}`}>
-          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest pr-1`}><Editable path="basics.name" className="break-words" /></h1>
-          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
+          <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-0.5 pr-1`}><Editable path="basics.name" className="break-words" /></h1>
+          <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-1 pr-1`}><Editable path="basics.title" className="break-words" /></h2>
           {!hasSidebarContact && (
-            <div className={`flex ${isNarrow ? 'flex-col gap-1.5' : 'flex-wrap gap-x-4 gap-y-1.5 items-center'} ${alignClass} ${TYPOGRAPHY.contact}`}>
+            <div className={`flex ${isNarrow ? 'flex-col gap-0.5' : 'flex-wrap gap-x-3 gap-y-0.5 items-center'} ${alignClass} ${TYPOGRAPHY.contact}`}>
               <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={justifyClass} />
             </div>
           )}
@@ -1311,7 +1311,7 @@ export const ATS_SNIPPETS: string[] = [
 // 15+ PRO TEMPLATES REGISTRY
 // ==========================================
 export const CANVAS_TEMPLATES = [
-  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 24, preferredItemGap: 12, zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
+  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 1, preferredItemGap: 1, preferredSpacing: 0.625, preferredFontSize: 10.5, preferredPageMargin: 30, zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
   { id: 'tpl-2', name: 'Modern Split', type: '2-col', titleStyle: 'standard', preferredSectionGap: 18, preferredItemGap: 10, zones: { header: ['header-minimal'], left: ['experience-standard', 'projects-standard', 'education-standard'], right: ['summary-highlight', 'skills-pills', 'languages-comma'] } },
   { id: 'tpl-3', name: 'Professional Sidebar Left', type: 'sidebar-left', titleStyle: 'standard', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { sidebar: ['header-avatar', 'sidebar-contact', 'skills-pills', 'languages-dots'], main: ['summary-clean', 'experience-standard', 'projects-compact', 'education-standard'] } },
   { id: 'tpl-4', name: 'Executive Sidebar Right', type: 'sidebar-right', titleStyle: 'minimal', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { main: ['header-split', 'summary-clean', 'experience-timeline', 'education-standard'], sidebar: ['sidebar-contact', 'skills-category-inline', 'interests-pills'] } },

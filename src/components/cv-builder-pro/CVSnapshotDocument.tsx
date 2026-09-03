@@ -116,6 +116,30 @@ export const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .cv-document .cv-gap-sm { gap: calc(var(--cv-item-gap, 12px) * 0.67 * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .cv-document .cv-gap-md { gap: calc(var(--cv-item-gap, 12px) * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .cv-document .cv-gap-lg { gap: calc(var(--cv-item-gap, 12px) * 1.33 * var(--cv-spacing)) !important; }
+
+  /* Unified spacing rhythm — route hardcoded Tailwind utilities through --cv-spacing */
+  .cv-snapshot-wrapper .mb-0 { margin-bottom: 0 !important; }
+  .cv-snapshot-wrapper .mb-0\.5 { margin-bottom: calc(2px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-1 { margin-bottom: calc(4px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-1\.5 { margin-bottom: calc(6px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-2 { margin-bottom: calc(8px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-3 { margin-bottom: calc(12px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-4 { margin-bottom: calc(16px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .mb-6 { margin-bottom: calc(24px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .pb-2 { padding-bottom: calc(8px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .pb-3 { padding-bottom: calc(12px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .pb-4 { padding-bottom: calc(16px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .pb-5 { padding-bottom: calc(20px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .pb-6 { padding-bottom: calc(24px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .p-4 { padding: calc(16px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .p-5 { padding: calc(20px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .p-6 { padding: calc(24px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-3 { gap: calc(12px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-4 { gap: calc(16px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-5 { gap: calc(20px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-0\.5 { gap: calc(2px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-y-0\.5 { row-gap: calc(2px * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .gap-x-3 { column-gap: calc(12px * var(--cv-spacing)) !important; }
   
   /* Layout formats */
   .cv-format-bullets-only .cv-prose p {

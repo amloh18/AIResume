@@ -881,7 +881,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   };
   const formatOption = defaultDesign.formatOption || 'hybrid';
   const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
-  const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px`, '--cv-item-gap': `${defaultDesign.itemGap || 12}px`, '--cv-column-gap': `${Math.max(24, (defaultDesign.sectionGap || 16) + 12)}px` } as React.CSSProperties;
+  const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px`, '--cv-item-gap': `${defaultDesign.itemGap || 12}px`, '--cv-column-gap': `${Math.max(8, (defaultDesign.sectionGap || 1) + 8)}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {
     const snippets = template.zones[zoneId] || [];
