@@ -1,7 +1,8 @@
 /**
- * Shared Gemini API Utility
+ * Shared AI API Utility
  *
- * Provides a single-key wrapper for API routes to call Gemini.
+ * Provides a single wrapper for API routes to call AI.
+ * Uses Ollama (gemma3:4b) as primary, Gemini as fallback.
  *
  * Key resolution (checked in priority order):
  *   1. gemini_api_key
@@ -16,32 +17,13 @@
  * backwards compatibility with existing importers, but it uses exactly one key.
  */
 
-import { GoogleGenAI } from '@google/genai';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { randomUUID } from 'crypto';
+import { aiRoute } from '@/lib/utils/ai-router';
 
 /**
- * Get the Gemini API key
- * Falls back to GEMINI_API_KEY, gemini_api_key1, GEMINI_API_KEY1, then NEXT_PUBLIC_GEMINI_API_KEY
- * Hard-fails if none is configured.
- */
-function getGeminiApiKey(): string {
-  const key =
-    process.env.gemini_api_key ||
-    process.env.GEMINI_API_KEY ||
-    process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1 ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-  if (!key) {
-    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
-  }
-
-  return key;
-}
-
-/**
- * Call Gemini API
+ * Call AI API — Ollama (gemma3:4b) primary, Gemini fallback.
+ * Accepts a string prompt or a messages array.
  */
 export async function callGeminiWithAllKeysFallback(
   prompt: string | any,
@@ -55,76 +37,43 @@ export async function callGeminiWithAllKeysFallback(
     responseMimeType?: string;
   }
 ): Promise<string> {
-  const apiKey = getGeminiApiKey();
+  // Build messages for the router
+  const messages: { role: string; content: string }[] = [];
+  if (typeof prompt === 'string') {
+    messages.push({ role: 'user', content: prompt });
+  } else if (Array.isArray(prompt)) {
+    // Already a messages array (e.g., from Gemini SDK format)
+    for (const msg of prompt) {
+      const role = msg.role === 'model' ? 'assistant' : (msg.role || 'user');
+      const text = msg.parts?.[0]?.text || msg.content || '';
+      if (text) messages.push({ role, content: text });
+    }
+  } else {
+    messages.push({ role: 'user', content: JSON.stringify(prompt) });
+  }
 
   try {
-    console.log(`🔑 Attempting Gemini API call...`);
-    const genAI = new GoogleGenAI({ apiKey });
-
-    const primaryModel = options?.model || 'gemini-2.5-flash-lite';
-    const fallbackModel = 'gemini-2.5-flash';
-
-    const contents = typeof prompt === 'string'
-      ? [{ role: 'user', parts: [{ text: prompt }] }]
-      : prompt;
-
+    console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
     const callStart = Date.now();
-    let result;
-    let usedModel = primaryModel;
-
-    try {
-      result = await genAI.models.generateContent({
-        model: primaryModel,
-        contents,
-        config: {
-          temperature: options?.temperature || 0.7,
-          maxOutputTokens: options?.maxTokens || 2048,
-          responseMimeType: options?.responseMimeType,
-        }
-      });
-    } catch (primaryError) {
-      console.warn(`⚠️ ${primaryModel} failed, trying ${fallbackModel}...`);
-      usedModel = fallbackModel;
-      result = await genAI.models.generateContent({
-        model: fallbackModel,
-        contents,
-        config: {
-          temperature: options?.temperature || 0.7,
-          maxOutputTokens: options?.maxTokens || 2048,
-          responseMimeType: options?.responseMimeType,
-        }
-      });
-    }
-
+    const result = await aiRoute(messages);
     const latencySeconds = (Date.now() - callStart) / 1000;
-    const text = result.text || '';
 
-    if (text) {
-      console.log(`✅ Gemini API call successful using ${usedModel}. Length: ${text.length} chars.`);
-      if ((result as any).candidates?.[0]) {
-        const candidate = (result as any).candidates[0];
-        console.log(`Debug Gemini candidate: finishReason=${candidate.finishReason}, safetyRatings=${JSON.stringify(candidate.safetyRatings)}`);
-      }
+    if (result.content) {
+      console.log(`✅ AI call successful using ${result.provider} (${result.model}). Length: ${result.content.length} chars.`);
 
-      const usageMetadata = (result as any).usageMetadata;
       const promptString = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
-      const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(promptString.length / 4);
-      const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
-      const tokensUsed = inputTokens + outputTokens;
-
-      const INPUT_COST_PER_1M = 0.075;
-      const OUTPUT_COST_PER_1M = 0.30;
-      const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+      const tokensUsed = Math.ceil((promptString.length + result.content.length) / 4);
+      const cost = result.provider === 'ollama' ? 0 : (tokensUsed / 1_000_000) * 0.075;
 
       try {
         await ActivityLogService.logAI({
           userId: options?.userId,
-          model: usedModel,
+          model: result.model,
           tokensUsed,
           cost,
           prompt: promptString.substring(0, 1000),
-          responseLength: text.length,
-          action: options?.action || 'gemini_generation',
+          responseLength: result.content.length,
+          action: options?.action || 'ai_generation',
           endpoint: options?.endpoint || options?.action || 'unknown_endpoint',
           status: 'success'
         });
@@ -141,25 +90,25 @@ export async function callGeminiWithAllKeysFallback(
           event: '$ai_generation',
           properties: {
             $ai_trace_id: randomUUID(),
-            $ai_provider: 'google',
-            $ai_model: usedModel,
-            $ai_input_tokens: inputTokens,
-            $ai_output_tokens: outputTokens,
+            $ai_provider: result.provider === 'ollama' ? 'ollama' : 'google',
+            $ai_model: result.model,
+            $ai_input_tokens: Math.ceil(promptString.length / 4),
+            $ai_output_tokens: Math.ceil(result.content.length / 4),
             $ai_latency: latencySeconds,
             $ai_total_cost_usd: cost,
-            $ai_span_name: options?.action || options?.endpoint || 'gemini_generation',
+            $ai_span_name: options?.action || options?.endpoint || 'ai_generation',
           },
         });
       } catch (phError) {
-        console.error('PostHog $ai_generation capture error (gemini):', phError);
+        console.error('PostHog $ai_generation capture error:', phError);
       }
 
-      return text;
+      return result.content;
     } else {
-      throw new Error('Gemini API returned empty response');
+      throw new Error('AI API returned empty response');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API error: ${errorMessage}`);
+    throw new Error(`AI API error: ${errorMessage}`);
   }
 }

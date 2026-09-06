@@ -1449,8 +1449,6 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
             postedAt: job.postedAt,
             firstSeenAt: now,
             status: 'new',
-            expiresAt,
-            freshnessScore,
             createdAt: now,
           },
           $set: {

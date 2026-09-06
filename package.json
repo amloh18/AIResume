@@ -101,6 +101,7 @@
     "nodemailer": "^7.0.6",
     "pdf-parse": "1.1.1",
     "pdfjs-dist": "^5.4.149",
+    "playwright": "^1.62.1",
     "posthog-js": "^1.375.0",
     "posthog-node": "^5.35.0",
     "react": "^19.0.0",

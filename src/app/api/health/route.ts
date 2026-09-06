@@ -92,16 +92,26 @@ async function checkExternalServices(): Promise<{
    polar: 'healthy' | 'unhealthy' | 'unknown';
  }> {
    const services: {
-     gemini: 'healthy' | 'unhealthy' | 'unknown';
-     email: 'healthy' | 'unhealthy' | 'unknown';
-     polar: 'healthy' | 'unhealthy' | 'unknown';
-   } = {
-     gemini: 'unknown',
-     email: 'unknown',
-     polar: 'unknown'
-   };
+      gemini: 'healthy' | 'unhealthy' | 'unknown';
+      ollama: 'healthy' | 'unhealthy' | 'unknown';
+      email: 'healthy' | 'unhealthy' | 'unknown';
+      polar: 'healthy' | 'unhealthy' | 'unknown';
+    } = {
+      gemini: 'unknown',
+      ollama: 'unknown',
+      email: 'unknown',
+      polar: 'unknown'
+    };
 
-   // Check Gemini API
+    // Check Ollama (primary AI model)
+    try {
+      const { ollamaHealthCheck } = await import('@/lib/utils/ollama-client');
+      services.ollama = (await ollamaHealthCheck()) ? 'healthy' : 'unhealthy';
+    } catch {
+      services.ollama = 'unhealthy';
+    }
+
+    // Check Gemini API (fallback AI model)
    if (process.env.GEMINI_API_KEY) {
      try {
        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {

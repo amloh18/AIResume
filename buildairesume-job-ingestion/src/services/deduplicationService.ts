@@ -42,7 +42,7 @@ export class DeduplicationService {
       throw new Error('DeduplicationService not initialized');
     }
 
-    const jobsCollection = this.db.collection('discoveredjobs');
+    const jobsCollection = this.db.collection('jobs');
 
     // Strategy 1: Check by source + sourceJobId (strongest match)
     const bySourceId = await this.checkBySourceId(jobsCollection, job);
@@ -199,7 +199,7 @@ export class DeduplicationService {
       throw new Error('DeduplicationService not initialized');
     }
 
-    const jobsCollection = this.db.collection('discoveredjobs');
+    const jobsCollection = this.db.collection('jobs');
 
     try {
       // Add new source to provenance
