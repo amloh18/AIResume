@@ -10,6 +10,7 @@
 
 import mongoose from 'mongoose';
 import { sendApplicationEmail, wasApplicationEmailSent } from '@/lib/services/applicationEmailService';
+import ApplicationEmailQueue from '@/models/ApplicationEmailQueue';
 
 // ============================================================================
 // Configuration
@@ -53,7 +54,7 @@ async function claimQueueItem(): Promise<any | null> {
 
   try {
     // Find and lock a queued item
-    const result = await mongoose.models.ApplicationEmailQueue.findOneAndUpdate(
+    const result = await ApplicationEmailQueue.findOneAndUpdate(
       {
         status: 'queued',
         scheduledAt: { $lte: now },
@@ -89,7 +90,7 @@ async function claimQueueItem(): Promise<any | null> {
  */
 async function releaseLock(queueItemId: string): Promise<void> {
   try {
-    await mongoose.models.ApplicationEmailQueue.updateOne(
+    await ApplicationEmailQueue.updateOne(
       { _id: queueItemId },
       {
         $set: {
@@ -108,7 +109,7 @@ async function releaseLock(queueItemId: string): Promise<void> {
  */
 async function markAsSent(queueItemId: string, messageId?: string): Promise<void> {
   try {
-    await mongoose.models.ApplicationEmailQueue.updateOne(
+    await ApplicationEmailQueue.updateOne(
       { _id: queueItemId },
       {
         $set: {
@@ -130,7 +131,7 @@ async function markAsSent(queueItemId: string, messageId?: string): Promise<void
  */
 async function markAsFailed(queueItemId: string, error: string, retryable: boolean): Promise<void> {
   try {
-    const queueItem = await mongoose.models.ApplicationEmailQueue.findById(queueItemId);
+    const queueItem = await ApplicationEmailQueue.findById(queueItemId);
     if (!queueItem) return;
 
     const shouldRetry = retryable && queueItem.attempts < WORKER_CONFIG.MAX_RETRIES;
@@ -141,7 +142,7 @@ async function markAsFailed(queueItemId: string, error: string, retryable: boole
       const delayMs = WORKER_CONFIG.RETRY_DELAYS_MS[delayIndex];
       const nextRetryAt = new Date(Date.now() + delayMs);
 
-      await mongoose.models.ApplicationEmailQueue.updateOne(
+      await ApplicationEmailQueue.updateOne(
         { _id: queueItemId },
         {
           $set: {
@@ -156,7 +157,7 @@ async function markAsFailed(queueItemId: string, error: string, retryable: boole
       );
       console.log(`⏳ Email will retry at ${nextRetryAt}: ${error}`);
     } else {
-      await mongoose.models.ApplicationEmailQueue.updateOne(
+      await ApplicationEmailQueue.updateOne(
         { _id: queueItemId },
         {
           $set: {
@@ -226,6 +227,11 @@ async function workerLoop(): Promise<void> {
   if (!isRunning) return;
 
   try {
+    // Wait for MongoDB to be connected before processing
+    if (mongoose.connection.readyState !== 1) {
+      return;
+    }
+
     // Check if we can process more jobs
     if (activeJobs.size >= WORKER_CONFIG.MAX_CONCURRENT) {
       console.log(`⏳ At max concurrency (${activeJobs.size}/${WORKER_CONFIG.MAX_CONCURRENT})`);
@@ -265,8 +271,12 @@ export function startEmailWorker(): void {
   // Start the polling loop
   pollTimer = setInterval(workerLoop, WORKER_CONFIG.POLL_INTERVAL_MS);
 
-  // Run immediately
-  workerLoop();
+  // Run after a short delay to allow MongoDB connection to establish
+  setTimeout(() => {
+    if (isRunning) {
+      workerLoop();
+    }
+  }, 3000);
 
   console.log(`✅ Email worker started (poll interval: ${WORKER_CONFIG.POLL_INTERVAL_MS}ms)`);
 }

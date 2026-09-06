@@ -1,11 +1,11 @@
 /**
  * Gemini API Helper Utility
- * Provides unified interface for Google Gemini API calls using gemini_api_key
- * Uses @google/genai package with gemini-2.5-flash-lite (with model fallback to gemini-2.5-flash)
+ * Provides unified interface for AI API calls with Ollama primary + Gemini fallback
+ * Uses Ollama (gemma3:4b) as primary, Gemini as fallback
  */
 
-import { GoogleGenAI } from '@google/genai';
 import { ActivityLogService } from '@/lib/services/activityLogService';
+import { aiRoute } from '@/lib/utils/ai-router';
 
 interface GeminiCallOptions {
   prompt: string;
@@ -21,28 +21,13 @@ interface GeminiCallOptions {
 
 interface GeminiResponse {
   content: string;
-  provider: 'gemini';
-  apiKeyUsed: 'gemini_api_key';
+  provider: 'ollama' | 'gemini';
+  apiKeyUsed: string;
 }
 
-function isQuotaError(error: any): boolean {
-  if (!error) return false;
-
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorString = JSON.stringify(error);
-
-  return (
-    errorMessage.includes('429') ||
-    errorMessage.includes('quota') ||
-    errorMessage.includes('Quota exceeded') ||
-    errorMessage.includes('RESOURCE_EXHAUSTED') ||
-    errorMessage.includes('rate limit') ||
-    errorMessage.includes('rate-limit') ||
-    errorString.includes('"code":429') ||
-    errorString.includes('"status":"RESOURCE_EXHAUSTED"')
-  );
-}
-
+/**
+ * Get Gemini API key (used by legacy hasAIApiKeys/getAvailableAIKeys)
+ */
 function getGeminiApiKey(): string {
   const key =
     process.env.gemini_api_key ||
@@ -50,77 +35,39 @@ function getGeminiApiKey(): string {
     process.env.gemini_api_key1 ||
     process.env.GEMINI_API_KEY1 ||
     process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-
-  if (!key) {
-    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
-  }
-
-  return key;
+  return key || '';
 }
 
-async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<string> {
+/**
+ * Call AI API — Ollama (gemma3:4b) primary, Gemini fallback.
+ */
+export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
+  // Build messages for the router
+  const messages: { role: string; content: string }[] = [];
+  if (options.systemPrompt) {
+    messages.push({ role: 'system', content: options.systemPrompt });
+  }
+  messages.push({ role: 'user', content: options.prompt });
+
+  // Try Ollama first via router
   try {
-    const genAI = new GoogleGenAI({ apiKey });
+    console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
+    const result = await aiRoute(messages);
+    console.log(`✅ AI call successful via ${result.provider} (${result.model}, ${result.latencyMs}ms)`);
 
-    const primaryModel = options.model || 'gemini-2.5-flash-lite';
-    const fallbackModel = 'gemini-2.5-flash';
-
-    let fullPrompt = options.prompt;
-    if (options.systemPrompt) {
-      fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
-    }
-
-    let result;
-    let usedModel = primaryModel;
-
-    try {
-      result = await genAI.models.generateContent({
-        model: primaryModel,
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        config: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 2048,
-          responseMimeType: options.responseMimeType,
-        }
-      });
-    } catch (primaryError) {
-      console.warn(`⚠️ ${primaryModel} failed, trying ${fallbackModel}...`);
-      usedModel = fallbackModel;
-      result = await genAI.models.generateContent({
-        model: fallbackModel,
-        contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-        config: {
-          temperature: options.temperature || 0.7,
-          maxOutputTokens: options.maxTokens || 2048,
-          responseMimeType: options.responseMimeType,
-        }
-      });
-    }
-
-    const text = result.text || '';
-
-    if (!text) {
-      throw new Error('Gemini API returned empty response');
-    }
-
-    const usageMetadata = (result as any).usageMetadata;
-    const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(fullPrompt.length / 4);
-    const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
-    const tokensUsed = inputTokens + outputTokens;
-
-    const INPUT_COST_PER_1M = 0.075;
-    const OUTPUT_COST_PER_1M = 0.30;
-    const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+    // Log usage
+    const tokensUsed = Math.ceil((options.prompt.length + result.content.length) / 4);
+    const cost = result.provider === 'ollama' ? 0 : (tokensUsed / 1_000_000) * 0.075;
 
     try {
       await ActivityLogService.logAI({
         userId: options.userId,
-        model: usedModel,
+        model: result.model,
         tokensUsed,
         cost,
-        prompt: fullPrompt.substring(0, 1000),
-        responseLength: text.length,
-        action: options.action || 'gemini_generation',
+        prompt: options.prompt.substring(0, 1000),
+        responseLength: result.content.length,
+        action: options.action || 'ai_generation',
         endpoint: options.endpoint || options.action || 'unknown_endpoint',
         status: 'success'
       });
@@ -128,39 +75,14 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
       console.error('Failed to log AI usage:', logError);
     }
 
-    return text;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API error: ${errorMessage}`);
-  }
-}
-
-/**
- * Call Gemini API with model fallback using the single configured key.
- * Hard-fails immediately if gemini_api_key is not configured.
- * If the primary model fails (non-quota errors) there is no key retry;
- * only the configured model falls back to gemini-2.5-flash.
- */
-export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
-  let apiKey: string;
-  try {
-    apiKey = getGeminiApiKey();
-  } catch {
-    throw new Error('No Gemini API key configured. Please set gemini_api_key.');
-  }
-
-  try {
-    console.log(`🔑 Attempting Gemini API call...`);
-    const content = await callGemini(options, apiKey);
-    console.log(`✅ Gemini API call successful`);
     return {
-      content,
-      provider: 'gemini',
-      apiKeyUsed: 'gemini_api_key'
+      content: result.content,
+      provider: result.provider,
+      apiKeyUsed: result.provider === 'ollama' ? 'ollama' : 'gemini_api_key'
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Gemini API error: ${errorMessage}`);
+    throw new Error(`AI API error: ${errorMessage}`);
   }
 }
 

@@ -421,3 +421,877 @@ export async function submitGreenhouseForm(page: Page): Promise<ATSSubmissionRes
     };
   }
 }
+
+// ==========================================
+// LEVER
+// ==========================================
+
+/**
+ * Detect Lever form fields
+ */
+export async function detectLeverFields(page: Page): Promise<ATSDetectionResult> {
+  const fields: ATSField[] = [];
+  let hasCAPTCHA = false;
+  let captchaType: string | undefined;
+
+  const captchaResult = await detectCAPTCHA(page);
+  if (captchaResult.detected) {
+    hasCAPTCHA = true;
+    captchaType = captchaResult.type;
+  }
+
+  const leverSelectors: Array<{ name: string; type: string; selector: string; label: string; required: boolean }> = [
+    { name: 'name', type: 'text', selector: 'input[name="name"]', label: 'Full Name', required: true },
+    { name: 'email', type: 'email', selector: 'input[name="email"]', label: 'Email', required: true },
+    { name: 'phone', type: 'tel', selector: 'input[name="phone"]', label: 'Phone', required: false },
+    { name: 'resume', type: 'file', selector: 'input[name="resume"]', label: 'Resume/CV', required: true },
+    { name: 'cover_letter', type: 'file', selector: 'input[name="cover_letter"]', label: 'Cover Letter', required: false },
+    { name: 'linkedin', type: 'url', selector: 'input[name="urls[LinkedIn]"]', label: 'LinkedIn', required: false },
+    { name: 'portfolio', type: 'url', selector: 'input[name="urls[Portfolio]"]', label: 'Portfolio', required: false },
+  ];
+
+  for (const fieldDef of leverSelectors) {
+    try {
+      const el = await page.$(fieldDef.selector);
+      if (el) {
+        fields.push({
+          name: fieldDef.name,
+          type: fieldDef.type,
+          required: fieldDef.required,
+          selector: fieldDef.selector,
+          label: fieldDef.label,
+        });
+      }
+    } catch {
+      // Selector query failed — continue
+    }
+  }
+
+  // Detect custom / unknown fields
+  try {
+    const customFields = await page.$$eval('div.field', (divs: any[]) => {
+      return divs.map((div: any) => {
+        const label = div.querySelector('label');
+        const input = div.querySelector('input, textarea, select');
+        if (!label || !input) return null;
+        return {
+          name: input.getAttribute('name') || '',
+          label: label.textContent?.trim() || '',
+          type: input.tagName.toLowerCase() === 'textarea' ? 'textarea' : input.getAttribute('type') || 'text',
+          required: input.hasAttribute('required'),
+        };
+      }).filter(Boolean);
+    });
+
+    for (const cf of customFields) {
+      if (cf && !fields.find((f) => f.selector === `input[name="${cf.name}"]`)) {
+        fields.push({
+          name: cf.name,
+          type: cf.type === 'textarea' ? 'textarea' : 'text',
+          required: cf.required,
+          selector: `input[name="${cf.name}"], textarea[name="${cf.name}"]`,
+          label: cf.label,
+        });
+      }
+    }
+  } catch {
+    // Custom field detection failed
+  }
+
+  return {
+    atsType: 'lever',
+    formDetected: fields.length > 0,
+    fields,
+    hasCAPTCHA,
+    captchaType,
+  };
+}
+
+/**
+ * Fill Lever form fields
+ */
+export async function fillLeverFields(
+  page: Page,
+  fields: ATSField[],
+  candidateData: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    linkedin?: string;
+    portfolio?: string;
+    resumePdf?: Buffer;
+    resumeFileName?: string;
+    coverLetterPdf?: Buffer;
+    coverLetterFileName?: string;
+  }
+): Promise<ATSFillResult> {
+  const result: ATSFillResult = {
+    fieldsFilled: 0,
+    fieldsSkipped: 0,
+    skippedFields: [],
+    errors: [],
+  };
+
+  const fieldMap: Record<string, string | undefined> = {
+    name: candidateData.fullName,
+    email: candidateData.email,
+    phone: candidateData.phone,
+    linkedin: candidateData.linkedin,
+    portfolio: candidateData.portfolio,
+    'urls[LinkedIn]': candidateData.linkedin,
+    'urls[Portfolio]': candidateData.portfolio,
+  };
+
+  for (const field of fields) {
+    try {
+      const value = fieldMap[field.name] || fieldMap[field.selector.replace('input[name="', '').replace('"]', '')];
+      if (value) {
+        await page.fill(field.selector, value);
+        result.fieldsFilled++;
+      } else if (field.type === 'file') {
+        result.skippedFields.push({ name: field.name, reason: 'File upload handled separately' });
+        result.fieldsSkipped++;
+      } else if (field.required) {
+        result.errors.push(`Required field "${field.label}" has no value`);
+      } else {
+        result.skippedFields.push({ name: field.name, reason: 'Optional field, no value provided' });
+        result.fieldsSkipped++;
+      }
+    } catch (error: any) {
+      result.errors.push(`Failed to fill "${field.label}": ${error.message}`);
+    }
+  }
+
+  // File uploads
+  try {
+    const resumeInput = await page.$('input[name="resume"]');
+    if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
+      fs.writeFileSync(tmpFile, candidateData.resumePdf);
+      await resumeInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload resume: ${error.message}`);
+  }
+
+  try {
+    const coverInput = await page.$('input[name="cover_letter"]');
+    if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
+      fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
+      await coverInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload cover letter: ${error.message}`);
+  }
+
+  return result;
+}
+
+/**
+ * Submit Lever form
+ */
+export async function submitLeverForm(page: Page): Promise<ATSSubmissionResult> {
+  const evidence: ATSSubmissionResult['evidence'] = {
+    submitButtonClicked: false,
+    navigationOccurred: false,
+    successTextFound: false,
+    confirmationUrlMatched: false,
+  };
+
+  const captchaCheck = await detectCAPTCHA(page);
+  if (captchaCheck.detected) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: true,
+      error: `CAPTCHA detected (${captchaCheck.type}) — manual intervention required`,
+      evidence,
+    };
+  }
+
+  try {
+    const submitSelectors = [
+      'button[data-qa="btn-submit"]',
+      'button[type="submit"]',
+      'input[type="submit"]',
+      '.btn-submit',
+    ];
+
+    let submitButton: any = null;
+    for (const selector of submitSelectors) {
+      submitButton = await page.$(selector);
+      if (submitButton) break;
+    }
+
+    if (!submitButton) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: false,
+        error: 'Submit button not found',
+        evidence,
+      };
+    }
+
+    const urlBefore = page.url();
+    await submitButton.click();
+    evidence.submitButtonClicked = true;
+
+    try {
+      await page.waitForNavigation({ timeout: 10000 });
+      evidence.navigationOccurred = true;
+    } catch {
+      // No navigation — AJAX submission
+    }
+
+    await page.waitForTimeout(2000);
+
+    // Verify submission
+    try {
+      const text = await page.textContent('body') || '';
+      const url = page.url();
+      const lowerText = text.toLowerCase();
+
+      const successPhrases = [
+        'thank you for applying',
+        'application submitted',
+        'we have received your application',
+        'your application has been submitted',
+      ];
+      evidence.successTextFound = successPhrases.some((phrase) => lowerText.includes(phrase));
+      evidence.confirmationUrlMatched = url.includes('/thank') || url.includes('/success') || url.includes('/applied');
+    } catch {
+      // Verification failed
+    }
+
+    const postSubmitCaptcha = await detectCAPTCHA(page);
+    if (postSubmitCaptcha.detected) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: true,
+        error: `CAPTCHA appeared after submission attempt (${postSubmitCaptcha.type})`,
+        evidence,
+      };
+    }
+
+    const confirmed = evidence.successTextFound || evidence.confirmationUrlMatched;
+
+    let confirmationId: string | undefined;
+    try {
+      const text = await page.textContent('body') || '';
+      const idMatch = text.match(/(?:application|confirmation|reference)\s*(?:id|number|#)?\s*[:=]?\s*([a-zA-Z0-9_-]{4,30})/i);
+      if (idMatch) confirmationId = idMatch[1];
+    } catch {
+      // ID extraction failed
+    }
+
+    return {
+      success: confirmed,
+      confirmed,
+      confirmationId,
+      confirmationUrl: page.url(),
+      hasCAPTCHA: false,
+      evidence,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: false,
+      error: error.message,
+      evidence,
+    };
+  }
+}
+
+// ==========================================
+// ASHBY
+// ==========================================
+
+/**
+ * Detect Ashby form fields
+ */
+export async function detectAshbyFields(page: Page): Promise<ATSDetectionResult> {
+  const fields: ATSField[] = [];
+  let hasCAPTCHA = false;
+  let captchaType: string | undefined;
+
+  const captchaResult = await detectCAPTCHA(page);
+  if (captchaResult.detected) {
+    hasCAPTCHA = true;
+    captchaType = captchaResult.type;
+  }
+
+  const ashbySelectors: Array<{ name: string; type: string; selector: string; label: string; required: boolean }> = [
+    { name: 'name', type: 'text', selector: 'input[name="name"]', label: 'Full Name', required: true },
+    { name: 'email', type: 'email', selector: 'input[name="email"]', label: 'Email', required: true },
+    { name: 'phone', type: 'tel', selector: 'input[name="phone"]', label: 'Phone', required: false },
+    { name: 'resume', type: 'file', selector: 'input[name="resume"]', label: 'Resume/CV', required: true },
+    { name: 'cover_letter', type: 'file', selector: 'input[name="cover_letter"]', label: 'Cover Letter', required: false },
+    { name: 'linkedin', type: 'url', selector: 'input[name="linkedInUrl"]', label: 'LinkedIn', required: false },
+    { name: 'portfolio', type: 'url', selector: 'input[name="website"]', label: 'Website', required: false },
+  ];
+
+  for (const fieldDef of ashbySelectors) {
+    try {
+      const el = await page.$(fieldDef.selector);
+      if (el) {
+        fields.push({
+          name: fieldDef.name,
+          type: fieldDef.type,
+          required: fieldDef.required,
+          selector: fieldDef.selector,
+          label: fieldDef.label,
+        });
+      }
+    } catch {
+      // Selector query failed — continue
+    }
+  }
+
+  // Detect additional fields
+  try {
+    const customFields = await page.$$eval('div[class*="field"], div[class*="form-group"]', (divs: any[]) => {
+      return divs.map((div: any) => {
+        const label = div.querySelector('label');
+        const input = div.querySelector('input, textarea, select');
+        if (!label || !input) return null;
+        return {
+          name: input.getAttribute('name') || '',
+          label: label.textContent?.trim() || '',
+          type: input.tagName.toLowerCase() === 'textarea' ? 'textarea' : input.getAttribute('type') || 'text',
+          required: input.hasAttribute('required'),
+        };
+      }).filter(Boolean);
+    });
+
+    for (const cf of customFields) {
+      if (cf && !fields.find((f) => f.selector === `input[name="${cf.name}"]`)) {
+        fields.push({
+          name: cf.name,
+          type: cf.type === 'textarea' ? 'textarea' : 'text',
+          required: cf.required,
+          selector: `input[name="${cf.name}"], textarea[name="${cf.name}"]`,
+          label: cf.label,
+        });
+      }
+    }
+  } catch {
+    // Custom field detection failed
+  }
+
+  return {
+    atsType: 'ashby',
+    formDetected: fields.length > 0,
+    fields,
+    hasCAPTCHA,
+    captchaType,
+  };
+}
+
+/**
+ * Fill Ashby form fields
+ */
+export async function fillAshbyFields(
+  page: Page,
+  fields: ATSField[],
+  candidateData: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    linkedin?: string;
+    portfolio?: string;
+    resumePdf?: Buffer;
+    resumeFileName?: string;
+    coverLetterPdf?: Buffer;
+    coverLetterFileName?: string;
+  }
+): Promise<ATSFillResult> {
+  const result: ATSFillResult = {
+    fieldsFilled: 0,
+    fieldsSkipped: 0,
+    skippedFields: [],
+    errors: [],
+  };
+
+  const fieldMap: Record<string, string | undefined> = {
+    name: candidateData.fullName,
+    email: candidateData.email,
+    phone: candidateData.phone,
+    linkedInUrl: candidateData.linkedin,
+    website: candidateData.portfolio,
+  };
+
+  for (const field of fields) {
+    try {
+      const value = fieldMap[field.name];
+      if (value) {
+        await page.fill(field.selector, value);
+        result.fieldsFilled++;
+      } else if (field.type === 'file') {
+        result.skippedFields.push({ name: field.name, reason: 'File upload handled separately' });
+        result.fieldsSkipped++;
+      } else if (field.required) {
+        result.errors.push(`Required field "${field.label}" has no value`);
+      } else {
+        result.skippedFields.push({ name: field.name, reason: 'Optional field, no value provided' });
+        result.fieldsSkipped++;
+      }
+    } catch (error: any) {
+      result.errors.push(`Failed to fill "${field.label}": ${error.message}`);
+    }
+  }
+
+  // File uploads
+  try {
+    const resumeInput = await page.$('input[name="resume"]');
+    if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
+      fs.writeFileSync(tmpFile, candidateData.resumePdf);
+      await resumeInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload resume: ${error.message}`);
+  }
+
+  try {
+    const coverInput = await page.$('input[name="cover_letter"]');
+    if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
+      fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
+      await coverInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload cover letter: ${error.message}`);
+  }
+
+  return result;
+}
+
+/**
+ * Submit Ashby form
+ */
+export async function submitAshbyForm(page: Page): Promise<ATSSubmissionResult> {
+  const evidence: ATSSubmissionResult['evidence'] = {
+    submitButtonClicked: false,
+    navigationOccurred: false,
+    successTextFound: false,
+    confirmationUrlMatched: false,
+  };
+
+  const captchaCheck = await detectCAPTCHA(page);
+  if (captchaCheck.detected) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: true,
+      error: `CAPTCHA detected (${captchaCheck.type}) — manual intervention required`,
+      evidence,
+    };
+  }
+
+  try {
+    const submitSelectors = [
+      'button[type="submit"]',
+      'input[type="submit"]',
+      'button[data-testid="submit"]',
+      '.submit-btn',
+    ];
+
+    let submitButton: any = null;
+    for (const selector of submitSelectors) {
+      submitButton = await page.$(selector);
+      if (submitButton) break;
+    }
+
+    if (!submitButton) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: false,
+        error: 'Submit button not found',
+        evidence,
+      };
+    }
+
+    const urlBefore = page.url();
+    await submitButton.click();
+    evidence.submitButtonClicked = true;
+
+    try {
+      await page.waitForNavigation({ timeout: 10000 });
+      evidence.navigationOccurred = true;
+    } catch {
+      // No navigation — AJAX submission
+    }
+
+    await page.waitForTimeout(2000);
+
+    // Verify submission
+    try {
+      const text = await page.textContent('body') || '';
+      const url = page.url();
+      const lowerText = text.toLowerCase();
+
+      const successPhrases = [
+        'thank you for applying',
+        'application submitted',
+        'we have received your application',
+        'your application has been submitted',
+        'thanks for your interest',
+      ];
+      evidence.successTextFound = successPhrases.some((phrase) => lowerText.includes(phrase));
+      evidence.confirmationUrlMatched = url.includes('/thank') || url.includes('/success') || url.includes('/applied');
+    } catch {
+      // Verification failed
+    }
+
+    const postSubmitCaptcha = await detectCAPTCHA(page);
+    if (postSubmitCaptcha.detected) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: true,
+        error: `CAPTCHA appeared after submission attempt (${postSubmitCaptcha.type})`,
+        evidence,
+      };
+    }
+
+    const confirmed = evidence.successTextFound || evidence.confirmationUrlMatched;
+
+    let confirmationId: string | undefined;
+    try {
+      const text = await page.textContent('body') || '';
+      const idMatch = text.match(/(?:application|confirmation|reference)\s*(?:id|number|#)?\s*[:=]?\s*([a-zA-Z0-9_-]{4,30})/i);
+      if (idMatch) confirmationId = idMatch[1];
+    } catch {
+      // ID extraction failed
+    }
+
+    return {
+      success: confirmed,
+      confirmed,
+      confirmationId,
+      confirmationUrl: page.url(),
+      hasCAPTCHA: false,
+      evidence,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: false,
+      error: error.message,
+      evidence,
+    };
+  }
+}
+
+// ==========================================
+// WORKABLE
+// ==========================================
+
+/**
+ * Detect Workable form fields
+ */
+export async function detectWorkableFields(page: Page): Promise<ATSDetectionResult> {
+  const fields: ATSField[] = [];
+  let hasCAPTCHA = false;
+  let captchaType: string | undefined;
+
+  const captchaResult = await detectCAPTCHA(page);
+  if (captchaResult.detected) {
+    hasCAPTCHA = true;
+    captchaType = captchaResult.type;
+  }
+
+  const workableSelectors: Array<{ name: string; type: string; selector: string; label: string; required: boolean }> = [
+    { name: 'name', type: 'text', selector: 'input[name="name"]', label: 'Full Name', required: true },
+    { name: 'email', type: 'email', selector: 'input[name="email"]', label: 'Email', required: true },
+    { name: 'phone', type: 'tel', selector: 'input[name="phone"]', label: 'Phone', required: false },
+    { name: 'resume', type: 'file', selector: 'input[name="resume"]', label: 'Resume/CV', required: true },
+    { name: 'cover_letter', type: 'file', selector: 'input[name="cover_letter"]', label: 'Cover Letter', required: false },
+  ];
+
+  for (const fieldDef of workableSelectors) {
+    try {
+      const el = await page.$(fieldDef.selector);
+      if (el) {
+        fields.push({
+          name: fieldDef.name,
+          type: fieldDef.type,
+          required: fieldDef.required,
+          selector: fieldDef.selector,
+          label: fieldDef.label,
+        });
+      }
+    } catch {
+      // Selector query failed — continue
+    }
+  }
+
+  // Detect additional fields
+  try {
+    const customFields = await page.$$eval('div[class*="field"], div[class*="form-group"]', (divs: any[]) => {
+      return divs.map((div: any) => {
+        const label = div.querySelector('label');
+        const input = div.querySelector('input, textarea, select');
+        if (!label || !input) return null;
+        return {
+          name: input.getAttribute('name') || '',
+          label: label.textContent?.trim() || '',
+          type: input.tagName.toLowerCase() === 'textarea' ? 'textarea' : input.getAttribute('type') || 'text',
+          required: input.hasAttribute('required'),
+        };
+      }).filter(Boolean);
+    });
+
+    for (const cf of customFields) {
+      if (cf && !fields.find((f) => f.selector === `input[name="${cf.name}"]`)) {
+        fields.push({
+          name: cf.name,
+          type: cf.type === 'textarea' ? 'textarea' : 'text',
+          required: cf.required,
+          selector: `input[name="${cf.name}"], textarea[name="${cf.name}"]`,
+          label: cf.label,
+        });
+      }
+    }
+  } catch {
+    // Custom field detection failed
+  }
+
+  return {
+    atsType: 'workable',
+    formDetected: fields.length > 0,
+    fields,
+    hasCAPTCHA,
+    captchaType,
+  };
+}
+
+/**
+ * Fill Workable form fields
+ */
+export async function fillWorkableFields(
+  page: Page,
+  fields: ATSField[],
+  candidateData: {
+    fullName: string;
+    email: string;
+    phone?: string;
+    resumePdf?: Buffer;
+    resumeFileName?: string;
+    coverLetterPdf?: Buffer;
+    coverLetterFileName?: string;
+  }
+): Promise<ATSFillResult> {
+  const result: ATSFillResult = {
+    fieldsFilled: 0,
+    fieldsSkipped: 0,
+    skippedFields: [],
+    errors: [],
+  };
+
+  const fieldMap: Record<string, string | undefined> = {
+    name: candidateData.fullName,
+    email: candidateData.email,
+    phone: candidateData.phone,
+  };
+
+  for (const field of fields) {
+    try {
+      const value = fieldMap[field.name];
+      if (value) {
+        await page.fill(field.selector, value);
+        result.fieldsFilled++;
+      } else if (field.type === 'file') {
+        result.skippedFields.push({ name: field.name, reason: 'File upload handled separately' });
+        result.fieldsSkipped++;
+      } else if (field.required) {
+        result.errors.push(`Required field "${field.label}" has no value`);
+      } else {
+        result.skippedFields.push({ name: field.name, reason: 'Optional field, no value provided' });
+        result.fieldsSkipped++;
+      }
+    } catch (error: any) {
+      result.errors.push(`Failed to fill "${field.label}": ${error.message}`);
+    }
+  }
+
+  // File uploads
+  try {
+    const resumeInput = await page.$('input[name="resume"]');
+    if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
+      fs.writeFileSync(tmpFile, candidateData.resumePdf);
+      await resumeInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload resume: ${error.message}`);
+  }
+
+  try {
+    const coverInput = await page.$('input[name="cover_letter"]');
+    if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
+      const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
+      fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
+      await coverInput.setInputFiles(tmpFile);
+      fs.unlinkSync(tmpFile);
+      result.fieldsFilled++;
+    }
+  } catch (error: any) {
+    result.errors.push(`Failed to upload cover letter: ${error.message}`);
+  }
+
+  return result;
+}
+
+/**
+ * Submit Workable form
+ */
+export async function submitWorkableForm(page: Page): Promise<ATSSubmissionResult> {
+  const evidence: ATSSubmissionResult['evidence'] = {
+    submitButtonClicked: false,
+    navigationOccurred: false,
+    successTextFound: false,
+    confirmationUrlMatched: false,
+  };
+
+  const captchaCheck = await detectCAPTCHA(page);
+  if (captchaCheck.detected) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: true,
+      error: `CAPTCHA detected (${captchaCheck.type}) — manual intervention required`,
+      evidence,
+    };
+  }
+
+  try {
+    const submitSelectors = [
+      'button[type="submit"]',
+      'input[type="submit"]',
+      '.btn-submit',
+      'button[data-testid="submit"]',
+    ];
+
+    let submitButton: any = null;
+    for (const selector of submitSelectors) {
+      submitButton = await page.$(selector);
+      if (submitButton) break;
+    }
+
+    if (!submitButton) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: false,
+        error: 'Submit button not found',
+        evidence,
+      };
+    }
+
+    const urlBefore = page.url();
+    await submitButton.click();
+    evidence.submitButtonClicked = true;
+
+    try {
+      await page.waitForNavigation({ timeout: 10000 });
+      evidence.navigationOccurred = true;
+    } catch {
+      // No navigation — AJAX submission
+    }
+
+    await page.waitForTimeout(2000);
+
+    // Verify submission
+    try {
+      const text = await page.textContent('body') || '';
+      const url = page.url();
+      const lowerText = text.toLowerCase();
+
+      const successPhrases = [
+        'thank you for applying',
+        'application submitted',
+        'we have received your application',
+        'your application has been submitted',
+        'thanks for your interest',
+      ];
+      evidence.successTextFound = successPhrases.some((phrase) => lowerText.includes(phrase));
+      evidence.confirmationUrlMatched = url.includes('/thank') || url.includes('/success') || url.includes('/applied');
+    } catch {
+      // Verification failed
+    }
+
+    const postSubmitCaptcha = await detectCAPTCHA(page);
+    if (postSubmitCaptcha.detected) {
+      return {
+        success: false,
+        confirmed: false,
+        hasCAPTCHA: true,
+        error: `CAPTCHA appeared after submission attempt (${postSubmitCaptcha.type})`,
+        evidence,
+      };
+    }
+
+    const confirmed = evidence.successTextFound || evidence.confirmationUrlMatched;
+
+    let confirmationId: string | undefined;
+    try {
+      const text = await page.textContent('body') || '';
+      const idMatch = text.match(/(?:application|confirmation|reference)\s*(?:id|number|#)?\s*[:=]?\s*([a-zA-Z0-9_-]{4,30})/i);
+      if (idMatch) confirmationId = idMatch[1];
+    } catch {
+      // ID extraction failed
+    }
+
+    return {
+      success: confirmed,
+      confirmed,
+      confirmationId,
+      confirmationUrl: page.url(),
+      hasCAPTCHA: false,
+      evidence,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      confirmed: false,
+      hasCAPTCHA: false,
+      error: error.message,
+      evidence,
+    };
+  }
+}

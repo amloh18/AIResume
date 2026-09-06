@@ -33,6 +33,8 @@ export interface ApplyResult {
   screeningAnswers?: { question: string; answer: string | number | boolean; confidence: number }[];
   nextStep?: string;
   error?: string;
+  confirmationId?: string;
+  confirmationUrl?: string;
 }
 
 export interface SessionCredentials {
@@ -640,15 +642,111 @@ export class UnifiedApplyService {
     jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    return {
-      success: true,
-      atsType: 'lever',
-      applicationId: jobApp._id.toString(),
-      status: 'action_required',
-      message: `Tailored documents ready for ${context.company}. Automated Lever submission requires Playwright worker (not yet connected). Please submit manually.`,
-      screeningAnswers,
-      nextStep: 'Open Lever application form and submit tailored resume',
-    };
+    try {
+      const { detectLeverFields, fillLeverFields, submitLeverForm, detectCAPTCHA } = await import('./atsPlaywrightService');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const playwright = require('playwright');
+
+      let browser: any = null;
+      let ctx: any = null;
+      let page: any = null;
+
+      try {
+        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        ctx = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        });
+        page = await ctx.newPage();
+
+        await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        const captchaCheck = await detectCAPTCHA(page);
+        if (captchaCheck.detected) {
+          return {
+            success: true,
+            atsType: 'lever',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA detected on Lever application (${captchaCheck.type}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        const detection = await detectLeverFields(page);
+        if (!detection.formDetected) {
+          return {
+            success: true,
+            atsType: 'lever',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `No application form detected at ${context.jobUrl}. The job may have been filled or the URL may be incorrect.`,
+            screeningAnswers,
+            nextStep: 'Verify the application URL and submit manually',
+          };
+        }
+
+        const user = await User.findById(userId).lean() as any;
+        const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+
+        const fillResult = await fillLeverFields(page, detection.fields, {
+          fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
+          email: user?.email || primaryCv?.basics?.email || '',
+          phone: user?.phone || primaryCv?.basics?.phone || '',
+          linkedin: primaryCv?.basics?.url || '',
+        });
+
+        const submissionResult = await submitLeverForm(page);
+
+        if (submissionResult.hasCAPTCHA) {
+          return {
+            success: true,
+            atsType: 'lever',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA appeared during Lever submission (${submissionResult.error}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        if (submissionResult.confirmed) {
+          return {
+            success: true,
+            atsType: 'lever',
+            applicationId: jobApp._id.toString(),
+            status: 'applied',
+            message: `Application submitted to ${context.company} via Lever.`,
+            screeningAnswers,
+            confirmationId: submissionResult.confirmationId,
+            confirmationUrl: submissionResult.confirmationUrl,
+          };
+        }
+
+        return {
+          success: true,
+          atsType: 'lever',
+          applicationId: jobApp._id.toString(),
+          status: 'action_required',
+          message: `Automated submission could not be confirmed for ${context.company}. Please verify manually.`,
+          screeningAnswers,
+          nextStep: `Check ${context.jobUrl} for submission status`,
+        };
+      } finally {
+        if (page) try { await page.close(); } catch { /* ignore */ }
+        if (ctx) try { await ctx.close(); } catch { /* ignore */ }
+        if (browser) try { await browser.close(); } catch { /* ignore */ }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        atsType: 'lever',
+        applicationId: jobApp._id.toString(),
+        status: 'failed',
+        message: `Lever automation failed: ${error.message}`,
+        screeningAnswers,
+      };
+    }
   }
 
   // ==========================================
@@ -660,15 +758,111 @@ export class UnifiedApplyService {
     jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    return {
-      success: true,
-      atsType: 'ashby',
-      applicationId: jobApp._id.toString(),
-      status: 'action_required',
-      message: `Tailored documents ready for ${context.company}. Automated Ashby submission requires Playwright worker (not yet connected). Please submit manually.`,
-      screeningAnswers,
-      nextStep: 'Open Ashby application form and submit tailored resume',
-    };
+    try {
+      const { detectAshbyFields, fillAshbyFields, submitAshbyForm, detectCAPTCHA } = await import('./atsPlaywrightService');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const playwright = require('playwright');
+
+      let browser: any = null;
+      let ctx: any = null;
+      let page: any = null;
+
+      try {
+        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        ctx = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        });
+        page = await ctx.newPage();
+
+        await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        const captchaCheck = await detectCAPTCHA(page);
+        if (captchaCheck.detected) {
+          return {
+            success: true,
+            atsType: 'ashby',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA detected on Ashby application (${captchaCheck.type}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        const detection = await detectAshbyFields(page);
+        if (!detection.formDetected) {
+          return {
+            success: true,
+            atsType: 'ashby',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `No application form detected at ${context.jobUrl}. The job may have been filled or the URL may be incorrect.`,
+            screeningAnswers,
+            nextStep: 'Verify the application URL and submit manually',
+          };
+        }
+
+        const user = await User.findById(userId).lean() as any;
+        const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+
+        const fillResult = await fillAshbyFields(page, detection.fields, {
+          fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
+          email: user?.email || primaryCv?.basics?.email || '',
+          phone: user?.phone || primaryCv?.basics?.phone || '',
+          linkedin: primaryCv?.basics?.url || '',
+        });
+
+        const submissionResult = await submitAshbyForm(page);
+
+        if (submissionResult.hasCAPTCHA) {
+          return {
+            success: true,
+            atsType: 'ashby',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA appeared during Ashby submission (${submissionResult.error}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        if (submissionResult.confirmed) {
+          return {
+            success: true,
+            atsType: 'ashby',
+            applicationId: jobApp._id.toString(),
+            status: 'applied',
+            message: `Application submitted to ${context.company} via Ashby.`,
+            screeningAnswers,
+            confirmationId: submissionResult.confirmationId,
+            confirmationUrl: submissionResult.confirmationUrl,
+          };
+        }
+
+        return {
+          success: true,
+          atsType: 'ashby',
+          applicationId: jobApp._id.toString(),
+          status: 'action_required',
+          message: `Automated submission could not be confirmed for ${context.company}. Please verify manually.`,
+          screeningAnswers,
+          nextStep: `Check ${context.jobUrl} for submission status`,
+        };
+      } finally {
+        if (page) try { await page.close(); } catch { /* ignore */ }
+        if (ctx) try { await ctx.close(); } catch { /* ignore */ }
+        if (browser) try { await browser.close(); } catch { /* ignore */ }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        atsType: 'ashby',
+        applicationId: jobApp._id.toString(),
+        status: 'failed',
+        message: `Ashby automation failed: ${error.message}`,
+        screeningAnswers,
+      };
+    }
   }
 
   // ==========================================
@@ -680,15 +874,110 @@ export class UnifiedApplyService {
     jobApp: any,
     screeningAnswers: any[]
   ): Promise<ApplyResult> {
-    return {
-      success: true,
-      atsType: 'workable',
-      applicationId: jobApp._id.toString(),
-      status: 'action_required',
-      message: `Tailored documents ready for ${context.company}. Automated Workable submission requires Playwright worker (not yet connected). Please submit manually.`,
-      screeningAnswers,
-      nextStep: 'Open Workable application form and submit tailored resume',
-    };
+    try {
+      const { detectWorkableFields, fillWorkableFields, submitWorkableForm, detectCAPTCHA } = await import('./atsPlaywrightService');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const playwright = require('playwright');
+
+      let browser: any = null;
+      let ctx: any = null;
+      let page: any = null;
+
+      try {
+        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        ctx = await browser.newContext({
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        });
+        page = await ctx.newPage();
+
+        await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        const captchaCheck = await detectCAPTCHA(page);
+        if (captchaCheck.detected) {
+          return {
+            success: true,
+            atsType: 'workable',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA detected on Workable application (${captchaCheck.type}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        const detection = await detectWorkableFields(page);
+        if (!detection.formDetected) {
+          return {
+            success: true,
+            atsType: 'workable',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `No application form detected at ${context.jobUrl}. The job may have been filled or the URL may be incorrect.`,
+            screeningAnswers,
+            nextStep: 'Verify the application URL and submit manually',
+          };
+        }
+
+        const user = await User.findById(userId).lean() as any;
+        const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+
+        const fillResult = await fillWorkableFields(page, detection.fields, {
+          fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
+          email: user?.email || primaryCv?.basics?.email || '',
+          phone: user?.phone || primaryCv?.basics?.phone || '',
+        });
+
+        const submissionResult = await submitWorkableForm(page);
+
+        if (submissionResult.hasCAPTCHA) {
+          return {
+            success: true,
+            atsType: 'workable',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `CAPTCHA appeared during Workable submission (${submissionResult.error}). Manual completion required.`,
+            screeningAnswers,
+            nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
+          };
+        }
+
+        if (submissionResult.confirmed) {
+          return {
+            success: true,
+            atsType: 'workable',
+            applicationId: jobApp._id.toString(),
+            status: 'applied',
+            message: `Application submitted to ${context.company} via Workable.`,
+            screeningAnswers,
+            confirmationId: submissionResult.confirmationId,
+            confirmationUrl: submissionResult.confirmationUrl,
+          };
+        }
+
+        return {
+          success: true,
+          atsType: 'workable',
+          applicationId: jobApp._id.toString(),
+          status: 'action_required',
+          message: `Automated submission could not be confirmed for ${context.company}. Please verify manually.`,
+          screeningAnswers,
+          nextStep: `Check ${context.jobUrl} for submission status`,
+        };
+      } finally {
+        if (page) try { await page.close(); } catch { /* ignore */ }
+        if (ctx) try { await ctx.close(); } catch { /* ignore */ }
+        if (browser) try { await browser.close(); } catch { /* ignore */ }
+      }
+    } catch (error: any) {
+      return {
+        success: false,
+        atsType: 'workable',
+        applicationId: jobApp._id.toString(),
+        status: 'failed',
+        message: `Workable automation failed: ${error.message}`,
+        screeningAnswers,
+      };
+    }
   }
 
   // ==========================================

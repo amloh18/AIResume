@@ -34,6 +34,11 @@ interface EnvConfig {
   // AI Services (primary key used across the app)
   GEMINI_API_KEY: string;
   
+  // Ollama (VPS) — Primary AI model
+  OLLAMA_BASE_URL?: string;
+  OLLAMA_MODEL?: string;
+  GEMINI_MODEL?: string;
+  
   // Payment Processing
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
