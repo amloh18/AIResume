@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ExternalLink, FolderGit2, Calendar, Building2, Sparkles } from 'lucide-react';
+import { ExternalLink, FolderGit2, Calendar, Building2 } from 'lucide-react';
 import CopyableText, { CopyAllButton } from './CopyableText';
 import type { LinkedInProjectEntry } from '@/types/linkedin';
 
@@ -130,19 +130,6 @@ function ProjectEntry({ project, index, showEnhanced }: ProjectEntryProps) {
                             text={displayTitle}
                             className="text-body font-semibold text-gray-900 block"
                         />
-                        <button
-                            onClick={() => {
-                                window.dispatchEvent(new CustomEvent('mori-cv-selection', {
-                                    detail: { 
-                                        path: `projects[${index}].description`, 
-                                        text: origData.description || ''
-                                    }
-                                }));
-                            }}
-                            className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded transition-colors shrink-0"
-                        >
-                            <Sparkles className="w-2.5 h-2.5" /> Edit with Mori
-                        </button>
                     </div>
 
                     {/* Date Range */}

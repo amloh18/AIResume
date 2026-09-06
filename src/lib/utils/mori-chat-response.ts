@@ -127,6 +127,39 @@ export function inferCvSectionFromPrompt(text: string): { path: string; text: st
   return hits[0] ? { path: hits[0].path, text: raw } : null;
 }
 
+/**
+ * Normalize AI-returned options into the canonical `{ label, prompt }` shape.
+ * The model may return options as strings, as objects with different keys
+ * (e.g. `{ label, value }`), or as a mix — normalize defensively so the chat
+ * UI always renders clickable cards with a valid prompt.
+ */
+export function normalizeMoriChatOptions(raw: any): Array<{ label: string; prompt: string }> | null {
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const seen = new Set<string>();
+  const out: Array<{ label: string; prompt: string }> = [];
+  for (const entry of raw) {
+    if (typeof entry === 'string') {
+      const label = entry.trim();
+      if (!label) continue;
+      const key = label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ label, prompt: label });
+      continue;
+    }
+    if (entry && typeof entry === 'object') {
+      const label = String(entry.label ?? entry.title ?? entry.text ?? entry.value ?? entry.prompt ?? '').trim();
+      if (!label) continue;
+      const prompt = String(entry.prompt ?? entry.value ?? entry.label ?? entry.text ?? entry.title ?? label).trim() || label;
+      const key = `${label.toLowerCase()}::${prompt.toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ label, prompt });
+    }
+  }
+  return out.length > 0 ? out.slice(0, 6) : null;
+}
+
 export type MoriTargetResolution =
   | { status: 'resolved'; selection: { path: string; text: string } | null }
   | { status: 'ask'; message: string; options: Array<{ label: string; prompt: string }> };
@@ -178,7 +211,7 @@ export function recoverMoriChatResult(result: any, currentCv: any) {
   let message = result?.message;
   let patch = result?.patch || null;
   let updatedCV = result?.updatedCV || null;
-  const options = result?.options || null;
+  const options = normalizeMoriChatOptions(result?.options);
 
   if (typeof message === 'string' && looksLikeCvJsonDump(message)) {
     const parsed = parseMoriChatContent(message);
@@ -241,7 +274,7 @@ export function parseMoriChatContent(raw: string): {
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
     return {
       message: sanitizeMoriChatMessage(parsed.message) || "I've updated your CV.",
-      options: Array.isArray(parsed.options) ? parsed.options : null,
+      options: normalizeMoriChatOptions(parsed.options),
       patch: parsed.patch && typeof parsed.patch === 'object' && !Array.isArray(parsed.patch) ? parsed.patch : null,
       updatedCV: parsed.updatedCV && typeof parsed.updatedCV === 'object' ? parsed.updatedCV : null,
     };

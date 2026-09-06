@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Building2, MapPin, Calendar, Sparkles, AlertCircle, RefreshCw, Check, Edit2 } from 'lucide-react';
 import CopyableText, { CopyAllButton } from './CopyableText';
 import { ExperienceGuard } from './CharacterGuard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LinkedInExperienceEntry } from '@/types/linkedin';
 import { useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
 
@@ -113,13 +114,28 @@ export default function LinkedInExperienceCard({ data }: LinkedInExperienceCardP
                     {isLoading ? (
                         <div className="space-y-6 flex-1">
                             {[1, 2].map(i => (
-                                <div key={i} className="animate-pulse flex gap-4">
-                                    <div className="w-12 h-12 bg-gray-200 rounded-lg"></div>
-                                    <div className="flex-1 space-y-2 mt-1">
-                                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                                        <div className="h-3 bg-gray-100 rounded w-1/3"></div>
-                                        <div className="h-3 bg-gray-100 rounded w-full mt-3"></div>
-                                        <div className="h-3 bg-gray-100 rounded w-5/6"></div>
+                                <div key={i} className={`flex gap-4 ${i === 1 ? 'pb-6 border-b border-[var(--border-primary)]' : ''}`}>
+                                    <div className="w-10 h-10 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center shrink-0">
+                                        <Building2 className="w-5 h-5 text-[var(--text-tertiary)]" />
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <Skeleton className="h-4 w-48" />
+                                        <Skeleton className="h-3.5 w-36" />
+                                        <Skeleton className="h-3 w-32" />
+                                        <div className="space-y-1.5 pt-1">
+                                            <div className="flex items-start gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                                                <Skeleton className="h-3.5 w-full" />
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                                                <Skeleton className="h-3.5 w-5/6" />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5 pt-1">
+                                            <Skeleton className="h-4 w-14 rounded" />
+                                            <Skeleton className="h-4 w-16 rounded" />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -217,21 +233,6 @@ function ExperienceEntry({ data, index, isEnhancedView, isLast }: ExperienceEntr
                                 {displayTitle}
                                 {isEnhancedView && data.status === 'ACCEPTED' && <Check className="inline-block w-3 h-3 text-blue-600 ml-1" />}
                             </div>
-                        )}
-                        {!isEnhancedView && (
-                            <button
-                                onClick={() => {
-                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
-                                        detail: { 
-                                            path: `work[${index}].summary`, 
-                                            text: originalData.description 
-                                        }
-                                    }));
-                                }}
-                                className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 font-semibold flex items-center gap-0.5 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded transition-colors shrink-0"
-                            >
-                                <Sparkles className="w-2.5 h-2.5" /> Edit with Mori
-                            </button>
                         )}
                     </div>
 

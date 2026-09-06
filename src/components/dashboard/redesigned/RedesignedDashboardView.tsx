@@ -46,6 +46,7 @@ import { useToast } from '@/hooks/use-toast';
 import UpgradeSuggestionCard from '@/components/dashboard/redesigned/UpgradeSuggestionCard';
 import TopJobMatchesSection from '@/components/dashboard/redesigned/TopJobMatchesSection';
 import NeedsAttentionWidget from '@/components/dashboard/redesigned/NeedsAttentionWidget';
+import OnboardingChecklistWidget from '@/components/dashboard/redesigned/OnboardingChecklistWidget';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import ProfileAnalyticsSidebar from '@/components/dashboard/redesigned/ProfileAnalyticsSidebar';
@@ -1347,6 +1348,10 @@ export default function RedesignedDashboardView() {
         <h1 className="dashboard-greeting text-[var(--text-primary)]">{greeting}</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">Here&apos;s what&apos;s happening with your career.</p>
       </div>
+
+      {/* Journey CV onboarding checklist — hides permanently once the master CV
+          reaches a good enough score */}
+      <OnboardingChecklistWidget />
 
       {/* Compact KPI strip */}
       <KpiStrip />

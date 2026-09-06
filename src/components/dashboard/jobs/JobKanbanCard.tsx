@@ -30,6 +30,7 @@ import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
 import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
+import { getJobCardColorClass } from "@/lib/config/job-constants";
 
 interface JobApplication {
   id: string;
@@ -93,6 +94,7 @@ interface JobKanbanCardProps {
   isDragging: boolean;
   canDrag: boolean;
   isExpired?: boolean;
+  colorIndex?: number;
   onClick: (job: JobApplication) => void;
   onDragStart: (e: React.DragEvent, jobId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
@@ -114,6 +116,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   isDragging,
   canDrag,
   isExpired,
+  colorIndex,
   onClick,
   onDragStart,
   onDragEnd,
@@ -662,6 +665,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const jobId = String(job.id || job._id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
   const { clearStatus } = useJobLiveStatusStore();
+  const cardColorClass = getJobCardColorClass(colorIndex, jobId);
 
   return (
     <motion.div
@@ -678,12 +682,12 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         onClick={() => onClick(job)}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`group relative overflow-hidden bg-white dark:bg-[#141810] rounded-xl border transition-all duration-300 ${
+        className={`job-card-kanban group relative overflow-hidden rounded-xl border transition-all duration-300 ${cardColorClass} ${
           isSelected
             ? "ring-2 ring-blue-500 ring-opacity-50"
-            : "border-gray-200 dark:border-white/20"
+            : ""
         } ${isDragging ? "opacity-50" : ""} ${!canDrag ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-        ${isExpired ? "opacity-60 grayscale border-dashed border-gray-300 dark:border-gray-600" : "shadow-sm group-hover:shadow-md"}
+        ${isExpired ? "opacity-60 grayscale border-dashed" : "shadow-2xs group-hover:shadow-md"}
         `}
       >
       <div className="p-3">

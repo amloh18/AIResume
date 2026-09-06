@@ -6,6 +6,7 @@ import { MapPin, Users, Sparkles, AlertCircle, RefreshCw, Check, Edit2, ArrowRig
 import Image from 'next/image';
 import CopyableText, { CopyAllButton } from './CopyableText';
 import { HeadlineGuard } from './CharacterGuard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LinkedInHeroSection } from '@/types/linkedin';
 import { LINKEDIN_COLORS } from '@/types/linkedin';
 import { useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
@@ -65,18 +66,6 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                 <div className="flex-1 p-5 sm:p-6 bg-[var(--bg-tertiary)]/30">
                     <div className="flex items-center justify-between mb-4">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Original Profile</span>
-                        {data.current.headline && (
-                            <button
-                                onClick={() => {
-                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
-                                        detail: { path: 'basics.label', text: data.current.headline }
-                                    }));
-                                }}
-                                className="text-xs text-emerald-700 dark:text-lime-400 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg transition-colors border border-emerald-500/20"
-                            >
-                                <Sparkles className="w-3 h-3" /> Edit with Mori
-                            </button>
-                        )}
                     </div>
                     
                     <div className="flex items-start gap-4">
@@ -120,9 +109,23 @@ export default function LinkedInHeroCard({ data, userProfileImage }: LinkedInHer
                     </div>
 
                     {isLoading ? (
-                        <div className="animate-pulse space-y-3 flex-1">
-                            <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-4 bg-gray-100 rounded w-1/2"></div>
+                        <div className="space-y-4 flex-1">
+                            <div className="flex items-start gap-4">
+                                <Skeleton className="w-16 h-16 rounded-full shrink-0 opacity-60" />
+                                <div className="flex-1 min-w-0 space-y-2">
+                                    <Skeleton className="h-5 w-40" />
+                                    <Skeleton className="h-4 w-full" />
+                                    <Skeleton className="h-4 w-4/5" />
+                                    <div className="flex items-center gap-1.5 mt-2">
+                                        <MapPin className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
+                                        <Skeleton className="h-3.5 w-32" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3">
+                                <Skeleton className="h-3.5 w-full mb-1.5" />
+                                <Skeleton className="h-3.5 w-5/6" />
+                            </div>
                         </div>
                     ) : isError ? (
                         <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center flex-1">

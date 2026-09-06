@@ -115,3 +115,74 @@ export function getCurrencySymbol(currency?: string): string {
 }
 
 export type JobRegion = 'UK' | 'India';
+
+export interface JobCardColorTheme {
+  id: string;
+  name: string;
+  cardClass: string;
+  bgLight: string;
+  borderLight: string;
+}
+
+export const JOB_CARD_COLOR_PALETTES: JobCardColorTheme[] = [
+  {
+    id: 'peach',
+    name: 'Peach',
+    cardClass: 'job-card-peach',
+    bgLight: '#FFE0CB',
+    borderLight: '#FCD3B6',
+  },
+  {
+    id: 'mint',
+    name: 'Mint',
+    cardClass: 'job-card-mint',
+    bgLight: '#D6F6EE',
+    borderLight: '#B7EDE0',
+  },
+  {
+    id: 'lavender',
+    name: 'Lavender',
+    cardClass: 'job-card-lavender',
+    bgLight: '#E2DBFB',
+    borderLight: '#CDC1F7',
+  },
+  {
+    id: 'sky',
+    name: 'Sky Blue',
+    cardClass: 'job-card-sky',
+    bgLight: '#E2F4FF',
+    borderLight: '#C5E7FD',
+  },
+  {
+    id: 'pink',
+    name: 'Pink',
+    cardClass: 'job-card-pink',
+    bgLight: '#FCE8F5',
+    borderLight: '#F7CDE7',
+  },
+  {
+    id: 'slate',
+    name: 'Pearl Slate',
+    cardClass: 'job-card-slate',
+    bgLight: '#EDEFF7',
+    borderLight: '#D6D9E7',
+  },
+];
+
+export function getJobCardColorClass(index?: number, id?: string): string {
+  return getJobCardColorTheme(index, id).cardClass;
+}
+
+export function getJobCardColorTheme(index?: number, id?: string): JobCardColorTheme {
+  if (typeof index === 'number' && index >= 0) {
+    return JOB_CARD_COLOR_PALETTES[index % JOB_CARD_COLOR_PALETTES.length];
+  }
+  if (id) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash + id.charCodeAt(i) * (i + 1)) % 10007;
+    }
+    return JOB_CARD_COLOR_PALETTES[hash % JOB_CARD_COLOR_PALETTES.length];
+  }
+  return JOB_CARD_COLOR_PALETTES[0];
+}

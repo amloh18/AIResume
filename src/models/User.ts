@@ -219,6 +219,9 @@ export interface IUser extends Document {
     completed_stages?: string[];
     onboarding_version?: number;
     primary_cv_id?: string | mongoose.Types.ObjectId;
+    cv_checklist_dismissed?: boolean;
+    cv_checklist_dismiss_reason?: 'score' | 'manual';
+    cv_checklist_dismissed_at?: string;
 
     // Career Preferences & Profiling
     career_pathway?: string;
@@ -831,6 +834,9 @@ const userSchema = new Schema<IUser>({
     completed_stages: { type: [String], default: [] },
     onboarding_version: { type: Number, default: 1 },
     primary_cv_id: { type: Schema.Types.ObjectId, ref: 'CV' },
+    cv_checklist_dismissed: { type: Boolean, default: false },
+    cv_checklist_dismiss_reason: { type: String, enum: ['score', 'manual'] },
+    cv_checklist_dismissed_at: { type: String },
 
     // Career Preferences & Profiling
     career_pathway: { type: String },

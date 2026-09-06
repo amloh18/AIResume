@@ -126,8 +126,8 @@ const MoriChatInterface: React.FC = () => {
   }, [showHistory, currentSelection]);
 
   const handleSend = async (overrideInput?: string) => {
-    const textToSend = overrideInput || input;
-    if (!textToSend.trim() || isLoading) return;
+    const textToSend = (overrideInput || input).trim();
+    if (!textToSend || isLoading) return;
 
     if (textToSend === 'Cancel') {
       setInput('');
@@ -149,7 +149,9 @@ const MoriChatInterface: React.FC = () => {
 
     const textLower = textToSend.toLowerCase();
     const isConfirmWholeCV = textLower.includes('apply to whole') || textLower.includes('apply to the whole') || textLower.includes('entire cv') || textLower.includes('proceed');
-    const isQuickOption = messages.length > 1 && messages[messages.length - 1].options?.some(opt => opt.prompt === textToSend || opt.label === textToSend);
+    // Match against ANY prior assistant option (not just the latest message) so
+    // clicking a stale/older option card still sends instead of re-asking.
+    const isQuickOption = messages.some(m => m.role === 'assistant' && m.options?.some(opt => opt.prompt === textToSend || opt.label === textToSend));
     const target = resolveMoriEditTarget(textToSend, state.cvData);
 
     if (!currentSelection && !isConfirmWholeCV && !isQuickOption && target.status === 'ask') {
@@ -174,7 +176,7 @@ const MoriChatInterface: React.FC = () => {
     const inferredSelection = currentSelection || (target.status === 'resolved' ? target.selection : null);
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       role: 'user',
       content: textToSend,
       timestamp: Date.now(),
@@ -225,11 +227,11 @@ const MoriChatInterface: React.FC = () => {
       }
       
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'assistant',
         content: recovered.message,
         timestamp: Date.now(),
-        options: recovered.options
+        options: recovered.options ?? undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -346,7 +348,7 @@ const MoriChatInterface: React.FC = () => {
 
     } catch (error: any) {
       setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'assistant',
         content: `Sorry, something went wrong. ${error.message || 'Please try again.'}`,
         timestamp: Date.now(),

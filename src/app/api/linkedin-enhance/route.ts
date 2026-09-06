@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 import LinkedInSnapshot from '@/models/LinkedInSnapshot';
+import { LINKEDIN_ENHANCER_PROMPT } from '@/lib/prompts/linkedin-enhancer-prompt';
 import fs from 'fs';
 import path from 'path';
 
@@ -29,6 +30,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { cvId, cvType, tone = 'Professional', targetIndustry, cvData, regenerate = false } = body;
+    const resolvedCvType: 'master' | 'journey' | 'standalone' | undefined =
+      cvType === 'master' || cvType === 'journey' || cvType === 'standalone' ? cvType : undefined;
 
     if (!cvId && !cvData) {
       return NextResponse.json(
@@ -85,7 +88,12 @@ export async function POST(request: NextRequest) {
     if (!cv) {
       // Fetch CV data from internal API
       const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-      const endpoint = cvType === 'master' ? `${baseUrl}/api/cvs/master` : `${baseUrl}/api/cv/${cvId}`;
+      // Journey & standalone CVs are fetched by their document id; the master CV
+      // has a dedicated endpoint that resolves the canonical master document.
+      const endpoint =
+        resolvedCvType === 'master'
+          ? `${baseUrl}/api/cvs/master`
+          : `${baseUrl}/api/cvs/${cvId}`;
 
       const cvResponse = await fetch(endpoint, {
         headers: { cookie: request.headers.get('cookie') || '' },
@@ -99,14 +107,18 @@ export async function POST(request: NextRequest) {
       }
 
       const data = await cvResponse.json();
-      // Master CV response: { success, data: { masterCV: { cvData: {...} } } }
-      cv = cvType === 'master'
-        ? (data.data?.masterCV?.cvData || data.data?.masterCV || data.masterCv)
-        : data;
-
-      // Ensure we have the correct ID for saving
-      if (cvType === 'master' && data.data?.masterCV?._id) {
-        fetchedCvId = data.data.masterCV._id;
+      if (resolvedCvType === 'master') {
+        // Master CV response: { success, data: { masterCV: { cvData: {...} } } }
+        cv = data.data?.masterCV?.cvData || data.data?.masterCV || data.masterCv;
+        if (data.data?.masterCV?._id) {
+          fetchedCvId = data.data.masterCV._id;
+        }
+      } else {
+        // /api/cvs/:id response: { success, data: { cv: { id, cvData, ... } } }
+        cv = data.data?.cv?.cvData || data.data?.cv;
+        if (data.data?.cv?._id || data.data?.cv?.id) {
+          fetchedCvId = data.data.cv._id || data.data.cv.id;
+        }
       }
     }
 
@@ -320,14 +332,18 @@ export async function POST(request: NextRequest) {
 function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?: string, variationSeed?: number): string {
   const cvJson = JSON.stringify(cvData, null, 2);
   
-  // Read prompt template from public/images/lindkedin_prompt.md
-  let promptTemplate = '';
+  // Read the full prompt template. The canonical template ships bundled as a TS
+  // module (markdown files are excluded from the Docker image). For local
+  // development, prefer docs/lindkedin_prompt.md if present so edits to the
+  // source-of-truth markdown are picked up without a rebuild.
+  let promptTemplate = LINKEDIN_ENHANCER_PROMPT;
   try {
-    const filePath = path.join(process.cwd(), 'public', 'images', 'lindkedin_prompt.md');
-    promptTemplate = fs.readFileSync(filePath, 'utf8');
+    const filePath = path.join(process.cwd(), 'docs', 'lindkedin_prompt.md');
+    if (fs.existsSync(filePath)) {
+      promptTemplate = fs.readFileSync(filePath, 'utf8');
+    }
   } catch (err) {
-    console.error('Failed to read linkedin_prompt.md, falling back to basic prompt', err);
-    promptTemplate = `Transform CV data to LinkedIn Profile.\nTone: {{TONE_PREFERENCE}}\nCV: {{MASTER_CV_DATA}}`;
+    console.error('Failed to read docs/lindkedin_prompt.md, using bundled prompt', err);
   }
 
   // Map tone from UI selector values to expected prompt keys

@@ -133,8 +133,8 @@ export function CountrySelector({ value, onChange, disabled, align = 'right', va
         <div className="flex items-center gap-1.5">
           {selectedObjects.length === 1 ? (
             <>
-              <span className="text-xs">{selectedObjects[0].flag}</span>
-              <span>{selectedObjects[0].name}</span>
+              <span className="text-xs shrink-0">{selectedObjects[0].flag}</span>
+              <span className="truncate max-w-[90px] sm:max-w-[160px] md:max-w-none">{selectedObjects[0].name}</span>
             </>
           ) : selectedObjects.length > 1 ? (
             <>

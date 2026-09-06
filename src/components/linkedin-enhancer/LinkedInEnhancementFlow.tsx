@@ -2,12 +2,11 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, FileText, ExternalLink, MessageSquare, Sparkles } from 'lucide-react';
+import { AlertCircle, FileText, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 // Context & Components
-import { LinkedInEnhancerProvider, useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
-import LinkedInEnhancerDashboard from './LinkedInEnhancerDashboard';
+import { useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
 import LinkedInHeader from './LinkedInHeader';
 import LinkedInHeroCard from './LinkedInHeroCard';
 import LinkedInAboutCard from './LinkedInAboutCard';
@@ -17,22 +16,91 @@ import LinkedInProjectsCard from './LinkedInProjectsCard';
 import LinkedInSkillsCard from './LinkedInSkillsCard';
 import LinkedInLanguagesCard from './LinkedInLanguagesCard';
 import LinkedInRecommendationsSidebar from './LinkedInRecommendationsSidebar';
-import { PanelRightClose, PanelRightOpen, CheckSquare, X } from 'lucide-react';
+import LinkedInEnhancerSkeleton from './LinkedInEnhancerSkeleton';
+import { CheckSquare, X } from 'lucide-react';
 import BrowserExtensionModal from './BrowserExtensionModal';
 import SuccessFeedbackModal from './SuccessFeedbackModal';
-import LinkedInAuthModal from './LinkedInAuthModal';
-import LinkedInMoriChatPanel from './LinkedInMoriChatPanel';
 
 // Types
-import type { CVSelectionItem, LinkedInUserContext } from '@/types/linkedin';
+import type { CVSelectionItem, LinkedInUserContext, LinkedInCvType } from '@/types/linkedin';
 import { LINKEDIN_COLORS } from '@/types/linkedin';
 
-export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackToDashboard?: () => void }) {
+// Job statuses that mean the application journey is finished. Journey CVs linked
+// to those jobs are not selected as the default source.
+const TERMINAL_JOB_STATUSES = new Set([
+  'rejected', 'accepted', 'withdrawn', 'archived', 'closed', 'declined',
+]);
+
+/**
+ * Resolve the source CV the LinkedIn enhancer should enhance.
+ *
+ * Priority:
+ *   1. The CV of the user's most recent active job-application journey
+ *      (a `journey` CV) — this is the tailored document they are actively
+ *      preparing, so it becomes the default LinkedIn source.
+ *   2. The Master CV.
+ *   3. The most recently updated standalone CV.
+ */
+async function resolveDefaultSourceCv(): Promise<CVSelectionItem | null> {
+  // 1) Look through the user's journeys for the most recent one that already has
+  //    a CV and is not a finished application.
+  try {
+    const journeyResponse = await fetch('/api/application-journey?limit=40');
+    if (journeyResponse.ok) {
+      const journeyData = await journeyResponse.json();
+      const journeys: any[] = journeyData?.data?.journeys || [];
+      const journeysWithCv = journeys.filter((j: any) => j?.cvId);
+      const activeJourney =
+        journeysWithCv.find((j: any) => {
+          const jobStatus = String(j?.jobStatus || '').toLowerCase();
+          return !TERMINAL_JOB_STATUSES.has(jobStatus);
+        }) || journeysWithCv[0];
+
+      if (activeJourney?.cvId) {
+        const journeyName = activeJourney?.jobTitle
+          ? `${activeJourney.jobTitle}${activeJourney?.company ? ` · ${activeJourney.company}` : ''}`
+          : 'Journey CV';
+        return {
+          id: activeJourney.cvId,
+          name: journeyName,
+          type: 'journey' as const,
+          updatedAt: activeJourney?.updatedAt || new Date().toISOString(),
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Failed to resolve journey CV, falling back to CV list:', err);
+  }
+
+  // 2/3) Fall back to the CV list. Order: journey -> master -> standalone.
+  try {
+    const response = await fetch('/api/cvs?type=cv&projection=list');
+    if (!response.ok) return null;
+    const data = await response.json();
+    const cvs: any[] = data?.data?.cvs || [];
+
+    const pick = (cvType: LinkedInCvType) => {
+      const cv = cvs.find((c: any) => (c?.cvType || c?.type) === cvType);
+      if (!cv) return null;
+      return {
+        id: cv.id || cv._id,
+        name: cv.title || cv.documentName || 'CV',
+        type: cvType,
+        updatedAt: cv.updatedAt || new Date().toISOString(),
+      };
+    };
+
+    return pick('journey') || pick('master') || pick('standalone');
+  } catch (err) {
+    console.error('Failed to resolve source CV:', err);
+    return null;
+  }
+}
+
+export default function LinkedInEnhancementFlow(_props: { onBackToDashboard?: () => void } = {}) {
     const router = useRouter();
     const { state, dispatch, setTone, selectCv, triggerEnhancement } = useLinkedInEnhancer();
     const [availableCvs, setAvailableCvs] = useState<CVSelectionItem[]>([]);
-    const activeCvId = state.selectedCvId || availableCvs[0]?.id || null;
-    const activeCvType = state.selectedCvType || availableCvs[0]?.type || 'master';
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
     const [showInsights, setShowInsights] = useState(true);
@@ -45,15 +113,10 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         skills_matrix: true,
         languages: true
     });
-    const [isFetchingFromLinkedIn, setIsFetchingFromLinkedIn] = useState(false);
-    const [fetchError, setFetchError] = useState<string | null>(null);
-    
     // Modal states
     const [isBrowserModalOpen, setIsBrowserModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [appliedSectionsCount, setAppliedSectionsCount] = useState(0);
-    const [showMoriChat, setShowMoriChat] = useState(false);
-    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     // Fetch user profile image from settings
     useEffect(() => {
@@ -71,113 +134,34 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         fetchUserProfile();
     }, []);
 
-    // Listen to selection event to auto-open Mori Chat panel
-    useEffect(() => {
-        const handleMoriSelection = () => {
-            setShowMoriChat(true);
-            setShowInsights(false);
-        };
-        window.addEventListener('mori-cv-selection', handleMoriSelection);
-        return () => window.removeEventListener('mori-cv-selection', handleMoriSelection);
-    }, []);
-
-    // Fetch available CVs on mount
-    useEffect(() => {
-        async function fetchCvs() {
-            dispatch({ type: 'SET_LOADING', payload: true });
-
-            try {
-                // Fetch Master CV from correct endpoint
-                const masterResponse = await fetch('/api/cvs/master');
-                let masterCv: CVSelectionItem | null = null;
-
-                if (masterResponse.ok) {
-                    const masterData = await masterResponse.json();
-                    // Response format: { success: true, data: { masterCV: {...} } }
-                    if (masterData.success && masterData.data?.masterCV) {
-                        const mcv = masterData.data.masterCV;
-                        masterCv = {
-                            id: mcv.id || mcv._id,
-                            name: 'Master CV',
-                            type: 'master' as const,
-                            updatedAt: mcv.updatedAt || new Date().toISOString(),
-                        };
-                    }
-                }
-
-                // Fetch Standalone CVs
-                const cvsResponse = await fetch('/api/cv?type=standalone');
-                let standaloneCvs: CVSelectionItem[] = [];
-
-                if (cvsResponse.ok) {
-                    const cvsData = await cvsResponse.json();
-                    if (Array.isArray(cvsData)) {
-                        standaloneCvs = cvsData.map((cv: any) => ({
-                            id: cv._id || cv.id,
-                            name: cv.documentName || cv.title || 'Untitled CV',
-                            type: 'standalone' as const,
-                            updatedAt: cv.updatedAt || new Date().toISOString(),
-                        }));
-                    }
-                }
-
-                const allCvs = [
-                    ...(masterCv ? [masterCv] : []),
-                    ...standaloneCvs,
-                ];
-
-                setAvailableCvs(allCvs);
-
-                // Auto-select first CV (Master CV if available)
-                if (allCvs.length > 0) {
-                    const firstCv = allCvs[0];
-                    selectCv(firstCv.id, firstCv.type);
-                    await loadCvData(firstCv.id, firstCv.type);
-                } else {
-                    dispatch({ type: 'SET_LOADING', payload: false });
-                }
-
-                setInitialLoadComplete(true);
-            } catch (error) {
-                console.error('Failed to fetch CVs:', error);
-                dispatch({ type: 'SET_ERROR', payload: 'Failed to load CVs' });
-                dispatch({ type: 'SET_LOADING', payload: false });
-                setInitialLoadComplete(true);
-            }
-        }
-
-        fetchCvs();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
     // Load CV data and transform to LinkedIn sections
-    const loadCvData = useCallback(async (cvId: string, cvType: 'master' | 'standalone') => {
+    const loadCvData = useCallback(async (cvId: string, cvType: LinkedInCvType, cvName?: string) => {
         try {
-            const endpoint = cvType === 'master' ? '/api/cvs/master' : `/api/cv/${cvId}`;
-            const response = await fetch(endpoint);
+            // Single endpoint covers journey, master and standalone CVs.
+            const response = await fetch(`/api/cvs/${cvId}`);
 
             if (!response.ok) {
                 throw new Error('Failed to load CV');
             }
 
             const data = await response.json();
-            // Master CV response: { success, data: { masterCV: { cvData: {...} } } }
-            // Standalone CV response: { cvData: {...} } or the direct CV object
-            const cvData = cvType === 'master'
-                ? data.data?.masterCV?.cvData || data.data?.masterCV
-                : data.cvData || data;
+            // /api/cvs/:id response: { success, data: { cv: { id, cvData, title, ... } } }
+            const cv = data?.data?.cv;
+            const cvData = cv?.cvData || data?.cvData || data;
+            const resolvedName = cvName || cv?.title || 'CV';
 
             // Transform CV data to LinkedIn sections
             const sections = transformCvToLinkedInSections(cvData);
 
             dispatch({
                 type: 'LOAD_CV_DATA',
-                payload: { sections, cvId, cvType },
+                payload: { sections, cvId, cvType, cvName: resolvedName, cvData },
             });
 
             // Trigger enhancement immediately after state update
             // Use requestAnimationFrame to ensure state is committed
             requestAnimationFrame(() => {
-                triggerEnhancement(cvId, cvType, false);
+                triggerEnhancement(cvId, cvType, false, cvData);
             });
 
             dispatch({ type: 'SET_LOADING', payload: false });
@@ -188,72 +172,38 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         }
     }, [dispatch, triggerEnhancement]);
 
-     // Handle CV selection change
-    const handleCvSelect = useCallback(async (id: string, type: 'master' | 'standalone') => {
-        selectCv(id, type);
-        dispatch({ type: 'SET_LOADING', payload: true });
-        await loadCvData(id, type);
-    }, [selectCv, loadCvData, dispatch]);
+    // Fetch the default source CV on mount.
+    // Priority: the most recently updated journey CV (the tailored CV from the
+    // user's current application journey) -> master CV -> most recent standalone CV.
+    useEffect(() => {
+        async function fetchCvs() {
+            dispatch({ type: 'SET_LOADING', payload: true });
 
-    // Fetch CV data from LinkedIn
-    const handleFetchFromLinkedIn = useCallback(async () => {
-        setIsFetchingFromLinkedIn(true);
-        setFetchError(null);
-        
-        try {
-            const response = await fetch('/api/linkedin/import');
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to fetch from LinkedIn');
-            }
-            
-            const data = await response.json();
-            
-            if (data.success && data.data) {
-                // Transform the LinkedIn data to LinkedIn sections
-                const sections = transformCvToLinkedInSections(data.data);
-                
-                // Create a temporary CV entry
-                const tempCv: CVSelectionItem = {
-                    id: `linkedin_${Date.now()}`,
-                    name: 'LinkedIn Profile',
-                    type: 'standalone',
-                    updatedAt: new Date().toISOString(),
-                };
-                
-                // Add to available CVs and select it
-                setAvailableCvs([tempCv]);
-                selectCv(tempCv.id, tempCv.type);
-                
-                // Load the data
-                dispatch({
-                    type: 'LOAD_CV_DATA',
-                    payload: { sections, cvId: tempCv.id, cvType: tempCv.type },
-                });
-                
-                // Trigger enhancement
-                requestAnimationFrame(() => {
-                    triggerEnhancement(tempCv.id, tempCv.type, false);
-                });
-                
+            try {
+                const firstCv = await resolveDefaultSourceCv();
+
+                if (!firstCv) {
+                    setAvailableCvs([]);
+                    dispatch({ type: 'SET_LOADING', payload: false });
+                    setInitialLoadComplete(true);
+                    return;
+                }
+
+                setAvailableCvs([firstCv]);
+                selectCv(firstCv.id, firstCv.type, firstCv.name);
+                await loadCvData(firstCv.id, firstCv.type, firstCv.name);
+                setInitialLoadComplete(true);
+            } catch (error) {
+                console.error('Failed to fetch CVs:', error);
+                dispatch({ type: 'SET_ERROR', payload: 'Failed to load CVs' });
                 dispatch({ type: 'SET_LOADING', payload: false });
-            } else {
-                throw new Error(data.error || 'Failed to fetch from LinkedIn');
+                setInitialLoadComplete(true);
             }
-        } catch (error: any) {
-            console.error('LinkedIn fetch error:', error);
-            if (error.message?.includes('LinkedIn account not connected') || error.message?.includes('token expired') || error.message?.includes('reconnect')) {
-                setIsAuthModalOpen(true);
-            } else {
-                setFetchError(error.message || 'Failed to fetch from LinkedIn');
-                dispatch({ type: 'SET_ERROR', payload: 'Failed to fetch from LinkedIn' });
-            }
-            dispatch({ type: 'SET_LOADING', payload: false });
-        } finally {
-            setIsFetchingFromLinkedIn(false);
         }
-    }, [dispatch, selectCv, triggerEnhancement]);
+
+        fetchCvs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Handle regenerate
     const handleRegenerate = useCallback(() => {
@@ -266,20 +216,6 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
             triggerEnhancement(firstCv.id, firstCv.type, true);
         }
     }, [triggerEnhancement, state.selectedCvId, state.selectedCvType, availableCvs]);
-
-    // Handle CV update from Mori Chat edits
-    const handleCvUpdated = useCallback((updatedCvData: any) => {
-        if (!state.selectedCvId || !state.selectedCvType) return;
-        const sections = transformCvToLinkedInSections(updatedCvData);
-        dispatch({
-            type: 'LOAD_CV_DATA',
-            payload: { sections, cvId: state.selectedCvId, cvType: state.selectedCvType },
-        });
-        // Automatically run enhancement generation on the newly updated CV content
-        requestAnimationFrame(() => {
-            triggerEnhancement(state.selectedCvId!, state.selectedCvType!, false);
-        });
-    }, [dispatch, state.selectedCvId, state.selectedCvType, triggerEnhancement]);
 
     // Handle tone change with regeneration
     const handleToneChangeWithRegenerate = useCallback((tone: LinkedInUserContext['tone_selection']) => {
@@ -329,49 +265,22 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         { label: 'Preparing workspace...', icon: '🚀' },
     ];
 
-    // Show loading state with skeleton sections while checking for CVs
+    // Show loading state with skeleton sections matching actual page UI
     if (!initialLoadComplete) {
         return (
-            <div
-                className="min-h-screen flex flex-col dashboard-workspace"
-            >
-                <LinkedInHeader
-                    availableCvs={[]}
-                    selectedCvId={null}
-                    onCvSelect={() => { }}
-                    onRegenerate={() => { }}
-                    isEnhancing={false}
-                    currentTone={state.user_context.tone_selection}
-                    onToneChange={setTone}
-                />
-                {/* Show skeleton sections instead of loading card */}
-                <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 space-y-4">
-                            {[1, 2, 3, 4].map((i) => (
-                                <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
-                                    <div className="space-y-2">
-                                        <div className="h-4 bg-gray-100 rounded w-full" />
-                                        <div className="h-4 bg-gray-100 rounded w-5/6" />
-                                        <div className="h-4 bg-gray-100 rounded w-4/6" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="space-y-4">
-                            {[1, 2].map((i) => (
-                                <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                                    <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-                                    <div className="space-y-2">
-                                        <div className="h-3 bg-gray-100 rounded w-full" />
-                                        <div className="h-3 bg-gray-100 rounded w-3/4" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+            <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+                <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-5 md:px-8">
+                    <div className="max-w-[1400px] w-full mx-auto flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-5 md:py-8 space-y-6">
+                        <LinkedInHeader
+                            onRegenerate={() => { }}
+                            isEnhancing={false}
+                            hasSourceCv={false}
+                            currentTone={state.user_context.tone_selection}
+                            onToneChange={setTone}
+                        />
+                        <LinkedInEnhancerSkeleton />
                     </div>
-                </main>
+                </div>
             </div>
         );
     }
@@ -379,38 +288,37 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
     // No CVs available
     if (initialLoadComplete && availableCvs.length === 0) {
         return (
-            <div
-                className="min-h-screen flex flex-col dashboard-workspace"
-            >
-                <LinkedInHeader
-                    availableCvs={[]}
-                    selectedCvId={null}
-                    onCvSelect={() => { }}
-                    onRegenerate={() => { }}
-                    isEnhancing={false}
-                    currentTone={state.user_context.tone_selection}
-                    onToneChange={setTone}
-                />
-                <div className="flex-1 flex items-center justify-center p-8">
-                    <div className="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
-                        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FileText className="w-8 h-8 text-blue-600" />
+            <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden flex flex-col pr-3 pb-3 pl-3 lg:pl-0">
+                <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-5 md:px-8">
+                    <div className="max-w-[1400px] w-full mx-auto flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-5 md:py-8 space-y-6">
+                        <LinkedInHeader
+                            onRegenerate={() => { }}
+                            isEnhancing={false}
+                            hasSourceCv={false}
+                            currentTone={state.user_context.tone_selection}
+                            onToneChange={setTone}
+                        />
+                        <div className="flex-1 flex items-center justify-center p-8">
+                            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl shadow-lg p-8 max-w-md text-center">
+                                <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                                    <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <h2 className="text-h3 font-bold text-[var(--text-primary)] mb-2">
+                                    Create a CV First
+                                </h2>
+                                <p className="text-[var(--text-secondary)] text-xs sm:text-sm mb-6 leading-relaxed">
+                                    To enhance your LinkedIn profile, you&apos;ll need a journey CV or master CV first.
+                                </p>
+                                <motion.button
+                                    onClick={() => router.push('/dashboard/jobs?tab=documents')}
+                                    className="px-6 py-2.5 rounded-xl bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs transition-colors duration-200 shadow-sm"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    Create CV
+                                </motion.button>
+                            </div>
                         </div>
-                        <h2 className="text-h3 font-semibold text-gray-900 mb-2">
-                            Create a CV First
-                        </h2>
-                        <p className="text-gray-600 mb-6">
-                            To enhance your LinkedIn profile, you'll need to create a Master CV or standalone CV first.
-                        </p>
-                        <motion.button
-                            onClick={() => router.push('/editor')}
-                            className="px-6 py-2.5 rounded-lg text-white font-medium"
-                            style={{ backgroundColor: LINKEDIN_COLORS.PRIMARY_BLUE }}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            Create CV
-                        </motion.button>
                     </div>
                 </div>
             </div>
@@ -423,23 +331,17 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-5 md:px-8">
                     <div className="max-w-[1400px] w-full mx-auto flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide py-5 md:py-8 space-y-6">
 
-                        {/* Header */}
+                        {/* Header — LinkedIn shortcut, tone selector, Enhance Profile */}
                         <LinkedInHeader
-                        availableCvs={availableCvs}
-                        selectedCvId={state.selectedCvId}
-                        onCvSelect={handleCvSelect}
-                        onRegenerate={handleRegenerate}
-                        isEnhancing={state.isEnhancing}
-                        currentTone={state.user_context.tone_selection}
-                        onToneChange={setTone}
-                        onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
-                        onFetchFromLinkedIn={handleFetchFromLinkedIn}
-                        isFetchingFromLinkedIn={isFetchingFromLinkedIn}
-                        showMoriChat={showMoriChat}
-                        setShowMoriChat={setShowMoriChat}
-                        showInsights={showInsights}
-                        setShowInsights={setShowInsights}
-                    />
+                            onRegenerate={handleRegenerate}
+                            isEnhancing={state.isEnhancing}
+                            hasSourceCv={Boolean(state.selectedCvId)}
+                            currentTone={state.user_context.tone_selection}
+                            onToneChange={setTone}
+                            onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
+                            sourceCvName={state.selectedCvName}
+                            sourceCvType={state.selectedCvType}
+                        />
 
                     {/* Loading State */}
                     <AnimatePresence mode="wait">
@@ -449,30 +351,9 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                            className="w-full"
                         >
-                            {/* Left Column Skeleton */}
-                            <div className="lg:col-span-2 space-y-4">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                                        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
-                                        <div className="space-y-2">
-                                            <div className="h-4 bg-gray-100 rounded w-full" />
-                                            <div className="h-4 bg-gray-100 rounded w-5/6" />
-                                            <div className="h-4 bg-gray-100 rounded w-4/6" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {/* Right Column Skeleton */}
-                            <div className="space-y-4">
-                                {[1, 2].map((i) => (
-                                    <div key={i} className="bg-white rounded-lg p-4 animate-pulse">
-                                        <div className="h-4 bg-gray-200 rounded w-2/3 mb-3" />
-                                        <div className="h-16 bg-gray-100 rounded" />
-                                    </div>
-                                ))}
-                            </div>
+                            <LinkedInEnhancerSkeleton />
                         </motion.div>
                     ) : state.error && state.sections.hero.status === 'ORIGINAL' ? (
                         // Show skeleton sections if AI failed and no enhanced data
@@ -480,18 +361,18 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                             key="skeleton"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                            className="w-full space-y-6"
                         >
                             {/* Error Banner */}
-                            <div className="lg:col-span-3 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl p-4 flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                                 <div className="flex-1">
-                                    <p className="text-red-800 font-medium">AI Enhancement Failed</p>
-                                    <p className="text-red-600 text-small">{state.error}</p>
+                                    <p className="text-red-800 dark:text-red-300 font-bold text-xs">AI Enhancement Failed</p>
+                                    <p className="text-red-600 dark:text-red-400 text-xs">{state.error}</p>
                                 </div>
                                 <motion.button
                                     onClick={handleRegenerate}
-                                    className="px-4 py-1.5 bg-red-600 text-white text-small rounded-lg"
+                                    className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -499,30 +380,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                 </motion.button>
                             </div>
 
-                            {/* Skeleton Sections */}
-                            <div className="lg:col-span-2 space-y-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                                        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
-                                        <div className="space-y-2">
-                                            <div className="h-4 bg-gray-100 rounded w-full" />
-                                            <div className="h-4 bg-gray-100 rounded w-5/6" />
-                                            <div className="h-4 bg-gray-100 rounded w-4/6" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="space-y-4">
-                                {[1, 2].map((i) => (
-                                    <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-                                        <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-                                        <div className="space-y-2">
-                                            <div className="h-3 bg-gray-100 rounded w-full" />
-                                            <div className="h-3 bg-gray-100 rounded w-3/4" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <LinkedInEnhancerSkeleton />
                         </motion.div>
                     ) : (
                         <motion.div
@@ -563,26 +421,9 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => {
-                                                    setShowMoriChat(true);
-                                                    setShowInsights(false);
-                                                }}
+                                                onClick={() => setShowInsights(!showInsights)}
                                                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                                    showMoriChat
-                                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50'
-                                                        : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)]'
-                                                }`}
-                                            >
-                                                <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-lime-400" />
-                                                <span>Mori Assistant</span>
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShowInsights(!showInsights || showMoriChat);
-                                                    setShowMoriChat(false);
-                                                }}
-                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                                                    showInsights && !showMoriChat
+                                                    showInsights
                                                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700/50'
                                                         : 'bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)]/80 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border-primary)]'
                                                 }`}
@@ -671,87 +512,31 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                                     </div>
                                 </div>
 
-                                {/* Right Side Panel - Mori Chat & Profile Insights Sidebar */}
-                                {(showInsights || showMoriChat) && (
+                                {/* Right Side Panel - Profile Insights Sidebar */}
+                                {showInsights && (
                                     <div className="w-full lg:w-[420px] flex-shrink-0 sticky top-4 h-[calc(100vh-140px)] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-xs flex flex-col transition-all duration-300">
                                         <div className="p-4 border-b border-[var(--border-primary)] flex justify-between items-center bg-[var(--bg-tertiary)]/50 shrink-0">
                                             <h3 className="text-xs font-bold text-[var(--text-primary)] flex items-center gap-2">
-                                                {showMoriChat ? (
-                                                    <>
-                                                        <MessageSquare className="w-4 h-4 text-emerald-600 dark:text-lime-400 animate-pulse" />
-                                                        <span>Mori AI Assistant</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-lime-400 animate-pulse" />
-                                                        <span>Profile Insights</span>
-                                                    </>
-                                                )}
+                                                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-lime-400 animate-pulse" />
+                                                <span>Profile Insights</span>
                                             </h3>
-                                            <div className="flex items-center gap-2">
-                                                {showMoriChat ? (
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowInsights(true);
-                                                            setShowMoriChat(false);
-                                                        }}
-                                                        className="p-1.5 rounded-lg text-emerald-600 dark:text-lime-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors flex items-center gap-1 text-xs font-bold"
-                                                        title="Switch to Insights"
-                                                    >
-                                                        <Sparkles className="w-4 h-4" />
-                                                        <span>Insights</span>
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => {
-                                                            setShowMoriChat(true);
-                                                            setShowInsights(false);
-                                                        }}
-                                                        className="p-1.5 rounded-lg text-emerald-600 dark:text-lime-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors flex items-center gap-1 text-xs font-bold"
-                                                        title="Switch to Mori Chat"
-                                                    >
-                                                        <MessageSquare className="w-4 h-4" />
-                                                        <span>Mori</span>
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => {
-                                                        setShowInsights(false);
-                                                        setShowMoriChat(false);
-                                                    }}
-                                                    className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={() => setShowInsights(false)}
+                                                className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                                                title="Close Insights"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
                                         </div>
                                         <div className="flex-1 overflow-y-auto min-h-0">
-                                            {showMoriChat ? (
-                                                activeCvId ? (
-                                                    <LinkedInMoriChatPanel
-                                                        cvId={activeCvId}
-                                                        cvType={activeCvType}
-                                                        onCvUpdated={handleCvUpdated}
-                                                        onClose={() => {
-                                                            setShowInsights(false);
-                                                            setShowMoriChat(false);
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="p-6 text-center text-xs text-[var(--text-secondary)]">
-                                                        Please select a CV to start chatting with Mori.
-                                                    </div>
-                                                )
-                                            ) : (
-                                                <div className="p-4 h-full">
-                                                    <LinkedInRecommendationsSidebar
-                                                        sideCards={state.side_cards}
-                                                        careerGuide={state.career_guide}
-                                                        audit={state.audit}
-                                                        isLoading={state.isEnhancing}
-                                                    />
-                                                </div>
-                                            )}
+                                            <div className="p-4 h-full">
+                                                <LinkedInRecommendationsSidebar
+                                                    sideCards={state.side_cards}
+                                                    careerGuide={state.career_guide}
+                                                    audit={state.audit}
+                                                    isLoading={state.isEnhancing}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -775,11 +560,6 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 onClose={() => setIsSuccessModalOpen(false)} 
                 onUndo={handleUndoChanges}
                 appliedSectionsCount={appliedSectionsCount}
-            />
-
-            <LinkedInAuthModal
-                isOpen={isAuthModalOpen}
-                onClose={() => setIsAuthModalOpen(false)}
             />
         </>
     );
@@ -863,11 +643,13 @@ function transformCvToLinkedInSections(cvData: any) {
                 improvement_notes: '',
             },
         })),
+        // Unified cvData uses { institution, area, studyType, startDate, endDate };
+        // legacy data uses { school, degree, field } etc. Map both conventions.
         education: education.map((edu: any, idx: number) => ({
             id: edu.id || edu._id || `edu_${idx}`,
             institution: edu.institution || edu.school || edu.university || '',
-            degree: edu.degree || edu.qualification || '',
-            field: edu.field || edu.fieldOfStudy || edu.major || '',
+            degree: edu.studyType || edu.degree || edu.qualification || '',
+            field: edu.area || edu.field || edu.fieldOfStudy || edu.major || '',
             grade: edu.grade || edu.gpa || '',
             activities: edu.activities || '',
         })),
@@ -894,7 +676,12 @@ function transformCvToLinkedInSections(cvData: any) {
         })),
         skills_matrix: {
             current: Array.isArray(skills)
-                ? skills.map((s: any) => typeof s === 'string' ? s : s.name || s.skill || '')
+                ? skills.flatMap((s: any) => {
+                    if (typeof s === 'string') return [s];
+                    // Unified/grouped: { category, skills: ['React', ...] }
+                    if (Array.isArray(s.skills)) return s.skills.filter(Boolean);
+                    return [s.name || s.skill].filter(Boolean);
+                })
                 : [],
             suggested_additions: [],
             verified_badges_eligible: [],
