@@ -13,7 +13,7 @@ interface StepIndicatorProps {
 }
 
 const steps = [
-  { number: 1, label: 'Editor', description: 'Edit and optimize with AI' },
+  { number: 1, label: 'Documents', description: 'Your CVs and cover letters' },
   { number: 2, label: 'Cover Letter Editor', description: 'Generate AI cover letter' },
   { number: 3, label: 'Review', description: 'Preview and save' }
 ];

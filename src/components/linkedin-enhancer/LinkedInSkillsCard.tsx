@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Star, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import CopyableText, { CopyAllButton } from './CopyableText';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LinkedInSkillsMatrix } from '@/types/linkedin';
 import { useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
 
@@ -82,10 +83,24 @@ export default function LinkedInSkillsCard({ data }: LinkedInSkillsCardProps) {
                     </div>
 
                     {isLoading ? (
-                        <div className="animate-pulse space-y-4">
-                            <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
-                            <div className="flex gap-2 flex-wrap">
-                                {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-6 bg-gray-100 rounded-full w-20"></div>)}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                    <Star className="w-3.5 h-3.5 text-amber-500" />
+                                    <span className="text-xs font-semibold text-[var(--text-secondary)]">Top Priority Skills</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-7 w-24 rounded-full" />)}
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                    <Plus className="w-3.5 h-3.5 text-emerald-600 dark:text-lime-400" />
+                                    <span className="text-xs font-semibold text-[var(--text-secondary)]">Suggested Additions</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-7 w-28 rounded-full" />)}
+                                </div>
                             </div>
                         </div>
                     ) : isError ? (

@@ -474,6 +474,8 @@ interface Step1DashboardProps {
   /** Controlled document mode shown in the editor header. */
   activeDocumentTab?: 'cvs' | 'cover-letters';
   onDocumentTabChange?: (tab: 'cvs' | 'cover-letters') => void;
+  /** Render without the full-page shell/card (used when embedded as a tab). */
+  embedded?: boolean;
 }
 
 export default function Step1Dashboard({
@@ -484,6 +486,7 @@ export default function Step1Dashboard({
   isGuestMode = false,
   activeDocumentTab,
   onDocumentTabChange,
+  embedded = false,
 }: Step1DashboardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -756,6 +759,18 @@ export default function Step1Dashboard({
       active: filterType === 'journey',
       onClick: () => {
         setFilterType(prev => (prev === 'journey' ? 'all' : 'journey'));
+      },
+    },
+    {
+      id: 'total-documents',
+      label: 'Total Documents',
+      value: String(kpiStats.cvCount + kpiStats.clCount),
+      icon: <FileText size={16} strokeWidth={1.75} />,
+      trend: `${kpiStats.cvCount} resumes · ${kpiStats.clCount} cover letters`,
+      trendUp: kpiStats.cvCount + kpiStats.clCount > 0,
+      active: filterType === 'all',
+      onClick: () => {
+        setFilterType('all');
       },
     },
   ], [kpiStats, filterType]);
@@ -1386,45 +1401,63 @@ export default function Step1Dashboard({
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
-          className="step-one-shell dashboard-workspace flex flex-col h-full overflow-hidden pl-3 lg:pl-0 pb-3"
+          className={
+            embedded
+              ? 'w-full h-full flex flex-col'
+              : 'step-one-shell dashboard-workspace flex flex-col h-full overflow-hidden pl-3 lg:pl-0 pb-3'
+          }
         >
           {/* Off-white rounded content card — matches the dashboard workspace */}
-          <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm h-full min-h-0 flex flex-col overflow-hidden mr-3">
+          <div
+            className={
+              embedded
+                ? 'h-full min-h-0 flex flex-col'
+                : 'dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm h-full min-h-0 flex flex-col overflow-hidden mr-3'
+            }
+          >
             <div
               ref={scrollContainerRef}
-              className="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-smooth"
+              className={
+                embedded
+                  ? 'flex-1 min-h-0'
+                  : 'flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-smooth'
+              }
               onScroll={handleScroll}
             >
               <div className="min-h-full flex flex-col">
 
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="step-one-hero relative z-10 w-full flex flex-col shrink-0 pt-6 sm:pt-8 pb-4 sm:pb-6">
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 space-y-6">
-            {/* Header (Jobs Hub Style) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
-              <div>
-                <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
-                  Editor
-                </h1>
-                <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
-                  AI-powered resume &amp; cover letter builder
-                </p>
-              </div>
+        <div ref={topSectionRef} className={`step-one-hero relative z-10 w-full flex flex-col shrink-0 pb-4 sm:pb-6 ${embedded ? 'pt-0' : 'pt-6 sm:pt-8'}`}>
+          <div className={`w-full space-y-6 ${embedded ? '' : 'max-w-7xl mx-auto px-4 sm:px-8'}`}>
+            {/* Header (Jobs Hub Style) — when embedded, the title/subtitle live in
+                the Jobs Hub header and the Create button moves into the
+                "Your Documents" toolbar below */}
+            {!embedded && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
+                <div>
+                  <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
+                    Documents
+                  </h1>
+                  <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
+                    Your master CV, tailored CVs &amp; cover letters
+                  </p>
+                </div>
 
-              {/* Create Button in Header */}
-              <Button
-                variant="primary"
-                size="md"
-                onClick={() => setIsCreateModalOpen(true)}
-                leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-              >
-                Create
-              </Button>
-            </div>
+                {/* Create Button in Header */}
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+                >
+                  Create
+                </Button>
+              </div>
+            )}
 
             {/* Dashboard-Style KPI Strip */}
-            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)] overflow-hidden">
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)]">
               {kpiMetrics.map((m) => (
                 <div
                   key={m.label}
@@ -1512,6 +1545,16 @@ export default function Step1Dashboard({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    {embedded && (
+                      <Button
+                        variant="primary"
+                        size="md"
+                        onClick={() => setIsCreateModalOpen(true)}
+                        leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+                      >
+                        Create
+                      </Button>
+                    )}
                     <label className="relative flex items-center h-10 min-w-[142px] rounded-full border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#141810] text-[color:var(--text-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
                       <SlidersHorizontal className="absolute left-3.5 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
                       <span className="sr-only">Filter documents</span>

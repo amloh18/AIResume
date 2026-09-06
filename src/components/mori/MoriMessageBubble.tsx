@@ -148,20 +148,29 @@ export default function MoriMessageBubble({
 
       {/* Options / Action cards */}
       {message.options && message.options.length > 0 && (
-        <div className="ml-9 mt-2 flex flex-col gap-1.5 w-[85%]">
-          {message.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => onOptionClick?.(opt.prompt)}
-              disabled={disabled}
-              className="text-left px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-[11px] font-medium text-emerald-800 dark:text-emerald-300 transition-all flex items-center justify-between group/opt hover:shadow-sm disabled:opacity-50"
-            >
-              <span>{opt.label}</span>
-              <span className="text-emerald-400 group-hover/opt:text-emerald-600 dark:group-hover/opt:text-emerald-300 text-[10px] transition-colors">
-                &rarr;
-              </span>
-            </button>
-          ))}
+        <div className="ml-9 mt-2 flex flex-col gap-1.5 w-[85%] pointer-events-auto">
+          {message.options.map((opt, i) => {
+            const label = typeof opt === 'string' ? opt : (opt?.label || opt?.prompt || '');
+            const prompt = typeof opt === 'string' ? opt : (opt?.prompt || opt?.label || '');
+            if (!label && !prompt) return null;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOptionClick?.(prompt || label);
+                }}
+                disabled={disabled}
+                className="relative z-10 text-left px-3 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-[11px] font-medium text-emerald-800 dark:text-emerald-300 transition-all flex items-center justify-between group/opt hover:shadow-sm disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <span>{label || prompt}</span>
+                <span className="text-emerald-400 group-hover/opt:text-emerald-600 dark:group-hover/opt:text-emerald-300 text-[10px] transition-colors">
+                  &rarr;
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

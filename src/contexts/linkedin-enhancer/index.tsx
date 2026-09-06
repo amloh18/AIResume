@@ -4,6 +4,7 @@ import React, { ReactNode, useCallback } from 'react';
 import { EnhancerProvider, useEnhancer } from './EnhancerContext';
 import { DashboardProvider, useDashboard } from './DashboardContext';
 import { ExtensionProvider, useExtension } from './ExtensionContext';
+import type { LinkedInCvType } from '@/types/linkedin';
 
 export function LinkedInEnhancerProvider({ children }: { children: ReactNode }) {
     return (
@@ -27,7 +28,7 @@ export function useLinkedInEnhancer() {
     const dashboard = useDashboard();
     const extension = useExtension();
 
-    const triggerEnhancement = useCallback(async (overrideCvId?: string, overrideCvType?: 'master' | 'standalone', regenerate: boolean = false) => {
+    const triggerEnhancement = useCallback(async (overrideCvId?: string, overrideCvType?: LinkedInCvType | null, regenerate: boolean = false, cvData?: any) => {
         const cvId = overrideCvId || enhancer.state.selectedCvId;
         const cvType = overrideCvType || enhancer.state.selectedCvType;
 
@@ -40,6 +41,10 @@ export function useLinkedInEnhancer() {
         enhancer.dispatch({ type: 'SET_SHOW_ENHANCING_OVERLAY', payload: regenerate });
         enhancer.dispatch({ type: 'SET_ERROR', payload: null });
 
+        // Prefer the freshly-loaded raw cvData so the AI is always fed exactly the
+        // data shown in the editor. Fall back to the cached source document.
+        const sourceCvData = cvData || enhancer.state.sourceCvData;
+
         try {
             const response = await fetch('/api/linkedin-enhance', {
                 method: 'POST',
@@ -50,6 +55,7 @@ export function useLinkedInEnhancer() {
                     tone: enhancer.state.user_context.tone_selection,
                     targetIndustry: enhancer.state.user_context.target_industry,
                     regenerate,
+                    ...(sourceCvData ? { cvData: sourceCvData } : {}),
                 }),
             });
 

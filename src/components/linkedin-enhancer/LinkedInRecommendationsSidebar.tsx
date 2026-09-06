@@ -13,6 +13,7 @@ import {
     Lightbulb,
     DollarSign
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LinkedInSideCards, LinkedInCareerGuide, LinkedInAudit } from '@/types/linkedin';
 
 interface LinkedInRecommendationsSidebarProps {
@@ -31,12 +32,41 @@ export default function LinkedInRecommendationsSidebar({
     if (isLoading) {
         return (
             <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="bg-white rounded-lg p-4 animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
-                        <div className="h-20 bg-gray-100 rounded" />
+                {/* Recommended Courses Skeleton */}
+                <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <BookOpen className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                        <h3 className="text-xs font-bold text-[var(--text-primary)]">Recommended Courses for Profile Insights</h3>
                     </div>
-                ))}
+                    <div className="space-y-2.5">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="p-3 bg-[var(--bg-tertiary)]/50 rounded-xl border border-[var(--border-primary)] space-y-1.5">
+                                <div className="flex items-start justify-between gap-2">
+                                    <Skeleton className="h-3.5 w-4/5" />
+                                    <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+                                </div>
+                                <Skeleton className="h-3 w-16" />
+                                <Skeleton className="h-3 w-full" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Networking Groups Skeleton */}
+                <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-xs border border-[var(--border-primary)] p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Users className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
+                        <h3 className="text-xs font-bold text-[var(--text-primary)]">Networking Groups</h3>
+                    </div>
+                    <div className="space-y-2">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="flex items-center justify-between p-2.5 bg-[var(--bg-tertiary)]/50 border border-[var(--border-primary)] rounded-xl">
+                                <Skeleton className="h-3.5 w-36" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -72,7 +102,7 @@ export default function LinkedInRecommendationsSidebar({
                 </motion.div>
             )}
 
-            {/* Recommended Courses */}
+            {/* Recommended Courses for Profile Insights */}
             <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -81,7 +111,7 @@ export default function LinkedInRecommendationsSidebar({
             >
                 <div className="flex items-center gap-2 mb-3">
                     <BookOpen className="w-4 h-4 text-emerald-600 dark:text-lime-400" />
-                    <h3 className="text-xs font-bold text-[var(--text-primary)]">Recommended Courses</h3>
+                    <h3 className="text-xs font-bold text-[var(--text-primary)]">Recommended Courses for Profile Insights</h3>
                 </div>
                 <div className="space-y-2.5">
                     {[

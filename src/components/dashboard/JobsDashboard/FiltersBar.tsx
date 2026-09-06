@@ -18,6 +18,7 @@ import {
   MapPin,
   DollarSign,
   Settings,
+  Target,
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import CvTailoringModeToggle from '@/components/jobs/CvTailoringModeToggle';
@@ -196,18 +197,28 @@ export default function FiltersBar({
 
   return (
     <div ref={dropdownRef} className="w-full">
-      {/* Integrated Command Surface Container */}
-      <div className="rounded-3xl bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 p-5 sm:p-6 shadow-sm space-y-4">
+      {/* Integrated Command Surface Container — clean card background matching dashboard */}
+      <div
+        className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-4 sm:p-5 shadow-xs space-y-3.5 transition-colors"
+      >
         {/* ========================================================================= */}
-        {/* ROW 1: Full-Width Search Bar */}
+        {/* ROW 1: Search Bar & Country Button Inline */}
         {/* ========================================================================= */}
-        <div className="relative w-full">
-          <SearchInput
-            value={filters.searchText || ''}
-            onChange={(e) => onChange({ searchText: e.target.value || undefined })}
-            onClear={() => onChange({ searchText: undefined })}
-            placeholder="Search jobs, companies, skills..."
-            size="md"
+        <div className="flex items-center gap-2 sm:gap-3 w-full">
+          <div className="flex-1 min-w-0">
+            <SearchInput
+              value={filters.searchText || ''}
+              onChange={(e) => onChange({ searchText: e.target.value || undefined })}
+              onClear={() => onChange({ searchText: undefined })}
+              placeholder="Search jobs, companies, skills..."
+              size="md"
+            />
+          </div>
+          <CountrySelector
+            value={countries}
+            onChange={onCountriesChange}
+            align="right"
+            variant="default"
           />
         </div>
 
@@ -215,8 +226,8 @@ export default function FiltersBar({
         {/* ROW 2: Navigation Switcher & Action Controls (Auto-Apply, Location, Mode) */}
         {/* ========================================================================= */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Left: Result Segment Navigation Switcher */}
-          <div className="flex items-center bg-gray-100/90 dark:bg-white/5 p-1 rounded-xl border border-gray-200/50 dark:border-white/5 shrink-0 self-start lg:self-auto h-10 shadow-2xs">
+          {/* Left: Result Segment Navigation Switcher (icon-only on the smallest screens) */}
+          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 self-start lg:self-auto h-10 shadow-2xs">
             <button
               type="button"
               onClick={() =>
@@ -230,12 +241,12 @@ export default function FiltersBar({
               }
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'recommended'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#013f2e] dark:text-[#36D39B]" />
-              <span>Recommended</span>
+              <Target className={`w-3.5 h-3.5 ${currentView === 'recommended' ? 'text-white dark:text-black' : 'text-[#013f2e] dark:text-[#36D39B]'}`} />
+              <span className="hidden sm:inline">Recommended</span>
             </button>
 
             <button
@@ -251,12 +262,12 @@ export default function FiltersBar({
               }
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'all'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Globe className="w-3.5 h-3.5 text-sky-500" />
-              <span>All</span>
+              <Globe className={`w-3.5 h-3.5 ${currentView === 'all' ? 'text-white dark:text-black' : 'text-sky-500'}`} />
+              <span className="hidden sm:inline">All</span>
             </button>
 
             <button
@@ -272,12 +283,12 @@ export default function FiltersBar({
               }
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'latest'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Clock className="w-3.5 h-3.5 text-gray-400" />
-              <span>Latest</span>
+              <Clock className={`w-3.5 h-3.5 ${currentView === 'latest' ? 'text-white dark:text-black' : 'text-gray-400'}`} />
+              <span className="hidden sm:inline">Latest</span>
             </button>
 
             <button
@@ -285,12 +296,12 @@ export default function FiltersBar({
               onClick={() => onChange({ savedOnly: true, unpersonalized: false })}
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
                 currentView === 'saved'
-                  ? 'bg-white dark:bg-[#1a230f] text-gray-900 dark:text-white shadow-xs font-bold'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
               }`}
             >
-              <Bookmark className="w-3.5 h-3.5 text-amber-500" />
-              <span>Saved</span>
+              <Bookmark className={`w-3.5 h-3.5 ${currentView === 'saved' ? 'text-white dark:text-black' : 'text-amber-500'}`} />
+              <span className="hidden sm:inline">Saved</span>
               {savedCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black">
                   {savedCount}
@@ -306,7 +317,7 @@ export default function FiltersBar({
               className={`h-10 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-2xs ${
                 autoApplyQuota.enabled
                   ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600/50'
-                  : 'bg-gray-50/90 dark:bg-white/[0.03] text-gray-600 dark:text-gray-400 border-gray-200/90 dark:border-white/10'
+                  : 'bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-300 border-[var(--border-primary)]'
               }`}
             >
               {/* Toggle action */}
@@ -366,13 +377,10 @@ export default function FiltersBar({
         {/* ========================================================================= */}
         {/* ROW 3: Unified Single-Row Quick Filter Bar */}
         {/* ========================================================================= */}
-        <div className="pt-1 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div className="pt-0.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {/* Region / Country Selector Pill */}
-            <CountrySelector value={countries} onChange={onCountriesChange} align="left" variant="pill" />
-
             {/* Workplace Type Pills */}
-            <div className="flex items-center gap-1 bg-gray-100/80 dark:bg-white/5 p-1 rounded-full border border-gray-200/60 dark:border-white/5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {visibleWorkplaceOptions.map((wp) => {
                 const active = (filters.workplaceType || []).includes(wp.id);
                 return (
@@ -380,10 +388,10 @@ export default function FiltersBar({
                     key={wp.id}
                     type="button"
                     onClick={() => handleToggleWorkplace(wp.id)}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    className={`h-8 px-3 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
                       active
-                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white font-bold shadow-2xs'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white dark:text-black border-transparent font-bold shadow-2xs'
+                        : 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-50 dark:hover:bg-white/5'
                     }`}
                   >
                     {wp.label}
@@ -397,8 +405,9 @@ export default function FiltersBar({
               selected={Boolean(filters.easyApplyOnly)}
               onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
               leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
+              title="Only show jobs where Auto-Apply is supported"
             >
-              Auto-Apply supported
+              <span className="hidden sm:inline">Auto-Apply supported</span>
             </Pill>
 
             {/* Visa Sponsorship Chip */}
@@ -406,8 +415,9 @@ export default function FiltersBar({
               selected={Boolean(filters.sponsorsVisa)}
               onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
               leftIcon={<Shield className="w-3.5 h-3.5 opacity-70" />}
+              title="Only show jobs offering visa sponsorship"
             >
-              Visa Sponsorship
+              <span className="hidden sm:inline">Visa Sponsorship</span>
             </Pill>
 
             {/* Experience Dropdown */}
@@ -418,20 +428,26 @@ export default function FiltersBar({
                   e.stopPropagation();
                   toggleDropdown('exp');
                 }}
-                className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer ${
+                className={`h-8 rounded-full px-3 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer duration-150 active:scale-[0.985] hover:scale-[1.015] ${
                   filters.experienceLevel?.length || activeDropdown === 'exp'
                     ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
+                    : 'border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[0.06] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
                 }`}
               >
+                <Briefcase className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>Experience</span>
-                {filters.experienceLevel?.length ? (
-                  <span className="w-4 h-4 rounded-full bg-white/20 text-white text-[10px] font-bold inline-flex items-center justify-center">
-                    {filters.experienceLevel.length}
+                {Boolean(filters.experienceLevel?.length) && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 tabular-nums ${
+                      filters.experienceLevel?.length || activeDropdown === 'exp'
+                        ? 'bg-white/20 dark:bg-black/20 text-current'
+                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                    }`}
+                  >
+                    {filters.experienceLevel?.length}
                   </span>
-                ) : (
-                  <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 )}
+                <ChevronDown className="w-3.5 h-3.5 opacity-60 shrink-0" />
               </button>
 
               {activeDropdown === 'exp' && (
@@ -472,18 +488,19 @@ export default function FiltersBar({
                   e.stopPropagation();
                   toggleDropdown('date');
                 }}
-                className={`rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer ${
+                className={`h-8 rounded-full px-3 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer duration-150 active:scale-[0.985] hover:scale-[1.015] ${
                   (filters.datePosted && filters.datePosted !== 'all') || activeDropdown === 'date'
                     ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                    : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
+                    : 'border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[0.06] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
                 }`}
               >
+                <Clock className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>
                   {filters.datePosted && filters.datePosted !== 'all'
                     ? DATE_OPTIONS.find((d) => d.id === filters.datePosted)?.label || 'Date'
                     : 'Date'}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                <ChevronDown className="w-3.5 h-3.5 opacity-60 shrink-0" />
               </button>
 
               {activeDropdown === 'date' && (

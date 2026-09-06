@@ -2,12 +2,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
-  Home, BarChart3, Target, FileText, Kanban,
+  Home, BarChart3, FileText, Kanban,
   Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -25,6 +25,7 @@ import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { theme, toggleTheme } = useTheme();
   const { isOpen: isMobileMenuOpen, toggleSidebar, setIsOpen, isDesktopExpanded, toggleDesktopSidebar } = useMobileSidebar();
   const { userData } = useUserData();
@@ -252,7 +253,11 @@ const OptimizedNavigation: React.FC = () => {
     if (pathname === '/dashboard' || pathname === '/dashboard/') {
       setActiveSection('analytics');
     } else if (pathname.includes('/jobs')) {
-      setActiveSection('jobs-dashboard');
+      if (searchParams.get('tab') === 'documents') {
+        setActiveSection('documents');
+      } else {
+        setActiveSection('jobs-dashboard');
+      }
     } else if (pathname.includes('/tracker')) {
       setActiveSection('tracker');
     } else if (pathname.includes('/interview')) {
@@ -260,11 +265,11 @@ const OptimizedNavigation: React.FC = () => {
     } else if (pathname.includes('/linkedin-enhancer')) {
       setActiveSection('linkedin-enhancer');
     } else if (pathname.includes('/editor')) {
-      setActiveSection('cv-builder-pro');
+      setActiveSection('documents');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
     }
-  }, [pathname]);
+  }, [pathname, searchParams]);
 
   // Immediate navigation without waiting for content
   const handleNavigation = useCallback((sectionId: string) => {
@@ -283,7 +288,7 @@ const OptimizedNavigation: React.FC = () => {
       'jobs-dashboard': '/dashboard/jobs',
       'tracker': '/dashboard/jobs?tab=applications',
       'settings': '/dashboard/settings',
-      'cv-builder-pro': '/editor',
+      'documents': '/dashboard/jobs?tab=documents',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
       'ats-resume-checker': '/ats-resume-checker'
@@ -351,11 +356,11 @@ const OptimizedNavigation: React.FC = () => {
 
   const toolSections = [
     {
-      id: 'cv-builder-pro',
-      name: 'Editor',
-      icon: Target,
-      description: 'AI CV optimization',
-      route: '/editor',
+      id: 'documents',
+      name: 'Documents',
+      icon: FileText,
+      description: 'CVs, cover letters & master profile',
+      route: '/dashboard/jobs?tab=documents',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
       activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',

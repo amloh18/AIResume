@@ -8,14 +8,12 @@ import {
   Edit3, 
   Target, 
   Bot, 
-  Briefcase, 
   Layers, 
   FileText, 
   Award, 
   Zap, 
   CheckCircle2, 
   AlertCircle,
-  MapPin,
   ShieldCheck
 } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
@@ -191,47 +189,28 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
             transition={{ type: 'spring', damping: 28, stiffness: 280 }}
             role="dialog"
             aria-label="Profile Analytics Sidebar"
-            className="fixed right-3 top-3 bottom-3 w-[min(34rem,calc(100vw-1.5rem))] bg-white dark:bg-[#111612] shadow-2xl z-[9999] flex flex-col rounded-3xl overflow-hidden border border-[var(--border-primary)]"
+            className="fixed right-3 top-3 bottom-3 w-[min(26rem,calc(100vw-1.5rem))] bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col rounded-2xl overflow-hidden border border-[var(--border-primary)]"
           >
-            {/* Header with Hero Gradient */}
-            <div className="relative bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white p-6 border-b border-slate-800 shrink-0">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#83d60d] to-lime-300 text-slate-950 flex items-center justify-center font-black text-lg shadow-lg shrink-0">
-                    {candidateName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-black truncate">{candidateName}</h2>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#83d60d]/20 text-[#83d60d] border border-[#83d60d]/40 shrink-0">
-                        Master Profile
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-300 font-semibold truncate flex items-center gap-1 mt-0.5">
-                      <Briefcase size={12} className="text-[#83d60d]" /> {candidateRole}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
-                  aria-label="Close panel"
-                >
-                  <X size={18} />
-                </button>
+            {/* Header — shared compact sidebar pattern */}
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-[var(--border-primary)] flex-shrink-0">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[var(--text-primary)] leading-snug">Profile Analytics</h2>
+                <p className="mt-0.5 text-xs text-[var(--text-secondary)] truncate">{candidateName}</p>
+                <p className="mt-0.5 text-[11px] text-[var(--text-tertiary)] truncate">
+                  {candidateRole}{candidateLocation ? ` · ${candidateLocation}` : ''}
+                </p>
               </div>
-
-              {candidateLocation && (
-                <div className="flex items-center gap-1.5 mt-3 text-[11px] text-slate-400 font-medium">
-                  <MapPin size={12} className="text-slate-500" />
-                  <span>{candidateLocation}</span>
-                </div>
-              )}
+              <button
+                onClick={onClose}
+                className="p-1.5 -m-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors shrink-0"
+                aria-label="Close panel"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Body Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-gray-900 dark:text-gray-100">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-5 text-gray-900 dark:text-gray-100">
               {loading ? (
                 <div className="space-y-6">
                   <Skeleton className="h-28 w-full rounded-2xl" />
@@ -402,7 +381,7 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
             </div>
 
             {/* Actionable Next Steps Footer */}
-            <div className="p-5 border-t border-[var(--border-primary)] bg-slate-50/80 dark:bg-gray-900/90 space-y-2.5 shrink-0">
+            <div className="border-t border-[var(--border-primary)] px-5 py-3.5 bg-[var(--bg-secondary)] space-y-2.5 shrink-0">
               <h5 className="text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Recommended Actions
               </h5>

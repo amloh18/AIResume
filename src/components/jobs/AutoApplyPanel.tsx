@@ -305,17 +305,120 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
     });
   };
 
+  // UI-first loading state: render the real settings layout (headings + card
+  // shells) immediately, with pulsing placeholders inside — data fills in after.
   if (loading) {
     return (
-      <div className="w-full max-w-[1600px] mx-auto p-4 space-y-6 animate-pulse">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
-          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+      <div className="w-full max-w-[1600px] mx-auto space-y-6 pb-12" aria-busy="true">
+        {/* ROW 1: Application Automation + Your Auto-Apply Profile */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col space-y-5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Zap className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Automation</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400">
+                Auto-Apply …
+              </span>
+            </div>
+            <div className="space-y-2.5 animate-pulse">
+              <div className="h-3.5 w-3/4 bg-gray-100 dark:bg-gray-900 rounded" />
+              <div className="h-3.5 w-2/3 bg-gray-100 dark:bg-gray-900 rounded" />
+              <div className="h-9 w-28 bg-gray-100 dark:bg-gray-900 rounded-xl mt-2" />
+            </div>
+          </div>
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col space-y-5">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Your Auto-Apply Profile</h3>
+            </div>
+            <div className="space-y-3 animate-pulse">
+              <div className="h-3.5 w-4/5 bg-gray-100 dark:bg-gray-900 rounded" />
+              <div className="h-3.5 w-2/3 bg-gray-100 dark:bg-gray-900 rounded" />
+              <div className="h-9 w-32 bg-gray-100 dark:bg-gray-900 rounded-xl mt-2" />
+            </div>
+          </div>
         </div>
-        <div className="h-48 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
-          <div className="h-64 bg-gray-100 dark:bg-gray-900 rounded-3xl" />
+
+        {/* ROW 2: Connected Job Accounts */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Globe className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
+              <span>Connected Job Accounts</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Connect your job-search accounts to personalize discovery and enable supported application features.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-24 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+
+        {/* ROW 3: Roles + Locations */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col space-y-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Roles You&apos;re Targeting</h3>
+            <div className="flex flex-wrap gap-2 animate-pulse">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-8 w-24 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              ))}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm flex flex-col space-y-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Where Do You Want to Work?</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll prioritize jobs you can realistically work from.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 animate-pulse">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-8 w-20 bg-gray-100 dark:bg-gray-900 rounded-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 4: Salary + Experience & Availability */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Target Salary</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">We&apos;ll filter out roles below your target.</p>
+              </div>
+            </div>
+            <div className="h-10 bg-gray-100 dark:bg-gray-900 rounded-xl animate-pulse" />
+          </div>
+          <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Experience &amp; Availability</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-14 bg-gray-100 dark:bg-gray-900 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ROW 5: Default Tab */}
+        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Default Tab</h4>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Choose which tab opens by default when you navigate to the Jobs page.
+          </p>
+          <div className="flex gap-3">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex-1 h-20 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse" />
+            ))}
+          </div>
         </div>
       </div>
     );

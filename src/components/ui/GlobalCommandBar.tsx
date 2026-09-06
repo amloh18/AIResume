@@ -46,10 +46,10 @@ interface ToolItem {
 const SIDEBAR_TOOLS: ToolItem[] = [
   {
     id: 'editor',
-    title: 'Editor',
-    description: 'AI CV builder & optimizer',
+    title: 'Documents',
+    description: 'CVs, cover letters & master profile',
     icon: Target,
-    route: '/editor',
+    route: '/dashboard/jobs?tab=documents',
     badge: 'PRO',
     color: 'text-emerald-700 dark:text-lime-400',
     bg: 'bg-emerald-500/10 dark:bg-lime-500/10',

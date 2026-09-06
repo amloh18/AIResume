@@ -103,6 +103,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // CV onboarding checklist dismissal ("never show again" once the master CV
+    // reaches a good score, or when the user manually dismisses it)
+    if (onboardingData.cv_checklist_dismissed !== undefined) {
+      updateFields['onboarding.cv_checklist_dismissed'] = onboardingData.cv_checklist_dismissed;
+      if (onboardingData.cv_checklist_dismissed === true) {
+        updateFields['onboarding.cv_checklist_dismiss_reason'] = onboardingData.cv_checklist_dismiss_reason || 'manual';
+        updateFields['onboarding.cv_checklist_dismissed_at'] = new Date().toISOString();
+      }
+    }
+
     if (onboardingData.activation_status) updateFields['onboarding.activation_status'] = onboardingData.activation_status;
     if (onboardingData.activation_route) updateFields['onboarding.activation_route'] = onboardingData.activation_route;
     if (onboardingData.dashboard_layout_type) updateFields['onboarding.dashboard_layout_type'] = onboardingData.dashboard_layout_type;

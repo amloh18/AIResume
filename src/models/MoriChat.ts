@@ -9,6 +9,11 @@ export interface IMoriChatMessage {
     path: string;
     text: string;
   };
+  options?: Array<{
+    label: string;
+    prompt: string;
+  }>;
+  isError?: boolean;
 }
 
 export interface IMoriChat extends Document {
@@ -28,7 +33,12 @@ const moriChatMessageSchema = new Schema<IMoriChatMessage>({
   selection: {
     path: { type: String },
     text: { type: String }
-  }
+  },
+  options: [{
+    label: { type: String },
+    prompt: { type: String }
+  }],
+  isError: { type: Boolean, default: false }
 });
 
 const moriChatSchema = new Schema<IMoriChat>({

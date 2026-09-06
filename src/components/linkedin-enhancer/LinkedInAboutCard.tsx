@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Quote, AlertCircle, RefreshCw, Check, Edit2 } from 'lucide-react';
 import CopyableText, { CopyAllButton } from './CopyableText';
 import { AboutGuard } from './CharacterGuard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { LinkedInAboutSection } from '@/types/linkedin';
 import { useLinkedInEnhancer } from '@/contexts/linkedin-enhancer';
 
@@ -68,18 +69,6 @@ export default function LinkedInAboutCard({ data }: LinkedInAboutCardProps) {
                 <div className="flex-1 p-5 sm:p-6 bg-[var(--bg-tertiary)]/30">
                      <div className="flex items-center justify-between mb-4">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Original About</span>
-                        {data.current && (
-                            <button
-                                onClick={() => {
-                                    window.dispatchEvent(new CustomEvent('mori-cv-selection', {
-                                        detail: { path: 'basics.summary', text: data.current }
-                                    }));
-                                }}
-                                className="text-xs text-emerald-700 dark:text-lime-400 hover:text-emerald-800 font-bold flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg transition-colors border border-emerald-500/20"
-                            >
-                                <Sparkles className="w-3 h-3" /> Edit with Mori
-                            </button>
-                        )}
                     </div>
                     <div className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
                         {data.current || <span className="italic text-gray-400">No about section provided</span>}
@@ -108,10 +97,29 @@ export default function LinkedInAboutCard({ data }: LinkedInAboutCardProps) {
                     </div>
 
                     {isLoading ? (
-                        <div className="animate-pulse space-y-3 flex-1">
-                            <div className="h-4 bg-gray-200 rounded w-full"></div>
-                            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                            <div className="h-4 bg-gray-100 rounded w-4/6"></div>
+                        <div className="space-y-3 flex-1">
+                            <div className="relative pl-4">
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-full" />
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                    <Quote className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                                        Hook (Mobile Visible)
+                                    </span>
+                                </div>
+                                <Skeleton className="h-3.5 w-full mb-1.5" />
+                                <Skeleton className="h-3.5 w-4/5" />
+                            </div>
+                            <div className="space-y-1.5">
+                                <Skeleton className="h-3.5 w-full" />
+                                <Skeleton className="h-3.5 w-full" />
+                                <Skeleton className="h-3.5 w-5/6" />
+                            </div>
+                            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/30 rounded-lg p-3">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block mb-1">
+                                    Call to Action
+                                </span>
+                                <Skeleton className="h-3.5 w-4/5" />
+                            </div>
                         </div>
                     ) : isError ? (
                         <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-center flex-1">

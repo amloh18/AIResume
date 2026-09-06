@@ -5,6 +5,7 @@ import type {
     LinkedInUserContext,
     LinkedInProfileSections,
     LinkedInSectionStatus,
+    LinkedInCvType,
 } from '@/types/linkedin';
 
 export interface EnhancerState {
@@ -16,7 +17,11 @@ export interface EnhancerState {
     user_context: LinkedInUserContext;
     sections: LinkedInProfileSections;
     selectedCvId: string | null;
-    selectedCvType: 'master' | 'standalone' | null;
+    selectedCvType: LinkedInCvType | null;
+    /** Display name of the source CV (shown in the header instead of a selector). */
+    selectedCvName: string | null;
+    /** Raw cvData of the loaded source CV — reused on regenerate so no refetch is needed. */
+    sourceCvData: any;
 }
 
 const initialEnhancerState: EnhancerState = {
@@ -52,6 +57,8 @@ const initialEnhancerState: EnhancerState = {
     },
     selectedCvId: null,
     selectedCvType: null,
+    selectedCvName: null,
+    sourceCvData: null,
 };
 
 type Action =
@@ -61,10 +68,10 @@ type Action =
     | { type: 'SET_ERROR'; payload: string | null }
     | { type: 'SET_USER_CONTEXT'; payload: Partial<LinkedInUserContext> }
     | { type: 'SET_SECTIONS'; payload: LinkedInProfileSections }
-    | { type: 'SET_SELECTED_CV'; payload: { id: string; type: 'master' | 'standalone' } }
+    | { type: 'SET_SELECTED_CV'; payload: { id: string; type: LinkedInCvType; name?: string } }
     | { type: 'SET_ENHANCED_SECTIONS'; payload: Partial<LinkedInProfileSections> }
     | { type: 'UPDATE_SECTION_STATUS'; payload: { section: keyof LinkedInProfileSections; id?: string; status: LinkedInSectionStatus } }
-    | { type: 'LOAD_CV_DATA'; payload: { sections: LinkedInProfileSections; cvId: string; cvType: 'master' | 'standalone' } }
+    | { type: 'LOAD_CV_DATA'; payload: { sections: LinkedInProfileSections; cvId: string; cvType: LinkedInCvType; cvName?: string; cvData?: any } }
     | { type: 'RESET_STATE' };
 
 function reducer(state: EnhancerState, action: Action): EnhancerState {
@@ -75,7 +82,12 @@ function reducer(state: EnhancerState, action: Action): EnhancerState {
         case 'SET_ERROR': return { ...state, error: action.payload };
         case 'SET_USER_CONTEXT': return { ...state, user_context: { ...state.user_context, ...action.payload } };
         case 'SET_SECTIONS': return { ...state, sections: action.payload };
-        case 'SET_SELECTED_CV': return { ...state, selectedCvId: action.payload.id, selectedCvType: action.payload.type };
+        case 'SET_SELECTED_CV': return {
+            ...state,
+            selectedCvId: action.payload.id,
+            selectedCvType: action.payload.type,
+            selectedCvName: action.payload.name ?? state.selectedCvName,
+        };
         case 'SET_ENHANCED_SECTIONS': {
             const mergedExperience = state.sections.experience.map((exp, idx) => {
                 const enhanced = action.payload.experience?.find((e: any) => e.id === exp.id) || action.payload.experience?.[idx];
@@ -125,6 +137,8 @@ function reducer(state: EnhancerState, action: Action): EnhancerState {
                 sections: action.payload.sections,
                 selectedCvId: action.payload.cvId,
                 selectedCvType: action.payload.cvType,
+                selectedCvName: action.payload.cvName ?? state.selectedCvName,
+                sourceCvData: action.payload.cvData ?? state.sourceCvData,
                 isLoading: false,
             };
         case 'RESET_STATE': return initialEnhancerState;
@@ -137,7 +151,7 @@ export interface EnhancerContextType {
     dispatch: React.Dispatch<Action>;
     setTone: (tone: LinkedInUserContext['tone_selection']) => void;
     setTargetIndustry: (industry: string) => void;
-    selectCv: (id: string, type: 'master' | 'standalone') => void;
+    selectCv: (id: string, type: LinkedInCvType, name?: string) => void;
     updateSectionStatus: (section: keyof LinkedInProfileSections, status: LinkedInSectionStatus, id?: string) => void;
 }
 
@@ -154,8 +168,8 @@ export function EnhancerProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_USER_CONTEXT', payload: { target_industry: industry } });
     }, []);
 
-    const selectCv = useCallback((id: string, type: 'master' | 'standalone') => {
-        dispatch({ type: 'SET_SELECTED_CV', payload: { id, type } });
+    const selectCv = useCallback((id: string, type: LinkedInCvType, name?: string) => {
+        dispatch({ type: 'SET_SELECTED_CV', payload: { id, type, name } });
     }, []);
 
     const updateSectionStatus = useCallback((section: keyof LinkedInProfileSections, status: LinkedInSectionStatus, id?: string) => {

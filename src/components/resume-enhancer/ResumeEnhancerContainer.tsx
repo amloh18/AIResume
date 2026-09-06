@@ -3005,7 +3005,9 @@ export default function ResumeEnhancerContainer({
       return;
     }
     isNavigatingHomeRef.current = true;
-    await handleSmartSave();
+    // Save in the background — the home button must always return to step 1
+    // (documents) even if the save fails (e.g. offline).
+    handleSmartSave().catch(() => {});
     setTemplateOverlayOpen(false);
     resetState();
     initializedRef.current = null;

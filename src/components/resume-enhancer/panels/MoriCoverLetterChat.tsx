@@ -144,7 +144,7 @@ export const MoriCoverLetterChat: React.FC<MoriCoverLetterChatProps> = ({
     const selectedTextCtx = currentSelection?.text || '';
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       role: 'user',
       content: textToSend,
       timestamp: Date.now(),
@@ -248,7 +248,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
       }
 
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'assistant',
         content: hasSelection 
           ? "I've applied the rewritten text directly to your cover letter canvas!" 
@@ -273,7 +273,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
       console.error('Mori cover letter chat error:', error);
       
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: 'assistant',
         content: "I'm sorry, I encountered a temporary connection issue. Please check your network or try again.",
         timestamp: Date.now(),
@@ -465,7 +465,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
                 isLatest={idx === messages.length - 1 && m.role === 'assistant'}
                 disabled={isLoading}
               />
-              {m.id === 'welcome' && messages.length === 1 && (
+              {(m.role === 'assistant') && (idx === messages.length - 1 || m.id === 'welcome') && (
                 <MoriSuggestionChips
                   suggestions={SUGGESTIONS}
                   onSelect={(prompt) => handleSend(prompt)}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
-import { join } from 'path';
+import { extname, join } from 'path';
 import { existsSync } from 'fs';
 
 // Map of missing files to their fallback files
@@ -17,6 +17,20 @@ const getS3FallbackUrl = (filename: string): string | null => {
   return `${s3BaseUrl}/${encodeURIComponent(filename)}`;
 };
 
+const getImageContentType = (filename: string): string => {
+  const contentTypes: Record<string, string> = {
+    '.avif': 'image/avif',
+    '.gif': 'image/gif',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+  };
+
+  return contentTypes[extname(filename).toLowerCase()] || 'application/octet-stream';
+};
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ filename: string }> }
@@ -30,7 +44,7 @@ export async function GET(
       const imageBuffer = await readFile(requestedPath);
       return new NextResponse(imageBuffer, {
         headers: {
-          'Content-Type': 'image/png',
+          'Content-Type': getImageContentType(filename),
           'Cache-Control': 'public, max-age=31536000, immutable',
         },
       });
@@ -44,7 +58,7 @@ export async function GET(
         const imageBuffer = await readFile(fallbackPath);
         return new NextResponse(imageBuffer, {
           headers: {
-            'Content-Type': 'image/png',
+            'Content-Type': getImageContentType(fallbackFile),
             'Cache-Control': 'public, max-age=31536000, immutable',
           },
         });
@@ -98,4 +112,3 @@ export async function GET(
     return new NextResponse(null, { status: 404 });
   }
 }
-

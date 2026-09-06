@@ -13,6 +13,13 @@ export interface LinkedInUserContext {
 // Section state machine enum
 export type LinkedInSectionStatus = 'ORIGINAL' | 'GENERATED' | 'ACCEPTED' | 'APPLIED';
 
+// Which CV document powers the enhancer
+// - 'journey': the CV tailored for the user's current job application journey
+// - 'master': the user's master/primary CV
+// - 'standalone': any other resume
+// (Journey is the default source; the enhancer falls back to master/standalone.)
+export type LinkedInCvType = 'journey' | 'master' | 'standalone';
+
 // Hero section (headline, location)
 export interface LinkedInHeroSection {
     status: LinkedInSectionStatus;
@@ -174,14 +181,14 @@ export interface LinkedInEnhancerState {
     audit: LinkedInAudit | null;
     career_guide: LinkedInCareerGuide | null;
     selectedCvId: string | null;
-    selectedCvType: 'master' | 'standalone' | null;
+    selectedCvType: LinkedInCvType | null;
 }
 
 // CV Selection item
 export interface CVSelectionItem {
     id: string;
     name: string;
-    type: 'master' | 'standalone';
+    type: LinkedInCvType;
     updatedAt: string;
 }
 

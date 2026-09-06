@@ -4,7 +4,10 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText } from 'lucide-react';
+import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
+import { ATSProvider } from '@/contexts/ATSContext';
+import DocumentsDashboardView from '@/components/dashboard/documents/DocumentsDashboardView';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -53,7 +56,7 @@ const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
 };
 
 export default function JobsDashboard() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'settings'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'documents' | 'settings'>('discover');
   const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -76,7 +79,7 @@ export default function JobsDashboard() {
     if (jobIdParam || newJobParam || filterParam) {
       setActiveTab('applications');
       tabSetByUrl.current = true;
-    } else if (tabParam && ['discover', 'applications', 'settings'].includes(tabParam)) {
+    } else if (tabParam && ['discover', 'applications', 'documents', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
       tabSetByUrl.current = true;
     }
@@ -882,13 +885,23 @@ export default function JobsDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
           <div>
             <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
-              Jobs Hub
+              {activeTab === 'discover' ? 'Jobs Hub' : activeTab === 'applications' ? 'Applications' : activeTab === 'documents' ? 'Documents' : 'Settings'}
             </h1>
             <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
-              AI-powered job matching and automation
-              <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-small font-medium text-lime-600 dark:text-lime-400">
-                BETA
-              </span>
+              {activeTab === 'discover' ? (
+                <>
+                  AI-powered job matching and automation
+                  <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-small font-medium text-lime-600 dark:text-lime-400">
+                    BETA
+                  </span>
+                </>
+              ) : activeTab === 'applications' ? (
+                <>Track every application, from saved to offer</>
+              ) : activeTab === 'documents' ? (
+                <>Your master CV, tailored CVs &amp; cover letters</>
+              ) : (
+                <>Application automation &amp; search preferences</>
+              )}
             </p>
           </div>
 
@@ -896,6 +909,7 @@ export default function JobsDashboard() {
             {[
               { id: 'discover', label: 'Discover', icon: Sparkles },
               { id: 'applications', label: 'Applications', icon: Briefcase },
+              { id: 'documents', label: 'Documents', icon: FileText },
               { id: 'settings', label: 'Settings', icon: Settings },
             ].map((tab) => (
               <button
@@ -1198,6 +1212,14 @@ export default function JobsDashboard() {
 
         {activeTab === 'applications' && (
           <ApplicationsPanel metrics={metrics} userId={userId} />
+        )}
+
+        {activeTab === 'documents' && (
+          <ResumeEnhancerProvider>
+            <ATSProvider>
+              <DocumentsDashboardView />
+            </ATSProvider>
+          </ResumeEnhancerProvider>
         )}
 
         {activeTab === 'settings' && (

@@ -184,7 +184,7 @@ const ExpiredJobsAccordion: React.FC<{
       </button>
       {isOpen && (
         <div className="mt-3 space-y-3">
-          {jobs.map((job) => {
+          {jobs.map((job, index) => {
             const jobJourneys = getJobJourneys(job.id);
             const isSelected = selectedJobs.has(job.id);
             const isDragging = draggedJob === job.id;
@@ -200,6 +200,7 @@ const ExpiredJobsAccordion: React.FC<{
                 isDragging={isDragging}
                 canDrag={canDrag}
                 isExpired={true}
+                colorIndex={index}
                 onClick={onJobClick as any}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
@@ -373,12 +374,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
                   <div
-                    className={`p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
+                    className={`p-2.5 rounded-xl ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
                     onMouseEnter={(e) => {
-                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl ${stage.hoverColor} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
+                      e.currentTarget.className = `p-2.5 rounded-xl ${stage.color} min-h-[48px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -466,17 +467,17 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
               >
                 {/* Stage Header */}
                 <div
-                  className={`flex-shrink-0 p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  className={`flex-shrink-0 p-2.5 rounded-xl ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
                   style={
                     {
                       "--hover-color": stage.hoverColor,
                     } as React.CSSProperties
                   }
                   onMouseEnter={(e) => {
-                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl ${stage.hoverColor} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.className = `p-2.5 rounded-xl border-2 border-solid ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                    e.currentTarget.className = `p-2.5 rounded-xl ${stage.color} min-h-[48px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -493,12 +494,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border-2 transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 relative ${
+                  className={`w-full rounded-xl transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 relative ${
                     draggedJob
                       ? isDraggableStage(stage.status)
-                        ? 'border-dashed border-lime-400 dark:border-lime-500/50 bg-lime-50/50 dark:bg-lime-900/10'
-                        : 'border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20 opacity-50'
-                      : 'border-[var(--border-primary)]/60 border-solid'
+                        ? 'border-2 border-dashed border-lime-400 dark:border-lime-500/50 bg-lime-50/50 dark:bg-lime-900/10'
+                        : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/20 opacity-50'
+                      : 'border-0'
                   }`}
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, stage.status)}
@@ -574,7 +575,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                             return (
                               <>
-                                {activeJobs.map((job) => {
+                                {activeJobs.map((job, index) => {
                                   const jobJourneys = getJobJourneys(job.id);
                                   const isSelected = selectedJobs.has(job.id);
                                   const isDragging = draggedJob === job.id;
@@ -589,6 +590,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                       isSelected={isSelected}
                                       isDragging={isDragging}
                                       canDrag={canDrag}
+                                      colorIndex={index}
                                       onClick={onJobClick}
                                       onDragStart={onDragStart}
                                       onDragEnd={onDragEnd}

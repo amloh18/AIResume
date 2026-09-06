@@ -7,6 +7,7 @@ import CompanyLogo from '@/components/ui/CompanyLogo';
 import { timeAgo } from '@/lib/utils/format-utils';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
+import { getCurrencySymbol, getJobCardColorClass } from '@/lib/config/job-constants';
 import {
   MapPin,
   CheckCircle2,
@@ -23,6 +24,7 @@ import {
   Send,
   AlertCircle,
   FileCheck2,
+  Target,
 } from 'lucide-react';
 
 export interface JobCardProps {
@@ -86,6 +88,7 @@ export function JobCard({
   onSave,
   onApply,
   onPass,
+  colorIndex,
 }: JobCardProps) {
   const jobId = String(job._id || job.id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
@@ -96,36 +99,37 @@ export function JobCard({
   const score = job.matchScore || 0;
   const companyName = job.company || 'Confidential';
   const salaryStr = formatSalary(job);
+  const cardColorClass = getJobCardColorClass(colorIndex, jobId);
 
   // Categorize match score into human-friendly confidence bands
   let matchTier = {
     label: 'Match',
-    badgeClass: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10',
+    badgeClass: 'text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-white/5 border-black/10 dark:border-white/10 shadow-2xs',
     dotClass: 'bg-gray-400',
   };
 
   if (score >= 90) {
     matchTier = {
       label: 'Excellent match',
-      badgeClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
+      badgeClass: 'text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
       dotClass: 'bg-emerald-500',
     };
   } else if (score >= 80) {
     matchTier = {
       label: 'Strong match',
-      badgeClass: 'text-lime-700 dark:text-[#013f2e] bg-lime-500/10 border-lime-500/30',
+      badgeClass: 'text-[#013f2e] dark:text-[#36D39B] bg-lime-500/20 border-lime-500/30',
       dotClass: 'bg-lime-500',
     };
   } else if (score >= 70) {
     matchTier = {
       label: 'Good match',
-      badgeClass: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/30',
+      badgeClass: 'text-sky-800 dark:text-sky-300 bg-sky-500/15 border-sky-500/30',
       dotClass: 'bg-sky-500',
     };
   } else if (score >= 60) {
     matchTier = {
       label: 'Possible match',
-      badgeClass: 'text-gray-700 dark:text-gray-300 bg-gray-500/10 border-gray-500/20',
+      badgeClass: 'text-gray-800 dark:text-gray-300 bg-gray-500/15 border-gray-500/25',
       dotClass: 'bg-gray-400',
     };
   }
@@ -139,7 +143,7 @@ export function JobCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={onOpen}
-      className="group relative flex flex-col justify-between rounded-2xl border border-gray-200 dark:border-white/10 p-5 cursor-pointer transition-all duration-200 bg-white dark:bg-[#141810] hover:border-lime-500/40 hover:shadow-xl hover:scale-[1.01] min-h-[300px]"
+      className={`job-card-discover group relative flex flex-col justify-between rounded-2xl border p-5 cursor-pointer transition-all duration-200 ${cardColorClass} hover:border-lime-500/50 hover:shadow-xl hover:scale-[1.01] min-h-[300px]`}
     >
       {/* Optional subtle pass/dismiss button */}
       {onPass && (
@@ -234,7 +238,7 @@ export function JobCard({
               {skills.map((skill, idx) => (
                 <span
                   key={idx}
-                  className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300"
+                  className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-300 border border-black/5 dark:border-white/5 shadow-2xs backdrop-blur-xs"
                 >
                   {skill}
                 </span>
@@ -242,12 +246,12 @@ export function JobCard({
             </div>
 
             {/* Freshness timestamp */}
-            <div className="text-[11px] text-gray-500 dark:text-gray-500 pt-0.5">
+            <div className="text-[11px] text-gray-600 dark:text-gray-400 pt-0.5">
               Posted {timeAgo(job.postedDate)}
             </div>
 
             {/* Bottom Section: Readiness & Action Journey */}
-            <div className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5 space-y-2.5">
+            <div className="mt-auto pt-3 border-t border-black/8 dark:border-white/5 space-y-2.5">
               {/* Dynamic stage info */}
               <div className="flex items-center justify-between text-xs">
                 {isSaved ? (
@@ -261,8 +265,8 @@ export function JobCard({
                     Auto-Apply available
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    <Sparkles className="w-3 h-3 text-lime-500" />
+                  <span className="inline-flex items-center gap-1 text-[11px] text-gray-700 dark:text-gray-300 font-medium">
+                    <Target className="w-3 h-3 text-[#013f2e] dark:text-[#36D39B]" />
                     Ready to apply
                   </span>
                 )}
@@ -294,7 +298,7 @@ export function JobCard({
                     }}
                     className="col-span-2 px-4 py-2.5 rounded-xl bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Briefcase className="w-3.5 h-3.5" />
                     <span>Prepare Application</span>
                   </button>
                 ) : (
@@ -306,13 +310,13 @@ export function JobCard({
                         onSave();
                       }}
                       disabled={saving}
-                      className="px-3.5 py-2 rounded-xl border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 shadow-xs"
+                      className="px-3.5 py-2 rounded-xl border border-black/10 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 shadow-2xs"
                     >
                       {saving ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
                       ) : (
                         <>
-                          <Bookmark className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                          <Bookmark className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
                           <span>Save</span>
                         </>
                       )}
