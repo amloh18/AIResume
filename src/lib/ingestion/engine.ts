@@ -308,16 +308,22 @@ export async function refreshSettingsCache(): Promise<void> {
   }
 }
 
-function getSourceEnabled(source: string): boolean {
+export function getSourceEnabled(source: string): boolean {
+  // LinkedIn has its own enablement check (env var override + session detection)
+  if (source === 'linkedin') return getLinkedInEnabled();
   const settings = getCachedSettings();
   if (settings?.sources?.[source]) return settings.sources[source].enabled;
   return SOURCE_REGISTRY[source]?.enabled ?? false;
 }
 
 function getLinkedInEnabled(): boolean {
+  // Env var is the deployment-level override — always respected.
+  // This ensures LINKEDIN_ENABLED=true takes effect even if the DB
+  // record has linkedin.enabled: false (set before the env var was added).
+  if (process.env.LINKEDIN_ENABLED) return process.env.LINKEDIN_ENABLED === 'true';
   const settings = getCachedSettings();
   if (settings?.linkedin) return settings.linkedin.enabled;
-  return process.env.LINKEDIN_ENABLED === 'true';
+  return false;
 }
 
 export function checkSourceConfig(source: string): ConfigCheck {

@@ -24,11 +24,19 @@ import Link from 'next/link';
 import PortalConnectModal, { PortalType } from '@/components/dashboard/settings/PortalConnectModal';
 import ContextualLimitModal from './ContextualLimitModal';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
+import {
+  deriveRemoteOnly,
+  normalizeWorkplaceData,
+  workplaceLabelToId,
+  WORKPLACE_ID_TO_LABEL,
+  type WorkplaceType,
+} from '@/lib/jobs/workplace';
 
 interface AutoApplyPreferences {
   enabled: boolean;
   targetRoles: string[];
   locations: string[];
+  workplaceTypes: ('remote' | 'hybrid' | 'onsite')[];
   remoteOnly: boolean;
   minSalary: number;
   salaryCurrency: string;
@@ -85,6 +93,9 @@ const CURRENCY_CONFIG: Record<
   },
 };
 
+// Workplace setup is a canonical field (`workplaceTypes` on the profile); the
+// normalization/derivation logic lives in @/lib/jobs/workplace.
+
 const EXPERIENCE_TIERS = [
   { label: 'Entry Level', range: '0–2 years', minYears: 1 },
   { label: 'Mid-level', range: '3–5 years', minYears: 3 },
@@ -106,11 +117,12 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
   
   const [whatHappensOpen, setWhatHappensOpen] = useState(false);
 
-const [preferences, setPreferences] = useState<AutoApplyPreferences>({
+  const [preferences, setPreferences] = useState<AutoApplyPreferences>({
     enabled: false,
     targetRoles: ['Software Engineer', 'Full Stack Developer', 'Frontend Developer'],
-    locations: ['Remote', 'London', 'Bangalore'],
-    remoteOnly: false,
+    locations: ['London', 'Bangalore'],
+    workplaceTypes: ['remote'],
+    remoteOnly: true,
     minSalary: 12,
     salaryCurrency: 'INR_LPA',
     experienceYears: 3,
@@ -162,9 +174,20 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         const json = await res.json();
         if (json.profile) {
           const { _id, userId, __v, profileVersion, createdAt, updatedAt, id, ...profileFields } = json.profile;
+          const { workplaceTypes: normalizedWorkplaceTypes, locations: normalizedLocations } = normalizeWorkplaceData(
+            json.profile.workplaceTypes,
+            json.profile.locations || []
+          );
+          const effectiveWorkplaceTypes: WorkplaceType[] =
+            normalizedWorkplaceTypes.length > 0 ? normalizedWorkplaceTypes : preferences.workplaceTypes;
           const loadedPrefs = {
             ...preferences,
             ...profileFields,
+            locations: normalizedLocations,
+            workplaceTypes: effectiveWorkplaceTypes,
+            // Keep the canonical `remoteOnly` flag coherent with the workplace
+            // selection: exclusively remote = remote-only constraint.
+            remoteOnly: deriveRemoteOnly(effectiveWorkplaceTypes),
             salaryCurrency: json.profile.salaryCurrency || 'INR_LPA',
           };
           setPreferences(loadedPrefs);
@@ -230,10 +253,16 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Belt & braces: never persist workplace labels inside `locations` —
+      // they belong in `workplaceTypes` only.
+      const payload = {
+        ...preferences,
+        locations: preferences.locations.filter((l) => !workplaceLabelToId(l.trim())),
+      };
       const res = await fetch('/api/job-search-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileData: preferences }),
+        body: JSON.stringify({ profileData: payload }),
       });
 
       if (!res.ok) {
@@ -242,7 +271,7 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
         throw new Error(errorBody.error || errorBody.details?.join(', ') || 'Failed to save preferences');
       }
       toast.success('Preferences saved');
-      setSavedPreferences(JSON.stringify(preferences));
+      setSavedPreferences(JSON.stringify(payload));
       await fetchEntitlements();
       onProfileSaved?.();
     } catch (error: any) {
@@ -296,11 +325,15 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
   };
 
   const toggleWorkplace = (type: string) => {
+    const id: WorkplaceType = workplaceLabelToId(type) || (type.toLowerCase() as WorkplaceType);
     setPreferences((prev) => {
-      const has = prev.locations.includes(type);
+      const has = prev.workplaceTypes.includes(id);
+      const next = has ? prev.workplaceTypes.filter((t) => t !== id) : [...prev.workplaceTypes, id];
       return {
         ...prev,
-        locations: has ? prev.locations.filter((l) => l !== type) : [...prev.locations, type]
+        workplaceTypes: next,
+        // Exclusively remote = remote-only constraint; anything else is open.
+        remoteOnly: deriveRemoteOnly(next),
       };
     });
   };
@@ -484,8 +517,8 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
 
   const hasChanges = JSON.stringify(preferences) !== savedPreferences && savedPreferences !== '';
   
-  const cityLocations = preferences.locations.filter(l => !['Remote', 'Hybrid', 'On-site'].includes(l));
-  const workplacePrefs = preferences.locations.filter(l => ['Remote', 'Hybrid', 'On-site'].includes(l));
+  const cityLocations = preferences.locations.filter((l) => !workplaceLabelToId(l.trim()));
+  const workplacePrefs = preferences.workplaceTypes.map((t) => WORKPLACE_ID_TO_LABEL[t] || t);
 
   const getExperienceLabel = (years: number) => {
     const tier = EXPERIENCE_TIERS.slice().reverse().find(t => years >= t.minYears);
@@ -936,7 +969,9 @@ const [preferences, setPreferences] = useState<AutoApplyPreferences>({
               <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">Workplace Setup</span>
               <div className="flex flex-wrap gap-2">
                 {['Remote', 'Hybrid', 'On-site'].map((type) => {
-                  const isActive = preferences.locations.includes(type);
+                  const isActive = preferences.workplaceTypes.includes(
+                    workplaceLabelToId(type.toLowerCase()) as WorkplaceType
+                  );
                   return (
                     <button
                       key={type}

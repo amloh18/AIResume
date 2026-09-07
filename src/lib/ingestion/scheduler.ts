@@ -23,6 +23,7 @@ import {
   executeSourceRun,
   completeRun,
   checkSourceConfig,
+  getSourceEnabled,
   SOURCE_REGISTRY,
   type SourceProgress,
 } from '@/lib/ingestion/engine';
@@ -289,9 +290,11 @@ export class IngestionScheduler {
       // Determine health status
       const healthStatus = IngestionScheduler.determineHealthStatus(source, def);
 
+      const enabled = getSourceEnabled(name);
+
       healthStatuses.push({
         source: name,
-        enabled: def?.enabled ?? false,
+        enabled,
         healthy: healthStatus === 'healthy',
         healthStatus,
         lastRunAt: source.status?.lastRunAt || null,
@@ -307,11 +310,12 @@ export class IngestionScheduler {
     // Add sources that exist in registry but not in DB
     for (const [name, def] of Object.entries(SOURCE_REGISTRY)) {
       if (!healthStatuses.find((h) => h.source === name)) {
+        const enabled = getSourceEnabled(name);
         healthStatuses.push({
           source: name,
-          enabled: def.enabled,
+          enabled,
           healthy: false,
-          healthStatus: def.enabled ? 'not_initialized' : 'disabled',
+          healthStatus: enabled ? 'not_initialized' : 'disabled',
           lastRunAt: null,
           lastSuccessAt: null,
           lastFailureAt: null,
@@ -333,8 +337,8 @@ export class IngestionScheduler {
     source: any,
     def: any
   ): 'healthy' | 'degraded' | 'stale' | 'failed' | 'config_error' | 'not_initialized' | 'running' | 'paused' | 'disabled' {
-    // Disabled source
-    if (!def?.enabled) return 'disabled';
+    // Disabled source — use dynamic check (env var may override static registry)
+    if (!getSourceEnabled(source.name)) return 'disabled';
 
     // Check if currently running
     if (source.status?.health === 'running') return 'running';

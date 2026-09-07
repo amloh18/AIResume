@@ -26,15 +26,14 @@ export class BatchProcessor {
     const bulkOps: AnyBulkWriteOperation<any>[] = [];
 
     for (const job of jobs) {
-      // Upsert based on canonicalId or exact source primary key
+      // Upsert by canonicalId only.
+      // The previous $or filter (canonicalId || sourceJobId) caused E11000
+      // collisions in bulkWrite with ordered:false when parallel operations
+      // couldn't see each other's inserts, and when Greenhouse sourceJobIds
+      // were per-company numeric IDs (not globally unique).
       bulkOps.push({
         updateOne: {
-          filter: {
-            $or: [
-              { canonicalId: job.canonicalId },
-              { 'source.primary': job.source.primary, 'source.sourceJobId': job.source.sourceJobId },
-            ],
-          },
+          filter: { canonicalId: job.canonicalId },
           update: {
             $setOnInsert: {
               canonicalId: job.canonicalId,
@@ -60,6 +59,11 @@ export class BatchProcessor {
               'ingestion.firstSeenAt': now,
             },
             $set: {
+              'source.primary': job.source.primary,
+              'source.sourceJobId': job.source.sourceJobId,
+              'source.sourceUrl': job.source.sourceUrl,
+              'source.applicationUrl': job.source.applicationUrl,
+              'source.discoveredAt': job.source.discoveredAt,
               'source.lastSeenAt': now,
               'ingestion.lastSeenAt': now,
               updatedAt: now,
@@ -83,7 +87,26 @@ export class BatchProcessor {
     }
 
     try {
-      const res = await jobsColl.bulkWrite(bulkOps, { ordered: false });
+      let res: any;
+      try {
+        res = await jobsColl.bulkWrite(bulkOps, { ordered: false });
+      } catch (bulkErr: any) {
+        // E11000 from ordered:false bulkWrite means some ops succeeded and some hit
+        // duplicate key conflicts (e.g. concurrent upserts racing on the same canonicalId).
+        // Retry the failed ops individually — they'll match existing docs on the second attempt.
+        if (bulkErr.code === 11000 && bulkErr.writeErrors?.length) {
+          logger.warn(`BulkWrite E11000: ${bulkErr.writeErrors.length} ops failed, retrying individually`);
+          const failedIndices = new Set(bulkErr.writeErrors.map((e: any) => e.index));
+          const retryOps = bulkOps.filter((_: any, i: number) => failedIndices.has(i));
+          if (retryOps.length > 0) {
+            res = await jobsColl.bulkWrite(retryOps, { ordered: false });
+          } else {
+            res = { upsertedCount: 0, modifiedCount: 0, upsertedIds: {} };
+          }
+        } else {
+          throw bulkErr;
+        }
+      }
 
       const inserted = res.upsertedCount || 0;
       const updated = res.modifiedCount || res.matchedCount || 0;

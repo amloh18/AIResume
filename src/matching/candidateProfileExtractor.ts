@@ -12,6 +12,12 @@
 
 import { Db, ObjectId } from 'mongodb';
 import { resolveRoleFamily } from '@/lib/taxonomy/roleTaxonomy';
+import {
+  deriveRemoteOnly,
+  deriveWorkplacePreference,
+  normalizeWorkplaceTypes,
+  workplaceLabelToId,
+} from '@/lib/jobs/workplace';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -132,13 +138,28 @@ export async function extractCandidateProfile(db: Db, userId: string): Promise<C
       .map((r: string) => resolveRoleFamily(r))
       .filter((f: string | null): f is string => !!f);
 
+    // Workplace preference comes from the full `workplaceTypes` selection,
+    // not just the first entry. Legacy label entries stored inside `locations`
+    // are migrated into the selection and stripped from the city list.
+    const workplaceTypes = normalizeWorkplaceTypes(profile.workplaceTypes);
+    const rawLocations = Array.isArray(profile.locations) ? profile.locations : [];
+    const targetLocations = rawLocations.filter(
+      (l: string) => !workplaceLabelToId((l || '').trim())
+    );
+    // "Remote only" is a hard constraint when the user's selection is
+    // exclusively remote — or when a legacy `remoteOnly: true` flag exists and
+    // no explicit workplace selection has been made (the selection wins once
+    // the user expresses one).
+    const remoteOnly = deriveRemoteOnly(workplaceTypes, profile.remoteOnly === true);
+    const workplacePreference = deriveWorkplacePreference(workplaceTypes);
+
     return {
       userId,
       targetRoles,
       roleFamilies,
-      targetLocations: profile.locations || [],
-      remotePreference: profile.remoteOnly ? 'remote' : (profile.workplaceTypes?.[0] || 'any'),
-      workplacePreference: profile.remoteOnly ? 'remote' : (profile.workplaceTypes?.[0] || 'any'),
+      targetLocations,
+      remotePreference: remoteOnly ? 'remote' : workplacePreference,
+      workplacePreference,
       experienceLevel: mapExperienceLevel(profile.experienceYears),
       experienceYears: profile.experienceYears || 0,
       minSalary: profile.minSalary || 0,
@@ -147,15 +168,15 @@ export async function extractCandidateProfile(db: Db, userId: string): Promise<C
       needsVisaSponsorship: false,
       preferredIndustries: [],
       hardConstraints: {
-        remoteOnly: profile.remoteOnly || false,
+        remoteOnly,
         minSalary: profile.minSalary || 0,
-        locations: profile.locations || [],
+        locations: targetLocations,
         visaRequired: false,
       },
       softPreferences: {
         preferredIndustries: [],
         preferredCompanySizes: [],
-        preferredWorkplace: profile.remoteOnly ? 'remote' : 'any',
+        preferredWorkplace: remoteOnly ? 'remote' : workplacePreference,
       },
     };
   }

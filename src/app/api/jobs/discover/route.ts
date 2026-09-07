@@ -24,6 +24,8 @@ import { scoreJobForCandidate } from '@/matching/deterministicScoring';
 import { extractCandidateProfile } from '@/matching/candidateProfileExtractor';
 import { getOrComputeProfile } from '@/lib/search/userProfileCache';
 import type { NormalizedUserProfile } from '@/lib/search/userProfileCache';
+import { resolveFeedRemoteOnly } from '@/lib/jobs/workplace';
+import { AUTO_APPLY_SUPPORTED_ATS, isAutoApplySupported } from '@/lib/jobs/autoApplySupport';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -71,6 +73,7 @@ export async function GET(request: NextRequest) {
     const experienceFilter = searchParams.get('experienceLevel')?.split(',').filter(Boolean) || [];
     const datePostedFilter = searchParams.get('datePosted');
     const sponsorsVisaFilter = searchParams.get('sponsorsVisa') === 'true';
+    const easyApplyOnly = searchParams.get('easyApplyOnly') === 'true';
     const matchScoreMax = parseInt(searchParams.get('matchScoreMax') || '100');
     const matchScoreMin = parseInt(searchParams.get('matchScoreMin') || '0');
     const sortBy = (searchParams.get('sortBy') || 'matchScore') as string;
@@ -413,6 +416,17 @@ export async function GET(request: NextRequest) {
         });
       }
 
+      // Auto-Apply supported filter (ATS types with an automation adapter)
+      if (easyApplyOnly) {
+        andClauses.push({
+          $or: [
+            { atsType: { $in: AUTO_APPLY_SUPPORTED_ATS } },
+            { 'source.primary': { $in: AUTO_APPLY_SUPPORTED_ATS } },
+            { source: { $in: AUTO_APPLY_SUPPORTED_ATS } },
+          ],
+        });
+      }
+
       const mongoFilter = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
       // Count the TRUE total from MongoDB
@@ -537,9 +551,18 @@ export async function GET(request: NextRequest) {
               ? userProfile.roleFamilies
               : 'Software Engineer'));
 
+    // ── Determine remote-only retrieval pool ─────────────────────────────
+    // Explicit feed filters ALWAYS win over the standing job-search profile
+    // (see resolveFeedRemoteOnly in @/lib/jobs/workplace).
+    const poolRemoteOnly = resolveFeedRemoteOnly({
+      remoteOnlyParam: remoteOnly,
+      workplaceFilter,
+      profileRemoteOnly: userProfile?.hardConstraints?.remoteOnly ?? false,
+    });
+
     candidates = await retrieveCandidates(effectiveSearch, {
       limit: Math.max(limit * 8, 250), // Fetch a rich candidate pool for personalized scoring
-      remoteOnly: userProfile?.hardConstraints?.remoteOnly || remoteOnly,
+      remoteOnly: poolRemoteOnly,
       countryFilter: countryList.length > 0 ? countryList : undefined,
       excludeJobIds,
     });
@@ -622,11 +645,22 @@ export async function GET(request: NextRequest) {
     }
 
     if (workplaceFilter.length > 0) {
+      // Matches the semantics used in All (catalog) mode: a job is hybrid when
+      // it isn't flagged remote but is labeled hybrid; onsite = not remote and
+      // not hybrid. Previously 'hybrid' matched everything and 'onsite' leaked
+      // hybrid-labeled jobs through.
       filteredListings = filteredListings.filter((job) => {
         const isRemote = job.remote;
+        const locationStr = (job.location || '').toLowerCase();
+        const isHybrid =
+          !isRemote &&
+          (locationStr.includes('hybrid') ||
+            (job as any).workplaceType === 'hybrid' ||
+            (Array.isArray((job as any).workplaceTypes) && (job as any).workplaceTypes.includes('hybrid')));
         return workplaceFilter.some((wf) => {
           if (wf === 'remote') return isRemote;
-          if (wf === 'onsite') return !isRemote;
+          if (wf === 'hybrid') return isHybrid;
+          if (wf === 'onsite') return !isRemote && !isHybrid;
           return true;
         });
       });
@@ -682,6 +716,13 @@ export async function GET(request: NextRequest) {
         const sponsors = (job as any).sponsorsVisa ?? (job as any).visaSponsorship;
         return sponsors === true || sponsors === 'true';
       });
+    }
+
+    // Auto-Apply supported filter
+    if (easyApplyOnly) {
+      filteredListings = filteredListings.filter((job) =>
+        isAutoApplySupported(job.atsType || (job as any).source || '')
+      );
     }
 
     // Saved only filter vs Exclude saved jobs from other feeds

@@ -51,6 +51,12 @@ interface SourceHealthData {
     demand: { total: number; stale: number; fetching: number };
     sources: { total: number; healthy: number; unhealthy: number };
   };
+  linkedinSession?: {
+    status: string;
+    enabled: boolean;
+    profileExists: boolean;
+    profileHasData: boolean;
+  };
 }
 
 function timeAgo(dateStr: string | null): string {
@@ -285,6 +291,39 @@ export default function SourceHealthPanel() {
         </div>
       )}
 
+      {/* LinkedIn Session Status Banner */}
+      {data?.linkedinSession && data.linkedinSession.enabled && data.linkedinSession.status !== 'PROFILE_EXISTS' && data.linkedinSession.status !== 'SESSION_OK' && (
+        <div className={`rounded-2xl p-4 flex items-start gap-3 ${
+          data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
+            ? 'bg-red-500/5 border border-red-500/10'
+            : 'bg-amber-500/5 border border-amber-500/10'
+        }`}>
+          <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${
+            data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
+              ? 'text-red-400'
+              : 'text-amber-400'
+          }`} />
+          <div>
+            <h4 className={`text-sm font-bold ${
+              data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
+                ? 'text-red-400'
+                : 'text-amber-400'
+            }`}>
+              LinkedIn: {data.linkedinSession.status.replace(/_/g, ' ')}
+            </h4>
+            <p className="text-xs text-white/50 mt-1">
+              {data.linkedinSession.status === 'PROFILE_MISSING' && 'Browser profile directory not found on VPS. Create it and run login_linkedin.py.'}
+              {data.linkedinSession.status === 'PROFILE_EMPTY' && 'Browser profile exists but has no session data. Run login_linkedin.py on the VPS to authenticate.'}
+              {data.linkedinSession.status === 'NEEDS_REAUTH' && 'LinkedIn session expired. Run login_linkedin.py again to re-authenticate.'}
+              {data.linkedinSession.status === 'NOT_CONFIGURED' && 'LinkedIn is not enabled. Set LINKEDIN_ENABLED=true and enable in Worker Settings.'}
+            </p>
+            <p className="text-[10px] text-white/30 mt-1.5 font-mono">
+              VPS: scripts/linkedin-worker/login_linkedin.py
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Run All Button */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-bold text-white">Source Workers</span>
@@ -432,6 +471,23 @@ export default function SourceHealthPanel() {
                 <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl px-3 py-2 mb-3">
                   <span className="text-[11px] text-amber-400">
                     {src.configStatus.reason || 'Not configured'}
+                  </span>
+                </div>
+              )}
+
+              {/* LinkedIn Session Status */}
+              {src.source === 'linkedin' && data?.linkedinSession && src.enabled && (
+                <div className={`rounded-xl px-3 py-2 mb-3 flex items-center gap-2 ${
+                  data.linkedinSession.status === 'PROFILE_EXISTS' || data.linkedinSession.status === 'SESSION_OK'
+                    ? 'bg-emerald-500/5 border border-emerald-500/10'
+                    : 'bg-amber-500/5 border border-amber-500/10'
+                }`}>
+                  <span className={`text-[11px] font-bold ${
+                    data.linkedinSession.status === 'PROFILE_EXISTS' || data.linkedinSession.status === 'SESSION_OK'
+                      ? 'text-emerald-400'
+                      : 'text-amber-400'
+                  }`}>
+                    Session: {data.linkedinSession.status.replace(/_/g, ' ')}
                   </span>
                 </div>
               )}

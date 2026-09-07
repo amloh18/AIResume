@@ -276,8 +276,10 @@ export async function loadIngestionSettings(): Promise<IngestionSettings> {
     if (doc?.settings) {
       // Deep merge with defaults (DB values override defaults)
       cachedSettings = deepMerge(DEFAULT_INGESTION_SETTINGS, doc.settings as IngestionSettings);
+      // Apply env var overrides on top of DB values — env vars are deployment-level controls
+      cachedSettings = applyEnvOverrides(cachedSettings);
       cacheTimestamp = now;
-      console.log('[WorkerSettings] Loaded from DB, merged with defaults');
+      console.log('[WorkerSettings] Loaded from DB, merged with defaults, env overrides applied');
       return cachedSettings;
     } else {
       console.log('[WorkerSettings] No DB record found, using defaults');

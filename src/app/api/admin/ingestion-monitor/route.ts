@@ -21,12 +21,14 @@ import authOptions from '@/lib/auth-config';
 import { getConnection } from '@/lib/database';
 import mongoose from 'mongoose';
 import AdminAuditLog from '@/models/AdminAuditLog';
-import { SOURCE_REGISTRY, checkSourceConfig, VALID_SOURCES } from '@/lib/ingestion/engine';
+import { SOURCE_REGISTRY, checkSourceConfig, getSourceEnabled, VALID_SOURCES } from '@/lib/ingestion/engine';
 import { DemandTracker } from '@/lib/demand/demandTracker';
 import { IngestionScheduler } from '@/lib/ingestion/scheduler';
 import { BaselineScheduler } from '@/lib/ingestion/baselineSchedule';
 import { IngestionLock } from '@/lib/ingestion/ingestionLock';
 import { BackgroundScheduler } from '@/lib/ingestion/backgroundScheduler';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +128,7 @@ export async function GET(req: NextRequest) {
         },
         locks: { active: activeLocks },
         health,
+        linkedinSession: getLinkedInSessionStatus(),
       });
     }
 
@@ -295,4 +298,52 @@ export async function POST(req: NextRequest) {
     console.error('Ingestion Monitor POST Error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
+}
+
+// ── LinkedIn Session Status (lightweight, no browser launch) ────────────────
+
+function getLinkedInSessionStatus(): {
+  status: string;
+  enabled: boolean;
+  profileExists: boolean;
+  profileHasData: boolean;
+} {
+  const enabled = getSourceEnabled('linkedin');
+  const profileDir = process.env.LINKEDIN_BROWSER_PROFILE_DIR ||
+    '/var/lib/buildairesume/browser-profiles/linkedin';
+
+  let profileExists = false;
+  let profileHasData = false;
+
+  try {
+    const stat = fs.statSync(profileDir);
+    profileExists = stat.isDirectory();
+
+    if (profileExists) {
+      const indicators = ['Cookies', 'Cookies-journal', 'Local State', 'Default'];
+      profileHasData = indicators.some((f) => {
+        try {
+          fs.accessSync(path.join(profileDir, f));
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    }
+  } catch {
+    // Directory doesn't exist
+  }
+
+  let status: string;
+  if (!enabled) {
+    status = 'NOT_CONFIGURED';
+  } else if (!profileExists) {
+    status = 'PROFILE_MISSING';
+  } else if (!profileHasData) {
+    status = 'PROFILE_EMPTY';
+  } else {
+    status = 'PROFILE_EXISTS';
+  }
+
+  return { status, enabled, profileExists, profileHasData };
 }

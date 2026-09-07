@@ -13,6 +13,7 @@ import {
   executeSourceRun,
   completeRun,
   checkSourceConfig,
+  getSourceEnabled,
   SOURCE_REGISTRY,
   recoverStaleRuns,
   getCachedSettings,
@@ -76,9 +77,9 @@ export class BaselineScheduler {
     const settings = getCachedSettings();
 
     for (const schedule of BASELINE_SCHEDULES) {
-      // Override enabled/interval/duration from DB settings if available
+      // Use dynamic enabled check (env var may override DB/registry defaults)
+      const effectiveEnabled = getSourceEnabled(schedule.source);
       const sourceSettings = settings?.sources?.[schedule.source];
-      const effectiveEnabled = sourceSettings?.enabled ?? schedule.enabled;
       const effectiveInterval = sourceSettings?.refreshIntervalMs ?? schedule.intervalMs;
       const effectiveDuration = sourceSettings?.maxDurationMs ?? schedule.maxDurationMs;
 
@@ -174,7 +175,7 @@ export class BaselineScheduler {
     const sourcesColl = db.collection('jobSources');
 
     for (const schedule of BASELINE_SCHEDULES) {
-      if (!schedule.enabled) continue;
+      if (!getSourceEnabled(schedule.source)) continue;
 
       const config = checkSourceConfig(schedule.source);
       if (!config.ready) continue;
@@ -220,7 +221,7 @@ export class BaselineScheduler {
 
       statuses.push({
         source: schedule.source,
-        enabled: schedule.enabled,
+        enabled: getSourceEnabled(schedule.source),
         intervalMs: schedule.intervalMs,
         lastRunAt,
         nextEligibleRun,
