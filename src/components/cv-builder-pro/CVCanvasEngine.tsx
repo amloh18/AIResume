@@ -20,6 +20,7 @@ import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { getCanvasSnippetPreviewData } from '@/lib/templates/canvas-initial-data';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
+import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
 import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
@@ -1299,6 +1300,18 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const recentAssignmentsRef = React.useRef<string[]>([]);
   const zoomRef = React.useRef(zoom);
   zoomRef.current = zoom;
+
+  // Pinch-to-zoom inside the canvas workspace (mobile). Page-level pinch is
+  // blocked by ZoomGuard on editor steps 2-5; the canvas re-enables zoom for
+  // its own container via two-finger gestures feeding setZoom.
+  useCanvasPinchZoom({
+    containerRef: workspaceRef,
+    zoomRef,
+    setZoom,
+    scaleFor: (distancePx) => (distancePx / 300) * 100,
+    minZoom: 50,
+    maxZoom: 200,
+  });
 
   // Dynamically calculate page partitioning assignments based on DOM snippet heights
   React.useEffect(() => {

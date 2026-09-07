@@ -1431,7 +1431,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           </div>
 
           {/* Mobile unified bottom navigation pill */}
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
+          <div data-editor-bottom-pill className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
             {/* Previous Step Button */}
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('editor-back-step'))}

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import CoverLetterLayoutEngine, { CoverLetterDesignProps } from '../../cover-letter-engine/CoverLetterLayoutEngine';
 import { 
   ClassicHeader, 
@@ -74,6 +75,19 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
+  // Pinch-to-zoom inside the letter canvas (mobile). Page-level pinch is
+  // blocked by ZoomGuard; the canvas container re-enables it for itself.
+  useCanvasPinchZoom({
+    containerRef,
+    zoomRef,
+    setZoom,
+    scaleFor: (distancePx) => (distancePx / 300) * 100,
+    minZoom: 50,
+    maxZoom: 200,
+  });
 
   // Design State
   const [design, setDesign] = useState<CoverLetterDesignProps>({
@@ -488,7 +502,7 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
       </div>
 
       {/* Mobile unified bottom navigation pill */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
+      <div data-editor-bottom-pill className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl no-print">
         {/* Previous Step Button */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('editor-back-step'))}

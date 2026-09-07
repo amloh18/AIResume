@@ -14,6 +14,7 @@ import User from '@/models/User';
 import { headers } from 'next/headers';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
+import { getAppleClientSecret } from './apple-provider-secret';
 
 /**
  * Unified Authentication Service
@@ -72,7 +73,11 @@ export class UnifiedAuthService {
 
         AppleProvider({
           clientId: process.env.APPLE_ID || '',
-          clientSecret: process.env.APPLE_SECRET || '',
+          // Apple's client secret is not static: it is an ES256 JWT generated
+          // from the .p8 signing key (see apple-provider-secret.ts). Returns ''
+          // when not configured, which leaves the provider unavailable without
+          // affecting the other providers.
+          clientSecret: getAppleClientSecret(),
         }),
 
         CredentialsProvider({

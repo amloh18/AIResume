@@ -14,8 +14,13 @@ export async function POST(request: NextRequest) {
     // Get session to invalidate cache and log logout
     const session = await getServerSession(authConfig);
     
-    // Log logout activity before invalidating cache
+    // Best-effort logging/cache/telemetry. This work must NEVER delay or block
+    // the cookie-clearing response below: if Mongo/PostHog/Redis is slow or
+    // hangs, the client would never receive the Set-Cookie headers that end
+    // the session, leaving the user signed in with a dead Sign Out button.
     if (session?.user?.id) {
+      const sessionUserId = session.user.id as string;
+      const sessionWork = (async () => {
       try {
         const { ActivityLogService } = await import('@/lib/services/activityLogService');
         const user = session.user as any;
@@ -23,7 +28,7 @@ export async function POST(request: NextRequest) {
         
         if (isAdmin) {
           await ActivityLogService.logAdminAction({
-            adminUserId: session.user.id as string,
+            adminUserId: sessionUserId,
             adminEmail: session.user.email || undefined,
             action: 'admin_logout',
             actionType: 'authentication',
@@ -34,7 +39,7 @@ export async function POST(request: NextRequest) {
           });
         } else {
           await ActivityLogService.logUserAction({
-            userId: session.user.id as string,
+            userId: sessionUserId,
             userEmail: session.user.email || undefined,
             action: 'user_logout',
             status: 'success',
@@ -51,14 +56,14 @@ export async function POST(request: NextRequest) {
         console.error('Failed to log logout activity:', logError);
       }
       
-      await UnifiedAuthService.invalidateUserCache(session.user.id as string);
+      await UnifiedAuthService.invalidateUserCache(sessionUserId);
 
       // Track sign-out server-side
       try {
         const { getPostHogClient } = await import('@/lib/posthog-server');
         const posthog = getPostHogClient();
         posthog.capture({
-          distinctId: session.user.id as string,
+          distinctId: sessionUserId,
           event: 'user_signed_out',
           properties: {
             email: session.user.email ?? undefined,
@@ -67,6 +72,14 @@ export async function POST(request: NextRequest) {
       } catch (phError) {
         console.error('PostHog capture error (user_signed_out):', phError);
       }
+      })();
+
+      // Cap the wait on side-effect work: respond with the cookie-clearing
+      // headers even if logging/cache/telemetry is stuck.
+      await Promise.race([
+        sessionWork,
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
     }
 
     // Create response
@@ -75,20 +88,45 @@ export async function POST(request: NextRequest) {
       message: 'Sign out successful'
     });
 
-    // Explicitly clear all NextAuth cookies
-    const isProduction = process.env.NODE_ENV === 'production';
-    const cookieNames = [
-      isProduction ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
-      isProduction ? '__Secure-next-auth.csrf-token' : 'next-auth.csrf-token',
-      isProduction ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
+    // Explicitly clear all NextAuth cookies.
+    // IMPORTANT: cookie names must cover BOTH the secure-prefixed and
+    // non-prefixed variants. The auth config names the session cookie
+    // `__Secure-next-auth.session-token` only when NODE_ENV === 'production'
+    // AND NEXTAUTH_URL starts with https:// — deriving the name from
+    // NODE_ENV alone can mismatch the cookie actually set (e.g. production
+    // running without an https NEXTAUTH_URL), leaving the user signed in.
+    // Deleting a non-existent cookie is a harmless no-op, so we clear every
+    // variant, including chunked session tokens (.0, .1, ...) which NextAuth
+    // uses when the JWT exceeds the per-cookie size limit.
+    const useSecureCookies =
+      process.env.NODE_ENV === 'production' &&
+      (process.env.NEXTAUTH_URL || '').startsWith('https://');
+    const securePrefix = '__Secure-';
+    const baseNames = [
+      'next-auth.session-token',
+      'next-auth.csrf-token',
+      'next-auth.callback-url',
     ];
 
-    cookieNames.forEach(cookieName => {
-      // Clear cookie with standard path
+    const cookieNames = new Set<string>();
+    baseNames.forEach((base) => {
+      cookieNames.add(base);
+      cookieNames.add(`${securePrefix}${base}`);
+      // Chunked session-token variants (NextAuth chunking)
+      if (base.endsWith('.session-token')) {
+        for (let i = 0; i < 4; i++) {
+          cookieNames.add(`${base}.${i}`);
+          cookieNames.add(`${securePrefix}${base}.${i}`);
+        }
+      }
+    });
+
+    const expires = new Date(0);
+    cookieNames.forEach((cookieName) => {
       response.cookies.set(cookieName, '', {
-        expires: new Date(0),
+        expires,
         httpOnly: true,
-        secure: isProduction,
+        secure: useSecureCookies,
         sameSite: 'lax',
         path: '/',
       });

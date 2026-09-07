@@ -17,16 +17,22 @@ export const comprehensiveSignOut = async (): Promise<void> => {
     }
 
     // Step 1: Call our custom signout API endpoint FIRST to invalidate server-side cache
-    // This needs to happen while the session is still valid to get the user ID
+    // This needs to happen while the session is still valid to get the user ID.
+    // Raced against a timeout so a slow/hung endpoint can never block the
+    // redirect below — the cookie clearing also happens in Step 2 and via
+    // document.cookie fallbacks, so logout must always proceed.
     try {
       console.log('🔍 Calling custom signout API endpoint...');
-      await fetch('/api/auth/signout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      await Promise.race([
+        fetch('/api/auth/signout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
+      ]);
       console.log('✅ Custom signout API endpoint called, cache invalidated');
     } catch (error) {
       console.error('❌ Error calling signout API:', error);
@@ -53,10 +59,19 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       // Detect production by checking if domain contains buildairesume.com or if using secure protocol
       const isProduction = currentDomain.includes('buildairesume.com') || (isSecure && currentDomain !== 'localhost');
 
-      // NextAuth cookie names (both dev and production)
+      // NextAuth cookie names (both dev and production), including chunked
+      // session-token variants NextAuth may use for large JWTs
       const nextAuthCookies = [
         'next-auth.session-token',
         '__Secure-next-auth.session-token',
+        'next-auth.session-token.0',
+        'next-auth.session-token.1',
+        'next-auth.session-token.2',
+        'next-auth.session-token.3',
+        '__Secure-next-auth.session-token.0',
+        '__Secure-next-auth.session-token.1',
+        '__Secure-next-auth.session-token.2',
+        '__Secure-next-auth.session-token.3',
         'next-auth.csrf-token',
         '__Secure-next-auth.csrf-token',
         'next-auth.callback-url',

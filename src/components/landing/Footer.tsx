@@ -19,9 +19,9 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { name: 'X', icon: X, href: 'https://x.com/buildairesume', color: 'from-blue-400 to-blue-500' },
-    { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/buildairesume.com/', color: 'from-pink-500 to-purple-500' },
-    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/build-ai-resume/', color: 'from-blue-600 to-blue-700' },
+    { name: 'X', icon: X, href: 'https://x.com/buildairesume' },
+    { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/buildairesume.com/' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/build-ai-resume/' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -140,18 +140,13 @@ const Footer = () => {
                 transition={{ duration: 0.3 }}
               >
                 <motion.div
-                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-[#0c1a14] border border-emerald-500/25 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{
                     scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
+                    boxShadow: "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                   }}
                 >
-                  <Phone className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
+                  <Phone className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-[#36D39B]" />
                 </motion.div>
                 <div>
                   <p className="text-white/60 text-small tablet:text-small">Phone</p>
@@ -258,26 +253,21 @@ const Footer = () => {
                   <motion.a
                     key={index}
                     href={social.href}
-                    className={`group relative w-12 h-12 bg-gradient-to-br ${social.color} rounded-2xl flex items-center justify-center text-white shadow-2xl hover:shadow-xl transition-all duration-300 overflow-hidden`}
+                    className="group relative w-12 h-12 bg-[#0c1a14] border border-emerald-500/25 rounded-2xl flex items-center justify-center text-[#36D39B] shadow-lg transition-all duration-300 overflow-hidden"
                     title={social.name}
                     whileHover={{
                       scale: 1.1,
-                      rotateY: 15,
                       y: -5,
-                      boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
+                      boxShadow: "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                     }}
                     whileTap={{ scale: 0.95 }}
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     viewport={{ once: true }}
-                    style={{
-                      transformStyle: 'preserve-3d',
-                      perspective: '1000px'
-                    }}
                   >
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      className="absolute inset-0 bg-gradient-to-br from-[#36D39B]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       style={{ filter: 'blur(10px)' }}
                     />
                     <IconComponent size={20} className="relative z-10" />

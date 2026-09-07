@@ -28,6 +28,7 @@ import {
   getCoverLetterTemplateIdForCV,
 } from '@/lib/templates/cover-letter-templates';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
+import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 
 function getAtsScannedText(cvData: any): string {
   if (!cvData) return 'No resume data found.';
@@ -283,6 +284,19 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
+  // Pinch-to-zoom inside the review preview canvas (mobile). Page-level pinch
+  // is blocked by ZoomGuard; the preview container re-enables it for itself.
+  useCanvasPinchZoom({
+    containerRef,
+    zoomRef,
+    setZoom,
+    scaleFor: (distancePx) => distancePx / 300,
+    minZoom: 0.4,
+    maxZoom: 1.5,
+  });
 
   const resolvedPaperSize = state.paperSize === 'Letter' ? 'Letter' : 'A4';
   const paperWidth = getPageDimensions(resolvedPaperSize).widthPx;

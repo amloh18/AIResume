@@ -84,7 +84,7 @@ export class GreenhouseSource implements JobSource {
 
         const batch: RawJob[] = rawJobsList.map((job) => ({
           source: 'greenhouse',
-          sourceJobId: String(job.id),
+          sourceJobId: `${company.token}:${job.id}`,
           url: job.absolute_url || `https://boards.greenhouse.io/${company.token}/jobs/${job.id}`,
           title: job.title || 'Untitled Role',
           companyName: company.name,

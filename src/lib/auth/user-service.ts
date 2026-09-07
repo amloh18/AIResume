@@ -119,24 +119,48 @@ export class UserService {
     try {
       await getConnection();
 
-      const userEmail = data.email.toLowerCase();
-      let existingUser = await userRepository.findByEmail(userEmail);
+      const userEmail = (data.email || '').toLowerCase().trim();
+      let existingUser = userEmail ? await userRepository.findByEmail(userEmail) : null;
+
+      // Apple only sends the user's email on the first authorization (and in
+      // the ID token while the email scope stays granted). On repeat sign-ins
+      // the email may be missing — fall back to looking the user up by the
+      // provider's stable account id (Apple `sub`), which is stored as
+      // authProviderId when the account is first created.
+      if (!existingUser && !userEmail && data.providerId) {
+        existingUser = await userRepository.findByAuthProviderId(data.providerId);
+        if (existingUser) {
+          console.log(`✅ ${data.provider} user matched by providerId (no email in profile):`, (existingUser as any)._id.toString());
+        }
+      }
 
       if (existingUser) {
         // Update existing user using repository
         const userId = (existingUser as any)._id.toString();
+        // Backfill the provider account id for accounts that were created via
+        // another flow (e.g. email/passwordless) and had none set — this is
+        // what makes future email-less Apple sign-ins resolvable.
+        const updateSet: Record<string, unknown> = {
+          lastLogin: new Date(),
+          avatar: data.image || existingUser.avatar,
+          isEmailVerified: true,
+        };
+        if (data.providerId && !(existingUser as any).authProviderId) {
+          updateSet.authProviderId = data.providerId;
+        }
         const updated = await userRepository.updateById(userId, {
-          $set: {
-            lastLogin: new Date(),
-            avatar: data.image || existingUser.avatar,
-            isEmailVerified: true,
-          },
+          $set: updateSet,
         } as any);
         
         if (updated) {
           existingUser = updated;
         }
         console.log(`✅ Existing ${data.provider} user updated:`, userId);
+      } else if (!userEmail) {
+        // No email and no matching provider account — we cannot safely create
+        // a user without an email address. Do NOT create empty-email users.
+        console.error(`❌ Cannot create ${data.provider} user: no email in profile and no existing account for providerId ${data.providerId || '(missing)'}`);
+        return null;
       } else {
         // Create new user using repository
         const userName = data.name || '';

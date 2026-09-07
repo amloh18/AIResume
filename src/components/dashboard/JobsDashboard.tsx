@@ -10,7 +10,7 @@ import { ATSProvider } from '@/contexts/ATSContext';
 import DocumentsDashboardView from '@/components/dashboard/documents/DocumentsDashboardView';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
@@ -55,11 +55,120 @@ const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
   return Array.from(seenKeys.values());
 };
 
+// ── URL <-> filter sync ─────────────────────────────────────────────────────
+// Active discover filters + tab are mirrored into the URL query string so a
+// page refresh (or a shared link) restores the exact same view.
+
+const SORT_OPTIONS = ['matchScore', 'postedDate', 'salary', 'company'];
+const SORT_ORDERS = ['asc', 'desc'];
+const DATE_OPTIONS = ['all', '24h', '7d', '30d'];
+
+// Keys the discover view owns in the URL (other params like jobId / action /
+// filter / stage used by the applications tab are preserved untouched).
+const MANAGED_URL_KEYS = [
+  'tab',
+  'q',
+  'workplaceType',
+  'experienceLevel',
+  'datePosted',
+  'sponsorsVisa',
+  'easyApplyOnly',
+  'savedOnly',
+  'unpersonalized',
+  'remoteOnly',
+  'sortBy',
+  'sortOrder',
+  'matchScoreMin',
+  'matchScoreMax',
+  'roles',
+  'jobTypes',
+  'locations',
+  'companies',
+  'sources',
+  'atsTypes',
+];
+
+function arrayParam(values: string[] | undefined): string | undefined {
+  return values && values.length > 0 ? values.join(',') : undefined;
+}
+
+function filtersToParams(filters: JobsFilter): URLSearchParams {
+  const params = new URLSearchParams();
+  const set = (key: string, value?: string) => {
+    if (value !== undefined && value !== '') params.set(key, value);
+    else params.delete(key);
+  };
+  set('q', filters.searchText);
+  set('workplaceType', arrayParam(filters.workplaceType));
+  set('experienceLevel', arrayParam(filters.experienceLevel));
+  set('datePosted', filters.datePosted && filters.datePosted !== 'all' ? filters.datePosted : undefined);
+  set('sponsorsVisa', filters.sponsorsVisa ? 'true' : undefined);
+  set('easyApplyOnly', filters.easyApplyOnly ? 'true' : undefined);
+  set('savedOnly', filters.savedOnly ? 'true' : undefined);
+  set('unpersonalized', filters.unpersonalized ? 'true' : undefined);
+  set('remoteOnly', filters.remoteOnly ? 'true' : undefined);
+  set('sortBy', filters.sortBy && filters.sortBy !== 'matchScore' ? filters.sortBy : undefined);
+  set('sortOrder', filters.sortOrder && filters.sortOrder !== 'desc' ? filters.sortOrder : undefined);
+  set('matchScoreMin', filters.matchScoreMin !== undefined ? String(filters.matchScoreMin) : undefined);
+  set('matchScoreMax', filters.matchScoreMax !== undefined ? String(filters.matchScoreMax) : undefined);
+  set('roles', arrayParam(filters.roles));
+  set('jobTypes', arrayParam(filters.jobTypes));
+  set('locations', arrayParam(filters.locations));
+  set('companies', arrayParam(filters.companies));
+  set('sources', arrayParam(filters.sources as string[] | undefined));
+  set('atsTypes', arrayParam(filters.atsTypes as string[] | undefined));
+  return params;
+}
+
+function paramsToFilters(params: URLSearchParams): Partial<JobsFilter> {
+  const f: Partial<JobsFilter> = {};
+  const get = (key: string) => params.get(key);
+  const q = get('q');
+  if (q) f.searchText = q;
+  const wp = get('workplaceType');
+  if (wp) f.workplaceType = wp.split(',').filter(Boolean);
+  const exp = get('experienceLevel');
+  if (exp) f.experienceLevel = exp.split(',').filter(Boolean);
+  const date = get('datePosted');
+  if (date && DATE_OPTIONS.includes(date)) f.datePosted = date as JobsFilter['datePosted'];
+  if (get('sponsorsVisa') === 'true') f.sponsorsVisa = true;
+  if (get('easyApplyOnly') === 'true') f.easyApplyOnly = true;
+  if (get('savedOnly') === 'true') f.savedOnly = true;
+  if (get('unpersonalized') === 'true') f.unpersonalized = true;
+  if (get('remoteOnly') === 'true') f.remoteOnly = true;
+  const sortBy = get('sortBy');
+  if (sortBy && SORT_OPTIONS.includes(sortBy)) f.sortBy = sortBy as JobsFilter['sortBy'];
+  const sortOrder = get('sortOrder');
+  if (sortOrder && SORT_ORDERS.includes(sortOrder)) f.sortOrder = sortOrder as JobsFilter['sortOrder'];
+  const mmin = get('matchScoreMin');
+  if (mmin !== null && !Number.isNaN(Number(mmin))) f.matchScoreMin = Number(mmin);
+  const mmax = get('matchScoreMax');
+  if (mmax !== null && !Number.isNaN(Number(mmax))) f.matchScoreMax = Number(mmax);
+  const split = (key: string) => {
+    const v = get(key);
+    return v ? v.split(',').filter(Boolean) : undefined;
+  };
+  const roles = split('roles');
+  if (roles) f.roles = roles;
+  const jobTypes = split('jobTypes');
+  if (jobTypes) f.jobTypes = jobTypes;
+  const locations = split('locations');
+  if (locations) f.locations = locations;
+  const companies = split('companies');
+  if (companies) f.companies = companies;
+  const sources = split('sources');
+  if (sources) f.sources = sources as JobsFilter['sources'];
+  const atsTypes = split('atsTypes');
+  if (atsTypes) f.atsTypes = atsTypes as JobsFilter['atsTypes'];
+  return f;
+}
+
 export default function JobsDashboard() {
   const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'documents' | 'settings'>('discover');
   const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
   const userId = session?.user?.id;
   const { toast } = useToast();
@@ -105,10 +214,34 @@ export default function JobsDashboard() {
   }, []);
   const [metrics, setMetrics] = useState<JobsMetrics | null>(null);
   const [jobs, setJobs] = useState<JobListing[]>([]);
-  const [filters, setFilters] = useState<JobsFilter>({
+  // Initialize from the URL so a refresh / shared link restores the view
+  const [filters, setFilters] = useState<JobsFilter>(() => ({
     sortBy: 'matchScore',
     sortOrder: 'desc',
-  });
+    ...paramsToFilters(searchParams),
+  }));
+
+  // Mirror the active tab + filters into the URL (preserving unrelated params
+  // such as jobId / action / filter / stage used by the applications tab).
+  const skipFirstUrlSync = useRef(true);
+  useEffect(() => {
+    if (skipFirstUrlSync.current) {
+      skipFirstUrlSync.current = false;
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const next = filtersToParams(filters);
+    for (const [key, value] of next.entries()) params.set(key, value);
+    for (const key of MANAGED_URL_KEYS) {
+      if (!next.has(key)) params.delete(key);
+    }
+    params.set('tab', activeTab);
+    const qs = params.toString();
+    const target = qs ? `${pathname}?${qs}` : pathname;
+    if (target !== window.location.pathname + window.location.search) {
+      router.replace(target, { scroll: false });
+    }
+  }, [filters, activeTab, pathname, router]);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -221,33 +354,24 @@ export default function JobsDashboard() {
     return 'your target roles';
   }, [userPreferences, filters.roles]);
 
+  // Only criteria that actually shape the feed belong in this summary:
+  // workplace setup (explicit feed filter, else the profile's standing
+  // preference) and explicitly filtered experience level. Profile fields like
+  // target salary, notice period, search intensity and volume are NOT applied
+  // as feed filters, so listing them here misrepresented the results.
   const metadataList = useMemo(() => {
     const parts: string[] = [];
 
-    // Workplace Types
+    // Workplace Types — explicit feed filter wins; otherwise the profile's
+    // standing workplace preference (used for personalization when no
+    // explicit workplace filter is chosen).
     if (filters.workplaceType?.length) {
       parts.push(filters.workplaceType.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
     } else if (userPreferences?.workplaceTypes && userPreferences.workplaceTypes.length > 0) {
       parts.push(userPreferences.workplaceTypes.map((t: string) => t.charAt(0).toUpperCase() + t.slice(1)).join(' · '));
-    } else if (userPreferences?.locations && userPreferences.locations.length > 0) {
-      parts.push(userPreferences.locations.join(' · '));
     }
 
-    // Salary Threshold
-    if (userPreferences?.minSalary) {
-      const cur = userPreferences.salaryCurrency;
-      if (cur === 'GBP_YEAR' || cur === 'GBP' || cur === '£') {
-        parts.push(`£${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
-      } else if (cur === 'EUR_YEAR' || cur === 'EUR' || cur === '€') {
-        parts.push(`€${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
-      } else if (cur === 'USD_YEAR' || cur === 'USD' || cur === '$') {
-        parts.push(`$${Number(userPreferences.minSalary).toLocaleString()}/yr+`);
-      } else {
-        parts.push(`₹${userPreferences.minSalary} LPA+`);
-      }
-    }
-
-    // Experience
+    // Experience — only when explicitly filtered in the feed
     if (filters.experienceLevel?.length) {
       const expLabels: Record<string, string> = {
         entry: 'Entry Level',
@@ -256,33 +380,6 @@ export default function JobsDashboard() {
         lead: 'Lead / Principal',
       };
       parts.push(filters.experienceLevel.map((e) => expLabels[e] || e).join(' · '));
-    } else if (userPreferences?.experienceYears !== undefined && userPreferences.experienceYears > 0) {
-      parts.push(`${userPreferences.experienceYears}+ yrs`);
-    }
-
-    // Availability
-    if (userPreferences?.maxNoticePeriodDays !== undefined) {
-      if (userPreferences.maxNoticePeriodDays === 0) {
-        parts.push('Immediate');
-      } else {
-        parts.push(`${userPreferences.maxNoticePeriodDays}d notice`);
-      }
-    }
-
-    // Search Intensity
-    if (userPreferences?.searchIntensity) {
-      const intensityLabels: Record<string, string> = {
-        browsing: 'Browsing',
-        exploring: 'Exploring',
-        active: 'Actively Applying',
-        aggressive: 'Aggressively Hunting',
-      };
-      parts.push(intensityLabels[userPreferences.searchIntensity] || userPreferences.searchIntensity);
-    }
-
-    // Application Volume
-    if (userPreferences?.expectedApplicationsPerMonth) {
-      parts.push(`${userPreferences.expectedApplicationsPerMonth}/mo`);
     }
 
     return parts;
@@ -645,7 +742,8 @@ export default function JobsDashboard() {
         sortOrder: filters.sortOrder || 'desc',
       };
 
-      if (filters.searchText) params.keywords = filters.searchText;
+      if (filters.searchText) params.q = filters.searchText;
+      if (filters.easyApplyOnly) params.easyApplyOnly = 'true';
       if (filters.remoteOnly) params.remoteOnly = 'true';
       if (filters.matchScoreMin !== undefined) params.matchScoreMin = filters.matchScoreMin.toString();
       if (filters.matchScoreMax !== undefined) params.matchScoreMax = filters.matchScoreMax.toString();
@@ -1134,7 +1232,7 @@ export default function JobsDashboard() {
                         key={suggestion}
                         type="button"
                         onClick={() => {
-                          setFilters((prev) => ({ ...prev, q: suggestion }));
+                          setFilters((prev) => ({ ...prev, searchText: suggestion }));
                           setPage(1);
                         }}
                         className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors cursor-pointer"

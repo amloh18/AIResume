@@ -71,6 +71,8 @@ import {
   saveCvThumbnailSnapshot,
 } from '@/lib/utils/cv-thumbnail-snapshot';
 import { extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
+import ZoomGuard from '@/components/editor/ZoomGuard';
+import OnScreenKeyboard from '@/components/editor/OnScreenKeyboard';
 
 interface ResumeEnhancerContainerProps {
   userId: string;
@@ -114,6 +116,16 @@ export default function ResumeEnhancerContainer({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
   const [isMobileStepsOpen, setIsMobileStepsOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  // Track small-screen viewports for mobile-only editor affordances
+  // (on-screen keyboard). Kept in state so SSR renders consistent markup.
+  useEffect(() => {
+    const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   // Map internal steps (1-5) to display steps (1-5) for the step indicator
   const displayStep = state.currentStep;
@@ -3320,11 +3332,17 @@ export default function ResumeEnhancerContainer({
     }
   }, []); // Empty deps - only run on mount
 
+  const isCanvasStep = state.currentStep === 3;
+  const isLetterStep = state.currentStep === 4;
+  // Page zoom is blocked on editor steps 2-5 (template, CV builder, cover letter,
+  // review) so pinch/ctrl-wheel gestures can't break the fixed editor shell.
+  // Canvas containers keep their own zoom controls — see ZoomGuard.
+  const isZoomGuardedStep = state.currentStep >= 2 || showTemplateOverlay;
+  const showOnScreenKeyboard = isZoomGuardedStep && isMobileViewport;
+
   if (isLoading && !showTemplateOverlay && requestedStep !== 2) {
     // Keep the editor chrome visible while the document loads: header skeleton + a
     // step-aware body skeleton (CV sheet + control panel, or letter sheet + panel).
-    const isCanvasStep = state.currentStep === 3;
-    const isLetterStep = state.currentStep === 4;
     return (
       <div className="h-macro dashboard-workspace flex flex-col overflow-hidden w-full" role="status" aria-label="Loading document">
         {/* Editor header skeleton — static chrome */}
@@ -3480,7 +3498,10 @@ export default function ResumeEnhancerContainer({
   }
 
   return (
-    <div className="h-macro dashboard-workspace flex overflow-hidden w-full">
+    <div className="h-macro dashboard-workspace flex overflow-hidden w-full" data-zoom-guard-root={isZoomGuardedStep || undefined}>
+      <ZoomGuard enabled={isZoomGuardedStep} />
+      {/* On-screen keyboard (mobile only) for canvas text editing on steps 2-5 */}
+      {showOnScreenKeyboard && <OnScreenKeyboard />}
       {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
       {state.currentStep === 1 && (
         <div
