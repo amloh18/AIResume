@@ -17,6 +17,14 @@ export async function register() {
       console.warn('[Startup] Email worker failed to start:', err);
     }
 
+    // Start email ingestion worker for inbound email polling
+    try {
+      const { startIngestionWorker } = await import('./services/emailIngestionService');
+      startIngestionWorker();
+    } catch (err) {
+      console.warn('[Startup] Email ingestion worker failed to start:', err);
+    }
+
     // Pre-load ingestion worker settings from DB into sync cache (delayed to allow MongoDB connection)
     setTimeout(async () => {
       try {

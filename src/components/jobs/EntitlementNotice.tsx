@@ -191,7 +191,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
 
             <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-xs text-gray-700 dark:text-gray-300 space-y-1.5 leading-relaxed">
               <p>
-                You&apos;ve used all <strong>50 automated applications</strong> available today. Your daily limit resets tomorrow at midnight.
+                You&apos;ve used all your automated applications for this period. Your limit resets on the next billing cycle.
               </p>
               <p className="text-gray-500 dark:text-gray-400 text-[11px]">
                 Manual applications, CV tailoring, and job saves are never restricted.

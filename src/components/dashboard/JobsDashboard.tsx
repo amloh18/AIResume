@@ -4,12 +4,13 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText, Mail } from 'lucide-react';
 import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import { ATSProvider } from '@/contexts/ATSContext';
 import DocumentsDashboardView from '@/components/dashboard/documents/DocumentsDashboardView';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
+import CommsPanel from '@/components/dashboard/jobs/CommsPanel';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
@@ -164,7 +165,7 @@ function paramsToFilters(params: URLSearchParams): Partial<JobsFilter> {
 }
 
 export default function JobsDashboard() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'documents' | 'settings'>('discover');
+  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'documents' | 'comms' | 'settings'>('discover');
   const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -188,7 +189,7 @@ export default function JobsDashboard() {
     if (jobIdParam || newJobParam || filterParam) {
       setActiveTab('applications');
       tabSetByUrl.current = true;
-    } else if (tabParam && ['discover', 'applications', 'documents', 'settings'].includes(tabParam)) {
+    } else if (tabParam && ['discover', 'applications', 'documents', 'comms', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam as any);
       tabSetByUrl.current = true;
     }
@@ -435,6 +436,64 @@ export default function JobsDashboard() {
     }
     loadSavedJobIds();
   }, [userId]);
+
+  // Listen for jobUpdated events to refresh savedIds when jobs are saved/updated elsewhere
+  useEffect(() => {
+    const handleJobUpdated = () => {
+      // Re-fetch saved job IDs to stay in sync
+      async function refreshSavedIds() {
+        try {
+          const res = await fetch('/api/jobs?limit=200&lite=true');
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.jobs || data.data || [];
+            if (Array.isArray(items)) {
+              const idSet = new Set<string>();
+              const idMap = new Map<string, string>();
+
+              items.forEach((j: any) => {
+                const dbId = j._id || j.id;
+                if (dbId) {
+                  idSet.add(dbId);
+                  idMap.set(dbId, dbId);
+                }
+                if (j.jobId) {
+                  idSet.add(j.jobId);
+                  idMap.set(j.jobId, dbId);
+                }
+                if (j.externalId) {
+                  idSet.add(j.externalId);
+                  idMap.set(j.externalId, dbId);
+                }
+                if (j.jobUrl || j.sourceUrl) {
+                  const u = (j.jobUrl || j.sourceUrl).trim().toLowerCase();
+                  idMap.set(u, dbId);
+                }
+                if (j.company && (j.jobTitle || j.title)) {
+                  const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                  const tit = ((j.jobTitle || j.title) || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                  idMap.set(`${comp}___${tit}`, dbId);
+                }
+              });
+
+              setSavedIds(idSet);
+              setSavedJobIdMap(idMap);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to refresh saved job IDs:', err);
+        }
+      }
+      refreshSavedIds();
+    };
+
+    window.addEventListener('jobUpdated', handleJobUpdated as EventListener);
+    window.addEventListener('jobDeleted', handleJobUpdated as EventListener);
+    return () => {
+      window.removeEventListener('jobUpdated', handleJobUpdated as EventListener);
+      window.removeEventListener('jobDeleted', handleJobUpdated as EventListener);
+    };
+  }, []);
 
   const isJobSaved = useCallback(
     (job: JobListing) => {
@@ -983,7 +1042,7 @@ export default function JobsDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
           <div>
             <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
-              {activeTab === 'discover' ? 'Jobs Hub' : activeTab === 'applications' ? 'Applications' : activeTab === 'documents' ? 'Documents' : 'Settings'}
+              {activeTab === 'discover' ? 'Jobs Hub' : activeTab === 'applications' ? 'Applications' : activeTab === 'documents' ? 'Documents' : activeTab === 'comms' ? 'Communications' : 'Settings'}
             </h1>
             <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
               {activeTab === 'discover' ? (
@@ -997,6 +1056,8 @@ export default function JobsDashboard() {
                 <>Track every application, from saved to offer</>
               ) : activeTab === 'documents' ? (
                 <>Your master CV, tailored CVs &amp; cover letters</>
+              ) : activeTab === 'comms' ? (
+                <>Emails, recruiter outreach &amp; application communications</>
               ) : (
                 <>Application automation &amp; search preferences</>
               )}
@@ -1008,6 +1069,7 @@ export default function JobsDashboard() {
               { id: 'discover', label: 'Discover', icon: Sparkles },
               { id: 'applications', label: 'Applications', icon: Briefcase },
               { id: 'documents', label: 'Documents', icon: FileText },
+              { id: 'comms', label: 'Comms', icon: Mail },
               { id: 'settings', label: 'Settings', icon: Settings },
             ].map((tab) => (
               <button
@@ -1318,6 +1380,12 @@ export default function JobsDashboard() {
               <DocumentsDashboardView />
             </ATSProvider>
           </ResumeEnhancerProvider>
+        )}
+
+        {activeTab === 'comms' && (
+          <div className="h-[calc(100vh-280px)]">
+            <CommsPanel />
+          </div>
         )}
 
         {activeTab === 'settings' && (

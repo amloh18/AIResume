@@ -1161,6 +1161,8 @@ ${userName}`
 
         // Reload journeys immediately to show the new journey card
         await loadJourneysForJob();
+        // Dispatch jobUpdated event to sync saved state across components
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: job.id || job._id, status: 'created' } }));
         // Also refresh parent component
         await onRefresh();
       } else {
@@ -1320,6 +1322,9 @@ ${userName}`
       // Dispatch credit update event to refresh membership card
       window.dispatchEvent(new CustomEvent('creditsUpdated'));
 
+      // Dispatch jobUpdated event to sync saved state across components
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId, status: 'created' } }));
+
       // Refresh job data to get updated status
       await onRefresh();
     } catch (error: any) {
@@ -1368,6 +1373,8 @@ ${userName}`
       });
       if (res.ok) {
         toast.success(`Job stage updated to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}!`);
+        // Dispatch jobUpdated event to sync saved state across components
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: targetJobId, status: newStatus } }));
         await onRefresh();
       } else {
         toast.error('Failed to update stage');
@@ -1475,6 +1482,8 @@ ${userName}`
       }
 
       toast.success('Job duplicated successfully!');
+      // Dispatch jobUpdated event to sync saved state across components
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: response.ok ? (await response.json()).job?._id : undefined, status: 'created' } }));
       onRefresh();
 
     } catch (error) {
@@ -1566,6 +1575,8 @@ ${userName}`
       }
 
       toast.success(job.isArchived ? 'Job archived successfully!' : 'Job unarchived successfully!');
+      // Dispatch jobUpdated event to sync saved state across components
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId, isArchived: job.isArchived } }));
       onRefresh();
 
     } catch (error) {
