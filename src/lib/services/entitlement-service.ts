@@ -140,12 +140,12 @@ export class EntitlementService {
           resetAt: monthlyResetAt,
         },
         autoApply: {
-          enabled: false,
-          limit: 0,
-          used: 0,
-          remaining: 0,
-          period: null,
-          resetAt: null,
+          enabled: true,
+          limit: 10,
+          used: monthlyUsed,
+          remaining: remaining,
+          period: 'month',
+          resetAt: monthlyResetAt,
         },
       };
     }
@@ -247,7 +247,7 @@ export class EntitlementService {
           allowed: false,
           entitlements,
           recommendation: this.getUpgradeRecommendation(entitlements, 'auto_apply'),
-          errorReason: `You've reached today's auto-apply limit of ${entitlements.autoApply.limit} applications. Your limit resets tomorrow.`,
+          errorReason: `You've reached your auto-apply limit of ${entitlements.autoApply.limit} applications this month. Your limit resets on the 1st.`,
         };
       }
 

@@ -139,6 +139,42 @@ export default function TopJobMatchesSection() {
     return () => controller.abort();
   }, [userId]);
 
+  // Listen for jobUpdated events to refresh savedIds when jobs are saved/updated elsewhere
+  useEffect(() => {
+    const handleJobUpdated = () => {
+      async function refreshSaved() {
+        try {
+          const res = await fetch('/api/jobs?limit=100&lite=true');
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.jobs || data.data || [];
+            if (Array.isArray(items)) {
+              const set = new Set<string>();
+              items.forEach((j: any) => {
+                if (j._id) set.add(j._id);
+                if (j.id) set.add(j.id);
+                if (j.jobId) set.add(j.jobId);
+              });
+              setSavedIds(set);
+            }
+          }
+        } catch (err: any) {
+          if (err?.name !== 'AbortError') {
+            console.warn('Failed to refresh saved jobs in TopMatches:', err);
+          }
+        }
+      }
+      refreshSaved();
+    };
+
+    window.addEventListener('jobUpdated', handleJobUpdated as EventListener);
+    window.addEventListener('jobDeleted', handleJobUpdated as EventListener);
+    return () => {
+      window.removeEventListener('jobUpdated', handleJobUpdated as EventListener);
+      window.removeEventListener('jobDeleted', handleJobUpdated as EventListener);
+    };
+  }, []);
+
   const fetchTopMatches = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
     const MAX_RETRIES = 2;
     const RETRY_DELAY_MS = 1500;
