@@ -21,6 +21,7 @@ import PaymentPastDueBanner from './PaymentPastDueBanner';
 import { getPlanName } from '@/lib/utils/userPlanUtils';
 import { useBillingData } from '@/lib/hooks/useBillingData';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
+import { useDashboardPrefetch } from '@/lib/hooks/useDashboardPrefetch';
 
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
@@ -31,6 +32,7 @@ const OptimizedNavigation: React.FC = () => {
   const { userData } = useUserData();
   const { data: billingData, refetch: refetchBillingData } = useBillingData();
   const { preloadOnHover } = useRoutePreloader();
+  const { prefetchJobs } = useDashboardPrefetch();
   // Use pricing plans hook to pass data to modal (avoid duplicate API calls)
   const pricingHookResult = usePricingPlans({ excludeFree: true });
   const [activeSection, setActiveSection] = useState('analytics');
@@ -478,6 +480,10 @@ const OptimizedNavigation: React.FC = () => {
                 if (!isExternal && section.route.startsWith('/')) {
                   router.prefetch(section.route);
                   preloadOnHover(section.id);
+                  // Also prefetch Jobs data when hovering over Jobs nav item
+                  if (section.id === 'jobs-dashboard') {
+                    prefetchJobs();
+                  }
                 }
               }
             };
@@ -544,6 +550,10 @@ const OptimizedNavigation: React.FC = () => {
                     if (!isExternal && section.route.startsWith('/')) {
                       router.prefetch(section.route);
                       preloadOnHover(section.id);
+                      // Prefetch jobs data when hovering over Jobs-adjacent tools
+                      if (section.id === 'documents' || section.id === 'tracker') {
+                        prefetchJobs();
+                      }
                     }
                   }
                 };

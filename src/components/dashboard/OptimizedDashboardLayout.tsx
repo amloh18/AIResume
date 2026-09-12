@@ -16,6 +16,7 @@ import NotificationCenter from '@/components/notifications/NotificationCenter';
 interface OptimizedDashboardLayoutProps {
   children?: React.ReactNode;
   noPadding?: boolean;
+  bootstrapData?: any; // BootstrapData from useDashboardPrefetch
 }
 
 // Inner component that can access contexts
@@ -101,11 +102,11 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
   );
 };
 
-const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children, noPadding }) => {
+const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ children, noPadding, bootstrapData }) => {
   return (
     <MobileSidebarProvider>
       <JobJourneyProvider>
-        <DashboardDataProvider>
+        <DashboardDataProvider bootstrapData={bootstrapData}>
           <DashboardContent noPadding={noPadding}>
             {children}
           </DashboardContent>

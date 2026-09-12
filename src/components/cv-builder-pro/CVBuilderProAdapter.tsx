@@ -21,6 +21,40 @@ interface CVBuilderProAdapterProps {
 
 const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
 
+/**
+ * Extract highlights (bullet points) from HTML description.
+ * Preserves inline formatting (<strong>, <em>, <a>, <u>) within each highlight.
+ */
+const extractHighlightsFromHtml = (html: string): string[] => {
+  const liMatches = html.match(/<li[^>]*>[\s\S]*?<\/li>/g);
+  if (!liMatches) return [];
+  return liMatches.map((li: string) =>
+    li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim()
+  ).filter(Boolean);
+};
+
+/**
+ * Extract summary (paragraph text) from HTML description.
+ * Supports multiple <p> blocks (joined with double newlines).
+ * Preserves inline formatting (<strong>, <em>, <a>, <u>) within paragraphs.
+ * Falls back to stripping all tags if no <p> found.
+ */
+const extractSummaryFromHtml = (html: string): string => {
+  // Extract all <p>...</p> blocks (global match)
+  const pMatches = html.match(/<p[^>]*>[\s\S]*?<\/p>/g);
+  if (pMatches && pMatches.length > 0) {
+    const paragraphs = pMatches
+      .map((p: string) => p.replace(/<p[^>]*>/, '').replace(/<\/p>/, '').trim())
+      .filter(Boolean);
+    return paragraphs.join('\n\n');
+  }
+  // Fallback: strip <ul>/<li> blocks and structural tags, preserve inline formatting
+  return html
+    .replace(/<ul>[\s\S]*?<\/ul>/g, '')
+    .replace(/<\/?(?:span|div|font|label|section|article|header|footer|nav|main|aside)[^>]*>/gi, '')
+    .trim();
+};
+
 const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }: CVBuilderProAdapterProps, ref) => {
   const canvasData = useMemo(() => normalizeCvDataForCanvas(cvData), [cvData]);
 
@@ -138,91 +172,37 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
     }
 
     if (Array.isArray(updatedCanvasData?.projects)) {
-      newCvData.projects = updatedCanvasData.projects.map((proj: any) => {
-        let description = '';
-        let highlights: string[] = [];
-        
-        if (proj.description) {
-          const liMatches = proj.description.match(/<li[^>]*>(.*?)<\/li>/g);
-          if (liMatches) {
-            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
-          }
-          const pMatch = proj.description.match(/<p>(.*?)<\/p>/);
-          if (pMatch) {
-            description = pMatch[1].replace(/<[^>]+>/g, '').trim();
-          } else {
-            description = proj.description.replace(/<ul>[\s\S]*?<\/ul>/, '').replace(/<[^>]+>/g, '').trim();
-          }
-        }
-
-        return {
-          ...proj,
-          description,
-          highlights
-        };
-      });
+      newCvData.projects = updatedCanvasData.projects.map((proj: any) => ({
+        ...proj,
+        description: extractSummaryFromHtml(proj.description || ''),
+        highlights: extractHighlightsFromHtml(proj.description || ''),
+      }));
     }
 
     if (Array.isArray(updatedCanvasData?.experience)) {
-      newCvData.work = updatedCanvasData.experience.map((exp: any) => {
-        let summary = '';
-        let highlights: string[] = [];
-        
-        if (exp.description) {
-          const liMatches = exp.description.match(/<li[^>]*>(.*?)<\/li>/g);
-          if (liMatches) {
-            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
-          }
-          const pMatch = exp.description.match(/<p>(.*?)<\/p>/);
-          if (pMatch) {
-            summary = pMatch[1].replace(/<[^>]+>/g, '').trim();
-          } else {
-            summary = exp.description.replace(/<ul>[\s\S]*?<\/ul>/, '').replace(/<[^>]+>/g, '').trim();
-          }
-        }
-
-        return {
-          id: exp.id,
-          position: exp.role,
-          name: exp.company,
-          startDate: exp.startDate || '',
-          endDate: exp.endDate || '',
-          summary,
-          highlights
-        };
-      });
+      newCvData.work = updatedCanvasData.experience.map((exp: any) => ({
+        id: exp.id,
+        position: exp.role,
+        name: exp.company,
+        startDate: exp.startDate || '',
+        endDate: exp.endDate || '',
+        summary: extractSummaryFromHtml(exp.description || ''),
+        highlights: extractHighlightsFromHtml(exp.description || ''),
+      }));
       delete newCvData.experience;
     }
 
     if (Array.isArray(updatedCanvasData?.volunteer)) {
-      newCvData.volunteer = updatedCanvasData.volunteer.map((vol: any) => {
-        let summary = '';
-        let highlights: string[] = [];
-        
-        if (vol.description) {
-          const liMatches = vol.description.match(/<li[^>]*>(.*?)<\/li>/g);
-          if (liMatches) {
-            highlights = liMatches.map((li: string) => li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim());
-          }
-          const pMatch = vol.description.match(/<p>(.*?)<\/p>/);
-          if (pMatch) {
-            summary = pMatch[1].replace(/<[^>]+>/g, '').trim();
-          } else {
-            summary = vol.description.replace(/<ul>[\s\S]*?<\/ul>/, '').replace(/<[^>]+>/g, '').trim();
-          }
-        }
-
-        return {
-          id: vol.id,
-          position: vol.role,
-          organization: vol.organization,
-          startDate: vol.startDate || '',
-          endDate: vol.endDate || '',
-          url: vol.url || '',
-          summary,
-          highlights
-        };
-      });
+      newCvData.volunteer = updatedCanvasData.volunteer.map((vol: any) => ({
+        id: vol.id,
+        position: vol.role,
+        organization: vol.organization,
+        startDate: vol.startDate || '',
+        endDate: vol.endDate || '',
+        url: vol.url || '',
+        summary: extractSummaryFromHtml(vol.description || ''),
+        highlights: extractHighlightsFromHtml(vol.description || ''),
+      }));
     }
     
     if (Array.isArray(updatedCanvasData?.education)) {
@@ -233,13 +213,14 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
           [studyType, area] = edu.degree.split(' in ');
         }
 
-        const descriptionLines = stripHtml(edu.description || '')
+        const descriptionText = extractSummaryFromHtml(edu.description || '');
+        const descriptionLines = descriptionText
           .split(/\n+/)
-          .map((line) => line.trim())
+          .map((line: string) => line.trim())
           .filter(Boolean);
-        const scoreLine = descriptionLines.find((line) => /^score:/i.test(line));
+        const scoreLine = descriptionLines.find((line: string) => /^score:/i.test(line));
         const remainingDescription = descriptionLines
-          .filter((line) => line !== scoreLine)
+          .filter((line: string) => line !== scoreLine)
           .join('\n');
 
         return {

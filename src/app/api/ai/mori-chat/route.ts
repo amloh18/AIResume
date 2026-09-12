@@ -11,6 +11,8 @@ import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { cleanAndParseJSON, inferCvSectionFromPrompt, mergeMoriCvIntoCanvas, parseMoriChatContent } from '@/lib/utils/mori-chat-response';
+import { normalizeCvData } from '@/types/cv-normalizer';
+import { diffCVData } from '@/types/cv-edit-ops';
 
 function injectItemIds(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
@@ -358,20 +360,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Normalize CV data to ensure all items have stable IDs for addressing
+    const normalizedCvData = normalizeCvData(cvData);
+
     // Construct the system prompt
     const systemPrompt = `You are Mori, an expert CV AI assistant. Your goal is to help users edit their CVs via natural language.
 You have access to the user's Master CV, their Current CV being edited, and the target Job Description (JD) for the role they are applying to.
 
-Contexts:
+CONTEXTS:
 1. <master_cv>
 ${masterCVData ? JSON.stringify(masterCVData, null, 2) : 'No Master CV loaded.'}
 </master_cv>
 Use this as the source of truth for their experiences. NEVER manufacture new experiences, timelines, or roles that do not exist in the Master CV.
 
 2. <current_cv>
-${cvData ? JSON.stringify(cvData, null, 2) : 'No CV data available.'}
+${normalizedCvData ? JSON.stringify(normalizedCvData, null, 2) : 'No CV data available.'}
 </current_cv>
-Any changes you suggest should be applied to this version.
+IMPORTANT: Every record in this CV has a stable "id" field. Every description block has an "id" and a "type" ("paragraph" or "bullet"). You MUST use these IDs when targeting edits. Never guess or fabricate IDs.
 
 3. <job_description>
 ${jdText || 'No job description provided.'}
@@ -384,29 +389,71 @@ User Selection Context:
 ${resolvedSelection ? `Path: ${resolvedSelection.path}\nContent: "${resolvedSelection.text}"\nThe user named or implied this section. Apply the edit to this section even if they did not click it on the canvas.` : 'No specific section selected. Infer the section from the user request (for example languages, skills, experience). If it is still unclear, ask a short clarifying question.'}
 (Note: The selection context shows what the user currently has selected/focused on the screen. However, they are NOT restricted to editing only this selection. If the user asks for changes across other sections or the entire CV, you MUST apply updates to all appropriate sections.)
 
-Your task is to analyze the user's request, their current CV, their master CV, and the job description, and return a structured JSON response.
+YOUR TASK:
+Analyze the user's request, their current CV, their master CV, and the job description. Return a structured JSON response.
 
-Strict Rules for CV updates:
-1. If the user asks to modify the CV and the request is clear, you MUST apply the edit in \`patch\`.
-2. NEVER put JSON, CV objects, or field dumps in \`message\`. \`message\` is a short spoken confirmation only (1-2 sentences).
-3. Do NOT return the entire CV. Do not use \`updatedCV\`. Full CV payloads truncate and get shown in chat by accident.
-4. Put only the sections you changed in \`patch\`. Each patch value must be the complete replacement for that section after the edit (include existing items plus any new ones).
-5. Use the field names from <current_cv>: \`experience\` (not \`work\`), \`certifications\` (not \`certificates\`), language items as \`{ "language", "fluency", "level" }\`.
-6. When adding a new item to any array, set its \`id\` to the placeholder string "NEW_ITEM". Never generate random IDs.
-7. Keep \`highlights\` arrays as \`string[]\`. Do not change their structure.
-8. If the user's query is vague, ask a clarifying question in \`message\` and provide 2-4 \`options\`. If options are provided, omit \`patch\`.
-9. Return a single JSON object:
+RULES FOR CV EDITS — READ CAREFULLY:
+
+1. RETURN STRUCTURED OPERATIONS. Use the "operations" array for targeted edits. Each operation targets a specific element by its ID.
+   Operation types:
+   - "update_text": Change the content of a description block. Requires: sectionId, recordId, descriptionId, content.
+   - "add_description": Add a new bullet or paragraph to a record. Requires: sectionId, recordId, type ("paragraph"|"bullet"), content. Optional: afterDescriptionId (to insert at a specific position).
+   - "delete_description": Remove a description block. Requires: sectionId, recordId, descriptionId.
+   - "change_description_type": Convert between paragraph and bullet. Requires: sectionId, recordId, descriptionId, type.
+   - "update_field": Change a non-description field (e.g., company, position, name). Requires: sectionId, recordId, field, value.
+   - "add_record": Add a new entry to a section array. Requires: sectionId, record (with at least a name/position/company). Optional: afterRecordId.
+   - "delete_record": Remove an entry from a section. Requires: sectionId, recordId.
+
+2. NEVER return the entire CV. Do not use "updatedCV" for normal edits. Only use "operations" or "patch".
+
+3. For small edits (fixing one bullet, updating one field), use operations ONLY. Do NOT return the full section in patch.
+
+4. For larger edits (rewriting all bullets in a section, adding multiple items), you may use "patch" with the complete replacement for affected sections.
+
+5. Section name mapping:
+   - Work experience → key: "work" (items have: name, position, startDate, endDate, summary, highlights, descriptions)
+   - Education → key: "education"
+   - Skills → key: "skills"
+   - Projects → key: "projects"
+   - Certifications → key: "certificates"
+   - Languages → key: "languages"
+   - Volunteer → key: "volunteer"
+   - Awards → key: "awards"
+   - Publications → key: "publications"
+   - Summary/About → key: "basics" (field: "summary")
+   - Contact info → key: "basics" (fields: name, label, email, phone, url, location)
+
+6. When adding a new record to an array, set its "id" to "NEW_ITEM". The system will generate a real ID.
+
+7. DESCRIPTION BLOCKS: Records have a "descriptions" array with objects like:
+   { "id": "some-uuid", "type": "paragraph"|"bullet", "content": "text" }
+   When modifying descriptions, always reference the exact "id" of the target description.
+
+8. PRESERVE IDs. Never regenerate IDs for existing records or descriptions. Never modify records you were not asked to change.
+
+9. MINIMUM NECESSARY MUTATION. An edit to one bullet should NOT rewrite other bullets, the summary, or unrelated sections.
+
+10. AMBIGUITY: If the user's request could apply to multiple records, return "options" (2-4 clarifying choices) instead of guessing.
+
+11. message: A SHORT spoken confirmation (1-2 sentences). NEVER put JSON, CV objects, or field dumps in message.
+
+12. NO-OP CHECK: If your operations would not change anything, say so in message instead of returning empty operations.
+
+RESPONSE FORMAT:
 {
-  "message": "Short confirmation with no JSON.",
+  "message": "Short confirmation.",
   "options": null,
-  "patch": {
-    "languages": [ { "id": "NEW_ITEM", "language": "Spanish", "fluency": "Fluent", "level": 4 } ]
-  }
-}
-10. \`patch\` keys are section names from the current CV (\`languages\`, \`skills\`, \`experience\`, \`education\`, \`basics\`, etc.). Omit \`patch\` when nothing should change.
-11. Selection Boundary Rule: Do NOT restrict modifications only to 'User Selection Context' if the user asks to update other sections or the entire CV.
-12. Section Target Protection Rule: Do not modify unrelated sections unless the user explicitly asks.
-13. Strict Targeting Priorities: Prefer the exact field in 'User Selection Context' when the request is about that selection.`;
+  "operations": [
+    {
+      "operation": "update_text",
+      "sectionId": "work",
+      "recordId": "the-record-id-from-current-cv",
+      "descriptionId": "the-description-id-from-current-cv",
+      "content": "Improved text here."
+    }
+  ],
+  "patch": null
+}`;
 
     const formattedMessages = messages.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
     const prompt = `Chat History:\n${formattedMessages}`;
@@ -423,7 +470,21 @@ Strict Rules for CV updates:
     const parsed = parseMoriChatContent(result.content);
     const cleanMessage = parsed.message;
     const options = parsed.options;
+
+    // Before/after verification: ensure no user content was lost
     let finalCvData = mergeMoriCvIntoCanvas(cvData, parsed);
+
+    if (finalCvData) {
+      // Verify no records were dropped
+      const beforeSections = extractSections(cvData);
+      const afterSections = extractSections(finalCvData);
+      for (const key of Object.keys(beforeSections)) {
+        if (beforeSections[key] > 0 && afterSections[key] === 0) {
+          console.error(`[mori-chat] Section "${key}" lost all records — rejecting merge`);
+          finalCvData = null;
+        }
+      }
+    }
 
     if (finalCvData) {
       finalCvData = injectItemIds(finalCvData);
@@ -572,4 +633,25 @@ Strict Rules for CV updates:
     } catch (_) {}
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Extract record counts for each section.
+ * Used to verify no section was entirely deleted during AI merge.
+ */
+function extractSections(cvData: any): Record<string, number> {
+  const sections: Record<string, number> = {};
+  const keys = [
+    'work', 'education', 'skills', 'projects', 'certificates',
+    'languages', 'awards', 'publications', 'volunteer', 'interests',
+    'references',
+  ];
+  for (const key of keys) {
+    sections[key] = Array.isArray(cvData[key]) ? cvData[key].length : 0;
+  }
+  return sections;
 }

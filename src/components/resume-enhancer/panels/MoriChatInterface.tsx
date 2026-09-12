@@ -241,9 +241,14 @@ const MoriChatInterface: React.FC = () => {
         fetchHistory(); // Refresh history to show new chat
       }
 
-      if (recovered.updatedCV) {
+      // Use the server-merged CV directly. The server already normalized IDs,
+      // applied operations, and verified the result. Re-merging client-side
+      // with original (unnormalized) state would cause operations to target
+      // IDs that don't exist, producing incorrect results.
+      const mergedCV = result.updatedCV || recovered.updatedCV;
+      if (mergedCV) {
         const oldCV = state.cvData;
-        const newCV = recovered.updatedCV;
+        const newCV = mergedCV;
 
         updateCVData(newCV);
 
