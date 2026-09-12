@@ -1,4 +1,10 @@
 import { coerceInterestsForEdit, coerceLanguagesForEdit, coerceSkillsForEdit } from '@/lib/utils/cv-snippet-data';
+import {
+  type CVEditOperation,
+  applyEditOperations,
+  diffCVData,
+} from '@/types/cv-edit-ops';
+import { normalizeCvData } from '@/types/cv-normalizer';
 
 export function cleanAndParseJSON(content: string): any {
   let cleaned = (content || '').trim();
@@ -209,6 +215,7 @@ export function resolveMoriEditTarget(text: string, cvData: any): MoriTargetReso
 
 export function recoverMoriChatResult(result: any, currentCv: any) {
   let message = result?.message;
+  let operations = result?.operations || null;
   let patch = result?.patch || null;
   let updatedCV = result?.updatedCV || null;
   const options = normalizeMoriChatOptions(result?.options);
@@ -216,16 +223,18 @@ export function recoverMoriChatResult(result: any, currentCv: any) {
   if (typeof message === 'string' && looksLikeCvJsonDump(message)) {
     const parsed = parseMoriChatContent(message);
     message = parsed.message;
+    operations = operations || parsed.operations;
     patch = patch || parsed.patch;
     updatedCV = updatedCV || parsed.updatedCV;
   } else if (message && typeof message === 'object') {
     const parsed = parseMoriChatContent(JSON.stringify(message));
     message = parsed.message;
+    operations = operations || parsed.operations;
     patch = patch || parsed.patch;
     updatedCV = updatedCV || parsed.updatedCV;
   }
 
-  const merged = mergeMoriCvIntoCanvas(currentCv, { patch, updatedCV });
+  const merged = mergeMoriCvIntoCanvas(currentCv, { operations, patch, updatedCV });
   return {
     message: sanitizeMoriChatMessage(message) || "I've processed your request.",
     options,
@@ -257,6 +266,7 @@ export function sanitizeMoriChatMessage(raw: any): string {
 export function parseMoriChatContent(raw: string): {
   message: string;
   options: Array<{ label: string; prompt: string }> | null;
+  operations: CVEditOperation[] | null;
   patch: Record<string, any> | null;
   updatedCV: any | null;
 } {
@@ -272,9 +282,18 @@ export function parseMoriChatContent(raw: string): {
   }
 
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    // Parse structured edit operations (new system)
+    let operations: CVEditOperation[] | null = null;
+    if (Array.isArray(parsed.operations) && parsed.operations.length > 0) {
+      operations = parsed.operations.filter((op: any) =>
+        op && typeof op === 'object' && typeof op.operation === 'string'
+      );
+    }
+
     return {
       message: sanitizeMoriChatMessage(parsed.message) || "I've updated your CV.",
       options: normalizeMoriChatOptions(parsed.options),
+      operations,
       patch: parsed.patch && typeof parsed.patch === 'object' && !Array.isArray(parsed.patch) ? parsed.patch : null,
       updatedCV: parsed.updatedCV && typeof parsed.updatedCV === 'object' ? parsed.updatedCV : null,
     };
@@ -283,6 +302,7 @@ export function parseMoriChatContent(raw: string): {
   return {
     message: sanitizeMoriChatMessage(raw) || "I've processed your request.",
     options: null,
+    operations: null,
     patch: null,
     updatedCV: null,
   };
@@ -380,9 +400,45 @@ function applySection(next: any, key: string, value: any, fromPatch: boolean) {
   next[key] = value;
 }
 
-export function mergeMoriCvIntoCanvas(currentCv: any, parsed: { patch?: Record<string, any> | null; updatedCV?: any | null }) {
+export function mergeMoriCvIntoCanvas(
+  currentCv: any,
+  parsed: {
+    operations?: CVEditOperation[] | null;
+    patch?: Record<string, any> | null;
+    updatedCV?: any | null;
+  }
+) {
   if (!currentCv || typeof currentCv !== 'object') return parsed.updatedCV || currentCv;
-  const next = { ...currentCv };
+
+  // Normalize CV data to ensure stable IDs
+  let cv = normalizeCvData(currentCv);
+
+  // ── PATH A: Structured edit operations (new, deterministic system) ──
+  if (Array.isArray(parsed.operations) && parsed.operations.length > 0) {
+    const session = applyEditOperations(cv, parsed.operations);
+
+    if (session.allSucceeded) {
+      // Verify something actually changed
+      const diffs = diffCVData(currentCv, session.cvData);
+      if (diffs.length === 0) {
+        // No actual changes — operations were valid but produced no diff
+        console.warn('[mori-chat] Operations applied but no changes detected');
+        return null;
+      }
+
+      console.log(`[mori-chat] Applied ${session.results.length} operations, ${diffs.length} fields changed`);
+      return session.cvData;
+    } else {
+      // Operations failed validation — fall through to legacy patch if available
+      console.warn('[mori-chat] Operations failed:', session.results.filter(r => !r.success).map(r => r.error));
+      if (!parsed.patch && !parsed.updatedCV) {
+        return null; // No fallback available
+      }
+    }
+  }
+
+  // ── PATH B: Legacy section-level patch (backward compatibility) ──
+  const next = { ...cv };
   let changed = false;
 
   if (parsed.updatedCV && typeof parsed.updatedCV === 'object') {

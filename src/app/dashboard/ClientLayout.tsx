@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardLayout';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import MoriAssistant from '@/components/dashboard/MoriAssistant';
+import { useDashboardPrefetch } from '@/lib/hooks/useDashboardPrefetch';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,12 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
   const router = useRouter();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlanKey, setSelectedPlanKey] = useState<string | null>(null);
+
+  // AUTH-TIME PREFETCH: Begin loading dashboard-critical data immediately
+  // when session is available, before any dashboard component mounts.
+  // This populates the TanStack Query cache so Dashboard reads from cache
+  // instead of triggering fresh requests.
+  const { bootstrapData } = useDashboardPrefetch();
 
   useEffect(() => {
     const plan = searchParams.get('plan');
@@ -31,7 +38,7 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
   }, [searchParams, router]);
 
   return (
-    <OptimizedDashboardLayout>
+    <OptimizedDashboardLayout bootstrapData={bootstrapData}>
       {children}
       {selectedPlanKey && (
         <UniversalPaymentModal

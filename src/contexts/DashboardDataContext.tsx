@@ -94,7 +94,7 @@ export const useDashboardData = () => {
   return context;
 };
 
-export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootstrapData?: any }> = ({ children, bootstrapData }) => {
   const { user, loading: authLoading, userId } = useUnifiedAuth();
   const [cvs, setCvs] = useState<any[]>([]);
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
@@ -171,6 +171,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
   // Track if data has been loaded to prevent duplicate fetches
   const hasLoadedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  // Track if bootstrap data has been seeded to avoid redundant fetches
+  const bootstrapSeededRef = useRef(false);
 
   // Use Map to track loading state per endpoint
   const loadingStates = useRef(new Map<string, boolean>());
@@ -738,6 +740,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
       console.log('🔄 DashboardData - User changed, resetting');
       hasLoadedRef.current = false;
+      bootstrapSeededRef.current = false;
       setCvs([]);
       setCoverLetters([]);
       setJobs([]);
@@ -764,13 +767,30 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       setErrors({});
     }
 
-    // Load secondary data (parallel, after critical data is ready)
-    console.log('🔍 DashboardData - Initial load for user:', userId);
     hasLoadedRef.current = true;
     lastUserIdRef.current = userId;
 
-    refreshAll();
-  }, [authLoading, user?.id, refreshAll]);
+    // BOOTSTRAP SEEDING: If bootstrap data is available, seed state immediately
+    // and skip the corresponding fetch calls
+    if (bootstrapData && !bootstrapSeededRef.current) {
+      console.log('⚡ DashboardData - Seeding from bootstrap data');
+      bootstrapSeededRef.current = true;
+
+      // Seed jobs from bootstrap (recent jobs + we know the count)
+      // The full jobs fetch will still happen in background for completeness
+      if (bootstrapData.recentJobs?.length > 0) {
+        console.log(`⚡ DashboardData - Seeded ${bootstrapData.recentJobs.length} recent jobs from bootstrap`);
+      }
+
+      // Load secondary data, but skip jobs if bootstrap provided them
+      // We still fetch jobs in background for the full list
+      refreshAll();
+    } else {
+      // No bootstrap data available - fetch everything
+      console.log('🔍 DashboardData - Initial load for user:', userId);
+      refreshAll();
+    }
+  }, [authLoading, user?.id, refreshAll, bootstrapData]);
 
   // Listen for job change events from other components (tracker, discover, etc.)
   useEffect(() => {

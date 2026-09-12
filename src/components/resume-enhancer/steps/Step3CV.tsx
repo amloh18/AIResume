@@ -114,6 +114,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     // Auto-save refs
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const lastSavedCvDataStrRef = useRef<string>('');
+    const autoSaveAbortRef = useRef<AbortController | null>(null);
+    const lastSavedAtRef = useRef<string | null>(null);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -237,6 +239,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
       // Set new debounce timer
       autoSaveTimerRef.current = setTimeout(async () => {
+        // Cancel any in-flight autosave request
+        if (autoSaveAbortRef.current) {
+          autoSaveAbortRef.current.abort();
+        }
+        const controller = new AbortController();
+        autoSaveAbortRef.current = controller;
+
         // Double-check if still analyzing; if so, we might be saving slightly stale scores, 
         // but the next score change will trigger another (batched) save anyway.
         try {
@@ -245,6 +254,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           const response = await fetch(`/api/cvs/${state.cvId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({
               cvData: state.cvData,
               cv_score_master: pillMasterScore,
@@ -255,14 +265,27 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                 semantic:   pillScoreResult?.atsScore?.keywordMatch ?? 0,
               },
               active_issues_json: pillIssues ?? [],
+              updatedAt: lastSavedAtRef.current || undefined,
             })
           });
 
           if (response.ok) {
+            const result = await response.json().catch(() => ({}));
             lastSavedCvDataStrRef.current = currentSaveKey;
+            // Track the server updatedAt for conflict detection on next save
+            if (result?.data?.updatedAt) {
+              lastSavedAtRef.current = result.data.updatedAt;
+            } else if (result?.updatedAt) {
+              lastSavedAtRef.current = result.updatedAt;
+            }
             console.log('CV Auto-saved successfully (batched: master=%d, ats=%d)', pillMasterScore, scoreForATS);
+          } else if (response.status === 409) {
+            // Conflict: server has a newer version. Discard local changes and reload.
+            console.warn('CV Auto-save conflict — server has newer version');
+            lastSavedCvDataStrRef.current = currentSaveKey;
           }
-        } catch (err) {
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return; // Cancelled — a new save superseded this one
           console.error('CV Auto-save failed:', err);
         }
       }, debounceMs);
