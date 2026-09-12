@@ -31,9 +31,9 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     if (propCallbackUrl) return propCallbackUrl;
     if (typeof window !== 'undefined') {
       const url = new URLSearchParams(window.location.search).get('callbackUrl');
-      return globalCallbackUrl || url || '/dashboard';
+      return globalCallbackUrl || url || '/dashboard/jobs';
     }
-    return globalCallbackUrl || '/dashboard';
+    return globalCallbackUrl || '/dashboard/jobs';
   }, [globalCallbackUrl, propCallbackUrl]);
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
@@ -816,7 +816,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
           if (role === 'admin') {
             window.location.href = '/admin';
           } else {
-            window.location.href = callbackUrl || '/dashboard';
+            window.location.href = callbackUrl || '/dashboard/jobs';
           }
         }, 800);
       } else {

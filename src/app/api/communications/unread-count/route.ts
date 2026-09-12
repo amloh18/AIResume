@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, data: { counts } });
+    return NextResponse.json({ success: true, counts, data: { counts } });
   } catch (error: any) {
     console.error('Unread count GET error:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

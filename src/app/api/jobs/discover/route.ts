@@ -560,8 +560,10 @@ export async function GET(request: NextRequest) {
       profileRemoteOnly: userProfile?.hardConstraints?.remoteOnly ?? false,
     });
 
+    const targetCount = page * limit;
+    const retrievalPoolLimit = Math.max(targetCount + limit * 4, limit <= 20 ? 100 : 250);
     candidates = await retrieveCandidates(effectiveSearch, {
-      limit: Math.max(limit * 8, 250), // Fetch a rich candidate pool for personalized scoring
+      limit: retrievalPoolLimit, // Adaptive pool size that scales with page
       remoteOnly: poolRemoteOnly,
       countryFilter: countryList.length > 0 ? countryList : undefined,
       excludeJobIds,
@@ -748,6 +750,54 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // ── Global Jobs (Manual / Extension jobs from other users) ─────────────
+    try {
+      const globalJobs = await GlobalJobService.getGlobalJobs({
+        excludeUserIds: userId ? [userId] : [],
+        limit: 50,
+        portalJobTitles: filteredListings.map(j => j.title),
+        portalJobCompanies: filteredListings.map(j => j.company),
+        searchQuery: hasSearchQuery ? effectiveQuery : undefined,
+        remoteOnly: poolRemoteOnly,
+        countryFilter: countryList.length > 0 ? countryList : undefined,
+      });
+
+      if (globalJobs.length > 0) {
+        const scoredGlobalJobs = globalJobs.map((gJob) => {
+          let matchScore = 45;
+          if (candidateProfile) {
+            try {
+              const scoreResult = scoreJobForCandidate(
+                {
+                  title: gJob.title,
+                  normalizedTitle: (gJob.title || '').toLowerCase(),
+                  skills: gJob.keywords || [],
+                  location: { city: gJob.location, country: gJob.country, remote: gJob.remote },
+                  salary: { min: gJob.salaryMin, max: gJob.salaryMax, currency: gJob.salaryCurrency },
+                  experience: { level: 'mid' },
+                  roleFamily: undefined,
+                  seniority: 'mid',
+                  description: gJob.description,
+                },
+                candidateProfile
+              );
+              matchScore = Math.min(98, Math.max(5, scoreResult.score));
+            } catch {
+              matchScore = 50;
+            }
+          }
+          return {
+            ...gJob,
+            matchScore,
+            matchTier: 'RELATED',
+          } as JobListing & { matchTier: string };
+        });
+        filteredListings = [...filteredListings, ...scoredGlobalJobs];
+      }
+    } catch {
+      // Ignore global jobs errors
+    }
+
     // Cross-source deduplication: keep best match per company+title+location
     const dedupMap = new Map<string, typeof filteredListings[0]>();
     for (const job of filteredListings) {
@@ -780,23 +830,12 @@ export async function GET(request: NextRequest) {
       return (b.matchScore - a.matchScore) * (sortOrder === 'asc' ? -1 : 1);
     });
 
-    // ── Global Jobs ────────────────────────────────────────────────────────
-    try {
-      const globalJobs = await GlobalJobService.getGlobalJobs({
-        excludeUserIds: userId ? [userId] : [],
-        limit: 50,
-        portalJobTitles: filteredListings.map(j => j.title),
-        portalJobCompanies: filteredListings.map(j => j.company),
-      });
-      filteredListings = [...filteredListings, ...globalJobs];
-    } catch {
-      // Ignore global jobs errors
-    }
-
     // ── Pagination ─────────────────────────────────────────────────────────
-    const total = filteredListings.length;
     const start = (page - 1) * limit;
     const paginated = filteredListings.slice(start, start + limit);
+    const total = candidates.totalCandidates >= retrievalPoolLimit
+      ? Math.max(candidates.searchMeta.totalInDatabase, filteredListings.length)
+      : filteredListings.length;
 
     // ── Demand Recording (fire-and-forget) ─────────────────────────────────
     if (hasSearchQuery && candidates.searchMeta.query.roleFamily) {
@@ -842,14 +881,18 @@ export async function GET(request: NextRequest) {
       total,
       page,
       pageSize: limit,
-      hasMore: start + limit < total,
+      hasMore: paginated.length === limit && (start + limit < total || candidates.totalCandidates >= retrievalPoolLimit),
       tiers: tierSummary,
       expansionNote: feed.searchMeta.expansionNote,
       profileUsed: !!candidateProfile,
       suggestedSearches,
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+      },
+    });
   } catch (error: any) {
     console.error('[API] GET /api/jobs/discover error:', error);
     return NextResponse.json(

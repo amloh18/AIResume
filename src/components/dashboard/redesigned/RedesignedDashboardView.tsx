@@ -1332,7 +1332,7 @@ function ProfileAnalyticsPanel() {
 /* Root view                                                           */
 /* ------------------------------------------------------------------ */
 
-export default function RedesignedDashboardView() {
+export default function RedesignedDashboardView({ hideGreeting = false }: { hideGreeting?: boolean } = {}) {
   const { data: session } = useSession();
   const firstName = session?.user?.name?.split(' ')[0] || 'there';
 
@@ -1344,10 +1344,12 @@ export default function RedesignedDashboardView() {
   return (
     <div className="space-y-6">
       {/* Greeting */}
-      <div className="pt-2">
-        <h1 className="dashboard-greeting text-[var(--text-primary)]">{greeting}</h1>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">Here&apos;s what&apos;s happening with your career.</p>
-      </div>
+      {!hideGreeting && (
+        <div className="pt-2">
+          <h1 className="dashboard-greeting text-[var(--text-primary)]">{greeting}</h1>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">Here&apos;s what&apos;s happening with your career.</p>
+        </div>
+      )}
 
       {/* Journey CV onboarding checklist — hides permanently once the master CV
           reaches a good enough score */}

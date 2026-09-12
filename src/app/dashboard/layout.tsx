@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   const session = await getServerSession(authConfig);
 
   if (!session?.user?.id) {
-    redirect('/sign-in?callbackUrl=/dashboard');
+    redirect('/sign-in?callbackUrl=/dashboard/jobs');
   }
 
   // Centralized Server-Side Onboarding Redirection

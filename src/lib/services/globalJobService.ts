@@ -59,6 +59,9 @@ export class GlobalJobService {
     skip?: number;
     portalJobTitles?: string[];
     portalJobCompanies?: string[];
+    searchQuery?: string;
+    remoteOnly?: boolean;
+    countryFilter?: string[];
   }): Promise<any[]> {
     await getConnection();
 
@@ -68,23 +71,53 @@ export class GlobalJobService {
       skip = 0,
       portalJobTitles = [],
       portalJobCompanies = [],
+      searchQuery,
+      remoteOnly,
+      countryFilter = [],
     } = options || {};
 
     // Query for complete manual/extension jobs from all users
-    const query: any = {
-      source: { $in: ['manual', 'extension'] },
-      isArchived: false,
+    const andClauses: Record<string, any>[] = [
+      { source: { $in: ['manual', 'extension'] } },
+      { isArchived: false },
       // Required fields must be non-empty
-      jobTitle: { $exists: true, $ne: '' },
-      company: { $exists: true, $ne: '' },
-      location: { $exists: true, $ne: '' },
-      jobDescription: { $exists: true, $ne: '' },
-    };
+      { jobTitle: { $exists: true, $ne: '' } },
+      { company: { $exists: true, $ne: '' } },
+      { location: { $exists: true, $ne: '' } },
+      { jobDescription: { $exists: true, $ne: '' } },
+    ];
 
     // Exclude specific users (e.g., the requesting user's own jobs are shown separately)
     if (excludeUserIds.length > 0) {
-      query.userId = { $nin: excludeUserIds };
+      andClauses.push({ userId: { $nin: excludeUserIds } });
     }
+
+    if (searchQuery && searchQuery.trim()) {
+      const qClean = searchQuery.trim();
+      const qRegex = new RegExp(qClean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      andClauses.push({
+        $or: [
+          { jobTitle: { $regex: qRegex } },
+          { company: { $regex: qRegex } },
+          { tags: { $in: [qRegex] } },
+        ],
+      });
+    }
+
+    if (remoteOnly) {
+      andClauses.push({
+        location: { $regex: /remote|work from home|anywhere/i },
+      });
+    }
+
+    if (countryFilter && countryFilter.length > 0) {
+      const countryRegex = new RegExp(countryFilter.map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i');
+      andClauses.push({
+        location: { $regex: countryRegex },
+      });
+    }
+
+    const query = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
     // Fetch candidate jobs
     const candidates = await JobApplication.find(query)
@@ -95,7 +128,10 @@ export class GlobalJobService {
     // Filter to only complete jobs
     const completeJobs = candidates.filter(job => this.isJobComplete(job));
 
-    // Deduplicate against portal jobs using DuplicateJobService
+    // Fast lookup sets for portal job deduplication
+    const portalCompaniesSet = new Set(
+      portalJobCompanies.map((c) => (c || '').toLowerCase().trim().replace(/[^a-z0-9]/g, ''))
+    );
     const portalJobsForDedup = portalJobTitles.map((title, i) => ({
       jobTitle: title,
       company: portalJobCompanies[i] || '',
@@ -107,25 +143,33 @@ export class GlobalJobService {
     const seenKeys = new Set<string>();
 
     for (const job of completeJobs) {
+      if (deduplicatedJobs.length >= skip + limit) break;
+
       // Create a unique key for basic dedup
-      const key = `${(job.company || '').toLowerCase().trim()}::${(job.jobTitle || '').toLowerCase().trim()}::${(job.location || '').toLowerCase().trim()}`;
+      const normComp = (job.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const key = `${normComp}::${(job.jobTitle || '').toLowerCase().trim()}::${(job.location || '').toLowerCase().trim()}`;
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
 
-      // Check against portal jobs using fuzzy matching
-      if (portalJobsForDedup.length > 0) {
-        const duplicateCheck = await DuplicateJobService.checkDuplicate(
-          {
-            jobTitle: job.jobTitle,
-            company: job.company,
-            location: job.location,
-          },
-          portalJobsForDedup,
-          { daysThreshold: 90, similarityThreshold: 0.8 }
+      // Only run fuzzy check if the company actually matches one of the portal companies
+      if (portalJobsForDedup.length > 0 && portalCompaniesSet.has(normComp)) {
+        const candidatePortalJobs = portalJobsForDedup.filter(
+          (pj) => (pj.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '') === normComp
         );
+        if (candidatePortalJobs.length > 0) {
+          const duplicateCheck = await DuplicateJobService.checkDuplicate(
+            {
+              jobTitle: job.jobTitle,
+              company: job.company,
+              location: job.location,
+            },
+            candidatePortalJobs,
+            { daysThreshold: 90, similarityThreshold: 0.8 }
+          );
 
-        // Skip if it's a duplicate of a portal job (portal takes precedence)
-        if (duplicateCheck.isDuplicate) continue;
+          // Skip if it's a duplicate of a portal job (portal takes precedence)
+          if (duplicateCheck.isDuplicate) continue;
+        }
       }
 
       deduplicatedJobs.push(job);

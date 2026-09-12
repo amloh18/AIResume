@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
-import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText, Mail } from 'lucide-react';
+import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText, Mail, LayoutDashboard, Kanban } from 'lucide-react';
 import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import { ATSProvider } from '@/contexts/ATSContext';
 import DocumentsDashboardView from '@/components/dashboard/documents/DocumentsDashboardView';
+import RedesignedDashboardView from '@/components/dashboard/redesigned/RedesignedDashboardView';
 import { AutoApplyPanel } from '@/components/jobs/AutoApplyPanel';
 import { ApplicationsPanel } from '@/components/jobs/ApplicationsPanel';
 import CommsPanel from '@/components/dashboard/jobs/CommsPanel';
@@ -35,6 +36,13 @@ import {
   type CvTailoringMode,
 } from '@/lib/cv-tailoring/tailoringMode';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
+
+function greetingForHour(hour: number): string {
+  if (hour < 5) return 'Good evening';
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 const deduplicateJobs = (rawJobs: JobListing[]): JobListing[] => {
   const seenKeys = new Map<string, JobListing>();
@@ -164,14 +172,21 @@ function paramsToFilters(params: URLSearchParams): Partial<JobsFilter> {
   return f;
 }
 
+export type JobsTabId = 'dashboard' | 'discover' | 'applications' | 'comms' | 'docs' | 'settings';
+
 export default function JobsDashboard() {
-  const [activeTab, setActiveTab] = useState<'discover' | 'applications' | 'documents' | 'comms' | 'settings'>('discover');
+  const [activeTab, setActiveTab] = useState<JobsTabId>('dashboard');
   const tabSetByUrl = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
   const userId = session?.user?.id;
+  const firstName = session?.user?.name?.split(' ')[0] || 'there';
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    return `${greetingForHour(h)}, ${firstName}`;
+  }, [firstName]);
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
@@ -189,8 +204,28 @@ export default function JobsDashboard() {
     if (jobIdParam || newJobParam || filterParam) {
       setActiveTab('applications');
       tabSetByUrl.current = true;
-    } else if (tabParam && ['discover', 'applications', 'documents', 'comms', 'settings'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    } else if (tabParam) {
+      if (tabParam === 'dashboard' || tabParam === 'overview') {
+        setActiveTab('dashboard');
+        tabSetByUrl.current = true;
+      } else if (tabParam === 'discover' || tabParam === 'jobs') {
+        setActiveTab('discover');
+        tabSetByUrl.current = true;
+      } else if (tabParam === 'applications' || tabParam === 'tracker') {
+        setActiveTab('applications');
+        tabSetByUrl.current = true;
+      } else if (tabParam === 'comms' || tabParam === 'communications') {
+        setActiveTab('comms');
+        tabSetByUrl.current = true;
+      } else if (tabParam === 'docs' || tabParam === 'documents') {
+        setActiveTab('docs');
+        tabSetByUrl.current = true;
+      } else if (tabParam === 'settings') {
+        setActiveTab('settings');
+        tabSetByUrl.current = true;
+      }
+    } else {
+      setActiveTab('dashboard');
       tabSetByUrl.current = true;
     }
   }, [searchParams]);
@@ -330,10 +365,6 @@ export default function JobsDashboard() {
         if (data?.profile) {
           setUserPreferences(data.profile);
           setAutoApplyEnabled(data.profile.enabled === true);
-          // Apply saved default tab if no URL param overrode it
-          if (!tabSetByUrl.current && data.profile.defaultJobsTab) {
-            setActiveTab(data.profile.defaultJobsTab);
-          }
         }
         if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
           setCvTailoringMode(
@@ -1031,21 +1062,29 @@ export default function JobsDashboard() {
     ? deduplicatedJobs.filter((job) => isJobSaved(job))
     : deduplicatedJobs.filter((job) => !isJobSaved(job));
 
-  if (error && !metrics) {
-    return <JobsErrorState message={error} onRetry={handleRetry} />;
-  }
-
   return (
     <div className="w-full bg-transparent">
       <div className="w-full max-w-[1850px] mx-auto space-y-6">
         {/* Header + Tabs */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
           <div>
             <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
-              {activeTab === 'discover' ? 'Jobs Hub' : activeTab === 'applications' ? 'Applications' : activeTab === 'documents' ? 'Documents' : activeTab === 'comms' ? 'Communications' : 'Settings'}
+              {activeTab === 'dashboard'
+                ? greeting
+                : activeTab === 'discover'
+                ? 'Jobs Hub'
+                : activeTab === 'applications'
+                ? 'Applications'
+                : activeTab === 'comms'
+                ? 'Communications'
+                : activeTab === 'docs'
+                ? 'Documents'
+                : 'Settings'}
             </h1>
             <p className="mt-1 text-small text-gray-600 dark:text-gray-400">
-              {activeTab === 'discover' ? (
+              {activeTab === 'dashboard' ? (
+                <>Here&apos;s what&apos;s happening with your career.</>
+              ) : activeTab === 'discover' ? (
                 <>
                   AI-powered job matching and automation
                   <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-small font-medium text-lime-600 dark:text-lime-400">
@@ -1054,42 +1093,60 @@ export default function JobsDashboard() {
                 </>
               ) : activeTab === 'applications' ? (
                 <>Track every application, from saved to offer</>
-              ) : activeTab === 'documents' ? (
-                <>Your master CV, tailored CVs &amp; cover letters</>
               ) : activeTab === 'comms' ? (
                 <>Emails, recruiter outreach &amp; application communications</>
+              ) : activeTab === 'docs' ? (
+                <>Your master CV, tailored CVs &amp; cover letters</>
               ) : (
                 <>Application automation &amp; search preferences</>
               )}
             </p>
           </div>
 
-          <nav className="flex items-end gap-6">
+          <nav className="flex items-center md:items-end gap-1.5 sm:gap-4 md:gap-6 w-full md:w-auto justify-between md:justify-start overflow-x-auto scrollbar-hide py-1 md:py-0">
             {[
-              { id: 'discover', label: 'Discover', icon: Sparkles },
-              { id: 'applications', label: 'Applications', icon: Briefcase },
-              { id: 'documents', label: 'Documents', icon: FileText },
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'discover', label: 'Jobs', icon: Briefcase },
+              { id: 'applications', label: 'Applications', icon: Kanban },
               { id: 'comms', label: 'Comms', icon: Mail },
+              { id: 'docs', label: 'Docs', icon: FileText },
               { id: 'settings', label: 'Settings', icon: Settings },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`flex items-center gap-2 py-2 border-b-2 font-medium text-small transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${activeTab === tab.id
-                  ? 'border-lime-500 text-lime-600 dark:text-lime-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  title={tab.label}
+                  aria-label={tab.label}
+                  className={`flex items-center justify-center gap-2 py-2 px-2.5 sm:px-0 border-b-2 font-medium text-small transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${
+                    isActive
+                      ? 'border-lime-500 text-lime-600 dark:text-lime-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
-                style={{ boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' }}
-              >
-                <tab.icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
-                <span className="transition-transform duration-200 group-hover:scale-105">{tab.label}</span>
-              </button>
-            ))}
+                  style={{ boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' }}
+                >
+                  <tab.icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110 flex-shrink-0" />
+                  <span className="hidden sm:inline transition-transform duration-200 group-hover:scale-105 whitespace-nowrap">
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
           </nav>
         </div>
 
         {/* Tab Content */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            <RedesignedDashboardView hideGreeting={true} />
+          </div>
+        )}
+
         {activeTab === 'discover' && (
+          error && !metrics ? (
+            <JobsErrorState message={error} onRetry={handleRetry} />
+          ) : (
           <div className="space-y-4">
             <FiltersBar
               filters={filters}
@@ -1368,24 +1425,25 @@ export default function JobsDashboard() {
               />
             )}
           </div>
+          )
         )}
 
         {activeTab === 'applications' && (
           <ApplicationsPanel metrics={metrics} userId={userId} />
         )}
 
-        {activeTab === 'documents' && (
+        {activeTab === 'comms' && (
+          <div className="h-[calc(100vh-320px)] min-h-[520px] flex flex-col pb-1 sm:pb-2 md:pb-2 lg:pb-2">
+            <CommsPanel />
+          </div>
+        )}
+
+        {(activeTab === 'docs' || (activeTab as string) === 'documents') && (
           <ResumeEnhancerProvider>
             <ATSProvider>
               <DocumentsDashboardView />
             </ATSProvider>
           </ResumeEnhancerProvider>
-        )}
-
-        {activeTab === 'comms' && (
-          <div className="h-[calc(100vh-280px)]">
-            <CommsPanel />
-          </div>
         )}
 
         {activeTab === 'settings' && (

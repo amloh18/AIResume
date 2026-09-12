@@ -1457,18 +1457,25 @@ export default function Step1Dashboard({
             )}
 
             {/* Dashboard-Style KPI Strip */}
-            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)]">
-              {kpiMetrics.map((m) => (
-                <div
-                  key={m.label}
-                  onClick={m.onClick}
-                  className={`px-5 py-4 flex items-center gap-3.5 min-w-0 transition-all cursor-pointer select-none ${
-                    m.active
-                      ? 'bg-lime-500/10 dark:bg-lime-500/15 ring-2 ring-inset ring-lime-500/40 dark:ring-lime-400/40'
-                      : 'hover:bg-gray-50/70 dark:hover:bg-white/[0.03]'
-                  }`}
-                  title={m.active ? `Filtering by ${m.label} (click to show all)` : `Filter by ${m.label}`}
-                >
+            <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-[var(--border-primary)] overflow-hidden">
+              {kpiMetrics.map((m, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === kpiMetrics.length - 1;
+                return (
+                  <div
+                    key={m.label}
+                    onClick={m.onClick}
+                    className={`px-5 py-4 flex items-center gap-3.5 min-w-0 transition-all cursor-pointer select-none ${
+                      isFirst ? 'rounded-tl-xl md:rounded-l-xl lg:rounded-l-xl' : ''
+                    } ${
+                      isLast ? 'rounded-br-xl md:rounded-br-xl lg:rounded-r-xl' : ''
+                    } ${
+                      m.active
+                        ? 'bg-lime-500/10 dark:bg-lime-500/15 ring-2 ring-inset ring-lime-500/40 dark:ring-lime-400/40'
+                        : 'hover:bg-gray-50/70 dark:hover:bg-white/[0.03]'
+                    }`}
+                    title={m.active ? `Filtering by ${m.label} (click to show all)` : `Filter by ${m.label}`}
+                  >
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                       m.active
@@ -1503,7 +1510,8 @@ export default function Step1Dashboard({
                     )}
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
         </div>

@@ -33,7 +33,9 @@ const ClientLayoutContent: React.FC<ClientLayoutProps> = ({ children }) => {
       const newParams = new URLSearchParams(searchParams.toString());
       newParams.delete('plan');
       newParams.delete('returnUrl');
-      router.replace(`/dashboard?${newParams.toString()}`);
+      const currentPath = typeof window !== 'undefined' && window.location.pathname !== '/dashboard' ? window.location.pathname : '/dashboard/jobs';
+      const qs = newParams.toString();
+      router.replace(qs ? `${currentPath}?${qs}` : currentPath);
     }
   }, [searchParams, router]);
 

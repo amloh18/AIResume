@@ -64,12 +64,13 @@ export async function GET(req: NextRequest) {
       }
 
       const jobsColl = db.collection('jobs');
-      const filter: Record<string, any> = { status: 'active' };
+      const filter: Record<string, any> = { status: { $in: ['active', 'new'] } };
 
       if (q) {
         filter.$or = [
           { title: { $regex: q, $options: 'i' } },
           { 'company.name': { $regex: q, $options: 'i' } },
+          { company: { $regex: q, $options: 'i' } },
           { skills: { $regex: q, $options: 'i' } },
           { descriptionText: { $regex: q, $options: 'i' } },
         ];

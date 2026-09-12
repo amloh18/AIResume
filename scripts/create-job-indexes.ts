@@ -32,11 +32,24 @@ async function createIndexes() {
   // ── Jobs collection ────────────────────────────────────────────────
   const jobsColl = db.collection('jobs');
 
+  // Safely drop old un-scoped unique index if present to avoid cross-company ID collisions
+  try {
+    const existing = await jobsColl.indexes();
+    if (existing.some((idx: any) => idx.name === 'jobs_source_dedup_unique')) {
+      console.log('Dropping legacy un-scoped unique index jobs_source_dedup_unique...');
+      if (!dryRun) {
+        await jobsColl.dropIndex('jobs_source_dedup_unique');
+      }
+    }
+  } catch {
+    // Ignore if not present
+  }
+
   const jobsIndexes = [
     // Dedup: canonicalId unique
     { key: { canonicalId: 1 }, name: 'jobs_canonicalId_unique', unique: true },
-    // Dedup: source.primary + source.sourceJobId unique
-    { key: { 'source.primary': 1, 'source.sourceJobId': 1 }, name: 'jobs_source_dedup_unique', unique: true },
+    // Dedup: source.primary + company + source.sourceJobId unique (scoped by company)
+    { key: { 'source.primary': 1, 'company.normalizedName': 1, 'source.sourceJobId': 1 }, name: 'jobs_source_company_jobid_unique', unique: true, sparse: true },
     // Discovery: status + postedAt (most common user query)
     { key: { status: 1, postedAt: -1 }, name: 'jobs_status_postedAt' },
     // Discovery: location queries

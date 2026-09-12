@@ -53,6 +53,12 @@ export interface TopMatchJob {
   isFresh?: boolean;
 }
 
+const TOP_MATCHES_CACHE_KEY = 'buildairesume_top_matches_cache_v1';
+const TOP_MATCHES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// In-memory module cache for instant 0ms tab switches
+let memoryTopMatchesCache: { jobs: TopMatchJob[]; timestamp: number } | null = null;
+
 const timeAgo = (date: string | Date) => {
   const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
   const days = Math.floor(seconds / 86400);
@@ -68,8 +74,63 @@ export default function TopJobMatchesSection() {
   const applyProgress = useApplyProgress();
   const { statuses, clearStatus } = useJobLiveStatusStore();
 
-  const [jobs, setJobs] = useState<TopMatchJob[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<TopMatchJob[]>(() => {
+    // 1. Check memory cache first (instant 0ms on tab switches)
+    if (
+      memoryTopMatchesCache &&
+      Date.now() - memoryTopMatchesCache.timestamp < TOP_MATCHES_CACHE_TTL
+    ) {
+      return memoryTopMatchesCache.jobs;
+    }
+    // 2. Check sessionStorage (instant 0ms on page reload / navigation)
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(TOP_MATCHES_CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (
+            parsed &&
+            Array.isArray(parsed.jobs) &&
+            Date.now() - parsed.timestamp < TOP_MATCHES_CACHE_TTL
+          ) {
+            memoryTopMatchesCache = parsed;
+            return parsed.jobs;
+          }
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  const [hasCachedData] = useState<boolean>(() => {
+    if (
+      memoryTopMatchesCache &&
+      memoryTopMatchesCache.jobs.length > 0 &&
+      Date.now() - memoryTopMatchesCache.timestamp < TOP_MATCHES_CACHE_TTL
+    ) {
+      return true;
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(TOP_MATCHES_CACHE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (
+            parsed &&
+            Array.isArray(parsed.jobs) &&
+            parsed.jobs.length > 0 &&
+            Date.now() - parsed.timestamp < TOP_MATCHES_CACHE_TTL
+          ) {
+            return true;
+          }
+        }
+      } catch {}
+    }
+    return false;
+  });
+
+  const [loading, setLoading] = useState<boolean>(!hasCachedData);
+  const [hasFetched, setHasFetched] = useState<boolean>(hasCachedData);
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -180,111 +241,96 @@ export default function TopJobMatchesSection() {
     const RETRY_DELAY_MS = 1500;
 
     try {
-      setLoading(true);
+      if (!memoryTopMatchesCache || memoryTopMatchesCache.jobs.length === 0) {
+        setLoading(true);
+      }
       setError(null);
 
-      // Fetch top matches and fresh jobs in parallel
-      const [topRes, freshRes] = await Promise.allSettled([
-        fetch('/api/jobs/discover?limit=10&sortBy=matchScore', { signal }),
-        fetch('/api/jobs/discover?limit=15&sortBy=postedDate', { signal }),
-      ]);
+      // Single consolidated request for fast retrieval & scoring
+      const res = await fetch('/api/jobs/discover?limit=15&sortBy=matchScore', {
+        signal,
+        headers: { 'Cache-Control': 'max-age=60' },
+      });
 
-      // Process top matches
-      let enriched: TopMatchJob[] = [];
-      if (topRes.status === 'fulfilled' && topRes.value.ok) {
-        const data = await topRes.value.json();
-        const rawList: JobListing[] = data.jobs || data.data || [];
+      if (signal?.aborted) return;
 
-        enriched = rawList.map((j) => {
-          const salaryText =
-            j.salaryMin || j.salaryMax
-              ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
-                  j.salaryMin && j.salaryMax ? ' - ' : ''
-                }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
-              : undefined;
-
-          return {
-            _id: j._id || j.id || '',
-            title: j.title || 'Untitled Role',
-            company: j.company || 'Confidential',
-            location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
-            experienceYears: j.experienceYears,
-            postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
-            matchScore: j.matchScore || 50,
-            skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
-            companyLogo: j.companyLogo,
-            applyUrl: j.applyUrl || '',
-            source: j.source || 'Aggregator',
-            salary: salaryText,
-            matchReasons: (j as any).matchReasons || ['Strong skills match with your profile'],
-            rawJob: j,
-          };
-        });
+      if (!res.ok) {
+        throw new Error(`Discover returned ${res.status}`);
       }
 
-      // Process fresh jobs and merge (deduplicate by _id)
-      const topIds = new Set(enriched.map((j) => j._id));
-      if (freshRes.status === 'fulfilled' && freshRes.value.ok) {
-        const freshData = await freshRes.value.json();
-        const rawFresh: JobListing[] = freshData.jobs || freshData.data || [];
-        const now = Date.now();
+      const data = await res.json();
+      const rawList: JobListing[] = data.jobs || data.data || [];
+      const now = Date.now();
 
-        for (const j of rawFresh) {
-          const id = j._id || j.id || '';
-          if (!id || topIds.has(id)) continue;
+      const enriched: TopMatchJob[] = rawList.map((j) => {
+        const salaryText =
+          j.salaryMin || j.salaryMax
+            ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
+                j.salaryMin && j.salaryMax ? ' - ' : ''
+              }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
+            : undefined;
 
-          const postedMs = j.postedDate ? new Date(j.postedDate).getTime() : 0;
-          const ageHours = postedMs > 0 ? (now - postedMs) / (1000 * 60 * 60) : 999;
+        const postedMs = j.postedDate ? new Date(j.postedDate).getTime() : 0;
+        const ageHours = postedMs > 0 ? (now - postedMs) / (1000 * 60 * 60) : 999;
+        const isFresh = ageHours < 48;
 
-          // Only include truly fresh jobs (< 48 hours)
-          if (ageHours >= 48) continue;
+        return {
+          _id: j._id || j.id || '',
+          title: j.title || 'Untitled Role',
+          company: j.company || 'Confidential',
+          location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
+          experienceYears: j.experienceYears,
+          postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
+          matchScore: j.matchScore || 50,
+          skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
+          companyLogo: j.companyLogo,
+          applyUrl: j.applyUrl || '',
+          source: j.source || 'Aggregator',
+          salary: salaryText,
+          matchReasons: (j as any).matchReasons || (isFresh ? ['Recently posted opportunity'] : ['Strong skills match with your profile']),
+          rawJob: j,
+          isFresh,
+          freshness: isFresh
+            ? {
+                score: ageHours < 1 ? 98 : ageHours < 6 ? 90 : ageHours < 24 ? 75 : 50,
+                ageHours,
+              }
+            : undefined,
+        };
+      });
 
-          const salaryText =
-            j.salaryMin || j.salaryMax
-              ? `${j.salaryCurrency || '$'}${j.salaryMin ? j.salaryMin.toLocaleString() : ''}${
-                  j.salaryMin && j.salaryMax ? ' - ' : ''
-                }${j.salaryMax ? `${j.salaryMax.toLocaleString()}` : ''}`
-              : undefined;
+      if (signal?.aborted) return;
 
-          enriched.push({
-            _id: id,
-            title: j.title || 'Untitled Role',
-            company: j.company || 'Confidential',
-            location: j.location || (j.remote ? 'Remote' : 'Location Not Specified'),
-            experienceYears: j.experienceYears,
-            postedAgo: j.postedDate ? timeAgo(j.postedDate) : 'Recently',
-            matchScore: j.matchScore || 50,
-            skills: (j.keywords && j.keywords.length > 0 ? j.keywords : ['Software', 'Tech']).slice(0, 3),
-            companyLogo: j.companyLogo,
-            applyUrl: j.applyUrl || '',
-            source: j.source || 'Aggregator',
-            salary: salaryText,
-            matchReasons: (j as any).matchReasons || ['Recently posted'],
-            rawJob: j,
-            freshness: {
-              score: ageHours < 1 ? 98 : ageHours < 6 ? 90 : ageHours < 24 ? 75 : 50,
-              ageHours,
-            },
-            isFresh: true,
-          });
-          topIds.add(id);
-        }
+      // Update both in-memory and sessionStorage caches for instant 0ms loads
+      memoryTopMatchesCache = { jobs: enriched, timestamp: Date.now() };
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(TOP_MATCHES_CACHE_KEY, JSON.stringify(memoryTopMatchesCache));
+        } catch {}
       }
 
       setJobs(enriched);
+      setHasFetched(true);
     } catch (err: any) {
-      if (err?.name === 'AbortError') return;
+      if (err?.name === 'AbortError' || signal?.aborted) return;
 
       if (retryCount < MAX_RETRIES) {
-        console.warn(`[TopMatches] Retry ${retryCount + 1}/${MAX_RETRIES} after error:`, err?.message);
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * (retryCount + 1)));
-        return fetchTopMatches(signal, retryCount + 1);
+        if (!signal?.aborted) {
+          return fetchTopMatches(signal, retryCount + 1);
+        }
+        return;
       }
 
       console.error('Failed to load top job matches:', err);
-      setError(err.message || 'Failed to load top matches');
+      // Only show full error UI if no cached data was already rendered
+      if (!memoryTopMatchesCache || memoryTopMatchesCache.jobs.length === 0) {
+        setError(err.message || 'Failed to load top matches');
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -465,7 +511,7 @@ export default function TopJobMatchesSection() {
     setModalOpen(true);
   };
 
-  if (loading) {
+  if ((loading || !hasFetched) && jobs.length === 0) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
