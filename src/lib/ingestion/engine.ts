@@ -448,14 +448,36 @@ function getWorkdayTenants() {
 }
 const ADZUNA_COUNTRIES = DEFAULT_ADZUNA_COUNTRIES;
 
+// ── Async Concurrency Pool ─────────────────────────────────────────────
+async function asyncPool<T, R>(
+  poolLimit: number,
+  items: T[],
+  iteratorFn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const ret: Promise<R>[] = [];
+  const executing: Promise<void>[] = [];
+  for (const item of items) {
+    const p = Promise.resolve().then(() => iteratorFn(item));
+    ret.push(p);
+    const e: Promise<void> = p.then(() => {
+      const idx = executing.indexOf(e);
+      if (idx !== -1) executing.splice(idx, 1);
+    });
+    executing.push(e);
+    if (executing.length >= poolLimit) {
+      await Promise.race(executing);
+    }
+  }
+  return Promise.all(ret);
+}
+
 async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
-  const jobs: RawJob[] = [];
   let boardErrors = 0;
   const GREENHOUSE_COMPANIES = getGreenhouseCompanies();
-  log('FETCH', `Greenhouse: fetching ${GREENHOUSE_COMPANIES.length} boards`);
+  log('FETCH', `Greenhouse: fetching ${GREENHOUSE_COMPANIES.length} boards concurrently`);
 
-  for (const company of GREENHOUSE_COMPANIES) {
-    if (signal?.aborted) break;
+  const results = await asyncPool(5, GREENHOUSE_COMPANIES, async (company: any) => {
+    if (signal?.aborted) return [];
     try {
       const res = await withRetry(
         () => fetch(
@@ -467,20 +489,21 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
 
       if (res.status === 403 || res.status === 404) {
         // Board not found or private — skip silently
-        continue;
+        return [];
       }
 
       if (!res.ok) {
         boardErrors++;
         log('FETCH', `Greenhouse/${company.token}: HTTP ${res.status}`);
-        continue;
+        return [];
       }
 
       const data: any = await res.json();
       const rawJobs: any[] = data.jobs || [];
+      const companyJobs: RawJob[] = [];
 
       for (const job of rawJobs) {
-        jobs.push({
+        companyJobs.push({
           source: 'greenhouse',
           sourceJobId: String(job.id),
           url: job.absolute_url || `https://boards.greenhouse.io/${company.token}/jobs/${job.id}`,
@@ -494,16 +517,19 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departments?.[0]?.name || undefined,
         });
       }
+      return companyJobs;
     } catch (err: any) {
-      if (signal?.aborted) break;
-      boardErrors++;
-      // Only log unexpected errors (not timeouts which are normal for unreachable boards)
-      if (err.name !== 'TimeoutError') {
-        log('FETCH', `Greenhouse/${company.token}: ${err.message}`);
+      if (!signal?.aborted) {
+        boardErrors++;
+        if (err.name !== 'TimeoutError') {
+          log('FETCH', `Greenhouse/${company.token}: ${err.message}`);
+        }
       }
+      return [];
     }
-  }
+  });
 
+  const jobs = results.flat();
   if (boardErrors > 0) {
     log('FETCH', `Greenhouse: ${boardErrors} boards failed`);
   }
@@ -512,13 +538,12 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
 }
 
 async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
-  const jobs: RawJob[] = [];
   let boardErrors = 0;
   const LEVER_COMPANIES = getLeverCompanies();
-  log('FETCH', `Lever: fetching ${LEVER_COMPANIES.length} companies`);
+  log('FETCH', `Lever: fetching ${LEVER_COMPANIES.length} companies concurrently`);
 
-  for (const company of LEVER_COMPANIES) {
-    if (signal?.aborted) break;
+  const results = await asyncPool(5, LEVER_COMPANIES, async (company: any) => {
+    if (signal?.aborted) return [];
     try {
       const res = await withRetry(
         () => fetch(
@@ -530,18 +555,19 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
 
       if (!res.ok) {
         boardErrors++;
-        continue;
+        return [];
       }
 
       const data: any[] = await res.json();
       if (!Array.isArray(data)) {
         boardErrors++;
-        continue;
+        return [];
       }
 
+      const companyJobs: RawJob[] = [];
       for (const job of data) {
         if (job.hostedUrl?.includes('deleted') || !job.text) continue;
-        jobs.push({
+        companyJobs.push({
           source: 'lever',
           sourceJobId: job.id || job.guid || `${company}-${Date.now()}`,
           url: job.hostedUrl || `https://jobs.lever.co/${company}`,
@@ -556,15 +582,19 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
           category: job.categories?.department || undefined,
         });
       }
+      return companyJobs;
     } catch (err: any) {
-      if (signal?.aborted) break;
-      boardErrors++;
-      if (err.name !== 'TimeoutError') {
-        log('FETCH', `Lever/${company}: ${err.message}`);
+      if (!signal?.aborted) {
+        boardErrors++;
+        if (err.name !== 'TimeoutError') {
+          log('FETCH', `Lever/${company}: ${err.message}`);
+        }
       }
+      return [];
     }
-  }
+  });
 
+  const jobs = results.flat();
   if (boardErrors > 0) {
     log('FETCH', `Lever: ${boardErrors} boards failed`);
   }
@@ -573,13 +603,12 @@ async function fetchLever(signal?: AbortSignal): Promise<RawJob[]> {
 }
 
 async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
-  const jobs: RawJob[] = [];
   let boardErrors = 0;
   const ASHBY_COMPANIES = getAshbyCompanies();
-  log('FETCH', `Ashby: fetching ${ASHBY_COMPANIES.length} boards`);
+  log('FETCH', `Ashby: fetching ${ASHBY_COMPANIES.length} boards concurrently`);
 
-  for (const company of ASHBY_COMPANIES) {
-    if (signal?.aborted) break;
+  const results = await asyncPool(5, ASHBY_COMPANIES, async (company: any) => {
+    if (signal?.aborted) return [];
     try {
       const res = await withRetry(
         () => fetch(
@@ -591,18 +620,19 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
 
       if (!res.ok) {
         boardErrors++;
-        continue;
+        return [];
       }
 
       const data: any = await res.json();
       const postings = data?.jobPostings || data?.data || [];
       if (!Array.isArray(postings)) {
         boardErrors++;
-        continue;
+        return [];
       }
 
+      const companyJobs: RawJob[] = [];
       for (const job of postings) {
-        jobs.push({
+        companyJobs.push({
           source: 'ashby',
           sourceJobId: job.id || job.postingId || `${company}-${Date.now()}`,
           url: job.url || `https://jobs.ashbyhq.com/${company}`,
@@ -616,15 +646,19 @@ async function fetchAshby(signal?: AbortSignal): Promise<RawJob[]> {
           department: job.departmentName || undefined,
         });
       }
+      return companyJobs;
     } catch (err: any) {
-      if (signal?.aborted) break;
-      boardErrors++;
-      if (err.name !== 'TimeoutError') {
-        log('FETCH', `Ashby/${company}: ${err.message}`);
+      if (!signal?.aborted) {
+        boardErrors++;
+        if (err.name !== 'TimeoutError') {
+          log('FETCH', `Ashby/${company}: ${err.message}`);
+        }
       }
+      return [];
     }
-  }
+  });
 
+  const jobs = results.flat();
   if (boardErrors > 0) {
     log('FETCH', `Ashby: ${boardErrors} boards failed`);
   }
@@ -1353,7 +1387,7 @@ function normalize(raw: RawJob): NormalizedJob {
 
 // ── Batch Upsert (source-agnostic) ─────────────────────────────────────
 
-async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[], sourceName: string) {
+export async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[], sourceName: string) {
   const coll = db!.collection('jobs');
   const eventsColl = db!.collection('jobEvents');
   const now = new Date();
@@ -1454,7 +1488,6 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
             skills: job.skills,
             postedAt: job.postedAt,
             firstSeenAt: now,
-            status: 'new',
             createdAt: now,
           },
           $set: {
@@ -1465,6 +1498,12 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
             'source.applicationUrl': job.source.applicationUrl,
             'source.discoveredAt': job.source.discoveredAt,
             'source.lastSeenAt': now,
+            atsType: job.source.primary,
+            remote: Boolean(job.location?.remote),
+            country: job.location?.countryCode || job.location?.country || '',
+            applyUrl: job.source.applicationUrl || job.source.sourceUrl,
+            postedDate: job.postedAt,
+            status: 'active',
             lastSeenAt: now,
             lastVerifiedAt: now,
             expiresAt,
@@ -1502,6 +1541,12 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
             roleFamilyKeywords: job.roleFamilyKeywords,
             salary: job.salary,
             skills: job.skills,
+            atsType: job.source.primary,
+            remote: Boolean(job.location?.remote),
+            country: job.location?.countryCode || job.location?.country || '',
+            applyUrl: job.source.applicationUrl || job.source.sourceUrl,
+            postedDate: job.postedAt,
+            status: 'active',
             'source.primary': job.source.primary,
             'source.secondary': job.source.secondary,
             'source.sourceJobId': job.source.sourceJobId,
@@ -1540,6 +1585,11 @@ async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[],
             lastSeenAt: now,
             lastVerifiedAt: now,
             expiresAt, // refresh expiry so actively-seen jobs don't expire early
+            status: 'active',
+            atsType: job.source.primary,
+            remote: Boolean(job.location?.remote),
+            country: job.location?.countryCode || job.location?.country || '',
+            applyUrl: job.source.applicationUrl || job.source.sourceUrl,
             updatedAt: now,
           },
         },

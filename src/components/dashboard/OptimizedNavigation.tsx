@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
   Home, BarChart3, FileText, Kanban,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock, PanelLeft, LayoutDashboard
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -239,7 +239,6 @@ const OptimizedNavigation: React.FC = () => {
   // Prefetch routes on mount for faster navigation
   useEffect(() => {
     const routesToPrefetch = [
-      '/dashboard',
       '/dashboard/jobs',
       '/dashboard/settings'
     ];
@@ -252,14 +251,21 @@ const OptimizedNavigation: React.FC = () => {
 
   // Update active section based on current path
   useEffect(() => {
-    if (pathname === '/dashboard' || pathname === '/dashboard/') {
-      setActiveSection('analytics');
-    } else if (pathname.includes('/jobs')) {
-      if (searchParams.get('tab') === 'documents') {
+    if (pathname === '/dashboard/jobs' || pathname.startsWith('/dashboard/jobs')) {
+      const tab = searchParams.get('tab');
+      if (tab === 'docs' || tab === 'documents') {
         setActiveSection('documents');
+      } else if (tab === 'applications' || tab === 'tracker') {
+        setActiveSection('tracker');
+      } else if (tab === 'discover' || tab === 'jobs') {
+        setActiveSection('analytics');
+      } else if (tab === 'settings') {
+        setActiveSection('settings');
       } else {
-        setActiveSection('jobs-dashboard');
+        setActiveSection('analytics');
       }
+    } else if (pathname === '/dashboard' || pathname === '/dashboard/') {
+      setActiveSection('analytics');
     } else if (pathname.includes('/tracker')) {
       setActiveSection('tracker');
     } else if (pathname.includes('/interview')) {
@@ -270,6 +276,8 @@ const OptimizedNavigation: React.FC = () => {
       setActiveSection('documents');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
+    } else if (pathname.startsWith('/admin')) {
+      setActiveSection('admin-dashboard');
     }
   }, [pathname, searchParams]);
 
@@ -285,15 +293,16 @@ const OptimizedNavigation: React.FC = () => {
 
     // Navigate immediately
     const routes = {
-      'analytics': '/dashboard',
-      'jobs': '/dashboard/jobs',
-      'jobs-dashboard': '/dashboard/jobs',
+      'analytics': '/dashboard/jobs',
+      'jobs': '/dashboard/jobs?tab=discover',
+      'jobs-dashboard': '/dashboard/jobs?tab=discover',
       'tracker': '/dashboard/jobs?tab=applications',
       'settings': '/dashboard/settings',
-      'documents': '/dashboard/jobs?tab=documents',
+      'documents': '/dashboard/jobs?tab=docs',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
-      'ats-resume-checker': '/ats-resume-checker'
+      'ats-resume-checker': '/ats-resume-checker',
+      'admin-dashboard': '/admin/dashboard',
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -308,7 +317,7 @@ const OptimizedNavigation: React.FC = () => {
   // Handle logo click - navigate to home for guests, dashboard for logged in users
   const handleLogoClick = useCallback(() => {
     if (userData?.id) {
-      router.replace('/dashboard');
+      router.replace('/dashboard/jobs');
     } else {
       router.replace('/');
     }
@@ -344,15 +353,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Home',
       icon: Home,
       description: 'Tracker, Documents & Analytics',
-      route: '/dashboard'
-    },
-    {
-      id: 'jobs-dashboard',
-      name: 'Jobs',
-      icon: Briefcase,
-      description: 'Job matching & automation (Beta)',
-      route: '/dashboard/jobs',
-      badge: 'BETA'
+      route: '/dashboard/jobs'
     },
   ];
 
@@ -362,7 +363,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Documents',
       icon: FileText,
       description: 'CVs, cover letters & master profile',
-      route: '/dashboard/jobs?tab=documents',
+      route: '/dashboard/jobs?tab=docs',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
       activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
@@ -409,6 +410,16 @@ const OptimizedNavigation: React.FC = () => {
       bg: 'bg-gray-50 dark:bg-gray-800/30',
       activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
     },
+    ...(isAdmin ? [{
+      id: 'admin-dashboard',
+      name: 'Admin Dashboard',
+      icon: Shield,
+      description: 'System & user controls',
+      route: '/admin/dashboard',
+      color: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-50 dark:bg-purple-900/30',
+      activeBg: 'bg-purple-100 border-purple-500/30 dark:bg-purple-900/40 dark:border-purple-400/40',
+    }] : []),
   ];
 
   return (
@@ -600,38 +611,6 @@ const OptimizedNavigation: React.FC = () => {
         </div>
       </nav>
 
-      {/* Admin Dashboard Button - Show for Admins */}
-      {isAdmin && (
-        <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
-          <div className={isDesktopExpanded ? "grid grid-cols-2 gap-2" : "flex flex-col items-center gap-2"}>
-            <motion.button
-              onClick={() => {
-                if (isMobileMenuOpen) {
-                  setIsOpen(false);
-                }
-                router.push('/admin/dashboard');
-              }}
-              className={isDesktopExpanded
-                ? "w-full h-full min-h-[88px] flex flex-col items-start justify-between gap-3 rounded-xl border border-purple-500/15 transition-all duration-200 text-left p-4 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-                : "w-9 h-9 flex items-center justify-center rounded-xl border border-purple-500/15 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
-              }
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Admin Dashboard"
-            >
-              <Shield className="w-5 h-5 flex-shrink-0" />
-              {isDesktopExpanded && (
-                <div className="min-w-0 w-full text-left">
-                  <div className="text-small font-medium truncate">Admin Dashboard</div>
-                  <div className="text-[11px] text-purple-600 dark:text-purple-300 truncate mt-0.5">
-                    System controls
-                  </div>
-                </div>
-              )}
-            </motion.button>
-          </div>
-        </div>
-      )}
 
       {/* Payment Past Due Banner - Show for past_due/unpaid subscriptions */}
       {(() => {

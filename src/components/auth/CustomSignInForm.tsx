@@ -47,7 +47,7 @@ export default function CustomSignInForm() {
       } else if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...')
         setTimeout(() => {
-          router.push('/dashboard')
+          router.push('/dashboard/jobs')
         }, 1000)
       } else {
         setError('Authentication failed. Please try again.')

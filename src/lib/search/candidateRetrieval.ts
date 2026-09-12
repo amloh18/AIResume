@@ -80,7 +80,8 @@ export function buildLocationAndCountryFilter(options: RetrievalOptions): Record
       $or: [
         { remote: true },
         { 'location.remote': true },
-        { location: { $regex: 'remote', $options: 'i' } },
+        { location: { $type: 'string', $regex: 'remote', $options: 'i' } },
+        { 'location.city': { $regex: 'remote', $options: 'i' } },
         { country: 'Global' },
       ],
     });
@@ -137,6 +138,7 @@ export function buildLocationAndCountryFilter(options: RetrievalOptions): Record
       countryOr.push({ 'location.city': { $regex: cityRegex, $options: 'i' } });
       countryOr.push({
         location: {
+          $type: 'string',
           $regex: cityRegex + '|' + matchedNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
           $options: 'i',
         },
@@ -212,17 +214,43 @@ export async function retrieveCandidates(
 
   const locationClauses = buildLocationAndCountryFilter(options);
 
-  const baseFilter: Record<string, any> = {
+  const statusClause: Record<string, any> = {
     $or: [
       { status: { $in: ['new', 'active'] } },
       { status: { $exists: false } },
     ],
-    ...(locationClauses.length > 0 ? { $and: locationClauses } : {}),
   };
+
+  const baseFilterClauses: Record<string, any>[] = [
+    statusClause,
+    ...locationClauses,
+  ];
+
+  if (options.excludeJobIds && options.excludeJobIds.size > 0) {
+    const validExcludeIds = Array.from(options.excludeJobIds)
+      .filter((id) => ObjectId.isValid(id))
+      .map((id) => new ObjectId(id));
+    if (validExcludeIds.length > 0) {
+      baseFilterClauses.push({ _id: { $nin: validExcludeIds } });
+    }
+  }
 
   const tiersUsed: string[] = [];
   let fallbackTriggered = false;
   const seenIds = new Set<string>();
+
+  function buildTierFilter(additionalClauses: Record<string, any>[] = []): Record<string, any> {
+    const seenExclude = seenIds.size > 0
+      ? [{ _id: { $nin: Array.from(seenIds).filter((id) => ObjectId.isValid(id)).map((id) => new ObjectId(id)) } }]
+      : [];
+
+    const allClauses = [
+      ...baseFilterClauses,
+      ...seenExclude,
+      ...additionalClauses,
+    ];
+    return allClauses.length === 1 ? allClauses[0] : { $and: allClauses };
+  }
 
   // Collect results from each tier
   const exactResults: RetrievedCandidate[] = [];
@@ -235,10 +263,7 @@ export async function retrieveCandidates(
   if (textSearchQuery) {
     try {
       const textResults = await coll
-        .find({
-          ...baseFilter,
-          $text: { $search: textSearchQuery },
-        })
+        .find(buildTierFilter([{ $text: { $search: textSearchQuery } }]))
         .sort({ score: { $meta: 'textScore' } })
         .limit(options.limit * 2)
         .toArray();
@@ -265,14 +290,16 @@ export async function retrieveCandidates(
     if (titleRegex && exactResults.length < options.limit * 2) {
       try {
         const titleDocs = await coll
-          .find({
-            ...baseFilter,
-            _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-            $or: [
-              { normalizedTitle: { $regex: titleRegex, $options: 'i' } },
-              { title: { $regex: titleRegex, $options: 'i' } },
-            ],
-          })
+          .find(
+            buildTierFilter([
+              {
+                $or: [
+                  { normalizedTitle: { $regex: titleRegex, $options: 'i' } },
+                  { title: { $regex: titleRegex, $options: 'i' } },
+                ],
+              },
+            ])
+          )
           .sort({ postedAt: -1, postedDate: -1, createdAt: -1 })
           .limit(options.limit * 2)
           .toArray();
@@ -296,11 +323,7 @@ export async function retrieveCandidates(
 
   // ── Layer 2: Role family match ──────────────────────────────────────────
   if (allRoleFamilies.size > 0) {
-    const familyFilter = {
-      ...baseFilter,
-      _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-      roleFamily: { $in: Array.from(allRoleFamilies) },
-    };
+    const familyFilter = buildTierFilter([{ roleFamily: { $in: Array.from(allRoleFamilies) } }]);
 
     try {
       const familyResults = await coll
@@ -328,11 +351,7 @@ export async function retrieveCandidates(
 
   // ── Layer 3: Synonym / related role expansion ───────────────────────────
   if (allRelatedFamilies.size > 0 && closeResults.length + exactResults.length < options.limit * 2) {
-    const relatedFamilyFilter = {
-      ...baseFilter,
-      _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-      roleFamily: { $in: Array.from(allRelatedFamilies) },
-    };
+    const relatedFamilyFilter = buildTierFilter([{ roleFamily: { $in: Array.from(allRelatedFamilies) } }]);
 
     try {
       const relatedResultsRaw = await coll
@@ -362,16 +381,16 @@ export async function retrieveCandidates(
     const tokensList = Array.from(allTokens);
     const keywordRegex = keywordsList.map((kw) => kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
 
-    const keywordFilter = {
-      ...baseFilter,
-      _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-      $or: [
-        ...(keywordRegex ? [{ normalizedTitle: { $regex: keywordRegex, $options: 'i' } }] : []),
-        ...(keywordsList.length > 0 ? [{ roleFamilyKeywords: { $in: keywordsList } }] : []),
-        ...(tokensList.length > 0 ? [{ skills: { $in: tokensList } }] : []),
-        ...(keywordsList.length > 0 ? [{ keywords: { $in: keywordsList } }] : []),
-      ],
-    };
+    const keywordFilter = buildTierFilter([
+      {
+        $or: [
+          ...(keywordRegex ? [{ normalizedTitle: { $regex: keywordRegex, $options: 'i' } }] : []),
+          ...(keywordsList.length > 0 ? [{ roleFamilyKeywords: { $in: keywordsList } }] : []),
+          ...(tokensList.length > 0 ? [{ skills: { $in: tokensList } }] : []),
+          ...(keywordsList.length > 0 ? [{ keywords: { $in: keywordsList } }] : []),
+        ],
+      },
+    ]);
 
     try {
       const keywordResults = await coll
@@ -402,16 +421,16 @@ export async function retrieveCandidates(
 
     if (broadRegex) {
       try {
-        const broadFilter = {
-          ...baseFilter,
-          _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-          $or: [
-            { normalizedTitle: { $regex: broadRegex, $options: 'i' } },
-            { title: { $regex: broadRegex, $options: 'i' } },
-            { descriptionText: { $regex: broadRegex, $options: 'i' } },
-            { description: { $regex: broadRegex, $options: 'i' } },
-          ],
-        };
+        const broadFilter = buildTierFilter([
+          {
+            $or: [
+              { normalizedTitle: { $regex: broadRegex, $options: 'i' } },
+              { title: { $regex: broadRegex, $options: 'i' } },
+              { descriptionText: { $regex: broadRegex, $options: 'i' } },
+              { description: { $regex: broadRegex, $options: 'i' } },
+            ],
+          },
+        ]);
 
         const broadResults = await coll
           .find(broadFilter)
@@ -452,11 +471,7 @@ export async function retrieveCandidates(
 
     if (adjacentFamilies.length > 0) {
       try {
-        const adjacentFilter = {
-          ...baseFilter,
-          _id: { $nin: Array.from(seenIds).map((id) => new ObjectId(id)) },
-          roleFamily: { $in: adjacentFamilies.slice(0, 3) },
-        };
+        const adjacentFilter = buildTierFilter([{ roleFamily: { $in: adjacentFamilies.slice(0, 3) } }]);
 
         const adjacentResultsRaw = await coll
           .find(adjacentFilter)
@@ -480,9 +495,10 @@ export async function retrieveCandidates(
   }
 
   // ── Get total database count for metadata ───────────────────────────────
+  const baseCountFilter = baseFilterClauses.length === 1 ? baseFilterClauses[0] : { $and: baseFilterClauses };
   let totalInDatabase = 0;
   try {
-    totalInDatabase = await coll.countDocuments(baseFilter);
+    totalInDatabase = await coll.countDocuments(baseCountFilter);
   } catch {
     // Ignore count errors
   }

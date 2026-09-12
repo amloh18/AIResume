@@ -438,21 +438,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
           </div>
         </div>
 
-        {/* ROW 5: Default Tab */}
-        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Default Tab</h4>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-            Choose which tab opens by default when you navigate to the Jobs page.
-          </p>
-          <div className="flex gap-3">
-            {[0, 1].map((i) => (
-              <div key={i} className="flex-1 h-20 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        </div>
       </div>
     );
   }
@@ -1178,45 +1163,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* Default Tab Preference                                                    */}
-      {/* ========================================================================= */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#013f2e]" />
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Default Tab</h4>
-        </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Choose which tab opens by default when you navigate to the Jobs page.
-        </p>
-        <div className="flex gap-3">
-          {[
-            { value: 'discover' as const, label: 'Discover', desc: 'Browse new job matches' },
-            { value: 'applications' as const, label: 'Applications', desc: 'View your tracker' },
-          ].map((opt) => {
-            const isSelected = preferences.defaultJobsTab === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setPreferences((p) => ({ ...p, defaultJobsTab: opt.value }))}
-                className={`flex-1 p-4 rounded-2xl border text-left transition-all ${
-                  isSelected
-                    ? 'border-lime-500 bg-lime-50/40 dark:bg-lime-900/20 shadow-2xs'
-                    : 'border-gray-200 dark:border-white/10 bg-gray-50/50 dark:bg-white/[0.02] hover:border-gray-300'
-                }`}
-              >
-                <div className={`text-sm font-bold ${isSelected ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400'}`}>
-                  {opt.label}
-                </div>
-                <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  {opt.desc}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* Save Action Bar                                                           */}

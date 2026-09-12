@@ -212,6 +212,12 @@ export default async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in', req.url));
     }
 
+    if (pathname === '/dashboard' || pathname === '/dashboard/') {
+      const url = req.nextUrl.clone();
+      url.pathname = '/dashboard/jobs';
+      return NextResponse.redirect(url);
+    }
+
     if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/settings')) {
       const expiredParam = req.nextUrl.searchParams.get('expired');
       if (expiredParam === 'true') {

@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      communications,
+      total,
+      unreadCount,
       data: { communications, total, unreadCount },
     });
   } catch (error: any) {

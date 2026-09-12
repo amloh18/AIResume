@@ -58,7 +58,7 @@ const TabsTrigger = React.forwardRef<
           {icon}
         </span>
       )}
-      <span>{children}</span>
+      {typeof children === 'string' ? <span>{children}</span> : children}
       {badge !== undefined && (
         <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200 dark:bg-white/10 group-data-[state=active]:bg-[#013f2e]/10 dark:group-data-[state=active]:bg-lime-500/20 group-data-[state=active]:text-[#013f2e] dark:group-data-[state=active]:text-lime-400 font-bold ml-0.5">
           {badge}

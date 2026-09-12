@@ -30,7 +30,15 @@ export default function PageHeader(props: PageHeaderProps) {
 
   // Helper to determine the current page title based on the URL path segment
   const getPageName = () => {
-    if (!pathname || pathname === '/dashboard') return 'Overview';
+    if (!pathname || pathname === '/dashboard' || pathname === '/dashboard/jobs') {
+      const tab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+      if (tab === 'discover' || tab === 'jobs') return 'Jobs Hub';
+      if (tab === 'applications' || tab === 'tracker') return 'Applications';
+      if (tab === 'comms') return 'Communications';
+      if (tab === 'docs' || tab === 'documents') return 'Documents';
+      if (tab === 'settings') return 'Settings';
+      return 'Overview';
+    }
     
     // Check nested routes
     if (pathname.includes('/dashboard/tracker')) return 'Tracker';
@@ -46,7 +54,7 @@ export default function PageHeader(props: PageHeaderProps) {
       {/* Left: Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-body text-gray-500 dark:text-gray-400 font-medium">
         <span 
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/dashboard/jobs')}
           className="hover:text-lime-600 dark:hover:text-lime-400 cursor-pointer transition-colors"
         >
           Dashboard

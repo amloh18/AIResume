@@ -2583,11 +2583,12 @@ const SettingsContent = () => {
                       <TabsTrigger
                         key={tab.id}
                         value={tab.id}
-                        className="data-[state=active]:text-lime-700 dark:data-[state=active]:text-lime-400 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0 rounded-none px-4 py-3 border-b-2 border-b-transparent data-[state=active]:border-b-lime-500 dark:data-[state=active]:border-b-lime-400 hover:border-b-lime-500 dark:hover:border-b-lime-400 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:shadow-none"
+                        icon={<IconComponent className="h-4 w-4 shrink-0" />}
+                        title={tab.name}
+                        aria-label={tab.name}
+                        className="data-[state=active]:text-lime-700 dark:data-[state=active]:text-lime-400 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0 rounded-none px-3 sm:px-4 py-2.5 sm:py-3 border-b-2 border-b-transparent data-[state=active]:border-b-lime-500 dark:data-[state=active]:border-b-lime-400 hover:border-b-lime-500 dark:hover:border-b-lime-400 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:shadow-none"
                       >
-                        <IconComponent className="h-4 w-4 mr-2" />
-                        <span className="hidden sm:inline">{tab.name}</span>
-                        <span className="sm:hidden">{tab.name.split(' ')[0]}</span>
+                        <span className="hidden sm:inline whitespace-nowrap">{tab.name}</span>
                       </TabsTrigger>
                     );
                   })}
