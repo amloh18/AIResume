@@ -50,7 +50,14 @@ export const GET = withAdminAuth(async (_req: NextRequest) => {
         });
       }
     } catch {
-      // Directory doesn't exist
+      // Directory doesn't exist — try to create it
+      try {
+        fs.mkdirSync(profileDir, { recursive: true, mode: 0o700 });
+        profileExists = true;
+        // Directory created but empty — will show PROFILE_EMPTY
+      } catch {
+        // Cannot create directory (permissions, etc.)
+      }
     }
 
     // Determine session status
@@ -118,9 +125,9 @@ function getInstructions(status: string): string | null {
     case 'NOT_CONFIGURED':
       return 'Set LINKEDIN_ENABLED=true in environment variables, then enable LinkedIn in Worker Settings.';
     case 'PROFILE_MISSING':
-      return 'Run: ssh into VPS, then: mkdir -p /var/lib/buildairesume/browser-profiles/linkedin && chmod 700 /var/lib/buildairesume/browser-profiles/linkedin';
+      return 'Profile directory created. Now run login_linkedin.py on the VPS: ssh into VPS, then: cd /app && python3 scripts/linkedin-worker/login_linkedin.py --xvfb';
     case 'PROFILE_EMPTY':
-      return 'Run login_linkedin.py on the VPS to create an authenticated session. See scripts/linkedin-worker/README.md';
+      return 'Run login_linkedin.py on the VPS to create an authenticated session. On headless VPS: python3 scripts/linkedin-worker/login_linkedin.py --xvfb. On machine with display: python3 scripts/linkedin-worker/login_linkedin.py';
     case 'NEEDS_REAUTH':
       return 'LinkedIn session expired. Run login_linkedin.py again to re-authenticate.';
     case 'BLOCKED':

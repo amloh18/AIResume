@@ -264,6 +264,12 @@ setup_linkedin_venv() {
             playwright install chromium 2>/dev/null || true
             run_sudo playwright install-deps chromium 2>/dev/null || true
 
+            # Install Xvfb for headless VPS login (needed by login_linkedin.py --xvfb)
+            info "Installing Xvfb for headless LinkedIn login..."
+            if command -v apt-get &>/dev/null; then
+                run_sudo apt-get install -y -qq xvfb 2>/dev/null || true
+            fi
+
             deactivate 2>/dev/null || true
 
             log "LinkedIn virtualenv ready at $LINKEDIN_VENV_DIR"
@@ -670,6 +676,10 @@ main() {
             install_systemd_services
             fix_permissions
             verify_installations
+            echo ""
+            info "LinkedIn worker installed. Next step:"
+            info "  ssh into VPS, then run:"
+            info "  python3 scripts/linkedin-worker/login_linkedin.py --xvfb"
             ;;
         --jobspy-only)
             check_root
