@@ -195,6 +195,8 @@ class DatabaseConnectionManager {
       socketTimeoutMS: 45000,
       connectTimeoutMS: 30000,
       retryWrites: true,
+      // Override database name if MONGODB_DB env var is set
+      ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
       ...(isTlsUri
         ? { ssl: true, tlsAllowInvalidCertificates: false }
         : { ssl: false }),
