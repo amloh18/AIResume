@@ -1,5 +1,5 @@
 import { Db } from 'mongodb';
-import { applicationWatchdog, StuckApplicationReport } from './watchdog';
+import { applicationWatchdog } from './watchdog';
 import { applicationStateMachine } from '../application-state/stateMachine';
 
 export class ApplicationReconciliationWorker {
@@ -40,7 +40,7 @@ export class ApplicationReconciliationWorker {
 
         if (emailReceipt) {
           // Inbound email proved submission succeeded! Transition to applied with proof
-          await applicationStateMachine.transition({
+          const result = await applicationStateMachine.transition({
             applicationId: report.applicationId,
             userId: report.userId,
             targetStage: 'applied',
@@ -54,10 +54,10 @@ export class ApplicationReconciliationWorker {
               verificationConfidence: 0.98,
             },
           });
-          resolvedCount++;
+          if (result.success) resolvedCount++;
         } else {
           // No proof available: safely route to review_required
-          await applicationStateMachine.transition({
+          const result = await applicationStateMachine.transition({
             applicationId: report.applicationId,
             userId: report.userId,
             targetStage: 'staging',
@@ -66,7 +66,7 @@ export class ApplicationReconciliationWorker {
             source: 'system',
             reason: report.reason,
           });
-          resolvedCount++;
+          if (result.success) resolvedCount++;
         }
       }
 

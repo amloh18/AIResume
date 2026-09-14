@@ -410,7 +410,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const zonesRef = React.useRef<Record<string, any[]>>({});
   const { userData } = useUserData();
 
-  const [activeTemplate, setActiveTemplate] = useState(cvData?.metadata?.canvasTemplate || template || CANVAS_TEMPLATES[0]);
+  const [activeTemplate, setActiveTemplate] = useState(template || cvData?.metadata?.canvasTemplate || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [focusedJsonPath, setFocusedJsonPath] = useState<string | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
@@ -571,7 +571,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }, [cvData.metadata]);
 
   useEffect(() => {
-    if (template && template.id !== activeTemplate.id && !cvData?.metadata?.canvasTemplate) {
+    // Template prop takes priority — when user selects a new template in Step 2,
+    // it should always override cvData.metadata.canvasTemplate
+    if (template && template.id !== activeTemplate.id) {
       loadTemplate(template);
     }
   }, [template]);

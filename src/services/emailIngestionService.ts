@@ -299,6 +299,71 @@ async function processInboundEmail(
 
     await communication.save();
 
+    // ── Phase 7: Trigger state transition on matched application ──────
+    if (match.applicationId && classification.confidence >= 0.85) {
+      try {
+        const { applicationStateMachine } = await import('@/lib/application-state/stateMachine');
+        const { recordApplicationOutcome } = await import('@/lib/services/applicationOutcomeService');
+
+        const userIdStr = typeof userId === 'string' ? userId : String(userId);
+        let targetStage: 'interview' | 'offer' | 'rejected' | 'applied' | null = null;
+        let eventType: string = 'status_update';
+
+        if (classification.classification === 'INTERVIEW_INVITATION') {
+          targetStage = 'interview';
+          eventType = 'INTERVIEW_DETECTED';
+        } else if (classification.classification === 'OFFER') {
+          targetStage = 'offer';
+          eventType = 'OFFER_DETECTED';
+        } else if (classification.classification === 'REJECTION') {
+          targetStage = 'rejected';
+          eventType = 'REJECTION_DETECTED';
+        } else if (classification.classification === 'APPLICATION_ACKNOWLEDGEMENT') {
+          targetStage = 'applied';
+          eventType = 'SUBMISSION_CONFIRMED';
+        }
+
+        if (targetStage) {
+          await applicationStateMachine.transition({
+            applicationId: match.applicationId,
+            userId: userIdStr,
+            targetStage,
+            targetStatus: targetStage,
+            eventType: eventType as any,
+            source: 'email_intelligence',
+            reason: `Email classification: ${classification.classification} (${Math.round(classification.confidence * 100)}% confidence)`,
+            evidence: {
+              emailMessageId: email.id,
+              confirmationText: subject,
+              verificationConfidence: classification.confidence,
+            },
+          });
+
+          // Record outcome for learning
+          const outcomeMap: Record<string, string> = {
+            INTERVIEW_INVITATION: 'interview_scheduled',
+            OFFER: 'offer_received',
+            REJECTION: 'rejected',
+            APPLICATION_ACKNOWLEDGEMENT: 'response_received',
+          };
+          const outcome = outcomeMap[classification.classification];
+          if (outcome) {
+            await recordApplicationOutcome({
+              userId: userIdStr,
+              jobId: match.jobId || '',
+              applicationId: match.applicationId,
+              outcome: outcome as any,
+              atsType: 'email_intelligence',
+              source: 'email_ingestion',
+              matchScore: match.score,
+            });
+          }
+        }
+      } catch (transitionErr: any) {
+        console.warn('[EmailIngestion] State transition failed:', transitionErr.message);
+      }
+    }
+
     return {
       communicationId: String(communication._id),
       classification: classification.classification,

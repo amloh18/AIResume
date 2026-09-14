@@ -58,7 +58,7 @@ export interface IActivityLog extends Document {
   paymentMetadata?: {
     amount?: number;
     currency?: string;
-    provider?: 'stripe' | 'polar';
+    provider?: 'stripe' | 'razorpay' | 'polar';
     transactionId?: string;
     planKey?: string;
   };

@@ -25,6 +25,32 @@ export async function register() {
       console.warn('[Startup] Email ingestion worker failed to start:', err);
     }
 
+    // Start application worker for auto-apply queue processing
+    try {
+      const { startApplicationWorker } = await import('./workers/applicationWorker');
+      startApplicationWorker();
+    } catch (err) {
+      console.warn('[Startup] Application worker failed to start:', err);
+    }
+
+    // Start reconciliation worker for stuck application recovery
+    try {
+      const { applicationReconciliationWorker } = await import('./lib/reconciliation/reconciliationWorker');
+      const mongoose = await import('mongoose');
+      // Delay to allow MongoDB connection
+      setTimeout(async () => {
+        if (mongoose.default.connection.readyState === 1) {
+          const db = (mongoose.default.connection as any).db;
+          if (db) {
+            applicationReconciliationWorker.start(db, 60_000); // every 60s
+            console.log('[Startup] Reconciliation worker started');
+          }
+        }
+      }, 10_000);
+    } catch (err) {
+      console.warn('[Startup] Reconciliation worker failed to start:', err);
+    }
+
     // Pre-load ingestion worker settings from DB into sync cache (delayed to allow MongoDB connection)
     setTimeout(async () => {
       try {

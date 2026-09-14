@@ -1,4 +1,3 @@
-import Application from '@/models/Application';
 import { applicationStateMachine } from '../application-state/stateMachine';
 
 export interface StagingInitOptions {

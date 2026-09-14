@@ -2170,7 +2170,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
                         {isStarter && (
                           <p className="text-[10px] text-right font-medium text-indigo-600 dark:text-indigo-400">
-                            Free Subscription ($0 invoices will be emailed from Polar)
+                            Free Subscription ($0 invoices will be emailed to you)
                           </p>
                         )}
                       </div>

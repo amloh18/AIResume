@@ -65,6 +65,28 @@ export function useApplyProgress() {
     [updateStep]
   );
 
+  const updateToQueued = useCallback(
+    (company: string, mode: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      const modeLabel = mode === 'auto' ? 'auto-submit' : mode === 'review' ? 'review' : 'manual';
+      updateStep(jobId, {
+        step: 'queued',
+        title: 'Queued for Processing',
+        description: `Application queued for ${modeLabel} processing at ${company}...`,
+        progress: 80,
+        company,
+      });
+
+      toast({
+        title: 'Application queued',
+        description: `Queued for ${modeLabel} processing at ${company}.`,
+        company,
+        duration: 4000,
+      });
+    },
+    [updateStep]
+  );
+
   const updateToSubmitting = useCallback(
     (company: string, directJobId?: string) => {
       const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
@@ -87,7 +109,7 @@ export function useApplyProgress() {
   );
 
   const completeApply = useCallback(
-    (jobTitle: string, company: string, success: boolean, message?: string, directJobId?: string, appStatus?: 'applied' | 'queued' | 'action_required' | 'saved' | 'failed') => {
+    (jobTitle: string, company: string, success: boolean, message?: string, directJobId?: string, appStatus?: 'applied' | 'queued' | 'action_required' | 'saved' | 'failed' | 'skipped') => {
       const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
       const isTechnical = Boolean(
         message && /validation failed|enum value|Internal Server Error|E11000/i.test(message)
@@ -95,16 +117,37 @@ export function useApplyProgress() {
       const succeeded = success && !isTechnical;
 
       if (succeeded) {
-        // Determine correct title and description based on actual application status
-        const isApplied = appStatus === 'applied';
-        const title = isApplied ? 'Application Submitted' : 'Documents Ready';
-        const description = isApplied
-          ? (message || `Application submitted to ${company} successfully.`)
-          : (message || `Tailored documents prepared for ${company}. Review or submit.`);
-        const toastTitle = isApplied ? 'Application submitted' : 'Documents ready';
-        const toastDescription = isApplied
-          ? (message || `Application submitted to ${company}.`)
-          : (message || `Tailored documents prepared for ${company}. Review and submit.`);
+        let title: string;
+        let description: string;
+        let toastTitle: string;
+        let toastDescription: string;
+
+        if (appStatus === 'applied') {
+          title = 'Application Submitted';
+          description = message || `Application submitted to ${company} successfully.`;
+          toastTitle = 'Application submitted';
+          toastDescription = message || `Application submitted to ${company}.`;
+        } else if (appStatus === 'queued') {
+          title = 'Application Queued';
+          description = message || `Application queued for automated processing at ${company}. The worker will submit it shortly.`;
+          toastTitle = 'Application queued';
+          toastDescription = message || `Queued for processing at ${company}.`;
+        } else if (appStatus === 'action_required') {
+          title = 'Review Required';
+          description = message || `Documents prepared for ${company}. Please review and submit manually.`;
+          toastTitle = 'Review required';
+          toastDescription = message || `Documents ready for ${company}. Review and submit.`;
+        } else if (appStatus === 'skipped') {
+          title = 'Application Skipped';
+          description = message || `This job was skipped based on your preferences.`;
+          toastTitle = 'Skipped';
+          toastDescription = message || `Job skipped per your preferences.`;
+        } else {
+          title = 'Documents Ready';
+          description = message || `Tailored documents prepared for ${company}. Review or submit.`;
+          toastTitle = 'Documents ready';
+          toastDescription = message || `Tailored documents prepared for ${company}.`;
+        }
 
         updateStep(jobId, {
           step: 'submitted',
@@ -178,6 +221,7 @@ export function useApplyProgress() {
     startApplyProgress,
     setActiveJobId,
     updateToTailoring,
+    updateToQueued,
     updateToSubmitting,
     completeApply,
     cancelProgress,

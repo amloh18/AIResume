@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type JobLiveStep = 'matching' | 'tailoring' | 'submitting' | 'submitted' | 'failed' | 'idle';
+export type JobLiveStep = 'matching' | 'tailoring' | 'queued' | 'submitting' | 'submitted' | 'failed' | 'idle';
 
 export interface JobLiveStatusAction {
   label: string;

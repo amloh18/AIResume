@@ -54,7 +54,8 @@ import {
   PenTool,
   FilePlus,
   Activity,
-  CheckCheck
+  CheckCheck,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
@@ -335,8 +336,8 @@ function WelcomePageContent() {
   const [analysisSnapshot, setAnalysisSnapshot] = useState<any>(null);
   const [trackerAnimStage, setTrackerAnimStage] = useState(0);
   const [editorCompleted, setEditorCompleted] = useState(false);
-  const [initialScore, setInitialScore] = useState<number>(64);
-  const [transformedScore, setTransformedScore] = useState<number>(88);
+  const [initialScore, setInitialScore] = useState<number>(0);
+  const [transformedScore, setTransformedScore] = useState<number>(0);
   
   // Selections
   const [intent, setIntent] = useState<string>('job_search'); // Default to full ecosystem or 'cv'
@@ -493,7 +494,7 @@ function WelcomePageContent() {
   };
 
   const defaultSnapshot = useMemo(() => ({
-    healthIndex: cvScore || 64,
+    healthIndex: cvScore || 0,
     breakdown: {
       structure: 14,
       readability: 13,
@@ -586,6 +587,11 @@ function WelcomePageContent() {
   // Save Onboarding Session to API (Full User Account Persistence)
   const saveSession = async (updates: any = {}) => {
     try {
+      // Skip API call for anonymous/guest users — persist to localStorage only
+      if (status !== 'authenticated') {
+        return;
+      }
+
       const payload = {
         primary_goal: intent,
         confidence_score: cvScore,
@@ -691,8 +697,8 @@ function WelcomePageContent() {
           if (analysisData.success) {
             setAnalysisSnapshot(analysisData.data);
             setCVScore(analysisData.data.healthIndex);
-            setInitialScore(analysisData.data.healthIndex || 64);
-            setTransformedScore(Math.min(96, Math.max(88, (analysisData.data.healthIndex || 64) + 24)));
+            setInitialScore(analysisData.data.healthIndex || 0);
+            setTransformedScore(Math.min(96, Math.max(analysisData.data.healthIndex || 0, (analysisData.data.healthIndex || 0) + 24)));
           }
 
           await saveSession({
@@ -724,8 +730,8 @@ function WelcomePageContent() {
           if (analysisData.success) {
             setAnalysisSnapshot(analysisData.data);
             setCVScore(analysisData.data.healthIndex);
-            setInitialScore(analysisData.data.healthIndex || 64);
-            setTransformedScore(Math.min(96, Math.max(88, (analysisData.data.healthIndex || 64) + 24)));
+            setInitialScore(analysisData.data.healthIndex || 0);
+            setTransformedScore(Math.min(96, Math.max(analysisData.data.healthIndex || 0, (analysisData.data.healthIndex || 0) + 24)));
 
             const scoreReport = {
               overall_score: analysisData.data.healthIndex || 0,
@@ -1062,6 +1068,12 @@ function WelcomePageContent() {
       sessionStorage.removeItem('fromOnboarding');
       sessionStorage.removeItem('onboardingReturnUrl');
       sessionStorage.removeItem('onboardingReturnStep');
+
+      // For non-authenticated users, redirect to sign-in with callback
+      if (status !== 'authenticated' && !forceAuth) {
+        router.push(`/sign-in?callbackUrl=${encodeURIComponent(targetRoute)}`);
+        return;
+      }
 
       router.push(targetRoute);
     } catch (err) {
@@ -1755,18 +1767,18 @@ function WelcomePageContent() {
                       </div>
                     </div>
                     <span className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-sm">
-                      +{Math.max(15, transformedScore - initialScore)} pts boost
+                      +{initialScore > 0 ? Math.max(15, transformedScore - initialScore) : 24} pts boost
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                     <div className="bg-white/90 p-3 rounded-2xl border border-emerald-100 text-center">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Initial Score</span>
-                      <span className="text-xl font-black text-amber-600">{initialScore}/100</span>
+                      <span className="text-xl font-black text-amber-600">{initialScore > 0 ? initialScore : '—'}/100</span>
                     </div>
                     <div className="bg-white/90 p-3 rounded-2xl border border-emerald-200 text-center ring-2 ring-emerald-500/20">
                       <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Updated Score</span>
-                      <span className="text-xl font-black text-emerald-600">{transformedScore}/100</span>
+                      <span className="text-xl font-black text-emerald-600">{transformedScore > 0 ? transformedScore : '—'}/100</span>
                     </div>
                     <div className="bg-white/90 p-3 rounded-2xl border border-emerald-100 text-center">
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Template</span>

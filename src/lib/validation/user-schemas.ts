@@ -83,7 +83,7 @@ const PlanKeySchema = z.enum([
 export const SubscriptionSchema = z.object({
   planKey: PlanKeySchema,
   status: z.enum(['active', 'inactive', 'cancelled', 'expired']),
-  provider: z.enum(['stripe', 'polar', 'admin', 'none']),
+  provider: z.enum(['stripe', 'razorpay', 'polar', 'admin', 'none']),
   providerSubscriptionId: z.string().optional(),
   providerCustomerId: z.string().optional(),
   interval: z.enum(['one-time', 'monthly', 'quarterly', 'yearly']),

@@ -96,8 +96,8 @@ export class EntitlementService {
     const monthlyStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const dailyStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-    // 3. Count Usage from job_applications collection
-    const appsCollection = db.collection('job_applications');
+    // 3. Count Usage from jobapplications collection
+    const appsCollection = db.collection('jobapplications');
     const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
 
     // Monthly count (applications created or applied this month)
@@ -111,7 +111,7 @@ export class EntitlementService {
             { applicationDate: { $gte: monthlyStart } },
           ],
         },
-        { status: { $nin: ['saved'] } }, // Exclude bookmarked jobs from consumption count
+        { status: { $nin: ['saved', 'draft'] } }, // Exclude bookmarked/draft jobs from consumption count
       ],
     });
 
@@ -119,7 +119,7 @@ export class EntitlementService {
     const dailyAutoApplyUsed = await appsCollection.countDocuments({
       $or: [{ userId: userObjectId }, { userId: userId.toString() }],
       appliedAt: { $gte: dailyStart },
-      isAutomated: true,
+      applicationMethod: 'auto',
     });
 
     // 4. Construct Entitlement Structures

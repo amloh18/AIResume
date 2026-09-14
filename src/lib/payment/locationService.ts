@@ -3,17 +3,17 @@ export interface LocationData {
    countryCode: string;
    currency: string;
    currencySymbol: string;
-   paymentPartner: 'polar';
-   exchangeRate: number;
- }
- 
- export interface PricingData {
-   originalPrice: number;
-   originalCurrency: string;
-   convertedPrice: number;
-   convertedCurrency: string;
-   exchangeRate: number;
-   paymentPartner: 'polar';
+  paymentPartner: 'polar' | 'razorpay';
+  exchangeRate: number;
+}
+
+export interface PricingData {
+  originalPrice: number;
+  originalCurrency: string;
+  convertedPrice: number;
+  convertedCurrency: string;
+  exchangeRate: number;
+  paymentPartner: 'polar' | 'razorpay';
  }
 
 // Exchange rates (simplified - in production, use a real API)
@@ -137,7 +137,7 @@ const EXCHANGE_RATES: Record<string, number> = {
 };
 
 // Country to payment partner mapping
-const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar'> = {
+const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar' | 'razorpay'> = {
   'IN': 'polar',
   'US': 'polar',
   'CA': 'polar',
@@ -372,7 +372,7 @@ export class LocationService {
      const convertedPrice = originalPrice * exchangeRate;
  
      // Always use Polar as payment partner
-     const paymentPartner: 'polar' = 'polar';
+     const paymentPartner: 'polar' | 'razorpay' = 'polar';
  
      return {
        originalPrice,
@@ -401,7 +401,7 @@ export class LocationService {
      ];
    }
  
-   static getPaymentPartnerForCurrency(currency: string): 'polar' {
+   static getPaymentPartnerForCurrency(currency: string): 'polar' | 'razorpay' {
      return 'polar';
    }
 

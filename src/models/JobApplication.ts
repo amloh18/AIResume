@@ -166,6 +166,53 @@ export interface IJobApplication extends Document {
   };
   extractedJd?: any; // Stores rich AI extracted details mapped to .vscode/job_refine.md schema
 
+  // ── State Machine (merged from Application model) ──────────────────
+  currentStage: 'saved' | 'staging' | 'applied' | 'interview' | 'offer' | 'rejected';
+  internalStatus:
+    | 'saved'
+    | 'staging_cv_generating'
+    | 'staging_cover_letter_generating'
+    | 'staging_ready'
+    | 'queued'
+    | 'processing'
+    | 'form_detected'
+    | 'submitting'
+    | 'verification'
+    | 'applied'
+    | 'automation_failed'
+    | 'automation_unknown'
+    | 'review_required'
+    | 'interview'
+    | 'offer'
+    | 'rejected';
+  applicationMethod: 'manual' | 'auto';
+  cvId?: mongoose.Types.ObjectId | string;
+  coverLetterId?: mongoose.Types.ObjectId | string;
+  automationEnabled: boolean;
+  automationRunId?: string;
+  attempts: number;
+  maxAttempts: number;
+  stageHistory: Array<{
+    stage: string;
+    internalStatus: string;
+    changedAt: Date;
+    reason?: string;
+    source: 'user' | 'automation' | 'email_intelligence' | 'admin' | 'system';
+  }>;
+  evidence?: {
+    confirmationId?: string;
+    confirmationUrl?: string;
+    confirmationText?: string;
+    emailMessageId?: string;
+    capturedAt?: Date;
+    verificationConfidence?: number;
+  };
+  // ── Retry / Backoff (Phase 6) ──────────────────────────────────────
+  nextRetryAt?: Date;
+  retryBackoffMs: number;
+  deadLetter: boolean;
+  deadLetterReason?: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -451,7 +498,54 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   isArchived: {
     type: Boolean,
     default: false
-  }
+  },
+  // ── State Machine fields ──────────────────────────────────────────
+  currentStage: {
+    type: String,
+    enum: ['saved', 'staging', 'applied', 'interview', 'offer', 'rejected'],
+    default: 'saved',
+    index: true,
+  },
+  internalStatus: {
+    type: String,
+    default: 'saved',
+    index: true,
+  },
+  applicationMethod: {
+    type: String,
+    enum: ['manual', 'auto'],
+    default: 'manual',
+  },
+  cvId: { type: Schema.Types.Mixed },
+  coverLetterId: { type: Schema.Types.Mixed },
+  automationEnabled: { type: Boolean, default: false },
+  automationRunId: { type: String },
+  attempts: { type: Number, default: 0 },
+  maxAttempts: { type: Number, default: 3 },
+  stageHistory: [{
+    stage: { type: String, required: true },
+    internalStatus: { type: String, required: true },
+    changedAt: { type: Date, default: Date.now },
+    reason: { type: String },
+    source: {
+      type: String,
+      enum: ['user', 'automation', 'email_intelligence', 'admin', 'system'],
+      default: 'user',
+    },
+  }],
+  evidence: {
+    confirmationId: { type: String },
+    confirmationUrl: { type: String },
+    confirmationText: { type: String },
+    emailMessageId: { type: String },
+    capturedAt: { type: Date },
+    verificationConfidence: { type: Number },
+  },
+  // ── Retry / Backoff ───────────────────────────────────────────────
+  nextRetryAt: { type: Date },
+  retryBackoffMs: { type: Number, default: 0 },
+  deadLetter: { type: Boolean, default: false, index: true },
+  deadLetterReason: { type: String }
 }, {
   timestamps: true,
   toJSON: {
@@ -491,6 +585,9 @@ jobApplicationSchema.index({ userId: 1, status: 1 });
 jobApplicationSchema.index({ userId: 1, applicationDate: -1 });
 jobApplicationSchema.index({ userId: 1, company: 1 });
 jobApplicationSchema.index({ userId: 1, isArchived: 1 });
+jobApplicationSchema.index({ userId: 1, currentStage: 1 });
+jobApplicationSchema.index({ userId: 1, internalStatus: 1 });
+jobApplicationSchema.index({ deadLetter: 1, nextRetryAt: 1 });
 jobApplicationSchema.index({ 'contacts.email': 1 });
 
 // Dedup: compound unique index prevents duplicate jobs per user
