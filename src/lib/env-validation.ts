@@ -13,6 +13,7 @@ interface EnvValidationResult {
 interface EnvConfig {
   // Database
   MONGODB_URI: string;
+  MONGODB_DB?: string;  // Override database name (default: extracted from URI)
   
   // Authentication
   NEXTAUTH_URL: string;
