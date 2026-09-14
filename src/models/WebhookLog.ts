@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IWebhookLog extends Document {
-  provider: 'stripe' | 'polar';
+  provider: 'stripe' | 'razorpay' | 'polar';
   eventType: string;
   payload: Record<string, any>; // Raw webhook payload
   status: 'processed' | 'failed' | 'error' | 'pending' | 'failed_permanently';
@@ -17,7 +17,7 @@ const webhookLogSchema = new Schema<IWebhookLog>({
   provider: {
     type: String,
     required: [true, 'Provider is required'],
-    enum: ['stripe', 'polar']
+    enum: ['stripe', 'razorpay', 'polar']
   },
   eventType: {
     type: String,

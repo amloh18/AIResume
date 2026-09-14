@@ -765,9 +765,12 @@ export default function JobsDashboard() {
         return;
       }
 
-      // Update progress: submitting
-      applyProgress.updateToSubmitting(job.company, job._id);
-      updateProgress(appId, 80, `Submitting application to ${job.company}...`, 'progress');
+      // Skipped by decision engine
+      if (resData.status === 'skipped') {
+        applyProgress.completeApply(job.title, job.company, true, resData.message || 'This job was skipped based on your preferences.', job._id, 'skipped');
+        updateProgress(appId, 100, `Skipped: ${resData.message || 'Not a match'}`, 'progress');
+        return;
+      }
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || job._id;
@@ -776,8 +779,18 @@ export default function JobsDashboard() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(job.title, job.company, true, resData.message, job._id, resData.status);
-        updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${job.title}!` : `Documents ready for ${job.title}`, 'progress');
+        // Show queued or applied feedback based on actual status
+        if (resData.status === 'queued') {
+          applyProgress.updateToQueued(job.company, resData.mode || 'auto', job._id);
+          updateProgress(appId, 90, `Queued for ${resData.mode || 'auto'} processing`, 'progress');
+          setTimeout(() => {
+            applyProgress.completeApply(job.title, job.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, job._id, 'queued');
+            updateProgress(appId, 100, `Application queued for ${resData.mode || 'auto'} processing`, 'progress');
+          }, 1500);
+        } else {
+          applyProgress.completeApply(job.title, job.company, true, resData.message, job._id, resData.status);
+          updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${job.title}!` : `Documents ready for ${job.title}`, 'progress');
+        }
       } else {
         // Genuine submission failure on employer site
         applyProgress.completeApply(job.title, job.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", job._id);
@@ -954,6 +967,12 @@ export default function JobsDashboard() {
         localStorage.setItem('morigrid_selected_countries', JSON.stringify(newCountries));
       } catch {}
     }
+    // Persist to user's job-search profile
+    fetch('/api/job-search-profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates: { locations: newCountries } }),
+    }).catch(() => {});
   };
 
   const handleFilterChange = (newFilters: Partial<JobsFilter>) => {
@@ -1433,7 +1452,7 @@ export default function JobsDashboard() {
         )}
 
         {activeTab === 'comms' && (
-          <div className="h-[calc(100vh-320px)] min-h-[520px] flex flex-col pb-1 sm:pb-2 md:pb-2 lg:pb-2">
+          <div className="h-[calc(100vh-320px)] min-h-[520px] flex flex-col pb-6 sm:pb-10 lg:pb-12">
             <CommsPanel />
           </div>
         )}

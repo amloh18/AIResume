@@ -5,7 +5,7 @@ export interface RegionInfo {
    countryName: string;
    currency: string;
    currencySymbol: string;
-   paymentPartner: 'polar';
+   paymentPartner: 'polar' | 'razorpay';
  }
 
 // Import currency and payment partner mappings from locationService
@@ -195,7 +195,7 @@ export async function detectUserRegion(ip?: string): Promise<RegionInfo> {
     countryName: 'United Kingdom',
     currency: 'GBP',
     currencySymbol: '£',
-    paymentPartner: 'polar'
+    paymentPartner: 'razorpay'
   };
   
   // Cache the fallback
@@ -358,7 +358,7 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
     countryName: 'United Kingdom',
     currency: 'GBP',
     currencySymbol: '£',
-    paymentPartner: 'polar'
+    paymentPartner: 'razorpay'
   };
 }
 

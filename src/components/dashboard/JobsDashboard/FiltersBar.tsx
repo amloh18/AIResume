@@ -152,8 +152,6 @@ export default function FiltersBar({
     ? 'saved'
     : filters.unpersonalized || filters.matchScoreMin === 0
     ? 'all'
-    : filters.sortBy === 'postedDate'
-    ? 'latest'
     : 'recommended';
 
   // 2. Real Auto-Apply Quota & State Logic
@@ -268,27 +266,6 @@ export default function FiltersBar({
             >
               <Globe className={`w-3.5 h-3.5 ${currentView === 'all' ? 'text-white dark:text-black' : 'text-sky-500'}`} />
               <span className="hidden sm:inline">All</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  savedOnly: false,
-                  sortBy: 'postedDate',
-                  sortOrder: 'desc',
-                  matchScoreMin: undefined,
-                  unpersonalized: false,
-                })
-              }
-              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
-                currentView === 'latest'
-                  ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
-              }`}
-            >
-              <Clock className={`w-3.5 h-3.5 ${currentView === 'latest' ? 'text-white dark:text-black' : 'text-gray-400'}`} />
-              <span className="hidden sm:inline">Latest</span>
             </button>
 
             <button

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Loader2, AlertCircle, X, Sparkles, ArrowRight, FileText, Send } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, X, Sparkles, ArrowRight, FileText, Send, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { JobLiveStatus, useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 
@@ -68,6 +68,8 @@ export function JobLiveStatusCard({
         return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
       case 'tailoring':
         return <FileText className="w-3.5 h-3.5" />;
+      case 'queued':
+        return <Clock className="w-3.5 h-3.5" />;
       case 'submitting':
         return <Send className="w-3.5 h-3.5" />;
       case 'submitted':
@@ -82,6 +84,7 @@ export function JobLiveStatusCard({
     switch (status.step) {
       case 'matching': return 'Matching CV';
       case 'tailoring': return 'Documents';
+      case 'queued': return 'Queued';
       case 'submitting': return 'Submitting';
       case 'submitted': return status.success ? 'Ready' : 'Complete';
       default: return 'Processing';
@@ -90,8 +93,9 @@ export function JobLiveStatusCard({
 
   // Pipeline stages for the compact progress indicator
   const pipelineStages = [
-    { key: 'matching', label: 'Match', done: ['tailoring', 'submitting', 'submitted'].includes(status.step) || isFailed },
-    { key: 'tailoring', label: 'Docs', done: ['submitting', 'submitted'].includes(status.step) || isFailed },
+    { key: 'matching', label: 'Match', done: ['tailoring', 'queued', 'submitting', 'submitted'].includes(status.step) || isFailed },
+    { key: 'tailoring', label: 'Docs', done: ['queued', 'submitting', 'submitted'].includes(status.step) || isFailed },
+    { key: 'queued', label: 'Queue', done: ['submitting', 'submitted'].includes(status.step) || isFailed },
     { key: 'submitting', label: 'Submit', done: status.step === 'submitted' || isFailed },
   ];
 
@@ -248,7 +252,7 @@ export function JobLiveStatusCard({
         ) : isInProgress ? (
           <div className="space-y-1">
             <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
-              <span>{status.step === 'matching' ? 'Matching CV...' : status.step === 'tailoring' ? 'Tailoring documents...' : 'Submitting to ATS...'}</span>
+              <span>{status.step === 'matching' ? 'Matching CV...' : status.step === 'tailoring' ? 'Tailoring documents...' : status.step === 'queued' ? 'Queued for processing...' : 'Submitting to ATS...'}</span>
               <span className="font-semibold text-emerald-500">{status.progress || 50}%</span>
             </div>
             <div className="w-full h-1 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">

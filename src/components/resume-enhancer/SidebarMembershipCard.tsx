@@ -261,7 +261,7 @@ export default function SidebarMembershipCard() {
           )}
 
           <p className="text-[10px] text-white/80 leading-snug mb-3">
-            You are subscribed to the $0/mo Starter plan. You will receive $0 invoice receipts from Polar.
+            You are subscribed to the $0/mo Starter plan. You will receive $0 invoice receipts.
           </p>
 
           <div className="text-[11px] font-semibold mb-1.5">

@@ -1,20 +1,19 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
-import { getPolar, PolarService } from '@/lib/payment/polar';
+import { getActivePaymentProvider, getActiveProviderName } from '@/lib/payment/paymentProvider';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import subscriptionService from '@/lib/services/subscriptionService';
 import Coupon from '@/models/Coupon';
 import DiscountCode from '@/models/DiscountCode';
 
-type PaidPlanKey = 
+type PaidPlanKey =
   | 'starter_monthly'
-  | 'starter_yearly' 
-  | 'focused_monthly' 
+  | 'starter_yearly'
+  | 'focused_monthly'
   | 'focused_yearly';
 
 interface ZeroAmountActivationParams {
@@ -74,7 +73,6 @@ async function activatePlanWithCoupon({
 
   const updatedUser = await User.findById(user._id).select('currentPlanKey subscription').lean();
 
-  // Build a redirect URL so the client navigates to the dashboard after activation
   const successRedirectUrl = constructSuccessUrl(
     returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`,
     { success: 'true', activated: 'true' }
@@ -136,16 +134,14 @@ export async function POST(request: NextRequest) {
     let couponDiscount = null;
     const code = (couponCode || discountCode)?.toUpperCase();
     if (code) {
-      // Logic for Coupon/DiscountCode check stays essentially the same
-      // ... (trimmed for brevity but keeping logic flow)
       const coupon = await Coupon.findOne({ code });
       if (coupon && coupon.isValid().valid) {
-         couponDiscount = { code: coupon.code, type: coupon.type, value: coupon.discountValue || 0, id: coupon._id.toString() };
+        couponDiscount = { code: coupon.code, type: coupon.type, value: coupon.discountValue || 0, id: coupon._id.toString() };
       } else {
-         const discount = await DiscountCode.findOne({ code, isActive: true });
-         if (discount && discount.isValid) {
-            couponDiscount = { code: discount.code, type: discount.discountType, value: discount.discountValue || 0, id: discount._id.toString() };
-         }
+        const discount = await DiscountCode.findOne({ code, isActive: true });
+        if (discount && discount.isValid) {
+          couponDiscount = { code: discount.code, type: discount.discountType, value: discount.discountValue || 0, id: discount._id.toString() };
+        }
       }
     }
 
@@ -164,19 +160,12 @@ export async function POST(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
     const regionInfo = await detectUserRegion(ip);
 
-    // Final provider selection logic
-    const paymentProvider = 'polar';
-    const polar = getPolar();
-    if (!polar) {
-      return NextResponse.json({ error: 'Polar is not configured' }, { status: 500 });
-    }
-
     if (planKey === 'free') {
       return NextResponse.json({ success: true, message: 'Free plan activated', planKey: 'free' });
     }
 
     const finalInterval = interval || (planKey.includes('monthly') ? 'monthly' : planKey.includes('yearly') ? 'yearly' : 'quarterly');
-    
+
     return await handleProPlanPayment(plan, user, finalInterval, billingDetails, returnUrl, regionInfo, couponDiscount);
 
   } catch (error) {
@@ -209,7 +198,6 @@ async function handleProPlanPayment(
   );
 
   if (transition.isDowngrade) {
-    // Schedule downgrade locally
     await User.findByIdAndUpdate(user._id, {
       $set: {
         'subscription.downgradeStatus': 'pending',
@@ -232,79 +220,23 @@ async function handleProPlanPayment(
     user.subscription?.purchasePrice
   );
 
-  // Use regionalPricing array directly from the plan document
-  let regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
+  // Compute discount amount (provider-agnostic)
+  let amount = 0;
+  if (interval === 'monthly') amount = (plan.price_monthly || 0) * 100;
+  else if (interval === 'yearly') amount = (plan.price_yearly || 0) * 100;
+  else if (interval === 'quarterly') amount = (plan.price_quarterly || 0) * 100;
+  else if (interval === 'one-time') amount = (plan.price_one_time || 0) * 100;
+
+  // Apply regional pricing override if available
+  const regionalPriceObj = plan.regionalPricing?.find((rp: any) =>
     rp.region?.toUpperCase() === countryCode.toUpperCase()
-  );
+  ) || plan.regionalPricing?.find((rp: any) =>
+    rp.region?.toUpperCase() === 'US'
+  ) || plan.regionalPricing?.[0];
 
-  // Fallback to US if specific region not found
-  if (!regionalPriceObj && countryCode !== 'US') {
-    regionalPriceObj = plan.regionalPricing?.find((rp: any) => 
-      rp.region?.toUpperCase() === 'US'
-    );
+  if (regionalPriceObj && regionalPriceObj.price > 0) {
+    amount = (regionalPriceObj.price * 100);
   }
-
-  // Final fallback to the first one available
-  if (!regionalPriceObj && plan.regionalPricing?.length > 0) {
-    regionalPriceObj = plan.regionalPricing[0];
-  }
-
-  let priceId = regionalPriceObj?.polarPriceId;
-  let productId = regionalPriceObj?.polarProductId;
-  let amount = regionalPriceObj ? (regionalPriceObj.price * 100) : 0;
-  let currency = regionalPriceObj?.currency || 'USD';
-
-  // Always resolve the product ID for the given interval if not set by regional pricing
-  if (!productId) {
-    if (interval === 'monthly') {
-      productId = plan.polarProductId_monthly;
-    } else if (interval === 'yearly') {
-      productId = plan.polarProductId_yearly;
-    } else if (interval === 'quarterly') {
-      productId = plan.polarProductId_quarterly;
-    } else if (interval === 'one-time') {
-      productId = plan.polarProductId_one_time;
-    }
-  }
-
-  // Always resolve the price ID for the given interval if not set by regional pricing
-  if (!priceId) {
-    if (interval === 'monthly') {
-      priceId = plan.polarPriceId_monthly;
-    } else if (interval === 'yearly') {
-      priceId = plan.polarPriceId_yearly;
-    } else if (interval === 'quarterly') {
-      priceId = plan.polarPriceId_quarterly;
-    } else if (interval === 'one-time') {
-      priceId = plan.polarPriceId_one_time;
-    }
-  }
-
-  // If amount is still 0, try to use USD price from the plan root
-  if (amount === 0) {
-    if (interval === 'monthly') {
-      amount = (plan.price_monthly || 0) * 100;
-    } else if (interval === 'yearly') {
-      amount = (plan.price_yearly || 0) * 100;
-    } else if (interval === 'quarterly') {
-      amount = (plan.price_quarterly || 0) * 100;
-    } else if (interval === 'one-time') {
-      amount = (plan.price_one_time || 0) * 100;
-    }
-  }
-
-  console.log('Polar pricing:', {
-    planKey,
-    interval: interval,
-    amount,
-    currency,
-    priceId,
-    productId,
-    regionalPricingFound: !!regionalPriceObj,
-    regionCode: countryCode,
-    transitionType: transition.type,
-    prorationCredit
-  });
 
   if (couponDiscount) {
     if (couponDiscount.type === 'percentage') amount = Math.round(amount * (1 - couponDiscount.value / 100));
@@ -312,60 +244,62 @@ async function handleProPlanPayment(
   }
 
   if (amount <= 0) {
-    return activatePlanWithCoupon({ user, planKey, interval, regionInfo, currency, couponDiscount, priceInMinorUnits: amount, returnUrl });
-  }
-
-  if (!priceId && !productId) {
-    return NextResponse.json({ error: `No payment configuration found for ${planKey}` }, { status: 400 });
-  }
-
-  try {
-    const successUrl = constructSuccessUrl(returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`, {
-      success: 'true',
-      session_id: '{CHECKOUT_SESSION_ID}'
-    });
-
-    // Build metadata and clean any empty strings/null/undefined to satisfy Polar's validation constraints
-    const metadata: Record<string, string> = {};
-    const rawMetadata = {
+    return activatePlanWithCoupon({
+      user,
       planKey,
+      interval: interval as 'monthly' | 'quarterly' | 'yearly' | 'one-time',
+      regionInfo,
+      currency: regionalPriceObj?.currency || 'USD',
+      couponDiscount,
+      priceInMinorUnits: amount,
+      returnUrl
+    });
+  }
+
+  // Get active payment provider and create checkout
+  try {
+    const activeProvider = await getActivePaymentProvider();
+    const activeProviderName = await getActiveProviderName();
+
+    const successUrl = constructSuccessUrl(
+      returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard`,
+      { success: 'true', session_id: '{CHECKOUT_SESSION_ID}' }
+    );
+
+    const cancelUrl = constructSuccessUrl(
+      returnUrl || `${process.env.NEXTAUTH_URL || ''}/dashboard/settings?tab=billing`,
+      { cancelled: 'true' }
+    );
+
+    const result = await activeProvider.createCheckoutSession({
+      planKey,
+      billingCycle: interval as any,
       userId: user._id.toString(),
-      planId: plan._id.toString(),
-      interval: interval,
-      region: countryCode,
-      couponCode: couponDiscount?.code || '',
-      couponId: couponDiscount?.id || '',
-      prorationCreditApplied: prorationCredit.toString(),
-      transitionType: transition.type
-    };
-
-    for (const [key, value] of Object.entries(rawMetadata)) {
-      if (value !== null && value !== undefined && value !== '') {
-        metadata[key] = value;
-      }
-    }
-
-    const checkoutResponse = await PolarService.createCheckout({
-      productPriceId: priceId!,
-      productId: productId,
-      customerEmail: billingDetails?.email || user.email,
-      customerName: billingDetails?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-      successUrl: successUrl,
-      metadata: metadata
+      userEmail: billingDetails?.email || user.email,
+      userName: billingDetails?.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+      successUrl,
+      cancelUrl,
+      couponCode: couponDiscount?.code,
+      metadata: {
+        planId: plan._id.toString(),
+        region: countryCode,
+        prorationCreditApplied: prorationCredit.toString(),
+        transitionType: transition.type,
+      },
     });
 
-    if (!checkoutResponse.success || !checkoutResponse.url) {
-      throw new Error(checkoutResponse.error || 'Failed to create Polar checkout session');
+    if (!result.success || !result.url) {
+      throw new Error(result.error || 'Failed to create checkout session');
     }
 
-    return NextResponse.json({ 
-      provider: 'polar', 
-      redirect_url: checkoutResponse.url,
-      url: checkoutResponse.url 
+    return NextResponse.json({
+      provider: activeProviderName,
+      redirect_url: result.url,
+      url: result.url,
     });
 
   } catch (error) {
-    console.error('Polar Checkout Session error:', error);
+    console.error('Checkout Session error:', error);
     return NextResponse.json({ error: 'Payment setup failed' }, { status: 500 });
   }
 }
@@ -375,11 +309,11 @@ function constructSuccessUrl(base: string, params: Record<string, string>): stri
   try {
     const isRelative = !base.startsWith('http://') && !base.startsWith('https://');
     const url = new URL(base, isRelative ? 'http://localhost' : undefined);
-    
+
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
-    
+
     return isRelative ? `${url.pathname}${url.search}${url.hash}` : url.toString();
   } catch (e) {
     const separator = base.includes('?') ? '&' : '?';

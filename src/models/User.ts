@@ -165,7 +165,7 @@ export interface IUser extends Document {
     purchasePrice?: number; // Original purchase price
     // Auto-renewal (only for monthly plans)
     autoRenew?: boolean; // Whether subscription auto-renews
-    provider: 'stripe' | 'polar' | 'admin' | 'none';
+    provider: 'stripe' | 'razorpay' | 'polar' | 'admin' | 'none';
     providerSubscriptionId?: string;
     providerCustomerId?: string;
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';

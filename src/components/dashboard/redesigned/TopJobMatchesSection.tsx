@@ -468,8 +468,12 @@ export default function TopJobMatchesSection() {
         return;
       }
 
-      applyProgress.updateToSubmitting(targetJob.company, jobId);
-      updateProgress(appId, 80, `Submitting application to ${targetJob.company}...`, 'progress');
+      // Skipped by decision engine
+      if (resData.status === 'skipped') {
+        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message || 'This job was skipped based on your preferences.', jobId, 'skipped');
+        updateProgress(appId, 100, `Skipped: ${resData.message || 'Not a match'}`, 'progress');
+        return;
+      }
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || jobId;
@@ -479,8 +483,18 @@ export default function TopJobMatchesSection() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
-        applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, resData.status);
-        updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${targetJob.title}!` : `Documents ready for ${targetJob.title}`, 'progress');
+        // Show queued or applied feedback based on actual status
+        if (resData.status === 'queued') {
+          applyProgress.updateToQueued(targetJob.company, resData.mode || 'auto', jobId);
+          updateProgress(appId, 90, `Queued for ${resData.mode || 'auto'} processing`, 'progress');
+          setTimeout(() => {
+            applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, jobId, 'queued');
+            updateProgress(appId, 100, `Application queued for ${resData.mode || 'auto'} processing`, 'progress');
+          }, 1500);
+        } else {
+          applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, resData.status);
+          updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${targetJob.title}!` : `Documents ready for ${targetJob.title}`, 'progress');
+        }
       } else {
         // Genuine submission failure
         applyProgress.completeApply(targetJob.title, targetJob.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", jobId);

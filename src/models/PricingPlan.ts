@@ -38,7 +38,7 @@ export interface IPricingPlan extends Document {
   promotionValidFrom?: Date;
   promotionValidUntil?: Date;
   promotionDescription?: string;
-  // Provider IDs
+  // Provider IDs — Polar (deprecated, kept for migration)
   polarPriceId_monthly?: string;
   polarPriceId_quarterly?: string;
   polarPriceId_yearly?: string;
@@ -47,6 +47,20 @@ export interface IPricingPlan extends Document {
   polarProductId_quarterly?: string;
   polarProductId_yearly?: string;
   polarProductId_one_time?: string;
+  // Provider IDs — Stripe
+  stripePriceId_monthly?: string;
+  stripePriceId_quarterly?: string;
+  stripePriceId_yearly?: string;
+  stripePriceId_one_time?: string;
+  stripeProductId?: string;
+  // Provider IDs — Razorpay
+  razorpayPriceId_monthly?: string;
+  razorpayPriceId_quarterly?: string;
+  razorpayPriceId_yearly?: string;
+  razorpayPriceId_one_time?: string;
+  razorpayPlanId_monthly?: string;
+  razorpayPlanId_quarterly?: string;
+  razorpayPlanId_yearly?: string;
   // Canonical USD prices
   price_monthly?: number;
   price_quarterly?: number;
@@ -228,7 +242,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     trim: true,
     maxlength: [200, 'Promotion description cannot exceed 200 characters']
   },
-  // Provider IDs
+  // Provider IDs — Polar (deprecated)
   polarPriceId_monthly: String,
   polarPriceId_quarterly: String,
   polarPriceId_yearly: String,
@@ -237,6 +251,20 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   polarProductId_quarterly: String,
   polarProductId_yearly: String,
   polarProductId_one_time: String,
+  // Provider IDs — Stripe
+  stripePriceId_monthly: String,
+  stripePriceId_quarterly: String,
+  stripePriceId_yearly: String,
+  stripePriceId_one_time: String,
+  stripeProductId: String,
+  // Provider IDs — Razorpay
+  razorpayPriceId_monthly: String,
+  razorpayPriceId_quarterly: String,
+  razorpayPriceId_yearly: String,
+  razorpayPriceId_one_time: String,
+  razorpayPlanId_monthly: String,
+  razorpayPlanId_quarterly: String,
+  razorpayPlanId_yearly: String,
   // Canonical USD prices
   price_monthly: {
     type: Number,

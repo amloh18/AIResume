@@ -76,8 +76,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
   const [providerHealth, setProviderHealth] = useState<{
-    polar: boolean | null;
-  }>({ polar: null });
+    activeProvider: 'stripe' | 'razorpay';
+    healthy: boolean | null;
+  }>({ activeProvider: 'razorpay', healthy: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
   const [userSubscription, setUserSubscription] = useState<any>(null);
 
@@ -436,57 +437,45 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     fetchUserData();
   }, [isOpen, adminMode]);
 
-  // Check Polar health when modal opens
+  // Check payment provider health when modal opens
   useEffect(() => {
-    const checkProviderHealth = async (provider: 'polar') => {
+    const fetchProviderInfo = async () => {
+      if (!isOpen) return;
+
+      setProviderHealthLoading(true);
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-        const response = await fetch(`/api/payment/${provider}/health`, {
+        const response = await fetch('/api/payment/provider', {
           signal: controller.signal,
           cache: 'no-store',
         });
 
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          console.warn(`${provider} health check failed:`, response.status, response.statusText);
-          return false;
+        if (response.ok) {
+          const data = await response.json();
+          setProviderHealth({
+            activeProvider: data.activeProvider || 'razorpay',
+            healthy: data.health?.[data.activeProvider] ?? true,
+          });
+        } else {
+          setProviderHealth({ activeProvider: 'razorpay', healthy: true });
         }
-
-        const data = await response.json();
-        return data.healthy === true;
       } catch (error: any) {
         if (error.name === 'AbortError') {
-          console.warn(`${provider} health check timed out`);
+          console.warn('Payment provider check timed out');
         } else {
-          console.error(`Error checking ${provider} health:`, error);
+          console.error('Error checking payment provider:', error);
         }
-        return false;
-      }
-    };
-
-    const checkAllProviders = async () => {
-      if (!isOpen) return;
-
-      setProviderHealthLoading(true);
-      try {
-        const [polarHealthy] = await Promise.all([
-          checkProviderHealth('polar'),
-        ]);
-
-        setProviderHealth({
-          polar: polarHealthy,
-        });
-      } catch (error) {
-        console.error('Error checking provider health:', error);
+        setProviderHealth({ activeProvider: 'razorpay', healthy: true });
       } finally {
         setProviderHealthLoading(false);
       }
     };
 
-    checkAllProviders();
+    fetchProviderInfo();
   }, [isOpen]);
 
   const applyDiscountCode = async () => {
@@ -746,7 +735,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           alert(`Error: Network error while granting plan. Please try again.`);
         }
       } else {
-        // Regular payment flow — Polar-only redirect
+        // Regular payment flow — redirect to provider checkout
         const body = {
           planKey: selectedPlan.key,
           interval: getBillingInterval(selectedPlan),
@@ -793,7 +782,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             return;
           }
 
-          // Polar Checkout — always redirect
+          // Redirect to Stripe/Razorpay checkout
           if (data.url || data.redirect_url) {
             window.location.href = data.url || data.redirect_url;
           }
@@ -1437,7 +1426,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             <Shield className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
                             <div>
                               <span className="block text-xs font-black text-gray-950 dark:text-white uppercase tracking-wider">Secure Checkout</span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">256-bit SSL encrypted transaction via Polar.</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">256-bit SSL encrypted transaction via {providerHealth.activeProvider === 'stripe' ? 'Stripe' : 'Razorpay'}.</span>
                             </div>
                           </div>
                           <div className="flex items-start gap-3 p-3 bg-gray-50/50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5">
@@ -1749,7 +1738,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               </div>
                             ) : (
                               <>
-                                {providerHealth.polar === false && (
+                                {providerHealth.healthy === false && (
                                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg max-w-md w-full mx-auto text-left">
                                     <div className="flex items-start gap-2">
                                       <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />

@@ -1,5 +1,25 @@
-import Application, { CanonicalStage, InternalApplicationStatus } from '@/models/Application';
+import JobApplication from '@/models/JobApplication';
 import ApplicationEvent, { ApplicationEventType } from '@/models/ApplicationEvent';
+
+export type CanonicalStage = 'saved' | 'staging' | 'applied' | 'interview' | 'offer' | 'rejected';
+
+export type InternalApplicationStatus =
+  | 'saved'
+  | 'staging_cv_generating'
+  | 'staging_cover_letter_generating'
+  | 'staging_ready'
+  | 'queued'
+  | 'processing'
+  | 'form_detected'
+  | 'submitting'
+  | 'verification'
+  | 'applied'
+  | 'automation_failed'
+  | 'automation_unknown'
+  | 'review_required'
+  | 'interview'
+  | 'offer'
+  | 'rejected';
 
 export interface StateTransitionRequest {
   applicationId: string;
@@ -28,12 +48,12 @@ export class ApplicationStateMachine {
    * Validates and performs a verified transition of an application's canonical stage
    */
   async transition(req: StateTransitionRequest): Promise<{ success: boolean; error?: string }> {
-    const app = await Application.findById(req.applicationId);
+    const app = await JobApplication.findById(req.applicationId);
     if (!app) {
       return { success: false, error: 'Application not found' };
     }
 
-    const currentStage: CanonicalStage = app.currentStage;
+    const currentStage: CanonicalStage = (app.currentStage as CanonicalStage) || 'saved';
     const allowed = ALLOWED_STAGE_TRANSITIONS[currentStage] || [];
 
     if (currentStage !== req.targetStage && !allowed.includes(req.targetStage)) {
@@ -57,11 +77,11 @@ export class ApplicationStateMachine {
     const previousStage = app.currentStage;
     const previousStatus = app.internalStatus;
 
-    // 1. Update Application document
+    // 1. Update JobApplication document
     app.currentStage = req.targetStage;
     app.internalStatus = req.targetStatus;
     if (req.evidence) {
-      app.evidence = { ...(app.evidence || {}), ...req.evidence };
+      app.evidence = { ...(app.evidence || {}), ...req.evidence } as any;
     }
 
     app.stageHistory.push({
@@ -78,7 +98,7 @@ export class ApplicationStateMachine {
     await ApplicationEvent.create({
       applicationId: app._id,
       userId: app.userId,
-      jobId: app.jobId,
+      jobId: (app as any).jobId,
       type: req.eventType,
       previousStage,
       newStage: req.targetStage,

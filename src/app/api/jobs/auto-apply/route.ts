@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
-import { UnifiedApplyService, ApplyJobContext } from '@/lib/services/unifiedApplyService';
-import type { ATSType } from '@/types/automation-schema';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
+import type { ATSType } from '@/types/automation-schema';
 
 /**
  * POST /api/jobs/auto-apply
- * Unified auto-apply endpoint that handles all ATS types:
- * - Greenhouse, Lever, Ashby, Workable (public API apply)
- * - Naukri, Indeed (session-based apply)
- * - Adzuna (redirect to career page)
- * - Unknown ATS (generic handler)
+ * ENQUEUE-ONLY endpoint. Creates/updates JobApplication + ApplicationQueue item.
+ * The applicationWorker processes items in the background.
+ *
+ * Previously this endpoint called UnifiedApplyService.apply() inline,
+ * causing 10-30s response times. Now it returns immediately.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -106,36 +105,108 @@ export async function POST(request: NextRequest) {
 
     const sanitizedSource = sanitizeJobApplicationSource(source || resolvedAtsType);
 
-    const context: ApplyJobContext = {
-      jobId: jobId || `job_${Date.now()}`,
-      title,
-      company,
-      description,
-      location,
-      salary,
-      jobUrl: jobUrl || '',
-      atsType: resolvedAtsType,
-      source: sanitizedSource,
-      screeningQuestions,
-    };
+    // ── Decision Engine: evaluate before enqueuing ───────────────────
+    const { makeApplicationDecision } = await import('@/lib/decision/engine');
+    const decision = await makeApplicationDecision({
+      userId: auth.userId,
+      job: {
+        title,
+        company,
+        jobUrl,
+        jobDescription: description,
+        location,
+        salary,
+        atsType: resolvedAtsType,
+      },
+    });
 
-    // Execute unified apply
-    const result = await UnifiedApplyService.apply(auth.userId, context);
+    if (decision.mode === 'skip') {
+      return NextResponse.json({
+        success: false,
+        status: 'skipped',
+        message: decision.reason,
+        warnings: decision.warnings,
+      }, { status: 200 });
+    }
+
+    // ── Find or Create JobApplication ────────────────────────────────
+    let userObjId: any = auth.userId;
+    try {
+      const mongoose = await import('mongoose');
+      if (mongoose.default.Types.ObjectId.isValid(auth.userId)) {
+        userObjId = new mongoose.default.Types.ObjectId(auth.userId);
+      }
+    } catch { /* use string */ }
+
+    let jobApp;
+    const existingByTitle = await JobApplication.findOne({
+      $or: [{ userId: userObjId }, { userId: String(auth.userId) }],
+      company: { $regex: new RegExp(`^${company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      jobTitle: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+
+    if (existingByTitle) {
+      jobApp = existingByTitle;
+    } else {
+      jobApp = await JobApplication.create({
+        userId: userObjId,
+        jobId: jobId || `job_${Date.now()}`,
+        jobTitle: title,
+        company,
+        jobUrl: jobUrl || '',
+        jobDescription: description || '',
+        location: location || 'Remote',
+        source: sanitizedSource,
+        atsType: resolvedAtsType,
+        status: 'created',
+        currentStage: 'saved',
+        internalStatus: 'saved',
+        applicationMethod: 'auto',
+        automationEnabled: true,
+        priority: 'high',
+        salary: salary || undefined,
+        matchScore: decision.matchScore,
+        stageHistory: [{
+          stage: 'saved',
+          internalStatus: 'saved',
+          changedAt: new Date(),
+          reason: 'Enqueued for auto-apply',
+          source: 'automation',
+        }],
+      });
+    }
+
+    // ── Enqueue into ApplicationQueue ────────────────────────────────
+    const ApplicationQueue = (await import('@/models/ApplicationQueue')).default;
+    const mongoose = await import('mongoose');
+
+    const idempotencyKey = `${auth.userId}_${jobApp._id}_${Date.now()}`;
+    const queueItem = await ApplicationQueue.create({
+      applicationId: jobApp._id,
+      userId: auth.userId,
+      jobId: jobApp.jobId || jobApp._id.toString(),
+      status: 'queued',
+      priority: decision.mode === 'auto' ? 90 : decision.mode === 'review' ? 60 : 30,
+      scheduledAt: new Date(),
+      idempotencyKey,
+    });
 
     return NextResponse.json({
-      success: result.success,
-      message: result.message,
-      applicationId: result.applicationId,
-      status: result.status,
-      atsType: result.atsType,
-      screeningAnswers: result.screeningAnswers,
-      nextStep: result.nextStep,
-      error: result.error,
-    }, { status: result.success ? 200 : 422 });
+      success: true,
+      status: 'queued',
+      applicationId: jobApp._id.toString(),
+      queueItemId: queueItem._id.toString(),
+      mode: decision.mode,
+      matchScore: decision.matchScore,
+      riskLevel: decision.risk?.riskLevel,
+      message: `Application queued for ${decision.mode} processing`,
+      warnings: decision.warnings,
+    }, { status: 200 });
+
   } catch (error: any) {
-    console.error('Error in unified auto-apply:', error);
+    console.error('Error enqueueing auto-apply:', error);
     return NextResponse.json(
-      { error: error.message || 'Auto-apply failed' },
+      { error: error.message || 'Failed to enqueue application' },
       { status: 500 }
     );
   }

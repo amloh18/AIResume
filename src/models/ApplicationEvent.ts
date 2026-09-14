@@ -18,12 +18,16 @@ export type ApplicationEventSource = 'user' | 'automation' | 'email_intelligence
 export interface IApplicationEventDocument extends Document {
   applicationId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  
+  jobId?: mongoose.Types.ObjectId | string;
+
   type: ApplicationEventType;
   previousStage?: string;
   newStage?: string;
+  previousStatus?: string;
+  newStatus?: string;
   source: ApplicationEventSource;
-  
+  runId?: string;
+
   metadata?: Record<string, any>;
   createdAt: Date;
 }
@@ -32,7 +36,7 @@ const ApplicationEventSchema = new Schema<IApplicationEventDocument>(
   {
     applicationId: {
       type: Schema.Types.ObjectId,
-      ref: 'ApplicationUnified',
+      ref: 'JobApplication',
       required: true,
       index: true,
     },
@@ -42,6 +46,7 @@ const ApplicationEventSchema = new Schema<IApplicationEventDocument>(
       required: true,
       index: true,
     },
+    jobId: { type: Schema.Types.Mixed },
     
     type: {
       type: String,
@@ -56,11 +61,14 @@ const ApplicationEventSchema = new Schema<IApplicationEventDocument>(
       type: String,
       enum: ['saved', 'staging', 'applied', 'interview', 'offer', 'rejected'],
     },
+    previousStatus: { type: String },
+    newStatus: { type: String },
     source: {
       type: String,
       enum: ['user', 'automation', 'email_intelligence', 'admin'],
       required: true,
     },
+    runId: { type: String },
     
     metadata: { type: Schema.Types.Mixed },
     

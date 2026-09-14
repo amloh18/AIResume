@@ -9,7 +9,7 @@ export interface ISubscription extends Document {
   billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'one-time'; // FIXED: Added quarterly
   amount: number;
   currency: string;
-  paymentMethod: 'polar' | 'stripe';
+  paymentMethod: 'polar' | 'stripe' | 'razorpay';
   paymentProviderId: string; // Polar subscription ID
   discountCodeId?: mongoose.Types.ObjectId;
   discountAmount?: number;
@@ -79,7 +79,7 @@ const subscriptionSchema = new Schema<ISubscription>({
   paymentMethod: {
     type: String,
     required: [true, 'Payment method is required'],
-    enum: ['polar', 'stripe']
+    enum: ['polar', 'stripe', 'razorpay']
   },
   paymentProviderId: {
     type: String,
