@@ -89,13 +89,22 @@ export interface RawJob {
   url: string;
   title: string;
   companyName: string;
+  companyUrl?: string;
   rawHtmlDescription?: string;
   locationString?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   isRemote?: boolean;
   postedDate?: Date | string;
   applicationUrl?: string;
   department?: string;
   category?: string;
+  jobType?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  salaryCurrency?: string;
+  salaryInterval?: string;
   sourceMetadata?: Record<string, any>;
 }
 
@@ -1023,20 +1032,37 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
           return;
         }
 
-        const jobs: RawJob[] = result.jobs.map((job: any) => ({
-          source: 'jobspy',
-          sourceSecondary: job.site || undefined,
-          sourceJobId: job.id || `jobspy-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          url: job.url || job.job_url || '',
-          title: job.title || 'Untitled',
-          companyName: job.company || 'Unknown',
-          rawHtmlDescription: job.description || job.snippet || '',
-          locationString: job.location || '',
-          isRemote: job.location?.toLowerCase().includes('remote') || job.is_remote || false,
-          postedDate: job.date_posted ? new Date(job.date_posted) : new Date(),
-          applicationUrl: job.url || job.job_url || '',
-          sourceMetadata: { site: job.site },
-        }));
+        const jobs: RawJob[] = result.jobs.map((job: any) => {
+          const jobUrl = job.job_url || job.url || '';
+          return {
+            source: 'jobspy',
+            sourceSecondary: job.site || undefined,
+            sourceJobId: job.id || jobUrl || `jobspy-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            url: jobUrl,
+            title: job.title || 'Untitled',
+            companyName: job.company || 'Unknown',
+            companyUrl: job.company_url || undefined,
+            rawHtmlDescription: job.description || '',
+            locationString: job.location || '',
+            city: job.city || undefined,
+            state: job.state || undefined,
+            country: job.country || undefined,
+            isRemote: job.is_remote || job.location?.toLowerCase().includes('remote') || false,
+            postedDate: job.date_posted ? new Date(job.date_posted) : new Date(),
+            applicationUrl: jobUrl,
+            jobType: job.job_type || undefined,
+            salaryMin: job.min_amount ?? undefined,
+            salaryMax: job.max_amount ?? undefined,
+            salaryCurrency: job.currency || undefined,
+            salaryInterval: job.interval || undefined,
+            sourceMetadata: {
+              site: job.site,
+              jobLevel: job.job_level || undefined,
+              companyIndustry: job.company_industry || undefined,
+              salarySource: job.salary_source || undefined,
+            },
+          };
+        });
 
         log('FETCH', `JobSpy: ${jobs.length} jobs fetched`);
         resolve(jobs);
@@ -1330,7 +1356,18 @@ function generateContentHash(job: {
 function normalize(raw: RawJob): NormalizedJob {
   const titleRes = normalizeTitle(raw.title);
   const company = normalizeCompany(raw.companyName, raw.url);
-  const location = normalizeLocation(raw.locationString);
+
+  // Use structured location fields if available, fall back to parsing locationString
+  const location = raw.city || raw.state || raw.country
+    ? {
+        city: raw.city || '',
+        state: raw.state || undefined,
+        country: raw.country || '',
+        countryCode: '',
+        remote: raw.isRemote || false,
+      }
+    : normalizeLocation(raw.locationString);
+
   const now = new Date();
   const descriptionText = (raw.rawHtmlDescription || '').replace(/<[^>]*>/g, '').substring(0, 50000);
   const description = (raw.rawHtmlDescription || '').substring(0, 50000);
@@ -1339,11 +1376,28 @@ function normalize(raw: RawJob): NormalizedJob {
   const roleFamily = resolveRoleFamily(titleRes.title) || undefined;
   const roleFamilyKeywords = roleFamily ? getFamilySearchTerms(roleFamily) : undefined;
 
+  // Map employment type from job board format
+  const employmentTypeMap: Record<string, string> = {
+    fulltime: 'full_time',
+    parttime: 'part_time',
+    contract: 'contract',
+    internship: 'internship',
+    temporary: 'temporary',
+  };
+  const employmentType = employmentTypeMap[raw.jobType || ''] || 'full_time';
+
+  // Build salary from structured fields
+  const salary: NormalizedJob['salary'] = {};
+  if (raw.salaryMin != null) salary.min = raw.salaryMin;
+  if (raw.salaryMax != null) salary.max = raw.salaryMax;
+  if (raw.salaryCurrency) salary.currency = raw.salaryCurrency;
+  if (raw.salaryInterval) salary.period = raw.salaryInterval;
+
   const contentHash = generateContentHash({
     title: titleRes.title,
     description,
     location: raw.locationString || '',
-    employmentType: 'full_time',
+    employmentType,
   });
 
   return {
@@ -1367,12 +1421,12 @@ function normalize(raw: RawJob): NormalizedJob {
     location,
     department: raw.department,
     category: raw.category,
-    employmentType: 'full_time',
+    employmentType,
     experience: { minYears: null, maxYears: null, level: titleRes.level },
     seniority: titleRes.level,
     roleFamily,
     roleFamilyKeywords,
-    salary: {},
+    salary,
     skills: [],
     status: 'new',
     postedAt: raw.postedDate ? new Date(raw.postedDate) : now,
