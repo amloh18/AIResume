@@ -95,16 +95,19 @@ export interface RawJob {
   city?: string;
   state?: string;
   country?: string;
+  countryCode?: string;
   isRemote?: boolean;
   postedDate?: Date | string;
   applicationUrl?: string;
   department?: string;
   category?: string;
   jobType?: string;
+  experienceLevel?: string;
   salaryMin?: number;
   salaryMax?: number;
   salaryCurrency?: string;
   salaryInterval?: string;
+  skills?: string[];
   sourceMetadata?: Record<string, any>;
 }
 
@@ -1047,17 +1050,19 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
             city: job.city || undefined,
             state: job.state || undefined,
             country: job.country || undefined,
+            countryCode: job.country || undefined,
             isRemote: job.is_remote || job.location?.toLowerCase().includes('remote') || false,
             postedDate: job.date_posted ? new Date(job.date_posted) : new Date(),
             applicationUrl: jobUrl,
             jobType: job.job_type || undefined,
+            experienceLevel: job.job_level || undefined,
             salaryMin: job.min_amount ?? undefined,
             salaryMax: job.max_amount ?? undefined,
             salaryCurrency: job.currency || undefined,
             salaryInterval: job.interval || undefined,
+            skills: Array.isArray(job.skills) ? job.skills : undefined,
             sourceMetadata: {
               site: job.site,
-              jobLevel: job.job_level || undefined,
               companyIndustry: job.company_industry || undefined,
               salarySource: job.salary_source || undefined,
             },
@@ -1266,6 +1271,59 @@ const SOURCE_FETCHERS: Record<string, (signal?: AbortSignal) => Promise<RawJob[]
 
 // ── Normalization Pipeline ──────────────────────────────────────────────
 
+function inferSkillsFromTitle(title: string): string[] {
+  const lower = title.toLowerCase();
+  const skills: string[] = [];
+
+  const patterns: [RegExp, string][] = [
+    [/\bpython\b/, 'Python'],
+    [/\bjavascript\b/, 'JavaScript'],
+    [/\btypescript\b/, 'TypeScript'],
+    [/\bjava\b(?!\s*script)/, 'Java'],
+    [/\bc\+\+\b/, 'C++'],
+    [/\bc#\b/, 'C#'],
+    [/\bgo(lang)?\b/, 'Go'],
+    [/\brust\b/, 'Rust'],
+    [/\bruby\b/, 'Ruby'],
+    [/\bphp\b/, 'PHP'],
+    [/\bswift\b/, 'Swift'],
+    [/\bkotlin\b/, 'Kotlin'],
+    [/\breact\b/, 'React'],
+    [/\bangular\b/, 'Angular'],
+    [/\bvue\.?js\b/, 'Vue.js'],
+    [/\bnext\.?js\b/, 'Next.js'],
+    [/\bnode\.?js\b/, 'Node.js'],
+    [/\bdjango\b/, 'Django'],
+    [/\bflask\b/, 'Flask'],
+    [/\bfastapi\b/, 'FastAPI'],
+    [/\baws\b/, 'AWS'],
+    [/\bazure\b/, 'Azure'],
+    [/\bgcp\b/, 'GCP'],
+    [/\bdocker\b/, 'Docker'],
+    [/\bkubernetes\b/, 'Kubernetes'],
+    [/\bterraform\b/, 'Terraform'],
+    [/\bmachine learning\b/, 'Machine Learning'],
+    [/\bml\b/, 'Machine Learning'],
+    [/\bdata scien/, 'Data Science'],
+    [/\bdata analy/, 'Data Analysis'],
+    [/\bfull[- ]?stack\b/, 'Full Stack'],
+    [/\bfront[- ]?end\b/, 'Frontend'],
+    [/\bback[- ]?end\b/, 'Backend'],
+    [/\bdevops\b/, 'DevOps'],
+    [/\bcloud\b/, 'Cloud'],
+    [/\bsecurity\b/, 'Security'],
+    [/\bmobile\b/, 'Mobile'],
+    [/\bios\b/, 'iOS'],
+    [/\bandroid\b/, 'Android'],
+  ];
+
+  for (const [pattern, skill] of patterns) {
+    if (pattern.test(lower)) skills.push(skill);
+  }
+
+  return skills;
+}
+
 function normalizeTitle(title: string): { title: string; normalizedTitle: string; level?: string } {
   const clean = title.replace(/\s+/g, ' ').trim();
   const lower = clean.toLowerCase();
@@ -1358,12 +1416,12 @@ function normalize(raw: RawJob): NormalizedJob {
   const company = normalizeCompany(raw.companyName, raw.url);
 
   // Use structured location fields if available, fall back to parsing locationString
-  const location = raw.city || raw.state || raw.country
+  const location = raw.city || raw.state || raw.country || raw.countryCode
     ? {
         city: raw.city || '',
         state: raw.state || undefined,
         country: raw.country || '',
-        countryCode: '',
+        countryCode: raw.countryCode || raw.country || '',
         remote: raw.isRemote || false,
       }
     : normalizeLocation(raw.locationString);
@@ -1379,12 +1437,17 @@ function normalize(raw: RawJob): NormalizedJob {
   // Map employment type from job board format
   const employmentTypeMap: Record<string, string> = {
     fulltime: 'full_time',
+    full_time: 'full_time',
     parttime: 'part_time',
+    part_time: 'part_time',
     contract: 'contract',
     internship: 'internship',
     temporary: 'temporary',
   };
   const employmentType = employmentTypeMap[raw.jobType || ''] || 'full_time';
+
+  // Use experience level from worker if provided, otherwise infer from title
+  const experienceLevel = raw.experienceLevel || titleRes.level || 'unknown';
 
   // Build salary from structured fields
   const salary: NormalizedJob['salary'] = {};
@@ -1392,6 +1455,11 @@ function normalize(raw: RawJob): NormalizedJob {
   if (raw.salaryMax != null) salary.max = raw.salaryMax;
   if (raw.salaryCurrency) salary.currency = raw.salaryCurrency;
   if (raw.salaryInterval) salary.period = raw.salaryInterval;
+
+  // Merge skills: worker-extracted + title-inferred
+  const titleSkills = inferSkillsFromTitle(titleRes.title);
+  const workerSkills = raw.skills || [];
+  const skills = [...new Set([...workerSkills, ...titleSkills])].slice(0, 20);
 
   const contentHash = generateContentHash({
     title: titleRes.title,
@@ -1422,12 +1490,12 @@ function normalize(raw: RawJob): NormalizedJob {
     department: raw.department,
     category: raw.category,
     employmentType,
-    experience: { minYears: null, maxYears: null, level: titleRes.level },
-    seniority: titleRes.level,
+    experience: { minYears: null, maxYears: null, level: experienceLevel },
+    seniority: experienceLevel,
     roleFamily,
     roleFamilyKeywords,
     salary,
-    skills: [],
+    skills,
     status: 'new',
     postedAt: raw.postedDate ? new Date(raw.postedDate) : now,
     firstSeenAt: now,
