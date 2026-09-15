@@ -17,6 +17,12 @@ async function workerTick(): Promise<void> {
   isRunning = true;
 
   try {
+    const mongoose = (await import('mongoose')).default;
+    if (mongoose.connection.readyState !== 1) {
+      const { ensureConnection } = await import('@/lib/database');
+      await ensureConnection();
+    }
+
     // Release any stuck processing items from previous crashes
     await releaseStuckItems(STUCK_RELEASE_MINUTES);
 

@@ -247,12 +247,17 @@ class DatabaseConnectionManager {
     // Verify connection is actually working with a ping
     try {
       await mongooseInstance.connection.db?.admin().ping();
-      // Only log successful connections in development or first connection
+      // Always log database name on cold start (critical for debugging)
+      if (isColdStart) {
+        const dbName = mongooseInstance.connection.db?.databaseName || 'unknown';
+        console.log(`📊 Connected to MongoDB database: "${dbName}"`);
+        if (!process.env.MONGODB_DB) {
+          console.warn('⚠️  MONGODB_DB env var is NOT set — using URI default. Set MONGODB_DB=airesume in your environment!');
+        }
+      }
+      // Only log full connection details in development
       if (process.env.NODE_ENV === 'development') {
         console.log('✅ Connected to MongoDB successfully');
-        console.log(
-          `📊 Database: ${mongooseInstance.connection.db?.databaseName || 'unknown'}`
-        );
         console.log(
           `🌐 Host: ${mongooseInstance.connection.host}:${mongooseInstance.connection.port}`
         );

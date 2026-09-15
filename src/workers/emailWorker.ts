@@ -229,7 +229,8 @@ async function workerLoop(): Promise<void> {
   try {
     // Wait for MongoDB to be connected before processing
     if (mongoose.connection.readyState !== 1) {
-      return;
+      const { ensureConnection } = await import('@/lib/database');
+      await ensureConnection();
     }
 
     // Check if we can process more jobs

@@ -12,6 +12,8 @@ export async function claimNextApplication(): Promise<{
   queueItem: any;
   jobApplication: any;
 } | null> {
+  const { ensureConnection } = await import('@/lib/database');
+  await ensureConnection();
   const now = new Date();
 
   // Atomic claim: find + lock in one operation
@@ -104,6 +106,8 @@ export async function failQueueItem(
  * Releases a stuck processing item back to queued (for recovery).
  */
 export async function releaseStuckItems(maxProcessingMinutes: number = 30): Promise<number> {
+  const { ensureConnection } = await import('@/lib/database');
+  await ensureConnection();
   const threshold = new Date(Date.now() - maxProcessingMinutes * 60 * 1000);
   const result = await ApplicationQueue.updateMany(
     {
