@@ -113,6 +113,7 @@ const REQUIRED_VARS: (keyof EnvConfig)[] = [
 
 const PRODUCTION_VARS: (keyof EnvConfig)[] = [
   'MONGODB_URI',
+  'MONGODB_DB',
   'NEXTAUTH_URL',
   'NEXTAUTH_SECRET',
   'JWT_SECRET',

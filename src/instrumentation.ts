@@ -2,12 +2,28 @@ import * as Sentry from "@sentry/nextjs";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Log critical env var status on startup
+    if (!process.env.MONGODB_DB) {
+      console.error('🚨 CRITICAL: MONGODB_DB is not set! App will connect to wrong database. Set MONGODB_DB=airesume');
+    } else {
+      console.log(`[Startup] MONGODB_DB=${process.env.MONGODB_DB}`);
+    }
+
     Sentry.init({
       dsn: "https://88b1aba46950f4d42ae02febd2ae0e8a@o4511432633679872.ingest.de.sentry.io/4511432660156496",
       tracesSampleRate: 1,
       enableLogs: true,
       sendDefaultPii: true,
     });
+
+    // Connect to MongoDB on server boot so workers and early queries never buffer or timeout
+    try {
+      const { getConnection } = await import('./lib/database');
+      await getConnection();
+      console.log('[Startup] MongoDB connection established successfully');
+    } catch (err) {
+      console.error('[Startup] Failed to connect to MongoDB on startup:', err);
+    }
 
     // Start email worker for application email delivery
     try {
