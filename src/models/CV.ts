@@ -46,11 +46,37 @@ export interface ICV extends Document {
     downloadCount: number;
     atsScore?: number;
     atsScoreDate?: Date;
+    /**
+     * Hash of the CV content the persisted ATS score was computed against.
+     * Enables real cache invalidation in /api/ats/calculate-score. Must stay
+     * declared here - Mongoose strict mode silently drops undeclared paths.
+     */
+    atsScoreHash?: string;
+    /** Deterministic factor breakdown for the persisted ATS score. */
+    atsScoreBreakdown?: any;
+    /** Deterministic knock-out factors for the persisted ATS score. */
+    knockOutFactors?: any;
+    /** ATS safety class of the template used, at generation time. */
+    templateAtsSafety?: 'safe' | 'caution' | 'risky';
+    /** Set when generation overrode the Master CV template for ATS safety. */
+    templatePinnedFrom?: string;
     thumbnailUrl?: string; // URL to PNG snapshot for card preview
     thumbnailGeneratedAt?: Date; // When the thumbnail was last generated
     starred: boolean;
     aiAnalysis?: any; // AI career analysis data
     createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'manual')
+    /** How the CV content was produced: 'tailored' | 'fallback'. */
+    generationMode?: string;
+    /** Human-readable explanation of how the CV was generated. */
+    generationReason?: string;
+    /** True when the CV was created by the no-source fallback path. */
+    fallbackCreation?: boolean;
+    /** JD keywords deterministically pinned into the skills section. */
+    pinnedKeywords?: string[];
+    /** Journey CV that seeded refinement for this CV (never linked, only read). */
+    refinementSeedFrom?: mongoose.Types.ObjectId;
+    /** Confidence (0-1) of the refinement seed match. */
+    refinementSeedConfidence?: number;
     // Resume Enhancer Career Ecosystem fields
     atsScoreCap?: number; // Max ATS score based on template (null = 100, creative = 70)
     parentMasterId?: mongoose.Types.ObjectId; // For Standalone CVs forked from Master
@@ -199,13 +225,28 @@ const cvSchema = new Schema<ICV>({
     downloadCount: { type: Number, default: 0 },
     atsScore: { type: Number, min: 0, max: 100 },
     atsScoreDate: { type: Date },
+    atsScoreHash: { type: String },
+    atsScoreBreakdown: { type: Schema.Types.Mixed },
+    knockOutFactors: { type: Schema.Types.Mixed },
+    templateAtsSafety: { type: String, enum: ['safe', 'caution', 'risky'] },
+    templatePinnedFrom: { type: String },
     thumbnailUrl: { type: String, trim: true },
     thumbnailGeneratedAt: { type: Date },
     starred: { type: Boolean, default: false },
     aiAnalysis: { type: Schema.Types.Mixed },
     createdVia: { type: String, trim: true },
+    generationMode: { type: String, trim: true },
+    generationReason: { type: String, trim: true },
+    fallbackCreation: { type: Boolean, default: false },
+    pinnedKeywords: { type: [String], default: undefined },
+    refinementSeedFrom: { type: Schema.Types.ObjectId, ref: 'CV' },
+    refinementSeedConfidence: { type: Number, min: 0, max: 1 },
     // Resume Enhancer Career Ecosystem fields
     atsScoreCap: { type: Number, min: 0, max: 100, default: 100 }, // Template-based ATS score cap
+    // Provenance marker for synthetic/dev-seeded documents. Fabricated scores
+    // must be excludable from real score aggregates.
+    seededData: { type: Boolean, default: false },
+    seededAtsScore: { type: Number },
     parentMasterId: { type: Schema.Types.ObjectId, ref: 'CV' }, // Source Master CV for forks
     isUserMaster: { type: Boolean, default: false }, // Definitive single Master flag
     fresherMode: { type: Boolean, default: false }, // Education/Projects first layout
@@ -250,6 +291,7 @@ cvSchema.index({ userId: 1 }); // Primary index for user queries - should reduce
 cvSchema.index({ userId: 1, createdAt: -1 }); // User's CVs by date
 cvSchema.index({ userId: 1, 'metadata.isMaster': 1 }); // Index for master CV queries
 cvSchema.index({ userId: 1, cvType: 1 }); // NEW: Index for CV type queries (Resume Enhancer)
+cvSchema.index({ userId: 1, cvType: 1, documentState: 1 }); // Journey CV limit counting (excludes frozen)
 cvSchema.index({ journeyId: 1, userId: 1 }); // Unique CV per journey (prevents duplicates)
 cvSchema.index({ templateId: 1 }); // Index for template-based queries
 cvSchema.index({ 'metadata.tags': 1 }); // Tag-based searches

@@ -1339,12 +1339,23 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     setPasswordErrors(null);
 
     try {
-      const response = await fetch('/api/user/change-password', {
-        method: 'POST',
+      // PUT /api/user/settings/security with action 'changePassword'.
+      // This previously POSTed to /api/user/change-password, which does not
+      // exist on disk — so it 404'd, `response.json()` threw on the HTML error
+      // body, and every attempt reported "Network error. Please try again."
+      // while the password was never changed. The complete implementation
+      // (verify current password, save, reset lockout, audit-log) already
+      // lives in that route and is used by the 2FA flow below, so we call it
+      // instead of adding a second copy of the same logic.
+      const response = await fetch('/api/user/settings/security', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
+          action: 'changePassword',
+          data: {
+            currentPassword: passwordForm.currentPassword,
+            newPassword: passwordForm.newPassword
+          }
         })
       });
 
@@ -1359,7 +1370,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         });
         setShowPasswordForm(false);
       } else {
-        setPasswordErrors(data.error || 'Failed to change password');
+        // `message`, not `error` — that route's error envelope uses `message`.
+        setPasswordErrors(data.message || 'Failed to change password');
       }
     } catch (error) {
       console.error('Error changing password:', error);

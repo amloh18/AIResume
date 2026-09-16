@@ -290,6 +290,21 @@ export async function PUT(
     delete updateData.createdAt;
     delete updateData.__v;
 
+    // `atsScore` on a Job is a derived ATS measurement, not user input.
+    //
+    // The blanket `...body` spread above meant any caller could write it
+    // directly, and `getJourneyAtsScore()` falls back to `job.atsScore` when a
+    // journey has none — so a client-supplied number would surface in the UI
+    // under an ATS label without ever passing through the scoring engine.
+    // Nothing server-side writes this field, so dropping it is safe.
+    if (updateData.atsScore !== undefined) {
+      console.warn('⛔ Job Update API - Ignored client-supplied atsScore:', {
+        jobId: resolvedParams.id,
+        atsScore: updateData.atsScore,
+      });
+      delete updateData.atsScore;
+    }
+
     // Record the moment an application is actually submitted: the first time a
     // job reaches an applied-like status. Used by the streak/dashboard metrics
     // to count real applications this week (not jobs merely created this week).

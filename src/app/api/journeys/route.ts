@@ -283,7 +283,7 @@ export async function DELETE(request: NextRequest) {
     await getConnection();
     
     const body = await request.json();
-    const { journeyId, userId } = body;
+    const { journeyId, userId, deleteDocuments } = body;
 
     if (!journeyId || !userId) {
       return NextResponse.json(
@@ -291,6 +291,13 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Read the links BEFORE deleting so we can cascade. The journey is the only
+    // place that records which CV / cover letter belong to it — dropping it
+    // first would orphan both documents forever.
+    const journey = await ApplicationJourney.findOne({ _id: journeyId, userId })
+      .select('cvId coverLetterId')
+      .lean();
 
     const result = await ApplicationJourney.findOneAndDelete({ 
       _id: journeyId, 
@@ -304,9 +311,59 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Cascade-delete the generated documents. Opt-out via `deleteDocuments: false`
+    // for callers that want to keep the documents (e.g. "archive" flows).
+    const cascade = {
+      attempted: deleteDocuments !== false,
+      cvDeleted: false,
+      coverLetterDeleted: false,
+      cvRetained: false,
+      coverLetterRetained: false,
+    };
+
+    if (cascade.attempted) {
+      const linkedCvId = (journey as any)?.cvId;
+      const linkedCoverLetterId = (journey as any)?.coverLetterId;
+
+      if (linkedCvId) {
+        // Guard: never delete a document another journey still points at.
+        const otherCvRef = await ApplicationJourney.countDocuments({
+          userId,
+          cvId: linkedCvId,
+        });
+        if (otherCvRef === 0) {
+          const cvDelete = await CV.deleteOne({ _id: linkedCvId, userId });
+          cascade.cvDeleted = cvDelete.deletedCount > 0;
+        } else {
+          cascade.cvRetained = true;
+        }
+      }
+
+      if (linkedCoverLetterId) {
+        const otherClRef = await ApplicationJourney.countDocuments({
+          userId,
+          coverLetterId: linkedCoverLetterId,
+        });
+        if (otherClRef === 0) {
+          const clDelete = await CoverLetter.deleteOne({ _id: linkedCoverLetterId, userId });
+          cascade.coverLetterDeleted = clDelete.deletedCount > 0;
+        } else {
+          cascade.coverLetterRetained = true;
+        }
+      }
+    }
+
+    // Invalidate the journey list cache so the deleted row disappears immediately
+    if (global.journeysCache) {
+      Array.from(global.journeysCache.keys())
+        .filter((key) => key.startsWith(`journeys_${userId}_`))
+        .forEach((key) => global.journeysCache!.delete(key));
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Journey deleted successfully'
+      message: 'Journey deleted successfully',
+      documents: cascade,
     });
 
   } catch (error: any) {

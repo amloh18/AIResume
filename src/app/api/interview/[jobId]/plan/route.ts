@@ -3,6 +3,7 @@ import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { JobApplication, User } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
+import { buildSession, groupQuestionsByModule } from '@/lib/interview/plan';
 import mongoose from 'mongoose';
 
 // Force dynamic
@@ -54,11 +55,15 @@ export async function GET(
 
         // Check if interview plan exists
         if (!job.interviewCoach || job.interviewCoach.status !== 'ready') {
+            // Return a *shell* rather than a bare error: the hub can paint its
+            // header and card frames with the real role/company immediately
+            // while the AI generates, so the page never blocks on a loader.
             return setCorsHeaders(
                 NextResponse.json({
                     success: false,
                     error: 'Interview plan not generated yet',
-                    needsGeneration: true
+                    needsGeneration: true,
+                    session: buildSession(job, null, 0)
                 }, { status: 404 }),
                 request
             );
@@ -66,65 +71,24 @@ export async function GET(
 
         const { modules, questions, readinessScore } = job.interviewCoach;
 
-        // Group questions by module for easier frontend consumption
-        // Group questions by module for easier frontend consumption
-        const questionsByModule: Record<string, any[]> = {};
-
         console.log(`🧩 Grouping ${questions.length} questions into ${modules.length} modules...`);
-
-        questions.forEach((q: any) => {
-            // Robust ID extraction
-            const qId = q.id ? q.id.toString() : (q._id ? q._id.toString() : null);
-
-            if (!qId) {
-                console.warn('⚠️ Question found with no ID:', q);
-                return;
-            }
-
-            // Find which module this question belongs to
-            const module = modules.find((m: any) =>
-                m.questionIds?.some((mid: any) => mid?.toString() === qId)
-            );
-
-            const moduleId = module?.id || 'unassigned';
-
-            if (moduleId === 'unassigned') {
-                console.log(`⚠️ Question ${qId} not assigned to any module (looking for ID in [${modules.map((m: any) => m.questionIds?.length).join(',')}])`);
-            }
-
-            if (!questionsByModule[moduleId]) {
-                questionsByModule[moduleId] = [];
-            }
-            questionsByModule[moduleId].push(q);
-        });
-
-        // Ensure all modules are initialized in the map even if empty
-        modules.forEach((m: any) => {
-            if (!questionsByModule[m.id]) {
-                questionsByModule[m.id] = [];
-            }
-        });
-
+        const questionsByModule = groupQuestionsByModule(modules, questions);
 
         // Fetch User streak
         const user = await User.findById(userIdQuery).select('interviewCoach');
         const currentStreak = user?.interviewCoach?.currentStreak || 0;
 
         // Build session-like response for frontend compatibility
-        const session = {
-            _id: job._id,
-            jobId: {
-                _id: job._id,
-                jobTitle: job.jobTitle,
-                company: job.company
+        const session = buildSession(
+            job,
+            {
+                status: job.interviewCoach.status,
+                generatedAt: job.interviewCoach.generatedAt,
+                modules,
+                readinessScore,
             },
-            targetRole: job.jobTitle,
-            modules: modules,
-            readinessScore: readinessScore || 0,
-            status: job.interviewCoach.status,
-            generatedAt: job.interviewCoach.generatedAt,
-            currentStreak: currentStreak
-        };
+            currentStreak
+        );
 
         return setCorsHeaders(
             NextResponse.json({

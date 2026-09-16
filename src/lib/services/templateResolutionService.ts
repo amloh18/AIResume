@@ -7,7 +7,7 @@
  */
 
 import { ITemplate } from '@/types/template';
-import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
+import { getTemplateById, getAllTemplates, ATS_SAFE_DEFAULT_TEMPLATE_ID } from '@/lib/templates/template-utils';
 import Template from '@/models/Template';
 import mongoose from 'mongoose';
 import { logger } from '@/lib/structured-logger';
@@ -193,9 +193,14 @@ export class TemplateResolutionService {
   }
 
   /**
-   * Get default template for fallback
+   * Get default template for fallback.
+   * Uses the ATS-safe default so a template that failed to resolve never
+   * silently degrades the document to an unparseable layout.
    */
   private getDefaultTemplate(): ITemplate {
+    const atsSafe = getTemplateById(ATS_SAFE_DEFAULT_TEMPLATE_ID);
+    if (atsSafe) return atsSafe;
+
     const all = getAllTemplates();
     return all[0] || {
       id: 'default',

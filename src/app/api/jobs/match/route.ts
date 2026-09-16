@@ -22,6 +22,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
+import type { TemplateAtsContext } from '@/lib/pill-engine/CentralScoreManager';
+import { getTemplateAtsProfile } from '@/lib/templates/template-utils';
 import { KeywordGapAnalysisService } from '@/lib/services/keyword-gap-analysis-service';
 import { extractCVSearchText } from '@/lib/utils/cv-text-extractor';
 import { buildCVMatchPrompt } from '@/lib/prompts/cv-match-prompt';
@@ -200,7 +202,47 @@ export async function POST(request: NextRequest): Promise<NextResponse<JobsMatch
             console.error('⚠️ Jobs Match - Keyword analysis failed, using fallback:', kwError);
         }
 
-        const atsScoreResult = manager.calculateATSScore(cvData, keywordAnalysis, 100);
+        // Resolve the CV's template so this score honours the layout penalty and
+        // the template's ATS cap, exactly like /api/ats/calculate-score does.
+        //
+        // Without this the two ATS writers disagreed: the same multi-column CV
+        // would score higher here (no penalty, hardcoded cap of 100) than via
+        // /api/ats/calculate-score, so the "single source of truth" claim held
+        // only by luck of which endpoint ran last.
+        let resolvedTemplateId: string | undefined;
+        let persistedCap: number | undefined;
+        if (cvId) {
+            try {
+                const CVModel = (await import('@/models/CV')).default;
+                const cvDoc: any = await CVModel
+                    .findById(cvId)
+                    .select('templateId metadata.atsScoreCap')
+                    .lean();
+                resolvedTemplateId = cvDoc?.templateId?.toString();
+                if (typeof cvDoc?.metadata?.atsScoreCap === 'number') {
+                    persistedCap = cvDoc.metadata.atsScoreCap;
+                }
+            } catch (templateLookupError) {
+                console.warn(
+                    '⚠️ Jobs Match - Could not resolve CV template, falling back to default ATS profile:',
+                    templateLookupError
+                );
+            }
+        }
+
+        const templateProfile = getTemplateAtsProfile(resolvedTemplateId);
+        const templateContext: TemplateAtsContext = {
+            layoutType: templateProfile.layoutType,
+            safety: templateProfile.safety,
+            cap: persistedCap ?? templateProfile.cap,
+        };
+
+        const atsScoreResult = manager.calculateATSScore(
+            cvData,
+            keywordAnalysis,
+            templateContext.cap,
+            templateContext
+        );
 
         // ─────────────────────────────────────────────
         // STEP 2: Job Match Score (deterministic heuristic)

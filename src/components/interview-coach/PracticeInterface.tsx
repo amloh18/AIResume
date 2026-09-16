@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   Send,
   Keyboard,
+  Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -343,13 +344,11 @@ export default function PracticeInterface({
 
   if (loading) {
     return (
-      <div className="absolute inset-0 dashboard-workspace flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-emerald-600 dark:border-lime-500 border-t-transparent animate-spin" />
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">
-            Loading question workspace...
-          </span>
-        </div>
+      <div className="absolute inset-0 dashboard-workspace flex flex-col items-center justify-center gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600 dark:text-lime-400" />
+        <span className="text-xs font-semibold text-[var(--text-secondary)]">
+          Loading question workspace...
+        </span>
       </div>
     );
   }

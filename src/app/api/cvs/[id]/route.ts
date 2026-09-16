@@ -379,10 +379,18 @@ export async function PUT(
     }
 
     // Prepare update data (excluding legacy fields)
+    //
+    // NOTE: score fields are deliberately NOT client-writable.
+    // `cv_score_ats`, `cv_score_master` and `score_breakdown` used to be in this
+    // list, which let any caller PUT an arbitrary ATS number that was then
+    // mirrored into `metadata.atsScore` and propagated to
+    // `ApplicationJourney.atsScore`. The single authoritative ATS writer is now
+    // POST /api/ats/calculate-score, which recomputes deterministically from the
+    // CV content with the shared CentralScoreManager and applies quota checks.
+    // `active_issues_json` stays: it is advisory UI output, not a score.
     const allowedFields = [
       'title', 'cvData', 'templateId', 'cvType', 'status', 'isMaster', 'metadata', 'journeyId',
-      // Central Score Manager fields — persisted by auto-save from Step3CV
-      'cv_score_master', 'cv_score_ats', 'score_breakdown', 'active_issues_json'
+      'active_issues_json'
     ];
 
     const updateData: Record<string, any> = {};
@@ -390,41 +398,6 @@ export async function PUT(
     // Avoid overwriting existing nested metadata fields with `undefined` during merges
     const removeUndefinedKeys = (obj: Record<string, any>) =>
       Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
-
-    // Extract ATS score from cvData if present in body.cvData and not explicitly passed in body
-    let cvDataScore: number | undefined = undefined;
-    if (body.cvData && typeof body.cvData === 'object') {
-      const cvDataObj = body.cvData;
-      const possibleScore = 
-        cvDataObj.analysis?.score ?? 
-        cvDataObj.analysis?.overall_score ?? 
-        cvDataObj.analysis?.overallScore ?? 
-        cvDataObj.analysisReport?.overall_score ?? 
-        cvDataObj.analysisReport?.score ?? 
-        cvDataObj.atsScore ?? 
-        cvDataObj.score ?? 
-        cvDataObj.scoreReport?.overall_score ??
-        cvDataObj.metadata?.atsScore ??
-        cvDataObj.metadata?.surgeonAnalysis?.scoreReport?.overall_score;
-
-      if (possibleScore !== undefined && possibleScore !== null && typeof possibleScore === 'number') {
-        cvDataScore = possibleScore;
-        console.log('📊 CV UPDATE API - Found score in cvData:', cvDataScore);
-      }
-    }
-
-    if (cvDataScore !== undefined) {
-      const targetType = body.cvType || cv.cvType;
-      if (targetType === 'journey') {
-        if (body.cv_score_ats === undefined) {
-          body.cv_score_ats = cvDataScore;
-        }
-      } else {
-        if (body.cv_score_master === undefined) {
-          body.cv_score_master = cvDataScore;
-        }
-      }
-    }
 
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -515,23 +488,71 @@ export async function PUT(
       }
     }
 
-    // SCORE SYNC: Mirror root-level score fields into metadata for legacy component compatibility.
-    // Components like Canvas.tsx, CVListView.tsx, and JourneyTimelineCard.tsx read from
-    // metadata.atsScore / metadata.cvScore / metadata.atsScoreBreakdown.
-    if (body.cv_score_ats !== undefined && typeof body.cv_score_ats === 'number') {
-      if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
-      updateData.metadata.atsScore = body.cv_score_ats;
-      updateData.metadata.atsScoreDate = new Date();
-      console.log('📊 CV UPDATE API - Syncing cv_score_ats to metadata.atsScore:', body.cv_score_ats);
+    // SCORE INTEGRITY GUARD
+    //
+    // `metadata` is still client-writable (it carries layout/preferences), so a
+    // caller could otherwise smuggle a score in through `metadata.atsScore` or
+    // `metadata.cvScore` and have every score-reading view display it.
+    // Score-bearing metadata is therefore stripped here and only ever written
+    // by the canonical scoring route / the server-side relationship service.
+    const CLIENT_FORBIDDEN_METADATA_SCORE_KEYS = [
+      'atsScore',
+      'atsScoreDate',
+      'atsScoreHash',
+      'atsScoreBreakdown',
+      'atsScoreCap',
+      'cvScore',
+      'knockOutFactors',
+      'templateAtsSafety',
+    ];
+
+    if (updateData.metadata) {
+      for (const key of CLIENT_FORBIDDEN_METADATA_SCORE_KEYS) {
+        // Restore the server's existing value rather than deleting the key —
+        // otherwise every metadata write would wipe the CV's persisted cap and
+        // safety class.
+        const existingValue = (cv.metadata as any)?.[key];
+        if (existingValue !== undefined) {
+          updateData.metadata[key] = existingValue;
+        } else {
+          delete updateData.metadata[key];
+        }
+      }
     }
-    if (body.cv_score_master !== undefined && typeof body.cv_score_master === 'number') {
+
+    // If the CV content changed, any previously persisted ATS score describes
+    // content that no longer exists. Drop the cache hash so the next
+    // /api/ats/calculate-score call recomputes instead of serving a stale hit.
+    const contentChanged =
+      updateData.cvData !== undefined &&
+      JSON.stringify(updateData.cvData) !== JSON.stringify(cv.cvData);
+
+    if (contentChanged) {
       if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
-      updateData.metadata.cvScore = body.cv_score_master;
-      console.log('📊 CV UPDATE API - Syncing cv_score_master to metadata.cvScore:', body.cv_score_master);
+      delete updateData.metadata.atsScoreHash;
     }
-    if (body.score_breakdown !== undefined && typeof body.score_breakdown === 'object') {
+
+    // If the template changed, the ATS ceiling and safety class of this CV
+    // changed with it. Recompute both server-side from the template id so the
+    // persisted cap can never drift from the template actually in use.
+    const nextTemplateId = updateData.templateId ?? cv.templateId?.toString();
+    const templateChanged =
+      updateData.templateId !== undefined &&
+      String(updateData.templateId) !== String(cv.templateId?.toString() ?? '');
+
+    if (templateChanged) {
+      const { getTemplateAtsProfile } = await import('@/lib/templates/template-utils');
+      const profile = getTemplateAtsProfile(nextTemplateId);
       if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
-      updateData.metadata.atsScoreBreakdown = body.score_breakdown;
+      updateData.metadata.templateAtsSafety = profile.safety;
+      updateData.metadata.atsScoreCap = profile.cap;
+      // The old score was produced under a different layout penalty.
+      delete updateData.metadata.atsScoreHash;
+      console.log('📐 CV UPDATE API - Template changed, recomputed ATS profile:', {
+        templateId: nextTemplateId,
+        safety: profile.safety,
+        cap: profile.cap,
+      });
     }
 
     // Validate templateId if provided
@@ -723,6 +744,13 @@ export async function PUT(
 
     // Perform MongoDB update
     const updateOperations: any = { $set: mongoUpdate.$set };
+
+    // NOTE: the stale `metadata.atsScoreHash` is removed by deleting the key
+    // from `updateData.metadata` above, because `metadata` is always written as
+    // a whole subdocument here. Adding a matching `$unset` for
+    // 'metadata.atsScoreHash' would make MongoDB reject the update with a path
+    // conflict at 'metadata'.
+
     if (Object.keys(mongoUnset.$unset).length > 0) {
       updateOperations.$unset = mongoUnset.$unset;
     }
@@ -791,27 +819,13 @@ export async function PUT(
     // Fire-and-forget: parallelize independent non-critical operations
     const fireAndForgetOps: Promise<any>[] = [];
 
-    // JOURNEY SCORE SYNC: Propagate updated cv_score_ats into ApplicationJourney.atsScore
-    const effectiveJourneyId = body.journeyId || cv.journeyId?.toString();
-    if (
-      body.cv_score_ats !== undefined &&
-      typeof body.cv_score_ats === 'number' &&
-      effectiveJourneyId
-    ) {
-      fireAndForgetOps.push(
-        import('@/lib/services/cvJourneyRelationshipService')
-          .then(({ ApplicationJourneyRelationshipService }) =>
-            ApplicationJourneyRelationshipService.updateJourneyATSScore(
-              effectiveJourneyId,
-              body.cv_score_ats,
-              body.jobId || undefined,
-              body.score_breakdown || undefined,
-              cv._id?.toString()
-            )
-          )
-          .catch(() => {}) // Non-critical
-      );
-    }
+    // JOURNEY SCORE SYNC was removed from this endpoint.
+    //
+    // It propagated the client-supplied `cv_score_ats` straight into
+    // `ApplicationJourney.atsScore`, which made the journey score forgeable and
+    // allowed it to diverge from the CV's own score. ApplicationJourney.atsScore
+    // is now written exclusively by ApplicationJourneyRelationshipService
+    // .updateJourneyATSScore(), called from POST /api/ats/calculate-score.
 
     // Log CV update activity (fire-and-forget)
     fireAndForgetOps.push(

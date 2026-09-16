@@ -560,12 +560,16 @@ export async function checkJourneyCVLimit(
     return { allowed: true, currentActiveCount: -1, limit: -1 };
   }
 
-  // Count active (non-frozen) Journey CVs
+  // Count active (non-frozen) Journey CVs.
+  // Freeze state lives on the ROOT document (`documentState`), which is what
+  // deep-freeze-service and unifiedLimitService both write. Counting on
+  // `metadata.isFrozen` never matched anything because that path was never
+  // persisted (Mongoose strict mode), so the Free-tier cap was a no-op.
   const CV = (await import('@/models/CV')).default;
   const currentActiveCount = await CV.countDocuments({
     userId,
     cvType: 'journey',
-    'metadata.isFrozen': { $ne: true }  // Exclude frozen CVs
+    documentState: { $ne: 'frozen' }  // Exclude frozen CVs
   });
 
   // For Pro Monthly: Check monthly limit (50)
@@ -579,7 +583,7 @@ export async function checkJourneyCVLimit(
       userId,
       cvType: 'journey',
       createdAt: { $gte: startOfMonth },
-      'metadata.isFrozen': { $ne: true }
+      documentState: { $ne: 'frozen' }
     });
 
     const remaining = Math.max(0, limits.activeJourneyCVs - monthlyCount);

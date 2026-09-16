@@ -191,14 +191,12 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     };
 
     // ── Live score engine ──
-    // usePillEngine must be declared before the auto-save useEffect so its return values
-    // (pillMasterScore, pillAtsScore, etc.) are in scope for the dependency array.
+    // Drives the in-editor pill/score display. Its numbers are computed by the
+    // shared CentralScoreManager, so they match the server, but they are
+    // display-only: they are never persisted by the auto-save below.
     // suppressAutoAnalysis=state.isAnalyzing prevents double-scoring during CV Surgeon scans.
     const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
     const {
-      scoreResult: pillScoreResult,
-      masterScore: pillMasterScore,
-      atsScore: pillAtsScore,
       issues: pillIssues,
       isAnalyzing: isPillAnalyzing,
     } = usePillEngine(
@@ -209,14 +207,19 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       state.isAnalyzing  // suppress during surgeon scan to avoid score thrashing
     );
 
-    // Auto-Save Effect: persists cvData AND freshly computed scores on every meaningful change.
-    // We batch content and score updates into a single debounced cycle to prevent thrashing.
+    // Auto-Save Effect: persists cvData on every meaningful content change.
+    //
+    // Scores are intentionally NOT part of this payload. The PUT endpoint
+    // rejects client-supplied score fields, because a forgeable ATS number is
+    // worse than a missing one. The persisted score is written exclusively by
+    // POST /api/ats/calculate-score (see refreshATSScore below and the
+    // analysis flow), which recomputes deterministically from the CV content.
     useEffect(() => {
       if (!state.cvData || !state.cvId) return;
 
-      // Build a composite key that captures both content and score changes
+      // The save key tracks CONTENT only — score changes no longer need a write.
       const currentCvDataStr = JSON.stringify(state.cvData);
-      const currentSaveKey = `${currentCvDataStr}|${pillMasterScore}|${pillAtsScore}`;
+      const currentSaveKey = currentCvDataStr;
 
       // Initialize on first load to prevent an immediate save
       if (!lastSavedCvDataStrRef.current) {
@@ -246,24 +249,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         const controller = new AbortController();
         autoSaveAbortRef.current = controller;
 
-        // Double-check if still analyzing; if so, we might be saving slightly stale scores, 
-        // but the next score change will trigger another (batched) save anyway.
         try {
-          const scoreForATS = isJourneyCV ? pillAtsScore : pillMasterScore;
-
           const response = await fetch(`/api/cvs/${state.cvId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
             body: JSON.stringify({
               cvData: state.cvData,
-              cv_score_master: pillMasterScore,
-              cv_score_ats: scoreForATS,
-              score_breakdown: {
-                structural: pillScoreResult?.cvScore?.completeness ?? 0,
-                industry:   pillScoreResult?.cvScore?.impactVerbs  ?? 0,
-                semantic:   pillScoreResult?.atsScore?.keywordMatch ?? 0,
-              },
               active_issues_json: pillIssues ?? [],
               updatedAt: lastSavedAtRef.current || undefined,
             })
@@ -278,7 +270,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             } else if (result?.updatedAt) {
               lastSavedAtRef.current = result.updatedAt;
             }
-            console.log('CV Auto-saved successfully (batched: master=%d, ats=%d)', pillMasterScore, scoreForATS);
+            console.log('CV Auto-saved successfully (content only)');
           } else if (response.status === 409) {
             // Conflict: server has a newer version. Discard local changes and reload.
             console.warn('CV Auto-save conflict — server has newer version');
@@ -295,7 +287,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           clearTimeout(autoSaveTimerRef.current);
         }
       };
-    }, [state.cvData, state.cvId, pillMasterScore, pillAtsScore, pillScoreResult, pillIssues, isJourneyCV, isPillAnalyzing]);
+    }, [state.cvData, state.cvId, pillIssues, isPillAnalyzing]);
 
     useEffect(() => {
       if (hasLoadedUserSectionTitlesRef.current) return;

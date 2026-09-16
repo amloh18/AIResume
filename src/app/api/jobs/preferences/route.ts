@@ -135,6 +135,22 @@ export async function POST(request: NextRequest) {
 
     const profile = await JobSearchProfileService.patchProfile(auth.userId, updates);
 
+    // [CANONICAL MIRROR] User.settings.cvTailoringMode is the store that
+    // document generation actually reads (see getUserCvTailoringMode). Legacy
+    // callers still write the mode through this endpoint, so mirror it forward
+    // or the toggle silently does nothing for them. Best-effort: never fail
+    // the request because of the mirror.
+    if (requestedMode !== undefined) {
+      try {
+        const { default: User } = await import('@/models/User');
+        await User.findByIdAndUpdate(auth.userId, {
+          'settings.cvTailoringMode': parseCvTailoringMode(requestedMode),
+        });
+      } catch (mirrorError) {
+        console.warn('Failed to mirror cvTailoringMode to User.settings:', mirrorError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Preferences saved',

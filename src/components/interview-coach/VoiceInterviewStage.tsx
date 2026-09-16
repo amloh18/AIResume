@@ -34,6 +34,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useVoiceRecorder } from '@/lib/hooks/useVoiceRecorder';
+import OrbStage from '@/components/issiofy/OrbStage';
 import type { VoiceStage } from '@/lib/interview/types';
 
 interface VoiceInterviewStageProps {
@@ -64,7 +65,7 @@ function WaveformBars({ active }: { active: boolean }) {
           style={{
             height: active ? undefined : '4px',
             backgroundColor: active
-              ? 'var(--accent-primary, #013f2e)'
+              ? 'var(--accent-primary)'
               : 'var(--text-tertiary, #9ca3af)',
             opacity: active ? 0.6 : 0.3,
             animationDelay: active ? `${i * 0.05}s` : undefined,
@@ -81,10 +82,13 @@ function MicButton({
   stage,
   onClick,
   disabled,
+  unavailable = false,
 }: {
   stage: VoiceStage;
   onClick: () => void;
   disabled?: boolean;
+  /** The environment cannot record audio at all — show a clear "off" affordance. */
+  unavailable?: boolean;
 }) {
   const isListening = stage === 'listening';
   const isPaused = stage === 'paused';
@@ -95,25 +99,29 @@ function MicButton({
       {/* Soft ring animation */}
       {isListening && (
         <>
-          <div className="absolute w-24 h-24 rounded-full border-2 border-[var(--accent-primary, #013f2e)] opacity-20 animate-ping" />
-          <div className="absolute w-20 h-20 rounded-full border border-[var(--accent-primary, #013f2e)] opacity-10 animate-pulse" />
+          <div className="absolute w-24 h-24 rounded-full border-2 border-[var(--accent-primary)] opacity-20 animate-ping" />
+          <div className="absolute w-20 h-20 rounded-full border border-[var(--accent-primary)] opacity-10 animate-pulse" />
         </>
       )}
 
       <button
         onClick={onClick}
-        disabled={disabled || isProcessing}
+        disabled={disabled || isProcessing || unavailable}
         className={`relative z-10 w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-200 shadow-lg ${
-          isListening
+          unavailable
+            ? 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'
+            : isListening
             ? 'bg-rose-600 hover:bg-rose-700 text-white scale-105'
             : isPaused
             ? 'bg-amber-500 hover:bg-amber-600 text-white'
             : isProcessing
             ? 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'
-            : 'bg-[var(--accent-primary, #013f2e)] hover:bg-[var(--accent-hover, #02523c)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white hover:scale-105'
+            : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white hover:scale-105'
         }`}
         aria-label={
-          isListening
+          unavailable
+            ? 'Microphone unavailable in this browser'
+            : isListening
             ? 'Stop recording'
             : isPaused
             ? 'Resume recording'
@@ -122,7 +130,9 @@ function MicButton({
             : 'Start recording answer'
         }
       >
-        {isProcessing ? (
+        {unavailable ? (
+          <MicOff className="w-6 h-6" />
+        ) : isProcessing ? (
           <Loader2 className="w-6 h-6 animate-spin" />
         ) : isListening ? (
           <Square className="w-5 h-5 fill-white" />
@@ -165,7 +175,7 @@ export default function VoiceInterviewStage({
   const [typedText, setTypedText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { state, actions, analyserNode, isListening, audioBlob } = useVoiceRecorder({
+  const { state, actions, analyserNode, isListening, audioBlob, micSupport } = useVoiceRecorder({
     language: 'en-US',
     maxDurationSec: 600,
     sessionId,
@@ -188,16 +198,33 @@ export default function VoiceInterviewStage({
             exit={{ opacity: 0, y: -8 }}
             className="flex flex-col items-center gap-5 py-6"
           >
-            <MicButton stage={stage} onClick={actions.startRecording} disabled={disabled} />
+            <MicButton
+              stage={stage}
+              onClick={actions.startRecording}
+              disabled={disabled}
+              unavailable={!micSupport.available}
+            />
 
             <div className="text-center space-y-1">
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Ready when you are</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                {micSupport.available ? 'Ready when you are' : 'Voice input is unavailable here'}
+              </p>
               <p className="text-xs text-[var(--text-secondary)] max-w-xs">
-                Speak naturally and answer the question in your own words.
+                {micSupport.available
+                  ? 'Speak naturally and answer the question in your own words.'
+                  : 'You can still answer by typing — nothing is lost.'}
               </p>
             </div>
 
-            {!browserSpeechSupported && (
+            {/* Explain *why* the mic is unavailable instead of failing on click. */}
+            {!micSupport.available && (
+              <p className="flex items-start gap-2 text-[10px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800/40 max-w-sm text-left">
+                <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />
+                <span>{micSupport.reason}</span>
+              </p>
+            )}
+
+            {micSupport.available && !browserSpeechSupported && (
               <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800/40">
                 Voice recognition will use BuildAIResume&apos;s local transcription.
               </p>
@@ -209,7 +236,11 @@ export default function VoiceInterviewStage({
                   setShowTypeInput(true);
                   onTypeFallback();
                 }}
-                className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors mt-2"
+                className={
+                  micSupport.available
+                    ? 'text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1.5 transition-colors mt-2'
+                    : 'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold transition-all shadow-sm mt-1'
+                }
               >
                 <Keyboard className="w-3.5 h-3.5" />
                 Type your answer instead
@@ -253,7 +284,9 @@ export default function VoiceInterviewStage({
               <TimerDisplay seconds={durationSec} className="text-xs text-[var(--text-secondary)]" />
             </div>
 
-            <WaveformBars active={true} />
+            {/* Recording visual. `listening` is a purely visual state — the orb
+                does not touch the microphone; useVoiceRecorder owns that. */}
+            <OrbStage orbState="listening" className="h-20" />
 
             {/* Live transcript */}
             {transcript && (
@@ -324,7 +357,7 @@ export default function VoiceInterviewStage({
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={actions.resumeRecording}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary, #013f2e)] hover:bg-[var(--accent-hover, #02523c)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold transition-all shadow-sm"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold transition-all shadow-sm"
               >
                 <Play className="w-3.5 h-3.5 fill-white" />
                 Resume
@@ -351,9 +384,7 @@ export default function VoiceInterviewStage({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 py-8"
           >
-            <div className="w-16 h-16 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-[var(--accent-primary, #013f2e)] dark:text-lime-400 animate-spin" />
-            </div>
+            <OrbStage orbState="thinking" className="h-20" />
             <div className="text-center space-y-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">
                 {stage === 'transcribing' ? 'Transcribing audio...' : 'Processing your answer...'}
@@ -395,7 +426,7 @@ export default function VoiceInterviewStage({
                 value={edited ? transcript : (finalTranscript || transcript)}
                 onChange={(e) => actions.setTranscript(e.target.value)}
                 rows={6}
-                className="w-full p-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] leading-relaxed resize-none focus:outline-none focus:border-[var(--accent-primary, #013f2e)] dark:focus:border-lime-500 focus:ring-1 focus:ring-[var(--accent-primary, #013f2e)] dark:focus:ring-lime-500 transition-all"
+                className="w-full p-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] leading-relaxed resize-none focus:outline-none focus:border-[var(--accent-primary)] dark:focus:border-lime-500 focus:ring-1 focus:ring-[var(--accent-primary)] dark:focus:ring-lime-500 transition-all"
                 placeholder="Your transcript will appear here..."
               />
               {provider && (
@@ -434,7 +465,7 @@ export default function VoiceInterviewStage({
                   actions.submitAnswer();
                 }}
                 disabled={!transcript.trim() && !finalTranscript.trim()}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[var(--accent-primary, #013f2e)] hover:bg-[var(--accent-hover, #02523c)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
               >
                 <Send className="w-3.5 h-3.5" />
                 Submit Answer
@@ -455,13 +486,18 @@ export default function VoiceInterviewStage({
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 py-8"
           >
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 dark:bg-lime-500/10 flex items-center justify-center">
-              {stage === 'saved' ? (
+            {stage === 'saved' ? (
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 dark:bg-lime-500/10 flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-lime-400" />
-              ) : (
-                <Loader2 className="w-6 h-6 text-[var(--accent-primary, #013f2e)] dark:text-lime-400 animate-spin" />
-              )}
-            </div>
+              </div>
+            ) : (
+              /* Deliberately not the orb: submitting and evaluating are network
+                 and AI operations, not voice input. The orb stays reserved for
+                 the voice stages, so this matches the 16x16 box above. */
+              <div className="w-16 h-16 rounded-2xl bg-[var(--bg-tertiary)] flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-600 dark:text-lime-400" />
+              </div>
+            )}
             <div className="text-center space-y-1">
               <p className="text-sm font-semibold text-[var(--text-primary)]">
                 {stage === 'submitting'
@@ -528,7 +564,7 @@ export default function VoiceInterviewStage({
                     setShowTypeInput(true);
                     onTypeFallback();
                   }}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary, #013f2e)] hover:bg-[var(--accent-hover, #02523c)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold transition-all shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold transition-all shadow-sm"
                 >
                   <Keyboard className="w-3.5 h-3.5" />
                   Type Your Answer
@@ -563,14 +599,14 @@ export default function VoiceInterviewStage({
           onChange={(e) => setTypedText(e.target.value)}
           rows={6}
           placeholder="Type your answer here..."
-          className="w-full p-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] leading-relaxed resize-none focus:outline-none focus:border-[var(--accent-primary, #013f2e)] dark:focus:border-lime-500 focus:ring-1 focus:ring-[var(--accent-primary, #013f2e)] dark:focus:ring-lime-500 transition-all"
+          className="w-full p-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-tertiary)] leading-relaxed resize-none focus:outline-none focus:border-[var(--accent-primary)] dark:focus:border-lime-500 focus:ring-1 focus:ring-[var(--accent-primary)] dark:focus:ring-lime-500 transition-all"
         />
         <button
           onClick={() => {
             onSubmit(typedText, 0, 'manual');
           }}
           disabled={!typedText.trim()}
-          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[var(--accent-primary, #013f2e)] hover:bg-[var(--accent-hover, #02523c)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] dark:bg-lime-500 dark:hover:bg-lime-600 dark:text-black text-white text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-3.5 h-3.5" />
           Submit Answer

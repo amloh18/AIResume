@@ -118,14 +118,19 @@ export default function LinkedInEnhancementFlow(_props: { onBackToDashboard?: ()
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
     const [appliedSectionsCount, setAppliedSectionsCount] = useState(0);
 
-    // Fetch user profile image from settings
+    // Fetch the user's profile image for the LinkedIn preview header.
     useEffect(() => {
         async function fetchUserProfile() {
             try {
-                const response = await fetch('/api/user/profile');
+                // /api/user/current returns { success, user: { …, avatar } }.
+                // This previously called /api/user/profile, which does not exist
+                // on disk, so `response.ok` was always false and the avatar never
+                // loaded. It also read `user.image`/`user.picture` — neither field
+                // exists on any user payload; the field is `avatar`.
+                const response = await fetch('/api/user/current');
                 if (response.ok) {
                     const data = await response.json();
-                    setUserProfileImage(data.user?.image || data.user?.picture || null);
+                    setUserProfileImage(data.user?.avatar || null);
                 }
             } catch (error) {
                 console.error('Failed to fetch user profile:', error);

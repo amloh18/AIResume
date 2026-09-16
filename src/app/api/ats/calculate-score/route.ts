@@ -6,6 +6,7 @@ import { KeywordGapAnalysisService } from '@/lib/services/keyword-gap-analysis-s
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ApplicationJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
 import { CVRepository } from '@/lib/repositories/cv-repository';
+import { getTemplateAtsProfile } from '@/lib/templates/template-utils';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import crypto from 'crypto';
@@ -238,10 +239,33 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 2: Calculate ATS score using CentralScoreManager (same formula as FloatingPulsePill)
+    //
+    // The template is part of the input, not just decoration: a multi-column or
+    // sidebar layout genuinely parses worse, so it must reduce the score rather
+    // than be ignored. We resolve the CV's template profile and hand it to the
+    // scorer, which applies the layout penalty and caps the result at the
+    // template's ATS ceiling.
+    const templateProfile = getTemplateAtsProfile(cv.templateId?.toString());
+    const templateContext = {
+      layoutType: templateProfile.layoutType,
+      safety: templateProfile.safety,
+      // A cap explicitly persisted on the CV (e.g. pinned at generation time)
+      // wins over the one derived from the template id.
+      cap: typeof cv.metadata?.atsScoreCap === 'number'
+        ? cv.metadata.atsScoreCap
+        : templateProfile.cap,
+    };
+
+    console.log('📊 ATS Calculate Score API - Template context:', {
+      templateId: cv.templateId?.toString(),
+      ...templateContext,
+    });
+
     const scoreResult = CentralScoreManager.getInstance().getScoreSync(
       cvData,
       keywordAnalysis,
-      100 // atsScoreCap
+      templateContext.cap,
+      templateContext
     );
 
     // Use ATS score if available (journey CV), otherwise fall back to CV score.

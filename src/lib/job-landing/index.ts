@@ -29,13 +29,14 @@ export { buildJobTargetProfile } from './jobTargetProfileService';
 export { buildEvidenceProfile } from './evidenceProfileService';
 export { performGapAnalysis } from './gapAnalysisService';
 export { buildKeywordStrategy, getKeywordsForTier, getAllKeywords } from './keywordStrategyService';
-export { evaluateCVReuse } from './cvReuseEngine';
+export { evaluateCvRefinement, evaluateCVReuse, textEvidencesKeyword } from './cvReuseEngine';
 export type {
   JobTargetProfile,
   EvidenceProfile,
   GapAnalysis,
   KeywordStrategy,
   CVReuseEvaluation,
+  CVRefinementSeed,
   GenerationContext,
   EvidenceItem,
   GapItem,

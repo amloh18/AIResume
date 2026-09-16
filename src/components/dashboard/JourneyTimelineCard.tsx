@@ -1458,21 +1458,28 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         setAtsScore(cachedCvScore);
         updateAtsScore(cachedCvScore);
 
-        // Also update journey with cached score
-        const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            atsScore: cachedScore,
-            metadata: {
-              updatedAt: new Date(),
-              lastAccessedAt: new Date()
-            }
-          })
-        });
+        // Sync the CV's persisted score onto the journey.
+        //
+        // This previously PUT `{ atsScore: cachedScore }` to /api/application-journey/[id]
+        // — note `cachedScore` was an undefined identifier (the real variable is
+        // `cachedCvScore`), so JSON.stringify dropped the key and the sync silently
+        // never happened. It also targeted an endpoint where atsScore is no longer
+        // client-writable. The dedicated refresh-ats endpoint re-reads the score
+        // from the CV server-side instead of trusting the request body.
+        try {
+          const journeyResponse = await fetch(`/api/application-journey/${journey.id}/refresh-ats`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
 
-        if (journeyResponse.ok) {
-          console.log('✅ JourneyTimelineCard - Cached score synced to journey');
+          if (journeyResponse.ok) {
+            console.log('✅ JourneyTimelineCard - Cached score synced to journey');
+          } else {
+            console.warn('⚠️ JourneyTimelineCard - Cached score sync failed:', journeyResponse.status);
+          }
+        } catch (syncError) {
+          // Non-fatal: the score is already displayed from the CV.
+          console.warn('⚠️ JourneyTimelineCard - Cached score sync threw:', syncError);
         }
 
         setAtsScoreLoading(false);
@@ -2981,15 +2988,27 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             const newCoverLetterId = createResult.data?.id || createResult.id;
 
                             if (newCoverLetterId) {
-                              // Update journey with cover letter ID
-                              await fetch(`/api/application-journey/${journey.id}`, {
-                                method: 'PATCH',
+                              // PUT, not PATCH. `/api/application-journey/[id]`
+                              // exports GET and PUT only, so the previous PATCH
+                              // returned 405: the cover letter was created but
+                              // never linked to the journey, while the success
+                              // toast below still fired. The response is now
+                              // checked so a link failure surfaces as an error
+                              // instead of a false success.
+                              const linkRes = await fetch(`/api/application-journey/${journey.id}`, {
+                                method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   userId: session.user.id,
                                   coverLetterId: newCoverLetterId
                                 })
                               });
+
+                              if (!linkRes.ok) {
+                                throw new Error(
+                                  `Failed to link cover letter to journey (HTTP ${linkRes.status})`
+                                );
+                              }
 
                               toast.success('Cover letter generated successfully!');
                               // Trigger refresh of journey data

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronRight,
   BookOpen,
+  Loader2,
 } from 'lucide-react';
 import ReadinessChart from './ReadinessChart';
 import ModuleList from './ModuleList';
@@ -23,12 +24,23 @@ import ModuleList from './ModuleList';
 interface InterviewHubProps {
   session: any;
   questionsByModule: any;
+  /**
+   * True while the AI is still generating the plan. The hub paints its whole
+   * layout up front and fills only the dynamic regions with skeletons, so the
+   * page renders the UI first and streams the content in rather than blocking
+   * behind a full-screen loader for the length of the generation.
+   */
+  isPreparing?: boolean;
 }
 
-export default function InterviewHub({ session, questionsByModule }: InterviewHubProps) {
+export default function InterviewHub({
+  session,
+  questionsByModule,
+  isPreparing = false,
+}: InterviewHubProps) {
   const router = useRouter();
 
-  const targetRole = session?.targetRole || 'Interview Prep';
+  const targetRole = session?.targetRole || 'Interview Preparation';
   const jobId = session?.jobId?._id || session?.jobId || session?._id || '';
   const company = session?.jobId?.company || '';
   const readinessScore = session?.readinessScore || 0;
@@ -91,7 +103,7 @@ export default function InterviewHub({ session, questionsByModule }: InterviewHu
                 )}
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/40">
                   <Sparkles className="w-3 h-3 text-emerald-600 dark:text-lime-400" />
-                  {modules.length} Modules Active
+                  {isPreparing ? 'Preparing your plan…' : `${modules.length} Modules Active`}
                 </span>
               </div>
               <p className="text-xs md:text-sm text-[var(--text-secondary)] mt-1">
@@ -142,14 +154,29 @@ export default function InterviewHub({ session, questionsByModule }: InterviewHu
                 </div>
 
                 <div className="my-2">
-                  <ReadinessChart score={readinessScore} />
+                  {isPreparing ? (
+                    <div
+                      className="rounded-full border-[10px] border-[var(--bg-tertiary)] animate-pulse"
+                      style={{ width: 170, height: 170 }}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <ReadinessChart score={readinessScore} />
+                  )}
                 </div>
 
-                <p className="text-xs text-[var(--text-secondary)] mt-3 mb-4 leading-relaxed max-w-xs">
-                  {readinessScore >= 80
-                    ? 'Your responses demonstrate strong role readiness. Keep fine-tuning edge questions.'
-                    : 'Practice 2–3 more questions in high-impact modules to boost your readiness score.'}
-                </p>
+                {isPreparing ? (
+                  <div className="w-full max-w-xs space-y-2 mt-3 mb-4" aria-hidden="true">
+                    <div className="h-3 rounded-full bg-[var(--bg-tertiary)] animate-pulse" />
+                    <div className="h-3 w-4/5 mx-auto rounded-full bg-[var(--bg-tertiary)] animate-pulse" />
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--text-secondary)] mt-3 mb-4 leading-relaxed max-w-xs">
+                    {readinessScore >= 80
+                      ? 'Your responses demonstrate strong role readiness. Keep fine-tuning edge questions.'
+                      : 'Practice 2–3 more questions in high-impact modules to boost your readiness score.'}
+                  </p>
+                )}
 
                 {nextQuestion && (
                   <button
@@ -228,6 +255,24 @@ export default function InterviewHub({ session, questionsByModule }: InterviewHu
             {/* Right Column: Hero Banner & Module Learning Path (8 Cols) */}
             <div className="lg:col-span-8 space-y-6">
 
+              {/* Preparing state — deliberately a slim status row, not a hero.
+                  The orb is reserved for voice input, so plan generation uses a
+                  plain spinner and the skeleton modules below carry the
+                  "content is coming" signal. The page chrome is already real at
+                  this point, so nothing here needs to shout. */}
+              {isPreparing && (
+                <div className="flex items-start gap-3 rounded-2xl border border-emerald-600/30 bg-[var(--bg-secondary)] px-4 py-3 dark:border-lime-500/30">
+                  <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-emerald-600 dark:text-lime-400" />
+                  <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      Building your interview plan.
+                    </span>{' '}
+                    Analysing your profile against this role and writing tailored questions —
+                    usually under a minute. You can leave this tab open.
+                  </p>
+                </div>
+              )}
+
               {/* Continue Where You Left Off Hero Banner */}
               {nextQuestion && (
                 <div className="bg-[var(--bg-secondary)] border border-emerald-600/30 dark:border-lime-500/30 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
@@ -291,11 +336,22 @@ export default function InterviewHub({ session, questionsByModule }: InterviewHu
               </div>
 
               {/* Module Accordion List */}
-              <ModuleList
-                modules={modules}
-                questionsByModule={questionsByModule}
-                jobId={jobId}
-              />
+              {isPreparing ? (
+                <div className="space-y-3" aria-hidden="true">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--border-primary)] animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <ModuleList
+                  modules={modules}
+                  questionsByModule={questionsByModule}
+                  jobId={jobId}
+                />
+              )}
 
             </div>
 

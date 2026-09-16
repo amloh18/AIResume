@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
+import { getCvScoreForDisplay, calculateCVScore } from '@/lib/utils/cv-scoring';
 import JobsListView from '@/components/dashboard/jobs/JobsListView';
 import { CVJourney } from '@/types/cv';
 import {
@@ -465,10 +465,10 @@ function KpiStrip() {
       trendUp: stats.interviewsThisWeek > 0,
     },
     {
-      label: 'Avg Match Score',
+      label: 'Avg ATS Score',
       value: stats.avgMatch > 0 ? `${stats.avgMatch}%` : '—',
       icon: <Target size={16} strokeWidth={1.75} />,
-      trend: stats.strongMatches > 0 ? `${stats.strongMatches} jobs ≥ 70%` : 'No matches scored',
+      trend: stats.strongMatches > 0 ? `${stats.strongMatches} documents ≥ 70%` : 'No documents scored',
       trendUp: stats.strongMatches > 0,
     },
     usageMetric,
@@ -850,7 +850,12 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
   const linkedCv = useMemo(() => findLinkedCvForJob(job, cvs), [job, cvs]);
   const linkedCvId = linkedCv ? cvId(linkedCv) : String(job?.linkedCvId || job?.linkedCv?._id || job?.cvId || job?.journey?.cvId || '');
   const hasLinkedCv = !!linkedCv || !!linkedCvId;
-  const atsScore = Math.round(job?.atsScore || job?.matchScore || cvAtsScore(linkedCv) || (linkedCv?.atsScore) || 0);
+  // ATS score must come from an ATS measurement. `job.matchScore` is a job-fit
+  // metric and must never be surfaced under an ATS/match label here.
+  const linkedCvScore = cvAtsScore(linkedCv);
+  const atsScore = typeof job?.atsScore === 'number' ? job.atsScore
+    : linkedCvScore > 0 ? linkedCvScore
+      : 0;
 
   const dynamicStep = useMemo(() => {
     if (!job) return null;
@@ -900,9 +905,23 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
     }
 
     // 3. CV is linked: check ATS score
+    // 3. CV is linked but nothing has been measured yet — say so honestly.
+    if (atsScore <= 0) {
+      return {
+        statusText: 'CV linked · ATS score not measured yet',
+        statusColor: 'text-[var(--text-secondary)]',
+        StatusIcon: Target,
+        buttonText: 'Measure ATS Score',
+        ButtonIcon: Target,
+        buttonAction: () => {
+          router.push(`/editor?mode=edit&cvId=${linkedCvId}&jobId=${job.id || job._id}`);
+        },
+      };
+    }
+
     if (atsScore > 0 && atsScore < 70) {
       return {
-        statusText: `CV linked · Match score: ${atsScore}% (Needs boost)`,
+        statusText: `CV linked · ATS score: ${atsScore}% (Needs boost)`,
         statusColor: 'text-amber-700 dark:text-amber-400',
         StatusIcon: Target,
         buttonText: 'Improve ATS Score',
@@ -915,7 +934,7 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
 
     if (atsScore >= 70) {
       return {
-        statusText: `High match (${atsScore}%) · Ready to apply`,
+        statusText: `Strong ATS fit (${atsScore}%) · Ready to apply`,
         statusColor: 'text-emerald-700 dark:text-emerald-400',
         StatusIcon: CheckCircle2,
         buttonText: 'Review & Apply',
@@ -1151,9 +1170,24 @@ function ProfileAnalyticsPanel() {
     );
   }, [cvs, selectedId]);
 
-  const score = masterProfile ? cvAtsScore(masterProfile) || 78 : 0;
+  // Real, server-persisted score only. Never invent a plausible-looking number —
+  // an unmeasured profile must read as "not measured", not as a fake 78.
+  const score = masterProfile ? cvAtsScore(masterProfile) : 0;
   const analysis = masterProfile?.metadata?.surgeonAnalysis || masterProfile?.metadata?.aiAnalysis;
   const report = analysis?.scoreReport;
+
+  // Deterministic, locally-computed breakdown straight from the CV content.
+  // This is a real measurement from the same engine the server uses, so it is
+  // safe to display even before anything has been persisted.
+  const cvBreakdown = useMemo(() => {
+    const cvData = masterProfile?.cvData;
+    if (!cvData) return null;
+    try {
+      return calculateCVScore(cvData);
+    } catch {
+      return null;
+    }
+  }, [masterProfile]);
 
   const candidateRole = masterProfile?.cvData?.basics?.label || 
                         masterProfile?.cvData?.personalInfo?.jobTitle || 
@@ -1162,37 +1196,51 @@ function ProfileAnalyticsPanel() {
                         'Career Profile';
 
   const metrics = useMemo(() => {
+    // Every branch below returns a REAL measurement. There is deliberately no
+    // fallback that synthesises bars from the headline score or from hardcoded
+    // constants — a fabricated breakdown is indistinguishable from a measured
+    // one once it is on screen, and that is exactly what we must not ship.
+    const norm = (val: number, max: number) => Math.round(Math.min(100, Math.max(0, (val / max) * 100)));
+
+    // Priority 1: the LLM review report, when it exists.
     if (report) {
-      const norm = (val: number, max: number) => Math.round(Math.min(100, Math.max(0, (val / max) * 100)));
       return [
-        { label: 'Formatting', value: norm(report.formatting ?? score, 15) },
-        { label: 'Keywords', value: norm(report.quantification ?? report.keywords ?? 0, 20) },
-        { label: 'Readability', value: norm(report.readability ?? score, 20) },
-        { label: 'Impact Verbs', value: norm(report.impactVerbs ?? 0, 20) },
-        { label: 'Skills Density', value: norm(report.completeness ?? 0, 25) },
+        { label: 'Formatting', value: norm(report.formatting ?? 0, 20), source: 'review' as const },
+        { label: 'Quantification', value: norm(report.quantification ?? report.keywords ?? 0, 20), source: 'review' as const },
+        { label: 'Readability', value: norm(report.readability ?? 0, 20), source: 'review' as const },
+        { label: 'Impact Verbs', value: norm(report.impactVerbs ?? 0, 20), source: 'review' as const },
+        { label: 'Completeness', value: norm(report.completeness ?? 0, 25), source: 'review' as const },
       ];
     }
-    if (score > 0) {
+
+    // Priority 2: the deterministic engine's own component scores.
+    if (cvBreakdown) {
       return [
-        { label: 'Formatting', value: Math.min(100, score + 4) },
-        { label: 'Keywords', value: Math.max(30, score - 4) },
-        { label: 'Readability', value: Math.min(100, score + 9) },
-        { label: 'Impact Verbs', value: Math.max(25, score - 13) },
-        { label: 'Skills Density', value: Math.min(100, score + 1) },
+        { label: 'Formatting', value: norm(cvBreakdown.formatting, 20), source: 'measured' as const },
+        { label: 'Quantification', value: norm(cvBreakdown.quantification, 20), source: 'measured' as const },
+        { label: 'Readability', value: norm(cvBreakdown.readability, 20), source: 'measured' as const },
+        { label: 'Impact Verbs', value: norm(cvBreakdown.impactVerbs, 20), source: 'measured' as const },
+        { label: 'Completeness', value: norm(cvBreakdown.completeness, 25), source: 'measured' as const },
       ];
     }
-    return [
-      { label: 'Formatting', value: 75 },
-      { label: 'Keywords', value: 68 },
-      { label: 'Readability', value: 84 },
-      { label: 'Impact Verbs', value: 65 },
-      { label: 'Skills Density', value: 80 },
-    ];
-  }, [report, score]);
 
-  const radarData = metrics.map((m) => ({ subject: m.label, A: m.value, fullMark: 100 }));
+    // Nothing real to show — render an honest empty state instead of fake bars.
+    return null;
+  }, [report, cvBreakdown]);
 
-  const scoreTone = score >= 85 ? 'High-Impact Profile' : score >= 70 ? 'Competitive Profile' : 'Optimization Recommended';
+  const radarData = (metrics ?? []).map((m) => ({ subject: m.label, A: m.value, fullMark: 100 }));
+
+  const scoreTone = score <= 0
+    ? 'Not measured yet'
+    : score >= 85 ? 'High-Impact Profile' : score >= 70 ? 'Competitive Profile' : 'Optimization Recommended';
+
+  const scoreSubLabel = score <= 0
+    ? 'Run an analysis to measure'
+    : score >= 80 ? 'Application Ready' : 'Optimization Suggested';
+
+  // The panel must not claim verification it has not performed.
+  const hasMeasuredScore = score > 0;
+  const breakdownIsReview = !!report;
 
   const metricIcons = [<Layers key="f" size={13} />, <Target key="k" size={13} />, <FileText key="r" size={13} />, <Zap key="i" size={13} />, <Award key="s" size={13} />];
 
@@ -1246,9 +1294,16 @@ function ProfileAnalyticsPanel() {
                 <h4 className="text-xs font-extrabold text-[var(--text-primary)] truncate">{candidateRole}</h4>
                 <p className="text-[10px] text-[var(--text-secondary)] truncate">Primary career asset</p>
               </div>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
-                ATS Verified
-              </span>
+              {/* Only claim verification when a real score has actually been measured. */}
+              {hasMeasuredScore ? (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+                  {breakdownIsReview ? 'AI Reviewed' : 'ATS Measured'}
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-0.5 rounded-md border border-[var(--border-primary)]">
+                  Not measured
+                </span>
+              )}
             </div>
 
             {/* Score & Radar Visualization */}
@@ -1259,40 +1314,66 @@ function ProfileAnalyticsPanel() {
                 </div>
                 <div className="mt-2 text-xs font-bold text-[var(--text-primary)]">{scoreTone}</div>
                 <div className="text-[11px] text-[var(--text-secondary)]">
-                  {score >= 80 ? 'Application Ready' : 'Optimization Suggested'}
+                  {scoreSubLabel}
                 </div>
               </div>
 
               <div className="flex-1 min-w-0 h-[150px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-                    <PolarGrid stroke="var(--border-primary)" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-tertiary)', fontSize: 9, fontWeight: 500 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar name="Profile Health" dataKey="A" stroke="var(--accent-primary)" fill="var(--accent-primary)" fillOpacity={0.14} strokeWidth={1.5} />
-                  </RadarChart>
-                </ResponsiveContainer>
+                {metrics ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                      <PolarGrid stroke="var(--border-primary)" />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--text-tertiary)', fontSize: 9, fontWeight: 500 }} />
+                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                      <Radar name="Profile Health" dataKey="A" stroke="var(--accent-primary)" fill="var(--accent-primary)" fillOpacity={0.14} strokeWidth={1.5} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-center px-4">
+                    <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
+                      No breakdown available yet. Run an analysis to measure this profile.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Breakdown Progress Bars */}
-            <div className="space-y-2.5 pt-1">
-              {metrics.map((m, i) => (
-                <div key={m.label} className="flex items-center gap-2.5">
-                  <span className="w-4 text-[var(--text-tertiary)] shrink-0">{metricIcons[i]}</span>
-                  <span className="w-20 text-xs text-[var(--text-secondary)] shrink-0">{m.label}</span>
-                  <div className="flex-1 h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--accent-primary)] rounded-full"
-                      style={{ width: `${Math.min(100, m.value)}%` }}
-                    />
-                  </div>
-                  <span className="w-9 text-right text-xs font-medium text-[var(--text-primary)] tabular-nums shrink-0">
-                    {m.value}%
-                  </span>
+            {metrics ? (
+              <div className="space-y-2.5 pt-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                  {breakdownIsReview ? 'AI Review Breakdown' : 'Measured Breakdown'}
                 </div>
-              ))}
-            </div>
+                {metrics.map((m, i) => (
+                  <div key={m.label} className="flex items-center gap-2.5">
+                    <span className="w-4 text-[var(--text-tertiary)] shrink-0">{metricIcons[i]}</span>
+                    <span className="w-20 text-xs text-[var(--text-secondary)] shrink-0">{m.label}</span>
+                    <div className="flex-1 h-1 bg-[var(--bg-tertiary)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--accent-primary)] rounded-full"
+                        style={{ width: `${Math.min(100, m.value)}%` }}
+                      />
+                    </div>
+                    <span className="w-9 text-right text-xs font-medium text-[var(--text-primary)] tabular-nums shrink-0">
+                      {m.value}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="pt-1">
+                <button
+                  onClick={() => {
+                    const id = cvId(masterProfile);
+                    if (id) router.push(`/editor?mode=edit-master&cvId=${id}&improve=true`);
+                    else router.push('/editor?doc=master-cv&mode=improve');
+                  }}
+                  className="w-full py-2 px-3 rounded-xl border border-dashed border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)] text-xs font-bold text-[var(--text-secondary)] transition-colors"
+                >
+                  Run an analysis to get your breakdown
+                </button>
+              </div>
+            )}
 
             {/* CTA to open Profile Analytics Sidebar */}
             <div className="pt-3 border-t border-[var(--border-primary)] text-center flex items-center justify-between gap-2">

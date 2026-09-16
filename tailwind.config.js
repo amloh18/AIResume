@@ -111,6 +111,16 @@ module.exports = {
       backdropBlur: {
         glass: "12px",
       },
+      // Tailwind v4 renamed/extended the shadow scale, and this codebase
+      // already references `shadow-2xs` (50x) and `shadow-xs` (80x). Tailwind
+      // v3 only ships sm | DEFAULT | md | lg | xl | inner | none, so without
+      // these two tokens every one of those classes compiled to nothing and
+      // silently dropped the intended elevation. Values match Tailwind v4's
+      // `--shadow-2xs` / `--shadow-xs` defaults.
+      boxShadow: {
+        "2xs": "0 1px rgb(0 0 0 / 0.05)",
+        xs: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      },
     },
   },
   plugins: [

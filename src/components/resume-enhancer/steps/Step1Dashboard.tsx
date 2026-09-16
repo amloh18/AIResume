@@ -28,6 +28,15 @@ let cachedExistingCVs: ExistingCV[] | null = null;
 let cachedExistingCoverLetters: any[] | null = null;
 let cachedDraftCV: any | null = null;
 let lastFetchTime = 0;
+
+/**
+ * Instant-paint cache for the documents layout. The authoritative value lives
+ * on UserSettings.preferences.dashboard.layout (see /api/user/ui-preferences);
+ * this key only avoids a layout flash on first render.
+ *
+ * Key name kept as-is so existing users' locally-remembered choice still applies.
+ */
+const VIEW_LAYOUT_STORAGE_KEY = 'editor_view_layout';
 let cacheUserId: string | null = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -512,16 +521,78 @@ export default function Step1Dashboard({
   const [viewLayout, setViewLayout] = useState<'grid' | 'list' | 'compact'>('grid');
   const [cvJourneysMap, setCvJourneysMap] = useState<Map<string, any>>(new Map());
 
+  // The documents layout is a per-user preference, persisted server-side on
+  // UserSettings.preferences.dashboard.layout.
+  //
+  // It used to live only in localStorage, which is device- and browser-scoped —
+  // so picking "List" on a laptop had no effect on the same account elsewhere.
+  // localStorage is still used, but purely as an instant-paint cache: it renders
+  // the remembered choice before the network round-trip resolves, then the
+  // server value reconciles over it.
+  const layoutSyncedRef = React.useRef(false); // the initial server read has settled
+  const layoutTouchedRef = React.useRef(false); // the user has picked a layout since mount
+
   useEffect(() => {
-    const saved = localStorage.getItem('editor_view_layout');
-    if (saved === 'grid' || saved === 'list' || saved === 'compact') {
-      setViewLayout(saved);
+    let cancelled = false;
+
+    // 1. Instant paint from the local cache.
+    const cached = localStorage.getItem(VIEW_LAYOUT_STORAGE_KEY);
+    if (cached === 'grid' || cached === 'list' || cached === 'compact') {
+      setViewLayout(cached);
     }
+
+    // 2. Reconcile with the authoritative server value.
+    (async () => {
+      try {
+        const res = await fetch('/api/user/ui-preferences', { cache: 'no-store' });
+        if (!res.ok) return; // Unauthenticated / offline — keep the cached value.
+        const json = await res.json().catch(() => null);
+        const layout = json?.data?.layout;
+        if (cancelled) return;
+        layoutSyncedRef.current = true;
+        // A click that landed while this request was in flight wins. The user's
+        // intent is more recent than the value we asked for, so applying the
+        // server value here would visibly snap the grid back under their cursor.
+        if (layoutTouchedRef.current) return;
+        if (layout === 'grid' || layout === 'list' || layout === 'compact') {
+          setViewLayout(layout);
+          localStorage.setItem(VIEW_LAYOUT_STORAGE_KEY, layout);
+        }
+      } catch {
+        // Network failure — the cached value is already applied.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('editor_view_layout', viewLayout);
+    localStorage.setItem(VIEW_LAYOUT_STORAGE_KEY, viewLayout);
+
+    // Skip the pre-hydration echo of the default, which would clobber the
+    // user's saved choice on every mount. A real click is never skipped, even
+    // if it lands before the initial read resolves.
+    if (!layoutSyncedRef.current && !layoutTouchedRef.current) return;
+
+    fetch('/api/user/ui-preferences', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ layout: viewLayout }),
+    }).catch(() => {
+      // Best-effort. The local cache already reflects the choice.
+    });
   }, [viewLayout]);
+
+  const handleViewLayoutChange = React.useCallback(
+    (next: 'grid' | 'list' | 'compact') => {
+      layoutTouchedRef.current = true;
+      setViewLayout(next);
+    },
+    []
+  );
+
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Guest';
@@ -1518,7 +1589,12 @@ export default function Step1Dashboard({
 
         {/* Your Documents — merged into the page flow (was a slide-up panel) */}
         {!isGuestMode && (
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-12">
+          // Width must mirror the hero above (line ~1432): when embedded as a
+          // dashboard tab the hero drops `max-w-7xl mx-auto px-4 sm:px-8`, but
+          // this block kept it. That pinned the document grid to a centred
+          // 1280px column while the KPI strip above spanned the full container,
+          // leaving the large empty gutters either side of the thumbnails.
+          <div className={`w-full ${embedded ? '' : 'max-w-7xl mx-auto px-4 sm:px-8'} pb-12`}>
                 <div className="step-one-documents-header flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5 pb-5 border-b border-[color:var(--border-primary)] pt-0">
                   <div>
                     <h3 className="mt-1 text-xs sm:text-sm text-[color:var(--text-secondary)] flex items-center gap-2">
@@ -1554,16 +1630,31 @@ export default function Step1Dashboard({
 
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {embedded && (
+                      // Icon-only below `sm`. The header stacks to a column on
+                      // mobile and the control row wraps, so the full label
+                      // competes with the filter select and the layout switcher
+                      // for width. `px-3` (12px) + a 16px icon makes the button
+                      // exactly 40px wide — i.e. square h-10 w-10 — at that size.
+                      // `aria-label` is required: `hidden` removes the span from
+                      // the accessibility tree, so the button would otherwise be
+                      // announced with no name on mobile.
                       <Button
                         variant="primary"
                         size="md"
                         onClick={() => setIsCreateModalOpen(true)}
                         leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
+                        className="px-3 sm:px-4 gap-0 sm:gap-2"
+                        aria-label="Create"
                       >
-                        Create
+                        <span className="hidden sm:inline">Create</span>
                       </Button>
                     )}
-                    <label className="relative flex items-center h-10 min-w-[142px] rounded-full border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-[#141810] text-[color:var(--text-primary)] focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
+                    {/* Shape + surface mirror the Button component's `secondary`
+                        variant and `size="md"` (rounded-xl, h-10, gray-200 border,
+                        white/#141810 fill, shadow-2xs) so these read as siblings of
+                        the Create button instead of a separate pill language.
+                        Radius was `rounded-full`; main buttons use `rounded-xl`. */}
+                    <label className="relative flex items-center h-10 min-w-[142px] rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-[color:var(--text-primary)] shadow-2xs focus-within:ring-2 focus-within:ring-[var(--accent-primary)]/50 transition-all">
                       <SlidersHorizontal className="absolute left-3.5 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
                       <span className="sr-only">Filter documents</span>
                       <select
@@ -1584,11 +1675,14 @@ export default function Step1Dashboard({
                       <ChevronDown className="absolute right-3 w-3.5 h-3.5 text-[color:var(--text-secondary)] pointer-events-none" />
                     </label>
 
-                    {/* Grid / List Layout Switcher */}
-                    <div className="flex items-center bg-gray-100 dark:bg-[#141810] p-1 rounded-full border border-gray-200 dark:border-white/5 w-fit h-10">
+                    {/* Grid / List Layout Switcher — same surface + radius tokens as
+                        the main buttons. Container is rounded-xl (12px) with p-1 (4px),
+                        so the segments use rounded-lg (8px): inner = outer − padding,
+                        which keeps the nested corners concentric. */}
+                    <div className="flex items-center bg-white dark:bg-[#141810] p-1 rounded-xl border border-gray-200 dark:border-white/10 shadow-2xs w-fit h-10">
                       <button
-                        onClick={() => setViewLayout('grid')}
-                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
+                        onClick={() => handleViewLayoutChange('grid')}
+                        className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'grid'
                             ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
@@ -1598,8 +1692,8 @@ export default function Step1Dashboard({
                         Grid
                       </button>
                       <button
-                        onClick={() => setViewLayout('compact')}
-                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
+                        onClick={() => handleViewLayoutChange('compact')}
+                        className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'compact'
                             ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
@@ -1609,8 +1703,8 @@ export default function Step1Dashboard({
                         Compact
                       </button>
                       <button
-                        onClick={() => setViewLayout('list')}
-                        className={`flex items-center gap-1 px-4 h-full rounded-full text-xs font-bold transition-all ${
+                        onClick={() => handleViewLayoutChange('list')}
+                        className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'list'
                             ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
@@ -1624,7 +1718,7 @@ export default function Step1Dashboard({
                 </div>
 
               {isLoadingCVs ? (
-                <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1"}>
+                <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 px-1"}>
                   {[1, 2, 3, 4, 5, 6].map(i => (
                     <div key={i} className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/80 dark:border-white/5 bg-gray-100 dark:bg-white/[0.03]">
                       <div className="w-full aspect-[1/1.414] animate-pulse relative">
@@ -1651,7 +1745,7 @@ export default function Step1Dashboard({
                 </div>
               ) : (filteredCVs.length > 0 || (draftCV && (filterType === 'all' || filterType === 'cv')) || orphanedCoverLetters.length > 0) ? (
                 viewLayout !== 'list' ? (
-                  <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 px-1"}>
+                  <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 px-1"}>
                   
                   {/* Render Draft CV if it exists */}
                   {draftCV && (filterType === 'all' || filterType === 'cv') && (

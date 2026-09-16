@@ -76,12 +76,17 @@ export async function buildGenerationContext(params: {
     mode,
   });
 
-  // Step 5: Check CV Reuse
+  // Step 5: Evaluate refinement seed from prior CVs
+  //
+  // NOTE: this does NOT decide whether to reuse an existing CV. Every journey
+  // gets its own tailored CV. The result is used purely to seed keyword targets
+  // for the new document's refinement.
   const reuseEvaluation = await evaluateCVReuse({
     userId,
     jobTargetProfile,
     evidenceProfile,
     gapAnalysis,
+    masterCvData,
   });
 
   return {
@@ -125,9 +130,12 @@ export function summarizeGenerationContext(ctx: GenerationContext): string {
     `  Total: ${keywordStrategy.totalKeywords}`,
     `  Coverage Target: ${Math.round(keywordStrategy.coverageTarget * 100)}%`,
     ``,
-    `CV Reuse:`,
-    `  Can Reuse: ${reuseEvaluation?.canReuse || false}`,
+    `CV Refinement Seed:`,
+    `  Seed Found: ${reuseEvaluation?.refinementSeed ? 'yes' : 'no'}`,
+    `  Similarity: ${reuseEvaluation?.reuseConfidence ?? 0}`,
     `  Reason: ${reuseEvaluation?.reason || 'N/A'}`,
+    `  Already Evidenced Keywords: ${reuseEvaluation?.refinementSeed?.alreadyEvidencedKeywords.length ?? 0}`,
+    `  Still Missing Keywords: ${reuseEvaluation?.refinementSeed?.stillMissingKeywords.length ?? 0}`,
     `  Adaptations Needed: ${reuseEvaluation?.adaptationNeeded.length || 0}`,
   ];
 

@@ -14,7 +14,7 @@
  * Whisper is only used if browser speech recognition fails.
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useSyncExternalStore } from 'react';
 import type {
   VoiceStage,
   VoiceState,
@@ -28,6 +28,111 @@ import {
   mergeSegments,
 } from '@/lib/interview/providers/browserSpeech';
 import { transcribeWithWhisper } from '@/lib/interview/providers/whisperProvider';
+
+export interface MicSupport {
+  available: boolean;
+  /** User-facing explanation when `available` is false. */
+  reason?: string;
+}
+
+/**
+ * Capability probe for the microphone.
+ *
+ * This does NOT request access and does NOT trigger a permission prompt — it
+ * only inspects what the environment exposes, so the UI can offer the typed
+ * fallback *before* the user clicks into a dead end.
+ *
+ * `navigator.mediaDevices` is undefined outside a secure context and in many
+ * embedded / in-app browsers (IDE preview panes, mobile webviews, some
+ * Electron shells), which is a completely different situation from the user
+ * denying permission.
+ */
+export function probeMicSupport(): MicSupport {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return { available: false, reason: 'Microphone access is only available in the browser.' };
+  }
+
+  if (!window.isSecureContext) {
+    return {
+      available: false,
+      reason:
+        'Microphone needs a secure connection. Open the app over HTTPS (or on localhost), or type your answer instead.',
+    };
+  }
+
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    return {
+      available: false,
+      reason:
+        'This browser does not expose microphone access. In-app and embedded browsers often block it — open the app in a full browser tab, or type your answer instead.',
+    };
+  }
+
+  return { available: true };
+}
+
+/**
+ * `useSyncExternalStore` requires a referentially stable snapshot, and the
+ * environment's capability cannot change without a page reload — so probe once
+ * and cache the result.
+ */
+let micSupportSnapshot: MicSupport | null = null;
+
+function getMicSupportSnapshot(): MicSupport {
+  if (micSupportSnapshot === null) micSupportSnapshot = probeMicSupport();
+  return micSupportSnapshot;
+}
+
+/** Server snapshot: assume available. The client snapshot takes over on hydration. */
+const SERVER_MIC_SUPPORT: MicSupport = { available: true };
+
+function getServerMicSupportSnapshot(): MicSupport {
+  return SERVER_MIC_SUPPORT;
+}
+
+/** Nothing to subscribe to — the value is fixed for the lifetime of the page. */
+function subscribeToMicSupport(): () => void {
+  return () => {};
+}
+
+/**
+ * Same pattern for browser speech support.
+ *
+ * `isBrowserSpeechSupported()` reads `window`, so calling it directly during
+ * render made the server render "unsupported" while the client hydrated with
+ * "supported" — a hydration mismatch. Routing it through
+ * `useSyncExternalStore` gives React an explicit server snapshot to hydrate
+ * against, then the client value takes over.
+ */
+let speechSupportSnapshot: boolean | null = null;
+
+function getSpeechSupportSnapshot(): boolean {
+  if (speechSupportSnapshot === null) {
+    speechSupportSnapshot = isBrowserSpeechSupported();
+  }
+  return speechSupportSnapshot;
+}
+
+function getServerSpeechSupportSnapshot(): boolean {
+  return false;
+}
+
+function subscribeToSpeechSupport(): () => void {
+  return () => {};
+}
+
+/** DOMException names raised by getUserMedia that we handle with a specific message. */
+const KNOWN_MIC_ERRORS = [
+  'NotAllowedError',
+  'PermissionDeniedError',
+  'NotFoundError',
+  'DevicesNotFoundError',
+  'NotReadableError',
+  'TrackStartError',
+  'OverconstrainedError',
+  'SecurityError',
+  'AbortError',
+];
 
 export interface UseVoiceRecorderOptions {
   /** Language for speech recognition (default: en-US) */
@@ -55,6 +160,11 @@ export interface UseVoiceRecorderReturn {
   isListening: boolean;
   /** The final audio blob (available after recording stops) */
   audioBlob: Blob | null;
+  /**
+   * Whether this environment can record audio at all. Resolved after mount so
+   * SSR and the first client render agree. Never triggers a permission prompt.
+   */
+  micSupport: MicSupport;
 }
 
 export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoiceRecorderReturn {
@@ -79,7 +189,21 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
   const [edited, setEdited] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
-  const browserSupported = isBrowserSpeechSupported();
+  // SSR-safe read (see getSpeechSupportSnapshot).
+  const browserSupported = useSyncExternalStore(
+    subscribeToSpeechSupport,
+    getSpeechSupportSnapshot,
+    getServerSpeechSupportSnapshot
+  );
+
+  // Read via useSyncExternalStore rather than setState-in-an-effect: the value
+  // is browser-only (so it needs a server snapshot for hydration parity) and
+  // constant for the page's lifetime.
+  const micSupport = useSyncExternalStore(
+    subscribeToMicSupport,
+    getMicSupportSnapshot,
+    getServerMicSupportSnapshot
+  );
 
   // ── Refs ────────────────────────────────────────────────────────────────
 
@@ -174,11 +298,14 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
 
     updateStage('requesting_mic');
 
-    // 1. Check secure context
-    if (typeof window !== 'undefined' && !window.isSecureContext) {
-      const msg = 'Microphone requires a secure connection (HTTPS). Please type your answer or access the site via HTTPS.';
-      console.warn('[useVoiceRecorder] Not a secure context:', window.location.protocol);
-      setError(msg);
+    // 1. Capability check — the same probe the UI uses, re-run here so a click
+    //    is validated against the live environment rather than stale state.
+    const support = probeMicSupport();
+    if (!support.available) {
+      // Expected in embedded / in-app browsers and on insecure origins, and the
+      // typed-answer fallback always exists — so this is a warning, not an error.
+      console.warn('[useVoiceRecorder] Microphone unavailable:', support.reason);
+      setError(support.reason);
       updateStage('error');
       return;
     }
@@ -186,18 +313,15 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
     // 2. Request microphone
     let stream: MediaStream;
     try {
-      if (typeof navigator === 'undefined') {
-        throw new Error('Navigator not available');
-      }
-      if (!navigator.mediaDevices) {
-        throw new Error('MediaDevices API not available — check browser settings');
-      }
-      if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
-        throw new Error('getUserMedia not supported');
-      }
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err: any) {
-      console.error('[useVoiceRecorder] getUserMedia error:', err?.name, err?.message, err);
+      // Acquiring the mic always has a typed fallback, so the known DOMException
+      // modes are warnings. Only an unrecognised failure is worth an error.
+      if (KNOWN_MIC_ERRORS.includes(err?.name)) {
+        console.warn('[useVoiceRecorder] getUserMedia failed:', err?.name, err?.message);
+      } else {
+        console.error('[useVoiceRecorder] getUserMedia error:', err?.name, err?.message, err);
+      }
 
       let msg: string;
       switch (err?.name) {
@@ -534,5 +658,6 @@ export function useVoiceRecorder(options: UseVoiceRecorderOptions = {}): UseVoic
     analyserNode: analyserRef.current,
     isListening: stage === 'listening',
     audioBlob,
+    micSupport,
   };
 }

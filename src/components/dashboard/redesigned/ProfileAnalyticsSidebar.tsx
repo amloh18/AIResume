@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
+import { getCvScoreForDisplay, calculateCVScore } from '@/lib/utils/cv-scoring';
 
 interface ProfileAnalyticsSidebarProps {
   cv: any;
@@ -34,33 +34,39 @@ function cvAtsScore(cv: any): number {
   return Math.round(getCvScoreForDisplay(cv) || 0);
 }
 
-function buildMetrics(report: any, score: number) {
+function buildMetrics(report: any, cvBreakdown: any) {
+  // Every branch returns a REAL measurement.
+  //
+  // The previous version synthesised component values from the headline score
+  // (`score + 4`, `score - 4`, `score + 9`, `score - 13`, `score + 1`) and fell
+  // back to a hardcoded 75/68/84/65/80 set when the score was 0. Both are
+  // fabricated data presented as analysis — a user cannot tell a synthesised
+  // bar from a measured one. They are gone; `null` means "not measured".
   const norm = (val: number, max: number) => Math.round(Math.min(100, Math.max(0, (val / max) * 100)));
+
+  // Priority 1: the LLM review report, when it exists.
   if (report) {
     return [
-      { label: 'Formatting', value: norm(report.formatting ?? score, 15), icon: Layers },
-      { label: 'Keywords', value: norm(report.quantification ?? report.keywords ?? 0, 20), icon: Target },
-      { label: 'Readability', value: norm(report.readability ?? score, 20), icon: FileText },
+      { label: 'Formatting', value: norm(report.formatting ?? 0, 20), icon: Layers },
+      { label: 'Quantification', value: norm(report.quantification ?? report.keywords ?? 0, 20), icon: Target },
+      { label: 'Readability', value: norm(report.readability ?? 0, 20), icon: FileText },
       { label: 'Impact Verbs', value: norm(report.impactVerbs ?? 0, 20), icon: Zap },
-      { label: 'Skills Density', value: norm(report.completeness ?? 0, 25), icon: Award },
+      { label: 'Completeness', value: norm(report.completeness ?? 0, 25), icon: Award },
     ];
   }
-  if (score > 0) {
+
+  // Priority 2: the deterministic engine's own component scores.
+  if (cvBreakdown) {
     return [
-      { label: 'Formatting', value: Math.min(100, score + 4), icon: Layers },
-      { label: 'Keywords', value: Math.max(30, score - 4), icon: Target },
-      { label: 'Readability', value: Math.min(100, score + 9), icon: FileText },
-      { label: 'Impact Verbs', value: Math.max(25, score - 13), icon: Zap },
-      { label: 'Skills Density', value: Math.min(100, score + 1), icon: Award },
+      { label: 'Formatting', value: norm(cvBreakdown.formatting, 20), icon: Layers },
+      { label: 'Quantification', value: norm(cvBreakdown.quantification, 20), icon: Target },
+      { label: 'Readability', value: norm(cvBreakdown.readability, 20), icon: FileText },
+      { label: 'Impact Verbs', value: norm(cvBreakdown.impactVerbs, 20), icon: Zap },
+      { label: 'Completeness', value: norm(cvBreakdown.completeness, 25), icon: Award },
     ];
   }
-  return [
-    { label: 'Formatting', value: 75, icon: Layers },
-    { label: 'Keywords', value: 68, icon: Target },
-    { label: 'Readability', value: 84, icon: FileText },
-    { label: 'Impact Verbs', value: 65, icon: Zap },
-    { label: 'Skills Density', value: 80, icon: Award },
-  ];
+
+  return null;
 }
 
 export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: ProfileAnalyticsSidebarProps) {
@@ -126,19 +132,29 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
 
   const analysis = activeCv?.metadata?.surgeonAnalysis || activeCv?.metadata?.aiAnalysis;
   const report = analysis?.scoreReport;
-  const score = cvAtsScore(activeCv) || 78;
-  const metrics = useMemo(() => buildMetrics(report, score), [report, score]);
+  // Real, server-persisted score only. Never a fabricated placeholder — an
+  // unmeasured profile must read as "not measured".
+  const score = cvAtsScore(activeCv);
 
-  const strengths: any[] = report?.strengths || analysis?.strengths || [
-    { title: 'Strong Action Verbs', detail: 'Bullet points begin with decisive action verbs.' },
-    { title: 'ATS Header & Layout', detail: 'Contact info and section hierarchy are fully machine-readable.' },
-    { title: 'Measurable Achievements', detail: 'Key achievements include quantifiable metrics.' }
-  ];
+  // Real, deterministic breakdown computed locally from the CV content (same
+  // engine the server uses), so it is safe to show before anything is persisted.
+  const cvBreakdown = useMemo(() => {
+    if (!activeCv?.cvData) return null;
+    try {
+      return calculateCVScore(activeCv.cvData);
+    } catch {
+      return null;
+    }
+  }, [activeCv?.cvData]);
 
-  const gaps: any[] = report?.gaps || analysis?.gaps || [
-    { title: 'Target Keyword Density', detail: 'Add 3-4 more specific framework / technical skill keywords.' },
-    { title: 'Summary Value Proposition', detail: 'Quantify total years of experience in your summary opening.' }
-  ];
+  const metrics = useMemo(() => buildMetrics(report, cvBreakdown), [report, cvBreakdown]);
+
+  // Only real diagnostics. The hardcoded defaults that used to sit here showed
+  // canned advice ("Add 3-4 more specific framework keywords") as though it were
+  // a finding about THIS CV.
+  const strengths: any[] | null = report?.strengths || analysis?.strengths || null;
+  const gaps: any[] | null = report?.gaps || analysis?.gaps || null;
+  const hasDiagnostics = !!strengths?.length || !!gaps?.length;
 
   const handleEditInEditor = () => {
     const id = cvId(activeCv);
@@ -160,11 +176,13 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
     router.push('/dashboard/interview');
   };
 
-  const scoreTone = score >= 85 
-    ? 'High-Impact Profile' 
-    : score >= 70 
-      ? 'Competitive Profile' 
-      : 'Optimization Recommended';
+  const scoreTone = score <= 0
+    ? 'Not measured yet'
+    : score >= 85
+      ? 'High-Impact Profile'
+      : score >= 70
+        ? 'Competitive Profile'
+        : 'Optimization Recommended';
 
   return (
     <AnimatePresence>
@@ -227,18 +245,22 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
                       </span>
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">
-                          {score}
+                          {score > 0 ? score : '—'}
                         </span>
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">/ 100</span>
                       </div>
                       <div className="flex items-center gap-1.5 pt-1">
-                        <span className={`text-xs font-black ${score >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        <span className={`text-xs font-black ${score <= 0 ? 'text-gray-500 dark:text-gray-400' : score >= 80 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                           {scoreTone}
                         </span>
-                        <span className="text-gray-300 dark:text-gray-700">·</span>
-                        <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                          +{Math.max(12, 100 - score)} pts potential
-                        </span>
+                        {score > 0 && (
+                          <>
+                            <span className="text-gray-300 dark:text-gray-700">·</span>
+                            <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                              +{Math.max(12, 100 - score)} pts potential
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -246,17 +268,19 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
                     <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" className="text-gray-200 dark:text-gray-800" strokeWidth="8" />
-                        <circle
-                          cx="50" cy="50" r="40" fill="none"
-                          stroke={score >= 80 ? '#83d60d' : '#f59e0b'}
-                          strokeWidth="8"
-                          strokeDasharray={`${2 * Math.PI * 40}`}
-                          strokeDashoffset={`${2 * Math.PI * 40 * (1 - score / 100)}`}
-                          strokeLinecap="round"
-                        />
+                        {score > 0 && (
+                          <circle
+                            cx="50" cy="50" r="40" fill="none"
+                            stroke={score >= 80 ? '#83d60d' : '#f59e0b'}
+                            strokeWidth="8"
+                            strokeDasharray={`${2 * Math.PI * 40}`}
+                            strokeDashoffset={`${2 * Math.PI * 40 * (1 - score / 100)}`}
+                            strokeLinecap="round"
+                          />
+                        )}
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <ShieldCheck className={`w-7 h-7 ${score >= 80 ? 'text-[#83d60d]' : 'text-amber-500'}`} />
+                        <ShieldCheck className={`w-7 h-7 ${score <= 0 ? 'text-gray-300 dark:text-gray-700' : score >= 80 ? 'text-[#83d60d]' : 'text-amber-500'}`} />
                       </div>
                     </div>
                   </div>
@@ -268,27 +292,35 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
                     </h4>
 
                     <div className="bg-white dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-3 shadow-sm">
-                      {metrics.map((m) => {
-                        const Icon = m.icon;
-                        return (
-                          <div key={m.label} className="space-y-1.5">
-                            <div className="flex items-center justify-between text-xs font-bold">
-                              <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                                <Icon size={12} className="text-gray-400" /> {m.label}
-                              </span>
-                              <span className="text-gray-900 dark:text-white tabular-nums">{m.value}%</span>
+                      {metrics ? (
+                        metrics.map((m) => {
+                          const Icon = m.icon;
+                          return (
+                            <div key={m.label} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-xs font-bold">
+                                <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
+                                  <Icon size={12} className="text-gray-400" /> {m.label}
+                                </span>
+                                <span className="text-gray-900 dark:text-white tabular-nums">{m.value}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                <motion.div
+                                  className={`h-full rounded-full ${m.value >= 75 ? 'bg-emerald-500' : m.value >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${m.value}%` }}
+                                  transition={{ duration: 0.6 }}
+                                />
+                              </div>
                             </div>
-                            <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                              <motion.div
-                                className={`h-full rounded-full ${m.value >= 75 ? 'bg-emerald-500' : m.value >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${m.value}%` }}
-                                transition={{ duration: 0.6 }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      ) : (
+                        // No real measurement to show. An honest empty state beats
+                        // synthesised bars.
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed text-center py-2">
+                          No breakdown available yet. Run an analysis to measure this profile.
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -355,25 +387,35 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
                       AI Diagnostics
                     </h4>
                     <div className="space-y-2">
-                      {strengths.slice(0, 2).map((item, idx) => (
-                        <div key={idx} className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-xl flex items-start gap-2.5">
-                          <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                          <div className="space-y-0.5">
-                            <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-300">{item.title || item}</h5>
-                            {item.detail && <p className="text-[11px] text-emerald-700 dark:text-emerald-400/80 leading-relaxed">{item.detail}</p>}
-                          </div>
-                        </div>
-                      ))}
+                      {hasDiagnostics ? (
+                        <>
+                          {strengths?.slice(0, 2).map((item, idx) => (
+                            <div key={idx} className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-xl flex items-start gap-2.5">
+                              <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <h5 className="text-xs font-bold text-emerald-900 dark:text-emerald-300">{item.title || item}</h5>
+                                {item.detail && <p className="text-[11px] text-emerald-700 dark:text-emerald-400/80 leading-relaxed">{item.detail}</p>}
+                              </div>
+                            </div>
+                          ))}
 
-                      {gaps.slice(0, 2).map((item, idx) => (
-                        <div key={idx} className="p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl flex items-start gap-2.5">
-                          <AlertCircle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                          <div className="space-y-0.5">
-                            <h5 className="text-xs font-bold text-amber-900 dark:text-amber-300">{item.title || item}</h5>
-                            {item.detail && <p className="text-[11px] text-amber-700 dark:text-amber-400/80 leading-relaxed">{item.detail}</p>}
-                          </div>
-                        </div>
-                      ))}
+                          {gaps?.slice(0, 2).map((item, idx) => (
+                            <div key={idx} className="p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl flex items-start gap-2.5">
+                              <AlertCircle size={15} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <h5 className="text-xs font-bold text-amber-900 dark:text-amber-300">{item.title || item}</h5>
+                                {item.detail && <p className="text-[11px] text-amber-700 dark:text-amber-400/80 leading-relaxed">{item.detail}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        // No review has been run for this CV. Showing canned advice
+                        // here would read as a finding about this specific profile.
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed text-center py-2">
+                          No diagnostics yet. Run an analysis to get strengths and gaps for this profile.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </>

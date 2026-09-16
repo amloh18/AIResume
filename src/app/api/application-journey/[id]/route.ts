@@ -253,8 +253,30 @@ export async function PUT(
     const body = await request.json();
     
     // Update allowed fields
+    //
+    // `atsScore` is NOT client-writable. It used to be assigned straight from
+    // the request body, so any caller could set a journey's ATS score to any
+    // number, bypassing the scoring engine entirely. ApplicationJourney.atsScore
+    // is now written only by ApplicationJourneyRelationshipService
+    // .updateJourneyATSScore(), invoked from POST /api/ats/calculate-score.
+    // If a client sends it anyway, reject loudly rather than silently ignore —
+    // a silent ignore would hide a stale client build that still thinks it can
+    // write scores.
     if (body.atsScore !== undefined) {
-      journey.atsScore = body.atsScore;
+      console.warn('⛔ Journey PUT API - Rejected client-supplied atsScore:', {
+        journeyId,
+        userId,
+        atsScore: body.atsScore,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'atsScore is read-only',
+          message:
+            'ATS scores are computed server-side. Use POST /api/ats/calculate-score to recalculate.',
+        },
+        { status: 400 }
+      );
     }
     
     if (body.cvId !== undefined) {
