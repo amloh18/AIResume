@@ -2673,14 +2673,14 @@ export default function ResumeEnhancerContainer({
     const isContinuing = state.currentStep === 3 || state.currentStep === 4;
     const completionPercentage = calculateCompletionPercentage();
 
-    let scoreVal = state.scoreReport?.overall_score !== undefined
-      ? state.scoreReport.overall_score
-      : (state.surgeonAnalysis?.score ?? 0);
-
-    if (state.cvType === 'journey') {
-      scoreVal = Math.min(scoreVal, state.atsScoreCap || 100);
-    }
-
+    // NOTE: no score fields in this payload.
+    //
+    // This used to send `scoreReport.overall_score` (an LLM *review* score) as
+    // `cv_score_ats`, which the API accepted, mirrored into `metadata.atsScore`
+    // and propagated to `ApplicationJourney.atsScore` — so the number a user saw
+    // as their "ATS score" could be an LLM's subjective verdict rather than a
+    // keyword/format measurement. Score fields are now rejected by the CV update
+    // endpoint; the only writer is POST /api/ats/calculate-score.
     const payload = {
       title: state.cvTitle,
       cvData: state.cvData,
@@ -2688,14 +2688,10 @@ export default function ResumeEnhancerContainer({
       cvType: state.cvType,
       status: isFinishing ? 'published' : 'draft',
       journeyId: state.journeyId,
-      cv_score_master: state.cvType !== 'journey' ? scoreVal : undefined,
-      cv_score_ats: state.cvType === 'journey' ? scoreVal : undefined,
       metadata: {
         isMaster: state.cvType === 'master',
         completionPercentage,
         createdVia: 'resume-enhancer',
-        cvScore: state.cvType !== 'journey' ? scoreVal : undefined,
-        atsScore: state.cvType === 'journey' ? scoreVal : undefined
       },
       // Send the server's last updatedAt for optimistic concurrency detection
       updatedAt: lastSavedAtRef.current || undefined,

@@ -518,7 +518,16 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
       if (state.paperSize && state.paperSize !== 'A4') return;
 
       try {
-        const response = await fetch('/api/region');
+        // /api/pricing/regional is the canonical region endpoint: it auto-detects
+        // from the request IP via detectUserRegion() and returns `{ countryCode }`.
+        // This previously called /api/region, which does not exist on disk, so
+        // `response.ok` was always false and detection never ran — every user got
+        // A4, including the US/CA/MX/PH countries that print US Letter (which
+        // clips content when the PDF is printed on the other stock).
+        //
+        // Detection failure is safe: detectUserRegion() falls back to 'GB' (not
+        // 'US'), and GB maps to A4 — same outcome as the old always-A4 behaviour.
+        const response = await fetch('/api/pricing/regional');
         if (response.ok) {
           const { countryCode } = await response.json();
           const detectedSize = getDefaultPaperSize(countryCode);
@@ -526,7 +535,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
             dispatch({ type: 'SET_PAPER_SIZE', payload: detectedSize });
           }
         }
-      } catch (error) {
+      } catch {
         // Silently fail - keep default A4
         console.debug('Paper size detection failed, using default A4');
       }

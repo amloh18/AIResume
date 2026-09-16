@@ -49,11 +49,69 @@ export interface ATSScoreBreakdown {
     rawTotal: number;              // 0-100
     parsabilityMultiplier: number; // P
     context: 'jd-specific' | 'industry-general';
+    // Template structural factors (ATS parsers read a linear text stream, so
+    // layout is a real scoring input, not a cosmetic detail).
+    templateSafety?: 'safe' | 'caution' | 'risky';
+    templateLayout?: string;
+    templatePenalty?: number;      // Points removed from formatting by layout
+    atsScoreCap?: number;          // Effective ceiling applied
     // Legacy fields
     experienceAlign?: number;
     skillsCoverage?: number;
     parseability?: number;
 }
+
+/**
+ * Structural context of the template a CV is rendered with.
+ * Supplied by callers that know the resolved template; omitted callers keep
+ * the previous layout-agnostic behaviour.
+ */
+export interface TemplateAtsContext {
+    layoutType?: string;   // 'single-column' | 'two-column' | 'sidebar-left' | 'sidebar-right' | 'unknown'
+    safety?: 'safe' | 'caution' | 'risky';
+    cap?: number;          // Template-derived ATS ceiling
+}
+
+/**
+ * Maximum raw value each ATS component can produce, and the weight it carries.
+ *
+ * Component maxima sum to 100 and weights sum to 1.0. Both must be declared so
+ * the composition can normalise each component to 0-1 before weighting —
+ * without the normalisation step the achievable ceiling is far below 100.
+ */
+export const ATS_COMPONENT_MAX = {
+    keywordMatch: 40,
+    formatting: 20,
+    sectionAlignment: 15,
+    recency: 15,
+    contactability: 10,
+} as const;
+
+export const ATS_WEIGHTS = {
+    keywordMatch: 0.4,
+    formatting: 0.2,
+    sectionAlignment: 0.15,
+    recency: 0.15,
+    contactability: 0.1,
+} as const;
+
+/** Formatting points removed because the layout is not linear-parseable. */
+const TEMPLATE_FORMATTING_PENALTY: Record<string, number> = {
+    'single-column': 0,
+    'two-column': 8,
+    'sidebar-left': 8,
+    'sidebar-right': 8,
+    unknown: 4,
+};
+
+/** Parsability multiplier applied because the layout is not linear-parseable. */
+const TEMPLATE_PARSEABILITY_FACTOR: Record<string, number> = {
+    'single-column': 1.0,
+    'two-column': 0.85,
+    'sidebar-left': 0.85,
+    'sidebar-right': 0.85,
+    unknown: 0.95,
+};
 
 export interface ScoreResult {
     cvScore: CVScoreBreakdown;
@@ -204,7 +262,8 @@ export class CentralScoreManager {
     public getScoreSync(
         cvData: UnifiedCVDataStructure,
         keywordAnalysis?: KeywordGapAnalysisResult | null,
-        atsScoreCap: number = 100
+        atsScoreCap: number = 100,
+        templateContext?: TemplateAtsContext
     ): ScoreResult {
         // Null guard
         if (!cvData) {
@@ -225,9 +284,9 @@ export class CentralScoreManager {
         // Calculate ATS Score (Robot/Journey Factors)
         let atsScore: ATSScoreBreakdown | undefined;
         if (keywordAnalysis) {
-            atsScore = this.calculateATSScore(cvData, keywordAnalysis, atsScoreCap);
+            atsScore = this.calculateATSScore(cvData, keywordAnalysis, atsScoreCap, templateContext);
         } else {
-            atsScore = this.calculateATSScore(cvData, null, atsScoreCap);
+            atsScore = this.calculateATSScore(cvData, null, atsScoreCap, templateContext);
         }
 
         const primaryScore = atsScore?.total ?? cvScore.total;
@@ -256,9 +315,10 @@ export class CentralScoreManager {
         cvData: UnifiedCVDataStructure,
         cvType: 'master' | 'journey' | 'standalone',
         keywordAnalysis?: KeywordGapAnalysisResult | null, // Unified arg
-        atsScoreCap: number = 100
+        atsScoreCap: number = 100,
+        templateContext?: TemplateAtsContext
     ): Promise<ScoreResult> {
-        return Promise.resolve(this.getScoreSync(cvData, keywordAnalysis, atsScoreCap));
+        return Promise.resolve(this.getScoreSync(cvData, keywordAnalysis, atsScoreCap, templateContext));
     }
 
     // --- Core Calculation Logic (Unified via CentralScoreManager) ---
@@ -301,7 +361,8 @@ export class CentralScoreManager {
     public calculateATSScore(
         cvData: UnifiedCVDataStructure,
         keywordAnalysis: KeywordGapAnalysisResult | null,
-        atsScoreCap: number = 100
+        atsScoreCap: number = 100,
+        templateContext?: TemplateAtsContext
     ): ATSScoreBreakdown {
         if (!cvData) {
             return {
@@ -322,16 +383,40 @@ export class CentralScoreManager {
             actualContext = 'industry-general';
         }
 
-        const formatting = this.calculateATSFormattingScore(cvData);
+        const layoutType = templateContext?.layoutType || 'unknown';
+        const formatting = this.calculateATSFormattingScore(cvData, templateContext);
         const sectionAlignment = this.calculateSectionAlignmentScore(cvData);
         const recency = this.calculateRecencyScore(cvData);
         const contactability = this.calculateContactabilityScore(cvData);
 
-        const weightedScore = (keywordMatch * 0.4) + (formatting * 0.2) + (sectionAlignment * 0.15) + (recency * 0.15) + (contactability * 0.1);
-        const rawTotal = Math.min(Math.round(weightedScore * 100 / 40), 100);
+        // ─── Weighted ATS composition ──────────────────────────────────
+        //
+        // Each component has its own scale (40 / 20 / 15 / 15 / 10 = 100 total),
+        // so each must be NORMALISED to 0-1 before weighting. The previous
+        // implementation weighted the raw component values and then divided by
+        // 40 (the keyword component's max only), which capped the whole score at
+        // 25.5 * 100 / 40 = 63.75 — a perfect CV could never score above ~64.
+        //
+        // That is the actual reason scores looked low and why client code started
+        // injecting a friendlier number. Fixing the normalisation makes the scale
+        // honest: 100 is reachable, and the number reflects real quality.
+        const keywordMatchWeighted = (keywordMatch / ATS_COMPONENT_MAX.keywordMatch) * ATS_WEIGHTS.keywordMatch;
+        const formattingWeighted = (formatting / ATS_COMPONENT_MAX.formatting) * ATS_WEIGHTS.formatting;
+        const sectionAlignmentWeighted = (sectionAlignment / ATS_COMPONENT_MAX.sectionAlignment) * ATS_WEIGHTS.sectionAlignment;
+        const recencyWeighted = (recency / ATS_COMPONENT_MAX.recency) * ATS_WEIGHTS.recency;
+        const contactabilityWeighted = (contactability / ATS_COMPONENT_MAX.contactability) * ATS_WEIGHTS.contactability;
 
-        const parsabilityMultiplier = this.calculateParsabilityMultiplier(cvData);
-        const total = Math.min(Math.round(rawTotal * parsabilityMultiplier), atsScoreCap);
+        const weightedScore = keywordMatchWeighted + formattingWeighted + sectionAlignmentWeighted + recencyWeighted + contactabilityWeighted;
+        const rawTotal = Math.min(Math.round(weightedScore * 100), 100);
+
+        const parsabilityMultiplier = this.calculateParsabilityMultiplier(cvData, templateContext);
+
+        // Effective ceiling: the tighter of the caller's cap and the template's cap.
+        const templateCap = typeof templateContext?.cap === 'number' ? templateContext.cap : 100;
+        const effectiveCap = Math.max(0, Math.min(atsScoreCap, templateCap));
+        const total = Math.min(Math.round(rawTotal * parsabilityMultiplier), effectiveCap);
+
+        const templatePenalty = TEMPLATE_FORMATTING_PENALTY[layoutType] ?? 0;
 
         return {
             keywordMatch,
@@ -343,6 +428,10 @@ export class CentralScoreManager {
             total,
             parsabilityMultiplier,
             context: actualContext,
+            templateSafety: templateContext?.safety,
+            templateLayout: templateContext?.layoutType,
+            templatePenalty,
+            atsScoreCap: effectiveCap,
             // Backwards compat values
             experienceAlign: Math.round(sectionAlignment + recency),
             skillsCoverage: keywordMatch,
@@ -495,14 +584,22 @@ export class CentralScoreManager {
         return Math.round((stats.matchedCount / stats.totalJDKeywords) * 40);
     }
 
-    private calculateParsabilityMultiplier(cvData: UnifiedCVDataStructure): number {
+    private calculateParsabilityMultiplier(
+        cvData: UnifiedCVDataStructure,
+        templateContext?: TemplateAtsContext
+    ): number {
         const wordCount = this.getWordCount(cvData);
         if (wordCount < 50) return 0.1;
         if (!cvData.work || cvData.work.length === 0) return 0.1;
         const skillsCount = cvData.skills?.length || 0;
         const workCount = cvData.work?.length || 0;
         if (skillsCount > 20 && workCount < 2) return 0.2;
-        return 1.0;
+
+        // Structural penalty: a multi-column or sidebar layout is read out of
+        // order by linear parsers, so the same content is genuinely less parseable.
+        const layoutType = templateContext?.layoutType || 'single-column';
+        const layoutFactor = TEMPLATE_PARSEABILITY_FACTOR[layoutType] ?? 0.95;
+        return Number((1.0 * layoutFactor).toFixed(3));
     }
 
     private calculateSectionAlignmentScore(cvData: UnifiedCVDataStructure): number {
@@ -536,11 +633,20 @@ export class CentralScoreManager {
         return Math.min(score, 10);
     }
 
-    private calculateATSFormattingScore(cvData: UnifiedCVDataStructure): number {
+    private calculateATSFormattingScore(
+        cvData: UnifiedCVDataStructure,
+        templateContext?: TemplateAtsContext
+    ): number {
         let score = 20;
         cvData.work?.forEach((job: any) => {
             job.highlights?.forEach((h: string) => { if (h.length > 200) score -= 2; });
         });
+
+        // Layout penalty: ATS parsers flatten the document to a text stream, so
+        // columns and sidebars genuinely break section detection.
+        const layoutType = templateContext?.layoutType || 'single-column';
+        score -= TEMPLATE_FORMATTING_PENALTY[layoutType] ?? 0;
+
         return Math.max(score, 0);
     }
 
@@ -766,6 +872,25 @@ export class CentralScoreManager {
                     message: 'CV lacks content for ATS parsing — add more experience and reduce skills-only entries',
                     scoreCategory: 'formatting',
                     deepLink: { section: 'work' }
+                });
+            }
+
+            // Template structural risk — layout is a real parsability factor
+            if (atsScore.templateSafety === 'risky' || atsScore.templateSafety === 'caution') {
+                const layoutLabel = atsScore.templateLayout || 'unknown';
+                const capLabel = typeof atsScore.atsScoreCap === 'number' ? atsScore.atsScoreCap : 100;
+                issues.push({
+                    id: 'ats-template-risk',
+                    type: 'SECTION_ORDER',
+                    severity: atsScore.templateSafety === 'risky' ? 'warning' : 'suggestion' as any,
+                    priority: 'suggestion',
+                    tier: 1,
+                    section: 'basics',
+                    message: atsScore.templateSafety === 'risky'
+                        ? `Template layout "${layoutLabel}" is not ATS-safe — multi-column text is read out of order. Switch to a single-column template to raise the ceiling above ${capLabel}.`
+                        : `Template styling may reduce parse accuracy. A single-column template scores higher.`,
+                    scoreCategory: 'formatting',
+                    deepLink: { section: 'basics' }
                 });
             }
         }

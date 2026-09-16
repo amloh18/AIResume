@@ -536,8 +536,24 @@ export default function UserActivityModal({ userId, isOpen, onClose }: { userId:
                                 if (res.ok) {
                                   toast({ title: "Note Added", description: "Support note added successfully.", variant: "success" });
                                   fetchUserActivity();
+                                } else {
+                                  // Previously there was no else-branch, so a failed
+                                  // save closed the dialog as if it had worked.
+                                  const result = await res.json().catch(() => null);
+                                  toast({
+                                    title: "Could Not Add Note",
+                                    description: result?.error || `Request failed (HTTP ${res.status}).`,
+                                    variant: "destructive"
+                                  });
                                 }
-                              } catch (err) { console.error(err); }
+                              } catch (err) {
+                                console.error(err);
+                                toast({
+                                  title: "Could Not Add Note",
+                                  description: "Network error. Please try again.",
+                                  variant: "destructive"
+                                });
+                              }
                             }
                           });
                         }}

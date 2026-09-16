@@ -28,6 +28,7 @@ import {
 import CompanyLogo from "@/components/ui/CompanyLogo";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
+import { getJourneyAtsScore } from "@/lib/utils/cv-scoring";
 import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
 import { getJobCardColorClass } from "@/lib/config/job-constants";
@@ -132,7 +133,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   const [progress, setProgress] = useState(0);
   const primaryJourney = jobJourneys && jobJourneys.length > 0 ? jobJourneys[0] : null;
-  const atsScore = primaryJourney?.atsScore || job.atsScore || job.matchScore;
+  // `job.matchScore` is a job-fit metric, NOT an ATS score. Falling back to it
+  // here would display a different measurement under the "ATS Score" label, so
+  // an unmeasured document correctly resolves to `undefined` instead.
+  const atsScore = getJourneyAtsScore(primaryJourney, job);
   const isGenerating = stage === "created" && primaryJourney?.status === "processing_documents";
 
   // Progress simulation timer

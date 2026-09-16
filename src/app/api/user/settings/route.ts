@@ -170,6 +170,20 @@ export async function PUT(request: NextRequest) {
       if (Object.keys(basicSettingsUpdates).length > 0) {
         await User.findByIdAndUpdate(userId, basicSettingsUpdates);
       }
+
+      // Keep the legacy JobSearchProfile copy aligned so /api/jobs/preferences
+      // does not report a stale mode. User.settings remains the canonical store
+      // that document generation reads. Best-effort: never fail the request.
+      if (settings.cvTailoringMode !== undefined) {
+        try {
+          const { JobSearchProfileService } = await import('@/lib/services/jobSearchProfileService');
+          await JobSearchProfileService.patchProfile(userId, {
+            cvTailoringMode: parseCvTailoringMode(settings.cvTailoringMode),
+          });
+        } catch (mirrorError) {
+          console.warn('Failed to mirror cvTailoringMode to JobSearchProfile:', mirrorError);
+        }
+      }
     }
 
     // Update detailed settings in UserSettings table
@@ -212,6 +226,17 @@ export async function PUT(request: NextRequest) {
             userSettings.preferences.cv = {
               ...(userSettings.preferences.cv || {}),
               ...settings.preferences.cv
+            };
+            return;
+          }
+          // `dashboard` needs the same deep merge as `cv`. Assigning the whole
+          // object would drop sibling fields the client did not send — notably
+          // `layout`, which /api/user/ui-preferences owns. A settings-page save
+          // would then silently reset the user's grid/compact/list choice.
+          if (key === 'dashboard' && settings.preferences.dashboard && typeof settings.preferences.dashboard === 'object') {
+            userSettings.preferences.dashboard = {
+              ...(userSettings.preferences.dashboard || {}),
+              ...settings.preferences.dashboard
             };
             return;
           }

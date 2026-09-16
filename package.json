@@ -24,7 +24,8 @@
     "migrate:cv-type": "npx tsx scripts/migrate-cv-type.ts",
     "migrate:legacy-templates": "npx tsx scripts/migrate-legacy-templates.ts",
     "backfill:role-families": "npx tsx scripts/backfill-role-families.ts",
-    "db:indexes": "npx tsx scripts/create-job-indexes.ts"
+    "db:indexes": "npx tsx scripts/create-job-indexes.ts",
+    "backfill:cv-tailoring-mode": "npx tsx scripts/backfill-cv-tailoring-mode.ts"
   },
   "keywords": [
     "cv",

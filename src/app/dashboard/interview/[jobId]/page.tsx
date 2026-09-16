@@ -3,16 +3,34 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import InterviewHub from '@/components/interview/InterviewHub';
 
+/**
+ * Interview plan page.
+ *
+ * Renders the hub immediately and streams the content in, rather than blocking
+ * the whole viewport behind a "Preparing your interview plan..." loader for the
+ * entire AI generation (which can run 10–50s).
+ *
+ * Two-phase load:
+ *   1. `GET /plan` — cheap. Returns the finished plan, or (new) a *shell* with
+ *      the real role/company plus `needsGeneration: true`.
+ *   2. `POST /initiate` — only when phase 1 has no plan. Returns the session
+ *      *and* the module-grouped questions, so the follow-up `/plan` call the
+ *      old flow made is no longer needed.
+ */
 const InterviewHubPage = () => {
     const params = useParams();
     const router = useRouter();
     const jobId = params.jobId as string;
 
+    /** Shell session — lets the hub paint its chrome before the plan exists. */
+    const [shell, setShell] = useState<any>(null);
+    /** Full plan data, once available. */
     const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    /** True only while the AI is actually generating. */
+    const [preparing, setPreparing] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     // Prevent double fetch with ref
@@ -28,16 +46,32 @@ const InterviewHubPage = () => {
                 const planRes = await fetch(`/api/interview/${jobId}/plan`);
                 const planData = await planRes.json();
 
-                if (planData.success && planData.session && planData.questionsByModule && Object.keys(planData.questionsByModule).length > 0) {
-                    console.log("⚡ Plan found. Skipping initiation.");
+                if (
+                    planData.success &&
+                    planData.session &&
+                    planData.questionsByModule &&
+                    Object.keys(planData.questionsByModule).length > 0
+                ) {
+                    console.log('⚡ Plan found. Skipping initiation.');
                     setData(planData);
-                    setLoading(false);
+                    setPreparing(false);
                     return;
                 }
 
-                console.log("Plan not ready or empty. Initiating...");
+                // A failure that is *not* "needs generation" is a real error
+                // (job missing / not yours) — don't burn an AI generation on it.
+                if (!planData.success && !planData.needsGeneration) {
+                    throw new Error(planData.error || 'Failed to load interview plan');
+                }
 
-                // Step 2: Initiate if no plan found
+                // Paint the shell now: the header and card frames appear
+                // immediately while the AI works.
+                if (planData.session) setShell(planData.session);
+
+                console.log('Plan not ready or empty. Initiating...');
+
+                // Step 2: Initiate. Returns session + questionsByModule, so the
+                // old third round-trip to /plan is gone.
                 const initRes = await fetch('/api/interview/initiate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -52,42 +86,28 @@ const InterviewHubPage = () => {
 
                 const initData = await initRes.json();
 
-                if (!initData.success || !initData.interviewCoach) {
-                    throw new Error('No interview data returned');
+                if (!initData.success || !initData.session) {
+                    throw new Error(initData.error || 'No interview data returned');
                 }
 
-                // Step 3: Fetch plan again to get questionsByModule grouping (if init didn't return it in that format)
-                // Note: initiate returns raw arrays/objects, 'plan' endpoint returns formatted questionsByModule
-                const finalPlanRes = await fetch(`/api/interview/${jobId}/plan`);
-                const finalPlanData = await finalPlanRes.json();
-
-                if (finalPlanData.success) {
-                    setData(finalPlanData);
-                } else {
-                    throw new Error(finalPlanData.error || 'Failed to load plan');
-                }
+                setData({
+                    session: initData.session,
+                    questionsByModule: initData.questionsByModule || {},
+                });
             } catch (err: any) {
                 console.error('Hub load error:', err);
                 setError(err.message);
             } finally {
-                setLoading(false);
+                setPreparing(false);
             }
         };
 
         fetchData();
     }, [jobId]);
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-screen app-page-bg">
-                <Loader2 className="w-10 h-10 animate-spin text-purple-500 mb-4" />
-                <p className="text-gray-500 font-medium">Preparing your interview plan...</p>
-                <p className="text-small text-gray-400 mt-2">This may take a moment while the AI analyzes your profile.</p>
-            </div>
-        );
-    }
-
-    if (error || !data?.session) {
+    // Only fall back to the full-page error state when there is nothing at all
+    // to render. While generating we keep the hub on screen.
+    if (error && !data) {
         return (
             <div className="flex flex-col items-center justify-center h-screen app-page-bg">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
@@ -107,7 +127,7 @@ const InterviewHubPage = () => {
                     <button
                         onClick={() => {
                             fetchedRef.current = false;
-                            setLoading(true);
+                            setPreparing(true);
                             setError(null);
                             window.location.reload();
                         }}
@@ -120,7 +140,17 @@ const InterviewHubPage = () => {
         );
     }
 
-    return <InterviewHub session={data.session} questionsByModule={data.questionsByModule} />;
+    // Prefer the full plan; fall back to the shell so the UI is on screen from
+    // the first paint.
+    const session = data?.session || shell;
+
+    return (
+        <InterviewHub
+            session={session}
+            questionsByModule={data?.questionsByModule || {}}
+            isPreparing={preparing}
+        />
+    );
 };
 
 export default InterviewHubPage;

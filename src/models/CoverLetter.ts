@@ -28,6 +28,8 @@ export interface ICoverLetter extends Document {
     version?: number;
     atsScore?: number;
     atsScoreDate?: Date;
+    seededData?: boolean;
+    seededAtsScore?: number;
     structuredBody?: any; // JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
   };
 }
@@ -148,6 +150,16 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     },
     atsScoreDate: {
       type: Date
+    },
+    // Provenance marker for synthetic/dev-seeded documents.
+    seededData: {
+      type: Boolean,
+      default: false
+    },
+    seededAtsScore: {
+      type: Number,
+      min: 0,
+      max: 100
     },
     structuredBody: {
       type: Schema.Types.Mixed, // Stores the JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }

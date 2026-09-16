@@ -119,6 +119,83 @@ export function extractCVSearchText(cvData: UnifiedCVDataStructure | any): strin
 }
 
 /**
+ * Extract ONLY the text that constitutes *evidence* that the candidate has
+ * actually done something: work experience, projects, certifications, volunteer
+ * work, and coursework.
+ *
+ * Deliberately EXCLUDES:
+ *   - `skills` — a skill listed in the skills section is a claim, not proof.
+ *     Including it would make the evidence check circular: the deterministic ATS
+ *     pass reads evidence to decide what may be added to skills, so skills must
+ *     not be part of its own input.
+ *   - `basics` — the summary/label are authored by the same generation pass and
+ *     would let the model self-certify any keyword by writing it into the summary.
+ *
+ * Use this for: deciding whether a JD keyword is genuinely supported before
+ * surfacing it, and for any "is this claim backed by experience?" check.
+ */
+export function extractCvEvidenceText(cvData: UnifiedCVDataStructure | any): string {
+    if (!cvData) return '';
+    const parts: string[] = [];
+
+    // Work experience — the primary evidence source
+    if (cvData.work && Array.isArray(cvData.work)) {
+        cvData.work.forEach((job: any) => {
+            if (job.position) parts.push(job.position);
+            if (job.title) parts.push(job.title);
+            if (job.summary) parts.push(job.summary);
+            if (job.description) parts.push(job.description);
+            if (job.highlights && Array.isArray(job.highlights)) {
+                parts.push(...job.highlights);
+            }
+        });
+    }
+
+    // Projects — secondary evidence source
+    if (cvData.projects && Array.isArray(cvData.projects)) {
+        cvData.projects.forEach((project: any) => {
+            if (project.name) parts.push(project.name);
+            if (project.description) parts.push(project.description);
+            if (project.highlights && Array.isArray(project.highlights)) {
+                parts.push(...project.highlights);
+            }
+            if (project.keywords && Array.isArray(project.keywords)) {
+                parts.push(...project.keywords);
+            }
+        });
+    }
+
+    // Certifications — proof of a specific competency
+    if (cvData.certificates && Array.isArray(cvData.certificates)) {
+        cvData.certificates.forEach((cert: any) => {
+            if (cert.name) parts.push(cert.name);
+        });
+    }
+
+    // Volunteer work
+    if (cvData.volunteer && Array.isArray(cvData.volunteer)) {
+        cvData.volunteer.forEach((vol: any) => {
+            if (vol.position) parts.push(vol.position);
+            if (vol.summary) parts.push(vol.summary);
+            if (vol.highlights && Array.isArray(vol.highlights)) {
+                parts.push(...vol.highlights);
+            }
+        });
+    }
+
+    // Coursework — weak but legitimate evidence of a competency
+    if (cvData.education && Array.isArray(cvData.education)) {
+        cvData.education.forEach((edu: any) => {
+            if (edu.courses && Array.isArray(edu.courses)) {
+                parts.push(...edu.courses);
+            }
+        });
+    }
+
+    return parts.filter(Boolean).join(' ').toLowerCase();
+}
+
+/**
  * Convert CV to structured plain text as an ATS would parse it.
  * Returns a formatted string with sections and newlines.
  * 

@@ -1,9 +1,9 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { CentralScoreManager, CVScoreBreakdown, ATSScoreBreakdown, ScoreResult } from '@/lib/pill-engine/CentralScoreManager';
+import { CentralScoreManager, CVScoreBreakdown, ATSScoreBreakdown, ScoreResult, TemplateAtsContext } from '@/lib/pill-engine/CentralScoreManager';
 import { KeywordGapAnalysisResult } from '@/types/keyword-gap';
 
 // Re-export types from CentralScoreManager for convenience
-export type { CVScoreBreakdown, ATSScoreBreakdown, ScoreResult };
+export type { CVScoreBreakdown, ATSScoreBreakdown, ScoreResult, TemplateAtsContext };
 
 /**
  * Unified CV Scoring API
@@ -33,14 +33,16 @@ export function calculateCVScore(
  * @param cvData - The CV data structure
  * @param keywordAnalysis - Optional keyword gap analysis result
  * @param atsScoreCap - Maximum possible ATS score (default: 100)
+ * @param templateContext - Template layout/safety context (structural ATS factors)
  * @returns ATSScoreBreakdown with keywordMatch, formatting, sectionAlignment, recency, contactability scores
  */
 export function calculateATSScore(
     cvData: UnifiedCVDataStructure,
     keywordAnalysis?: KeywordGapAnalysisResult | null,
-    atsScoreCap: number = 100
+    atsScoreCap: number = 100,
+    templateContext?: TemplateAtsContext
 ): ATSScoreBreakdown {
-    return CentralScoreManager.getInstance().calculateATSScore(cvData, keywordAnalysis || null, atsScoreCap);
+    return CentralScoreManager.getInstance().calculateATSScore(cvData, keywordAnalysis || null, atsScoreCap, templateContext);
 }
 
 /**
@@ -50,34 +52,56 @@ export function calculateATSScore(
  * @param cvData - The CV data structure
  * @param keywordAnalysis - Optional keyword gap analysis result
  * @param atsScoreCap - Maximum possible ATS score (default: 100)
+ * @param templateContext - Template layout/safety context (structural ATS factors)
  * @returns ScoreResult with cvScore, atsScore, overallGrade, issues, and recommendations
  */
 export function calculateScore(
     cvData: UnifiedCVDataStructure,
     keywordAnalysis?: KeywordGapAnalysisResult | null,
-    atsScoreCap: number = 100
+    atsScoreCap: number = 100,
+    templateContext?: TemplateAtsContext
 ): ScoreResult {
-    return CentralScoreManager.getInstance().getScoreSync(cvData, keywordAnalysis || null, atsScoreCap);
+    return CentralScoreManager.getInstance().getScoreSync(cvData, keywordAnalysis || null, atsScoreCap, templateContext);
 }
 
 /**
  * Canonical read selector for the score a user sees in list/thumbnail views.
  * 
- * Single source of truth: deterministic scores first (persisted by
- * CentralScoreManager-based writers), LLM review score only as a last resort.
- * Mirrors the live pill shown in the editor so the same CV reads the same
- * score in every surface.
+ * Single source of truth: deterministic scores only. The LLM review score is
+ * deliberately NOT used here — it is a subjective review, not an ATS keyword
+ * score, and must never be presented as one. Use `getCvReviewScore` if a
+ * surface genuinely wants the review number, and label it as a review.
  */
 export function getCvScoreForDisplay(cv: any): number | undefined {
   if (!cv) return undefined;
-  const deterministic =
-    typeof cv.metadata?.atsScore === 'number' ? cv.metadata.atsScore
-      : typeof cv.cv_score_ats === 'number' ? cv.cv_score_ats
+  return typeof cv.metadata?.atsScore === 'number' ? cv.metadata.atsScore
+    : typeof cv.cv_score_ats === 'number' ? cv.cv_score_ats
+      : typeof cv.cv_score_master === 'number' ? cv.cv_score_master
         : typeof cv.atsScore === 'number' ? cv.atsScore
           : undefined;
-  if (deterministic !== undefined) return deterministic;
+}
+
+/**
+ * The LLM review score, kept separate from ATS/CV scores on purpose.
+ * Lives only inside metadata.surgeonAnalysis.scoreReport.
+ */
+export function getCvReviewScore(cv: any): number | undefined {
+  if (!cv) return undefined;
   return cv.metadata?.surgeonAnalysis?.scoreReport?.overall_score
     ?? cv.scoreReport?.overall_score;
+}
+
+/**
+ * Resolve the ATS score for a journey, deterministically.
+ *
+ * `job.matchScore` is a job-fit metric, NOT an ATS score, so it is deliberately
+ * excluded — an absent ATS score must read as "not calculated", never as a
+ * different metric wearing the ATS label.
+ */
+export function getJourneyAtsScore(journey: any, job?: any): number | undefined {
+  const fromJourney = typeof journey?.atsScore === 'number' ? journey.atsScore : undefined;
+  if (fromJourney !== undefined) return fromJourney;
+  return typeof job?.atsScore === 'number' ? job.atsScore : undefined;
 }
 
 /**

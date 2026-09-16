@@ -366,11 +366,26 @@ export default function JobsDashboard() {
           setUserPreferences(data.profile);
           setAutoApplyEnabled(data.profile.enabled === true);
         }
-        if (data?.cvTailoringMode || data?.profile?.cvTailoringMode) {
-          setCvTailoringMode(
-            parseCvTailoringMode(data.cvTailoringMode || data.profile.cvTailoringMode)
-          );
+      })
+      .catch(() => {});
+
+    // Canonical tailoring mode lives on User.settings (this is what document
+    // generation reads). Fall back to the legacy JobSearchProfile value so a
+    // preference saved before the backfill still shows correctly.
+    fetch('/api/user/settings')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const canonical = data?.data?.settings?.cvTailoringMode;
+        if (canonical) {
+          setCvTailoringMode(parseCvTailoringMode(canonical));
+          return;
         }
+        return fetch('/api/job-search-profile')
+          .then((res) => (res.ok ? res.json() : null))
+          .then((legacy) => {
+            const legacyMode = legacy?.cvTailoringMode || legacy?.profile?.cvTailoringMode;
+            if (legacyMode) setCvTailoringMode(parseCvTailoringMode(legacyMode));
+          });
       })
       .catch(() => {});
   }, [userId, fetchPortalConnections]);
@@ -993,17 +1008,32 @@ export default function JobsDashboard() {
     const previous = cvTailoringMode;
     setCvTailoringMode(mode);
     try {
-      const res = await fetch('/api/job-search-profile', {
-        method: 'PATCH',
+      // User.settings.cvTailoringMode is the canonical store — it is what the
+      // document-generation pipeline reads via getUserCvTailoringMode().
+      // Writing to JobSearchProfile instead left the toggle with no effect on
+      // generated CVs, so this must stay pointed at /api/user/settings.
+      //
+      // PUT, not PATCH. `/api/user/settings` exports GET and PUT only, so a
+      // PATCH returns 405 and the toggle silently reverted. Every other caller
+      // of this route already uses PUT (dashboard/settings, Step3CV).
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates: { cvTailoringMode: mode } }),
+        body: JSON.stringify({ settings: { cvTailoringMode: mode } }),
       });
       if (!res.ok) {
-        throw new Error('Failed to save tailoring mode');
+        throw new Error(`Failed to save tailoring mode (HTTP ${res.status})`);
       }
     } catch (err) {
       console.error('Failed to save CV tailoring mode:', err);
       setCvTailoringMode(previous);
+      // Surface it. A silent revert plus a console error is indistinguishable
+      // from "the toggle just doesn't stick".
+      toast({
+        title: 'Could not save tailoring mode',
+        description: 'Your change was reverted. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -1081,11 +1111,34 @@ export default function JobsDashboard() {
     ? deduplicatedJobs.filter((job) => isJobSaved(job))
     : deduplicatedJobs.filter((job) => !isJobSaved(job));
 
+  // Comms is a fixed-height workspace: CommsPanel scrolls internally, so its
+  // tab content must FILL the space between the header block and the bottom of
+  // the layout frame instead of sizing to its own content.
+  //
+  // Filling requires a full-height flex chain up to the frame
+  // (`OptimizedDashboardLayout` gives us `h-full flex flex-col`). But the root
+  // and container below are shared by every tab, and constraining them would
+  // break the tall tabs — measured: with the chain applied unconditionally, a
+  // 2400px dashboard tab drops `main.scrollHeight` from 2418px to 751px, i.e.
+  // no scrollable overflow and the content becomes unreachable.
+  //
+  // So the chain is applied ONLY for comms. Every other tab keeps its previous
+  // natural-height, page-scrolling behaviour byte-for-byte.
+  const isCommsTab = activeTab === 'comms';
+
   return (
-    <div className="w-full bg-transparent">
-      <div className="w-full max-w-[1850px] mx-auto space-y-6">
+    <div className={`w-full bg-transparent ${isCommsTab ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
+      <div
+        className={`w-full max-w-[1850px] mx-auto ${
+          isCommsTab ? 'flex-1 min-h-0 flex flex-col gap-6' : 'space-y-6'
+        }`}
+      >
         {/* Header + Tabs */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4">
+        <div
+          className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-200 dark:border-white/10 pb-4 ${
+            isCommsTab ? 'shrink-0' : ''
+          }`}
+        >
           <div>
             <h1 className="text-h1 font-bold text-gray-900 dark:text-white">
               {activeTab === 'dashboard'
@@ -1452,7 +1505,20 @@ export default function JobsDashboard() {
         )}
 
         {activeTab === 'comms' && (
-          <div className="h-[calc(100vh-320px)] min-h-[520px] flex flex-col pb-6 sm:pb-10 lg:pb-12">
+          // Height comes from the flex chain above (`flex-1 min-h-0`), not from a
+          // magic number.
+          //
+          // This previously read `h-[calc(100vh-320px)] min-h-[520px]`. The 320px
+          // was a stale estimate of the chrome above the panel (header h-14,
+          // frame py-5, header block, space-y-6, frame padding) — the real total
+          // is ~192px. So the wrapper was ~122px shorter than the space actually
+          // available, which is the dead area that appeared below the email list
+          // and got worse as the viewport got taller. `min-h-[520px]` also
+          // silently overrode the calc on shorter viewports.
+          //
+          // `min-h-0` is required: without it a flex item refuses to shrink below
+          // its content size and the chain does nothing.
+          <div className="flex-1 min-h-0 flex flex-col">
             <CommsPanel />
           </div>
         )}

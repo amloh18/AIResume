@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import UserSettings from '@/models/UserSettings';
-import { createErrorResponse } from '@/lib/db-utils';
+import { createErrorResponse, ValidationError } from '@/lib/db-utils';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
@@ -135,18 +135,18 @@ async function handlePasswordChange(userId: string, data: any, userSettings: any
   const { currentPassword, newPassword } = data;
   
   if (!currentPassword || !newPassword) {
-    throw new Error('Current password and new password are required');
+    throw new ValidationError('Current password and new password are required');
   }
 
   const user = await User.findById(userId).select('+password');
   if (!user) {
-    throw new Error('User not found');
+    throw new ValidationError('User not found');
   }
 
   // Verify current password
   const isCurrentPasswordValid = await user.comparePassword(currentPassword);
   if (!isCurrentPasswordValid) {
-    throw new Error('Current password is incorrect');
+    throw new ValidationError('Current password is incorrect');
   }
 
   // Update password

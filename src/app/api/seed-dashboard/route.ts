@@ -15,7 +15,52 @@ import '@/models/JobApplication';
 import '@/models/CoverLetter';
 import '@/models/ApplicationJourney';
 
+/**
+ * Dashboard seeding endpoint (development / demo only).
+ *
+ * ⚠️ This endpoint writes SYNTHETIC data, including fabricated ATS scores.
+ * It must never be reachable in production: fabricated scores in a production
+ * database are indistinguishable from real ones and would make every
+ * score-reading surface lie.
+ *
+ * Gating:
+ *   - Blocked outright when NODE_ENV === 'production' unless
+ *     SEED_DASHBOARD_ENABLED === 'true'.
+ *   - When enabled in production, a matching `x-seed-secret` header
+ *     (SEED_DASHBOARD_SECRET) is also required.
+ */
+function assertSeedAllowed(request: NextRequest): NextResponse | null {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const explicitlyEnabled = process.env.SEED_DASHBOARD_ENABLED === 'true';
+
+    if (isProduction && !explicitlyEnabled) {
+        return NextResponse.json(
+            {
+                success: false,
+                error: 'Not found',
+            },
+            { status: 404 }
+        );
+    }
+
+    if (explicitlyEnabled) {
+        const expected = process.env.SEED_DASHBOARD_SECRET;
+        const provided = request.headers.get('x-seed-secret');
+        if (!expected || provided !== expected) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+    }
+
+    return null;
+}
+
 export async function POST(request: NextRequest) {
+    const blocked = assertSeedAllowed(request);
+    if (blocked) return blocked;
+
     try {
         await getConnection();
 
@@ -146,6 +191,9 @@ export async function POST(request: NextRequest) {
             const d = jobsData[i];
             if (!['applied', 'screening', 'interview', 'offer', 'rejected', 'accepted'].includes(d.status)) continue;
 
+            // SYNTHETIC score — this is demo data, not a measurement.
+            // `seededData` + `seededAtsScore` record the provenance explicitly so
+            // any surface can exclude seeded documents from score aggregates.
             const atsScore = Math.floor(Math.random() * (98 - 65) + 65);
             cvDocs.push({
                 userId,
@@ -155,7 +203,14 @@ export async function POST(request: NextRequest) {
                 templateId: masterCV.templateId,
                 documentState: 'editable',
                 cvData: masterCV.cvData,
-                metadata: { isMaster: false, createdFrom: masterCV._id, lastModified: d.appDate, atsScore }
+                metadata: {
+                    isMaster: false,
+                    createdFrom: masterCV._id,
+                    lastModified: d.appDate,
+                    atsScore,
+                    seededData: true,
+                    seededAtsScore: atsScore,
+                }
             });
 
             clDocs.push({
@@ -169,7 +224,7 @@ export async function POST(request: NextRequest) {
                 footer: 'Best, Test',
                 createdAt: d.appDate,
                 updatedAt: d.appDate,
-                metadata: { wordCount: 200, atsScore: 85 }
+                metadata: { wordCount: 200, atsScore: 85, seededData: true, seededAtsScore: 85 }
             });
 
             journeyDocs.push({

@@ -6,6 +6,7 @@ import { FileText, MapPin, Download, TrendingUp, AlertTriangle, CheckCircle, Shi
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
+import { getJourneyAtsScore } from '@/lib/utils/cv-scoring';
 
 interface JobApplication {
   id: string;
@@ -58,8 +59,9 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
   const filteredJobs = showReadyOnly
     ? jobs.filter(job => {
       const journeys = getJobJourneys(job.id);
-      const atsScore = journeys[0]?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
-      return atsScore >= 80;
+      // ATS-labelled value must come from an ATS measurement — never job.matchScore.
+      const atsScore = getJourneyAtsScore(journeys[0], job);
+      return typeof atsScore === 'number' && atsScore >= 80;
     })
     : jobs;
 
@@ -116,7 +118,7 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
             {filteredJobs.map((job) => {
               const journeys = getJobJourneys(job.id);
               const journey = journeys[0]; // Primary journey
-              const atsScore = journey?.atsScore || (job as any).atsScore || (job as any).matchScore || 0;
+              const atsScore = getJourneyAtsScore(journey, job);
               const hasCV = !!journey?.cvId;
               const hasCL = !!journey?.coverLetterId;
               const riskLevel = job.trustSnapshot?.ghostRiskLevel || 'unknown';
@@ -158,17 +160,27 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
                   {/* ATS Score */}
                   <td className="px-6 py-4 whitespace-nowrap align-middle">
                     <div className="w-24">
-                      <div className="flex justify-between text-small mb-1">
-                        <span className={atsScore >= 80 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400'}>
-                          {atsScore}/100
+                      {typeof atsScore === 'number' ? (
+                        <>
+                          <div className="flex justify-between text-small mb-1">
+                            <span className={atsScore >= 80 ? 'text-green-600 dark:text-green-400 font-medium' : 'text-amber-600 dark:text-amber-400'}>
+                              {atsScore}/100
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full ${atsScore >= 80 ? 'bg-green-500' : 'bg-amber-500'}`}
+                              style={{ width: `${atsScore}%` }}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        // No ATS measurement exists yet. Show that plainly rather
+                        // than substituting a job-fit score under the ATS label.
+                        <span className="text-small text-gray-400 dark:text-gray-500" title="No ATS measurement recorded for this document yet">
+                          Not measured
                         </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                        <div
-                          className={`h-1.5 rounded-full ${atsScore >= 80 ? 'bg-green-500' : 'bg-amber-500'}`}
-                          style={{ width: `${atsScore}%` }}
-                        />
-                      </div>
+                      )}
                     </div>
                   </td>
 

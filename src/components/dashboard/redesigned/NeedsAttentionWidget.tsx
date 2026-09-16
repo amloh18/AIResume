@@ -46,12 +46,10 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
   const router = useRouter();
   const { data: session } = useSession();
   const [items, setItems] = useState<AttentionItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAttentionItems = useCallback(async (signal?: AbortSignal) => {
     try {
-      setLoading(true);
       setError(null);
 
       // Fetch jobs needing attention
@@ -125,8 +123,6 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
       if (err?.name === 'AbortError') return;
       console.error('Failed to load attention items:', err);
       setError(err.message || 'Failed to load attention items');
-    } finally {
-      setLoading(false);
     }
   }, [limit]);
 
@@ -170,28 +166,11 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
     }
   };
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Needs Attention</h3>
-        </div>
-        <div className="space-y-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="animate-pulse flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-white/5">
-              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700" />
-              <div className="flex-1 space-y-1">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+  // No loading skeleton on purpose. The widget is purely additive — it either
+  // has something the user must act on, or it renders nothing (see the
+  // `items.length === 0` guard below). Showing a placeholder card while the
+  // fetch is in flight made the dashboard flash an amber "Needs Attention"
+  // panel on every load, then collapse it when the list came back empty.
   if (error) {
     return (
       <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] p-4">

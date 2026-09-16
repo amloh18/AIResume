@@ -590,6 +590,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     // Remove applicationDate as it's no longer used in the form
     delete data.applicationDate;
 
+    // `atsScore` is a derived ATS measurement, not an editable job field. It is
+    // kept in local form state for display, but must never be sent back — the
+    // server rejects it, and autosave runs every 2s.
+    delete data.atsScore;
+
     return data;
   };
 

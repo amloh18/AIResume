@@ -6,6 +6,7 @@ import { JobApplication, User } from '@/models';
 import CV from '@/models/CV';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
+import { buildSession, groupQuestionsByModule } from '@/lib/interview/plan';
 import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 import mongoose from 'mongoose';
 
@@ -70,8 +71,26 @@ export async function POST(request: NextRequest) {
         console.log(`✅ Job found: ${job.jobTitle} at ${job.company}`);
 
         // --- Gating Logic: Free users can only generate 1 plan total ---
-        const user = await User.findById(userIdObj).select('currentPlanKey subscription');
+        // `interviewCoach` is selected in the same query so the response can
+        // carry the practice streak without an extra round-trip.
+        const user = await User.findById(userIdObj).select('currentPlanKey subscription interviewCoach');
         const planKey = user?.currentPlanKey || 'free';
+        const currentStreak = user?.interviewCoach?.currentStreak || 0;
+
+        /**
+         * Everything the client needs to render the hub without a follow-up
+         * request: the session (shell or full) plus module-grouped questions.
+         * Previously the client had to call `/plan` a second time just to get
+         * this grouping, which cost an extra auth + 2-query round-trip after a
+         * 10–50s AI generation.
+         */
+        const planShape = (interviewCoach: any) => ({
+            questionsByModule: groupQuestionsByModule(
+                interviewCoach?.modules || [],
+                interviewCoach?.questions || []
+            ),
+            session: buildSession(job, interviewCoach, currentStreak),
+        });
 
         // Handle 'fetch' action to prevent unnecessary AI generation
         if (action === 'fetch') {
@@ -81,7 +100,8 @@ export async function POST(request: NextRequest) {
                         success: true,
                         interviewCoach: job.interviewCoach,
                         existing: true,
-                        planKey
+                        planKey,
+                        ...planShape(job.interviewCoach)
                     }),
                     request
                 );
@@ -114,7 +134,8 @@ export async function POST(request: NextRequest) {
                         existing: true,
                         cached: true,
                         cachedHoursAgo: Math.round(hoursOld),
-                        planKey
+                        planKey,
+                        ...planShape(job.interviewCoach)
                     }),
                     request
                 );
@@ -253,7 +274,8 @@ export async function POST(request: NextRequest) {
                     success: true,
                     interviewCoach: verifyJob.interviewCoach,
                     existing: false,
-                    planKey: planKey
+                    planKey: planKey,
+                    ...planShape(verifyJob.interviewCoach)
                 }),
                 request
             );

@@ -19,12 +19,17 @@ import {
   extractAtsKeywords,
   applyDeterministicAtsPass,
   type CvTailoringMode,
+  type CvRefinementSeedInput,
 } from '@/lib/cv-tailoring/tailoringMode';
 import {
   buildGenerationContext,
   summarizeGenerationContext,
   type GenerationContext,
 } from '@/lib/job-landing';
+import {
+  getTemplateById,
+  resolveAtsSafeTemplateId,
+} from '@/lib/templates/template-utils';
 
 export interface CreateJourneyDocumentsResult {
   success: boolean;
@@ -32,6 +37,45 @@ export interface CreateJourneyDocumentsResult {
   coverLetterId: string | null;
   error?: string;
   generationState?: any;
+}
+
+/**
+ * Fields on `CV.metadata` that describe a *specific scoring run* or a
+ * *specific document's lifecycle*. They must never be inherited by a derived
+ * document: a freshly generated Journey CV that carries the Master CV's
+ * `atsScore` would display a score it was never measured against.
+ */
+const NON_INHERITABLE_CV_METADATA = [
+  'atsScore',
+  'atsScoreDate',
+  'atsScoreHash',
+  'atsScoreBreakdown',
+  'atsScoreCap',
+  'knockOutFactors',
+  'templateAtsSafety',
+  'templatePinnedFrom',
+  'aiAnalysis',
+  'analysisSnapshot',
+  'thumbnailUrl',
+  'thumbnailGeneratedAt',
+  'frozenAt',
+  'frozenReason',
+  'isFrozen',
+  'pinnedKeywords',
+  'refinementSeedFrom',
+  'refinementSeedConfidence',
+  'generationMode',
+  'generationReason',
+  'fallbackCreation',
+] as const;
+
+function stripInheritedScoreMetadata(metadata: Record<string, any> | undefined): Record<string, any> {
+  if (!metadata) return {};
+  const clone: Record<string, any> = { ...metadata };
+  for (const key of NON_INHERITABLE_CV_METADATA) {
+    delete clone[key];
+  }
+  return clone;
 }
 
 function getTrackerCvGenerationReason(options: {
@@ -198,7 +242,10 @@ export async function createJourneyDocuments(
             hardRequirementMatch: generationContext.gapAnalysis.hardRequirementMatch,
             keywordCoverage: generationContext.gapAnalysis.keywordCoverage,
             totalKeywords: generationContext.keywordStrategy.totalKeywords,
-            canReuse: generationContext.reuseEvaluation?.canReuse || false,
+            // Refinement seed (not a reuse decision — see cvReuseEngine).
+            refinementSeedFrom: generationContext.reuseEvaluation?.refinementSeed?.seedCVId || null,
+            refinementSeedConfidence:
+              generationContext.reuseEvaluation?.refinementSeed?.confidence ?? 0,
           });
         }
       } catch (intelError) {
@@ -258,41 +305,79 @@ export async function createJourneyDocuments(
           // Duplicate master CV
           const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
 
-          // Use Modern Minimal template as default if master CV doesn't have templateId
-          let templateId = masterCV.templateId;
+          // ─── TEMPLATE PINNING ────────────────────────────────────────
+          // Journey CVs are applied to real jobs, so they must be parseable
+          // by ATS software. A Master CV is a personal design choice — if it
+          // uses a multi-column/sidebar/creative layout, inheriting it would
+          // silently cap every generated document. We therefore only inherit
+          // the Master template when it is already ATS-safe, and otherwise
+          // pin to the ATS-safe default and record the override.
+          const templateResolution = resolveAtsSafeTemplateId(masterCV.templateId);
+          const templateId = templateResolution.templateId;
           let templateName = masterCV.templateName;
           let templateData = masterCV.templateData;
 
-          if (!templateId) {
-            templateId = 'modern-minimal-v2';
-            templateName = 'Modern Minimal';
-            console.log('✅ Journey Document Service - Using Modern Minimal template as default');
+          if (templateResolution.templateId !== masterCV.templateId) {
+            // Template changed — the Master's templateData/styling belong to
+            // the old template and must not leak into the new one.
+            const resolvedTemplate = getTemplateById(templateResolution.templateId);
+            templateName = resolvedTemplate?.name || 'Modern Minimal';
+            templateData = undefined;
           }
+
+          if (templateResolution.pinnedFrom) {
+            console.log(
+              `📐 Journey Document Service - Pinned ATS-safe template '${templateId}' ` +
+              `(Master used '${templateResolution.pinnedFrom}', ${templateResolution.profile.reason})`
+            );
+          } else {
+            console.log(
+              `📐 Journey Document Service - Master template '${templateId}' is ATS-safe ` +
+              `(${templateResolution.profile.layoutType})`
+            );
+          }
+          // ─── END TEMPLATE PINNING ────────────────────────────────────
 
           // Deep copy cvData to preserve structure/content map.
           let duplicatedCvData = masterCV.cvData ? JSON.parse(JSON.stringify(masterCV.cvData)) : masterCV.cvData;
 
+          // Refinement seed: a comparable prior CV, used ONLY as a keyword
+          // target list. It never causes this journey to share another
+          // journey's CV — every job still gets its own tailored document.
+          const refinementSeed = generationContext?.reuseEvaluation?.refinementSeed || null;
+          if (refinementSeed) {
+            console.log(
+              `🌱 Journey Document Service - Refining from prior CV "${refinementSeed.seedCVTitle}" ` +
+              `(${Math.round(refinementSeed.confidence * 100)}% comparable): ` +
+              `${refinementSeed.alreadyEvidencedKeywords.length} keywords already evidenced, ` +
+              `${refinementSeed.stillMissingKeywords.length} still unevidenced`
+            );
+          }
+
+          let pinnedKeywords: string[] = [];
+          let skippedKeywords: string[] = [];
+
           if (shouldTailorDocuments) {
             try {
               console.log('🚀 Journey Document Service - Tailoring CV content for job...');
-              const tailoredCvData = await tailorCVContent(duplicatedCvData, job, tailoringMode);
-              if (tailoredCvData) {
-                duplicatedCvData = tailoredCvData;
+              const tailoringResult = await tailorCVContent(
+                duplicatedCvData,
+                job,
+                tailoringMode,
+                refinementSeed
+              );
+              if (tailoringResult) {
+                duplicatedCvData = tailoringResult.cvData;
+                pinnedKeywords = tailoringResult.pinnedKeywords;
+                skippedKeywords = tailoringResult.skippedKeywords;
                 cvWasTailored = true;
-                console.log('✅ Journey Document Service - CV content tailored successfully');
-
-                // Apply keyword strategy from intelligence layer if available
-                if (generationContext?.keywordStrategy) {
-                  const { keywordStrategy, gapAnalysis } = generationContext;
-                  // Pin tier-1 mandatory keywords that are missing
-                  const tier1Keywords = keywordStrategy.tiers[0]?.keywords || [];
-                  const missingKeywords = gapAnalysis.missing
-                    .map(m => m.requirement.toLowerCase())
-                    .filter(req => tier1Keywords.some(kw => req.includes(kw.toLowerCase())));
-
-                  if (missingKeywords.length > 0) {
-                    console.log(`📌 Journey Document Service - Pinning ${missingKeywords.length} mandatory keywords from intelligence layer`);
-                  }
+                console.log(
+                  `✅ Journey Document Service - CV content tailored successfully ` +
+                  `(${pinnedKeywords.length} keywords pinned from evidence, ` +
+                  `${skippedKeywords.length} skipped as unevidenced)`
+                );
+                if (pinnedKeywords.length > 0) {
+                  console.log(`📌 Pinned keywords: ${pinnedKeywords.join(', ')}`);
                 }
               }
             } catch (tailorError) {
@@ -321,7 +406,7 @@ export async function createJourneyDocuments(
             styling: masterCV.styling ? JSON.parse(JSON.stringify(masterCV.styling)) : masterCV.styling, // Deep copy styling
             userId: new mongoose.Types.ObjectId(userId),
             metadata: {
-              ...masterCV.metadata,
+              ...stripInheritedScoreMetadata(masterCV.metadata),
               isMaster: false,
               createdVia: 'journey',
               lastModified: new Date(),
@@ -332,7 +417,18 @@ export async function createJourneyDocuments(
               generationReason: getTrackerCvGenerationReason({
                 wasTailored: cvWasTailored,
                 tailoringRequested: shouldTailorDocuments
-              })
+              }),
+              // Template audit trail: what we pinned to, why, and the ATS ceiling
+              // that template imposes. CentralScoreManager caps the score with it.
+              templateAtsSafety: templateResolution.profile.safety,
+              templatePinnedFrom: templateResolution.pinnedFrom,
+              atsScoreCap: templateResolution.profile.cap,
+              // Refinement audit trail: which JD keywords the deterministic pass
+              // added from evidence, and which one were skipped because nothing
+              // in the CV supported them. Makes "why isn't X on my CV?" answerable.
+              pinnedKeywords,
+              refinementSeedFrom: refinementSeed?.seedCVId,
+              refinementSeedConfidence: refinementSeed?.confidence,
             }
           });
 
@@ -367,6 +463,37 @@ export async function createJourneyDocuments(
           // Link standalone CV to journey instead of creating new one
           standaloneCV.cvType = 'journey';
           standaloneCV.journeyId = currentJourney._id.toString();
+
+          // A standalone CV can carry a decorative layout the user picked for
+          // personal use. Once it becomes the document attached to a real
+          // application it must be ATS-parseable, so pin it the same way.
+          const standaloneTemplateResolution = resolveAtsSafeTemplateId(standaloneCV.templateId);
+          const templateChanged =
+            standaloneTemplateResolution.templateId !== standaloneCV.templateId;
+
+          if (templateChanged) {
+            const resolvedTemplate = getTemplateById(standaloneTemplateResolution.templateId);
+            standaloneCV.templateId = standaloneTemplateResolution.templateId;
+            standaloneCV.templateName = resolvedTemplate?.name || 'Modern Minimal';
+            standaloneCV.templateData = undefined;
+            console.log(
+              `📐 Journey Document Service - Pinned standalone CV to ATS-safe template ` +
+              `'${standaloneTemplateResolution.templateId}' (was '${standaloneTemplateResolution.pinnedFrom}')`
+            );
+          }
+
+          standaloneCV.metadata = {
+            ...(standaloneCV.metadata || {}),
+            // A stale score from the standalone context must not survive a
+            // template change — the score is template-dependent.
+            ...(templateChanged ? stripInheritedScoreMetadata(standaloneCV.metadata) : {}),
+            templateAtsSafety: standaloneTemplateResolution.profile.safety,
+            templatePinnedFrom:
+              standaloneTemplateResolution.pinnedFrom ||
+              (standaloneCV.metadata as any)?.templatePinnedFrom,
+            atsScoreCap: standaloneTemplateResolution.profile.cap,
+          } as any;
+
           await standaloneCV.save();
 
           cvId = standaloneCV._id.toString();
@@ -380,6 +507,8 @@ export async function createJourneyDocuments(
           console.error('❌ Journey Document Service - No master CV or standalone CV found');
           console.error('❌ Journey Document Service - Creating basic CV structure as fallback');
 
+          const basicTemplateResolution = resolveAtsSafeTemplateId(null);
+          const basicTemplate = getTemplateById(basicTemplateResolution.templateId);
           const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
           const basicCV = new CV({
             title: cvTitle,
@@ -397,8 +526,8 @@ export async function createJourneyDocuments(
             isMaster: false,
             journeyId: currentJourney._id.toString(),
             cvType: 'journey',
-            templateId: 'modern-minimal-v2',
-            templateName: 'Modern Minimal',
+            templateId: basicTemplateResolution.templateId,
+            templateName: basicTemplate?.name || 'Modern Minimal',
             userId: new mongoose.Types.ObjectId(userId),
             metadata: {
               isMaster: false,
@@ -406,7 +535,9 @@ export async function createJourneyDocuments(
               lastModified: new Date(),
               viewCount: 0,
               downloadCount: 0,
-              fallbackCreation: true // Flag to indicate this was a fallback creation
+              fallbackCreation: true, // Flag to indicate this was a fallback creation
+              templateAtsSafety: basicTemplateResolution.profile.safety,
+              atsScoreCap: basicTemplateResolution.profile.cap,
             }
           });
 
@@ -760,8 +891,13 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 async function tailorCVContent(
   cvData: UnifiedCVDataStructure,
   jobData: any,
-  mode: CvTailoringMode
-): Promise<UnifiedCVDataStructure | null> {
+  mode: CvTailoringMode,
+  refinementSeed?: CvRefinementSeedInput | null
+): Promise<{
+  cvData: UnifiedCVDataStructure;
+  pinnedKeywords: string[];
+  skippedKeywords: string[];
+} | null> {
   try {
     const jobDescription = jobData.jobDescription || jobData.description || '';
     const jobTitle = jobData.title || jobData.jobTitle || 'Target Role';
@@ -774,6 +910,7 @@ async function tailorCVContent(
       company,
       jobDescription,
       atsKeywords,
+      refinementSeed,
     });
 
     const aiResponse = await callAIWithFallback({
@@ -787,11 +924,16 @@ async function tailorCVContent(
     const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return applyDeterministicAtsPass(parsed, {
+      const passResult = applyDeterministicAtsPass(parsed, {
         mode,
         jobTitle,
         atsKeywords,
-      }) as UnifiedCVDataStructure;
+      });
+      return {
+        cvData: passResult.cvData as UnifiedCVDataStructure,
+        pinnedKeywords: passResult.pinnedKeywords,
+        skippedKeywords: passResult.skippedKeywords,
+      };
     }
 
     return null;

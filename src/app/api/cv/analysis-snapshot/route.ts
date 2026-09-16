@@ -153,15 +153,18 @@ export async function POST(request: NextRequest) {
       const updateData: any = {
         'metadata.analysisSnapshot': snapshot,
         'metadata.surgeonAnalysis': surgeonAnalysis,
-        'metadata.cvScore': finalScore
       };
 
-      if (cv.cvType === 'journey') {
-        updateData.cv_score_ats = finalScore;
-        updateData['metadata.atsScore'] = finalScore;
-        updateData['metadata.atsScoreDate'] = new Date();
-      } else {
-        updateData.cv_score_master = finalScore;
+      // Journey CVs are deliberately excluded from this write.
+      //
+      // The onboarding snapshot is computed from the CV alone, with no job
+      // description, so its health index is a general quality score — not an
+      // ATS score. Writing it to `cv_score_ats` / `metadata.atsScore` for a
+      // journey CV would present a JD-independent number as the CV's ATS score
+      // and overwrite the real one. Journey ATS scores come only from
+      // POST /api/ats/calculate-score.
+      if (cv.cvType !== 'journey') {
+        updateData['metadata.cvScore'] = finalScore;
       }
 
       await CV.findByIdAndUpdate(cvId, {

@@ -199,10 +199,22 @@ export default function FiltersBar({
       <div
         className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-4 sm:p-5 shadow-xs space-y-3.5 transition-colors"
       >
+        {/* Frosted layer.
+            The controls below are translucent (the search field is
+            `bg-gray-50/80`), so the orange zigzag pattern showed through them
+            and made the text noisy. `backdrop-filter` blurs everything painted
+            behind the element — including this container's own gradient — so an
+            absolutely-positioned child is what softens the pattern.
+            `pointer-events-none` keeps it from swallowing clicks. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-0 rounded-2xl sm:rounded-3xl backdrop-blur-[3px] pointer-events-none"
+        />
+
         {/* ========================================================================= */}
         {/* ROW 1: Search Bar & Country Button Inline */}
         {/* ========================================================================= */}
-        <div className="flex items-center gap-2 sm:gap-3 w-full">
+        <div className="relative z-10 flex items-center gap-2 sm:gap-3 w-full">
           <div className="flex-1 min-w-0">
             <SearchInput
               value={filters.searchText || ''}
@@ -223,7 +235,7 @@ export default function FiltersBar({
         {/* ========================================================================= */}
         {/* ROW 2: Navigation Switcher & Action Controls (Auto-Apply, Location, Mode) */}
         {/* ========================================================================= */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Left: Result Segment Navigation Switcher (icon-only on the smallest screens) */}
           <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 self-start lg:self-auto h-10 shadow-2xs">
             <button
@@ -354,7 +366,7 @@ export default function FiltersBar({
         {/* ========================================================================= */}
         {/* ROW 3: Unified Single-Row Quick Filter Bar */}
         {/* ========================================================================= */}
-        <div className="pt-0.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        <div className="relative z-10 pt-0.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Workplace Type Pills */}
             <div className="flex items-center gap-1 shrink-0">
