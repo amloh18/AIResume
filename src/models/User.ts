@@ -49,6 +49,7 @@ export interface IUser extends Document {
   role: 'user' | 'admin' | 'superadmin';
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
+  stalwartEmail?: string;
 
   // Guest support
   isAnonymous: boolean;
@@ -341,6 +342,12 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: [true, 'Email is required'],
     unique: true,
+    lowercase: true,
+    trim: true
+  },
+  stalwartEmail: {
+    type: String,
+    sparse: true,
     lowercase: true,
     trim: true
   },

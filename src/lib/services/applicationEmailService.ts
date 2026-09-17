@@ -107,8 +107,13 @@ function getTransporter() {
  * Compose application email from data
  */
 function composeApplicationEmail(data: ApplicationEmailData) {
-  const senderEmail = process.env.APPLICATION_SENDER_EMAIL || 'applications@buildairesume.com';
-  const senderName = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
+  const defaultSenderEmail = process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
+  const defaultSenderName = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
+
+  const domain = defaultSenderEmail.includes('@') ? defaultSenderEmail.split('@')[1] : 'morigrid.com';
+  const isCandidateEmailOnDomain = data.candidateEmail && data.candidateEmail.toLowerCase().endsWith(`@${domain}`);
+  const senderEmail = isCandidateEmailOnDomain ? data.candidateEmail : defaultSenderEmail;
+  const senderName = data.candidateName || defaultSenderName;
 
   const mailOptions: nodemailer.SendMailOptions = {
     from: `"${senderName}" <${senderEmail}>`,
@@ -116,7 +121,7 @@ function composeApplicationEmail(data: ApplicationEmailData) {
     subject: data.subject,
     text: data.body,
     html: generateApplicationEmailHtml(data),
-    replyTo: data.replyTo || data.candidateEmail,
+    replyTo: data.replyTo || data.candidateEmail || senderEmail,
     attachments: [],
   };
 
