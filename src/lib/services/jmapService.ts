@@ -335,7 +335,7 @@ export async function getEmails(params: {
   ];
 
   const emails = await jmapCall('Email/get', {
-    ids: result.ids,
+    ids: emailIds,
     properties: emailProperties,
     fetchTextBodyValues: true,
     fetchHTMLBodyValues: true,
@@ -343,8 +343,8 @@ export async function getEmails(params: {
 
   return {
     list: emails.list || [],
-    total: result.total,
-    state: result.state,
+    total,
+    state,
   };
 }
 
@@ -391,29 +391,13 @@ export async function searchEmails(params: {
   if (params.since) filter.after = params.since;
   if (params.before) filter.before = params.before;
 
-  if (params.mailboxRole) {
-    const mailbox = await getMailboxByRole(params.mailboxRole);
-    if (mailbox) filter.inMailbox = mailbox.id;
-  }
-
-  const result = await jmapCall('Email/query', {
+  const res = await getEmails({
+    mailboxRole: params.mailboxRole,
     filter,
     limit: params.limit || 50,
   });
 
-  if (!result.ids || result.ids.length === 0) return [];
-
-  const emails = await jmapCall('Email/get', {
-    ids: result.ids,
-    properties: [
-      'id', 'threadId', 'mailboxIds', 'keywords', 'from', 'to', 'cc',
-      'subject', 'receivedAt', 'textBody', 'htmlBody', 'size', 'preview',
-    ],
-    fetchTextBodyValues: true,
-    fetchHTMLBodyValues: true,
-  });
-
-  return emails.list || [];
+  return res.list || [];
 }
 
 // ============================================================================
