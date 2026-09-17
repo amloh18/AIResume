@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database/connection-manager';
+import User from '@/models/User';
 import { Communication } from '@/models/Communication';
 import { sendEmailViaSmtp } from '@/lib/services/jmapService';
 
@@ -32,16 +33,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Body is required' }, { status: 400 });
     }
 
+    // Resolve candidate identity
+    const user: any = await User.findById(userId).select('stalwartEmail firstName lastName email').lean();
+    const senderEmail = user?.stalwartEmail || process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
+    const senderName = (user?.firstName && user?.lastName)
+      ? `${user.firstName} ${user.lastName}`
+      : (process.env.APPLICATION_SENDER_NAME || 'BuildAIResume');
+
     const sendResult = await sendEmailViaSmtp({
-      from: process.env.APPLICATION_SENDER_EMAIL || 'applications@morigrid.com',
-      fromName: process.env.APPLICATION_SENDER_NAME || 'BuildAIResume',
+      from: senderEmail,
+      fromName: senderName,
       to,
       cc: cc?.length ? cc : undefined,
       bcc: bcc?.length ? bcc : undefined,
       subject,
       textBody,
       htmlBody,
-      replyTo,
+      replyTo: replyTo || senderEmail,
       inReplyTo,
     });
 
@@ -71,10 +79,10 @@ export async function POST(request: NextRequest) {
       bodySnippet: textBody.substring(0, 500),
       textBody,
       htmlBody,
-      senderEmail: process.env.APPLICATION_SENDER_EMAIL || 'applications@morigrid.com',
-      senderName: process.env.APPLICATION_SENDER_NAME || 'BuildAIResume',
+      senderEmail,
+      senderName,
       recipients,
-      replyTo,
+      replyTo: replyTo || senderEmail,
       jobId: jobId || undefined,
       applicationId: applicationId || undefined,
       classification: 'UNKNOWN',

@@ -14,17 +14,23 @@ import nodemailer from 'nodemailer';
 // Configuration
 // ============================================================================
 
-const JMAP_BASE_URL = process.env.STALWART_JMAP_URL || 'http://localhost:8085/jmap';
-const JMAP_API_URL = `${JMAP_BASE_URL}`;
-const JMAP_USER = process.env.STALWART_JMAP_USER || 'admin';
-const JMAP_PASS = process.env.STALWART_JMAP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
-const SMTP_HOST = process.env.STALWART_SMTP_HOST || '192.168.1.8';
-const SMTP_PORT = parseInt(process.env.STALWART_SMTP_PORT || '465');
-const SMTP_SECURE = process.env.STALWART_SMTP_SECURE === 'true' || SMTP_PORT === 465;
-const SMTP_USER = process.env.STALWART_SMTP_USER || 'applications@morigrid.com';
-const SMTP_PASS = process.env.STALWART_SMTP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
-const APPLICATION_SENDER = process.env.APPLICATION_SENDER_EMAIL || 'applications@morigrid.com';
-const APPLICATION_SENDER_NAME = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
+function getJmapConfig() {
+  const baseUrl = process.env.STALWART_JMAP_URL || 'http://localhost:8085/jmap';
+  const user = process.env.STALWART_JMAP_USER || 'admin';
+  const pass = process.env.STALWART_JMAP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
+  return { baseUrl, user, pass };
+}
+
+function getSmtpConfig() {
+  const host = process.env.STALWART_SMTP_HOST || '192.168.1.8';
+  const port = parseInt(process.env.STALWART_SMTP_PORT || '587');
+  const secure = process.env.STALWART_SMTP_SECURE === 'true' || port === 465;
+  const user = process.env.STALWART_SMTP_USER || 'applications@morigrid.com';
+  const pass = process.env.STALWART_SMTP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
+  const senderEmail = process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
+  const senderName = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
+  return { host, port, secure, user, pass, senderEmail, senderName };
+}
 
 // ============================================================================
 // JMAP Session
@@ -59,9 +65,10 @@ export async function getJmapSession(): Promise<JmapSession> {
     return cachedSession;
   }
 
-  const auth = Buffer.from(`${JMAP_USER}:${JMAP_PASS}`).toString('base64');
+  const { baseUrl, user, pass } = getJmapConfig();
+  const auth = Buffer.from(`${user}:${pass}`).toString('base64');
 
-  const response = await fetch(`${JMAP_BASE_URL}/session`, {
+  const response = await fetch(`${baseUrl}/session`, {
     headers: {
       'Authorization': `Basic ${auth}`,
     },
@@ -73,9 +80,9 @@ export async function getJmapSession(): Promise<JmapSession> {
 
   const session = await response.json();
 
-  // Option A: If JMAP_BASE_URL is internal, rewrite external URLs to use JMAP_BASE_URL origin
+  // Option A: If baseUrl is internal, rewrite external URLs to use baseUrl origin
   try {
-    const baseOrigin = new URL(JMAP_BASE_URL).origin;
+    const baseOrigin = new URL(baseUrl).origin;
     const rewriteUrl = (url?: string) => {
       if (!url) return url;
       try {
@@ -124,8 +131,9 @@ export async function jmapCall(
     accountId = await getAccountId();
   }
 
+  const { user, pass } = getJmapConfig();
   const session = await getJmapSession();
-  const auth = Buffer.from(`${JMAP_USER}:${JMAP_PASS}`).toString('base64');
+  const auth = Buffer.from(`${user}:${pass}`).toString('base64');
 
   const response = await fetch(session.apiUrl, {
     method: 'POST',
@@ -166,8 +174,9 @@ export async function jmapMultiCall(
   calls: Array<[string, Record<string, any>]>
 ): Promise<any[]> {
   const accountId = await getAccountId();
+  const { user, pass } = getJmapConfig();
   const session = await getJmapSession();
-  const auth = Buffer.from(`${JMAP_USER}:${JMAP_PASS}`).toString('base64');
+  const auth = Buffer.from(`${user}:${pass}`).toString('base64');
 
   const methodCalls = calls.map(([method, params], i) => [
     method,
@@ -563,13 +572,14 @@ export async function sendEmailViaSmtp(params: SendEmailParams): Promise<{
   retryable?: boolean;
 }> {
   try {
+    const { host, port, secure, user, pass, senderEmail, senderName } = getSmtpConfig();
     const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
+      host,
+      port,
+      secure,
       auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
+        user,
+        pass,
       },
       pool: true,
       maxConnections: 5,
@@ -577,7 +587,7 @@ export async function sendEmailViaSmtp(params: SendEmailParams): Promise<{
     });
 
     const mailOptions: any = {
-      from: `"${params.fromName || APPLICATION_SENDER_NAME}" <${params.from}>`,
+      from: `"${params.fromName || senderName}" <${params.from || senderEmail}>`,
       to: params.to.join(', '),
       cc: params.cc?.join(', '),
       bcc: params.bcc?.join(', '),
@@ -796,11 +806,12 @@ export async function testSmtpConnection(): Promise<{
 }> {
   const start = Date.now();
   try {
+    const { host, port, secure, user, pass } = getSmtpConfig();
     const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      host,
+      port,
+      secure,
+      auth: { user, pass },
     });
     await transporter.verify();
     return {
