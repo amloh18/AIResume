@@ -72,6 +72,27 @@ export async function getJmapSession(): Promise<JmapSession> {
   }
 
   const session = await response.json();
+
+  // Option A: If JMAP_BASE_URL is internal, rewrite external URLs to use JMAP_BASE_URL origin
+  try {
+    const baseOrigin = new URL(JMAP_BASE_URL).origin;
+    const rewriteUrl = (url?: string) => {
+      if (!url) return url;
+      try {
+        const parsed = new URL(url);
+        return `${baseOrigin}${parsed.pathname}${parsed.search}`;
+      } catch {
+        return url;
+      }
+    };
+    if (session.apiUrl) session.apiUrl = rewriteUrl(session.apiUrl);
+    if (session.downloadUrl) session.downloadUrl = rewriteUrl(session.downloadUrl);
+    if (session.uploadUrl) session.uploadUrl = rewriteUrl(session.uploadUrl);
+    if (session.eventSourceUrl) session.eventSourceUrl = rewriteUrl(session.eventSourceUrl);
+  } catch {
+    // Keep original session URLs if parsing fails
+  }
+
   cachedSession = session;
   sessionExpiry = Date.now() + 5 * 60 * 1000; // Cache for 5 minutes
   return session;
@@ -270,14 +291,41 @@ export async function getEmails(params: {
     queryFilter.inMailbox = targetMailboxId;
   }
 
-  const result = await jmapCall('Email/query', {
-    filter: queryFilter,
-    sort: [{ property: sort, isAscending: sortOrder === 'ascending' }],
-    limit,
-  });
+  let emailIds: string[] = [];
+  let state = '';
+  let total = 0;
 
-  if (!result.ids || result.ids.length === 0) {
-    return { list: [], total: 0, state: result.state };
+  try {
+    const result = await jmapCall('Email/query', {
+      filter: queryFilter,
+      sort: [{ property: sort, isAscending: sortOrder === 'ascending' }],
+      limit,
+    });
+    emailIds = result.ids || [];
+    state = result.state;
+    total = result.total ?? emailIds.length;
+  } catch (err: any) {
+    // If Email/query is not supported or search indexing is unavailable, fall back to Email/get
+    const allEmails = await jmapCall('Email/get', {
+      ids: null,
+      properties: ['id', 'mailboxIds', 'receivedAt', sort],
+    });
+    let filtered = allEmails.list || [];
+    if (targetMailboxId) {
+      filtered = filtered.filter((e: any) => e.mailboxIds?.[targetMailboxId]);
+    }
+    filtered.sort((a: any, b: any) => {
+      const ta = new Date(a[sort] || 0).getTime();
+      const tb = new Date(b[sort] || 0).getTime();
+      return sortOrder === 'ascending' ? ta - tb : tb - ta;
+    });
+    emailIds = filtered.slice(0, limit).map((e: any) => e.id);
+    state = allEmails.state;
+    total = filtered.length;
+  }
+
+  if (emailIds.length === 0) {
+    return { list: [], total: 0, state };
   }
 
   const emailProperties = properties || [
