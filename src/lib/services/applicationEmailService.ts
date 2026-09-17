@@ -68,13 +68,19 @@ export interface EmailQueueItem {
  * Create Stalwart SMTP transporter
  */
 function createStalwartTransporter() {
+  const host = process.env.STALWART_SMTP_HOST || process.env.EMAIL_SERVER_HOST || '192.168.1.8';
+  const port = parseInt(process.env.STALWART_SMTP_PORT || process.env.EMAIL_SERVER_PORT || '587');
+  const secure = process.env.STALWART_SMTP_SECURE === 'true' || port === 465;
+  const user = process.env.STALWART_SMTP_USER || process.env.EMAIL_SERVER_USER || 'b9c9d3001@smtp-brevo.com';
+  const pass = process.env.STALWART_SMTP_PASSWORD || process.env.EMAIL_SERVER_PASSWORD || '';
+
   const config = {
-    host: process.env.STALWART_SMTP_HOST || 'stalwart',
-    port: parseInt(process.env.STALWART_SMTP_PORT || '587'),
-    secure: process.env.STALWART_SMTP_PORT === '465',
+    host,
+    port,
+    secure,
     auth: {
-      user: process.env.STALWART_SMTP_USER || 'applications@buildairesume.com',
-      pass: process.env.STALWART_SMTP_PASSWORD || '',
+      user,
+      pass,
     },
     // Connection pooling for performance
     pool: true,
@@ -88,15 +94,14 @@ function createStalwartTransporter() {
 }
 
 /**
- * Get email transporter (Stalwart for application emails)
+ * Get email transporter (Stalwart or fallback SMTP relay for application emails)
  */
 function getTransporter() {
-  if (!process.env.STALWART_SMTP_HOST) {
-    console.warn('⚠️ Stalwart SMTP not configured, falling back to default email service');
-    return null;
+  if (process.env.STALWART_SMTP_HOST || process.env.EMAIL_SERVER_HOST) {
+    return createStalwartTransporter();
   }
-
-  return createStalwartTransporter();
+  console.warn('⚠️ Neither STALWART_SMTP_HOST nor EMAIL_SERVER_HOST configured');
+  return null;
 }
 
 // ============================================================================
@@ -320,6 +325,37 @@ async function trackApplicationEmail(params: TrackEmailParams): Promise<void> {
       queueItem.completedAt = new Date();
       queueItem.lastError = params.failureReason;
       await queueItem.save();
+    }
+
+    // Mirror into Communication collection for unified Comms tab and Journey sidebar display
+    if (params.status === 'sent') {
+      try {
+        const { Communication } = require('@/models/Communication');
+        if (Communication) {
+          await Communication.create({
+            userId: params.userId,
+            messageId: params.messageId || `<${Date.now()}@buildairesume.com>`,
+            direction: 'outbound',
+            type: 'application_submission',
+            status: 'sent',
+            subject: params.subject,
+            bodySnippet: `Application sent to ${params.recipient}`,
+            senderEmail: params.sender,
+            recipients: [{ email: params.recipient, type: 'to' }],
+            jobId: params.jobId,
+            applicationId: params.applicationId,
+            classification: 'APPLICATION_SUBMISSION',
+            classificationConfidence: 1.0,
+            matchConfidence: 'exact',
+            isRead: true,
+            isAutomated: true,
+            sentAt: new Date(),
+            receivedAt: new Date(),
+          });
+        }
+      } catch (commErr) {
+        console.warn('Failed to mirror application email to Communication collection:', commErr);
+      }
     }
   } catch (error) {
     console.error('Failed to track application email:', error);

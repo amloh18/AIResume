@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database/connection-manager';
 import { EmailAccount, EmailMessage, EmailThread, SenderJobMemory, StageChangeLog } from '@/models/TrackerEmail';
+import { Communication } from '@/models/Communication';
+import User from '@/models/User';
+import { sendEmailViaSmtp } from '@/lib/services/jmapService';
 import JobApplication from '@/models/JobApplication';
 import mongoose from 'mongoose';
 
@@ -32,9 +35,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 });
     }
 
-    // Check if the user has connected an email account
-    let emailAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
-    const isAutomated = !!emailAccount;
+    // Check if the user has connected an email account (prioritize stalwart)
+    let emailAccount: any = await EmailAccount.findOne({ userId, provider: 'stalwart' });
+    if (!emailAccount) {
+      emailAccount = await EmailAccount.findOne({ userId, syncStatus: 'connected' });
+    }
+
+    // If still not found, check User model for stalwartEmail
+    if (!emailAccount) {
+      const user: any = await User.findById(userId).select('stalwartEmail email').lean();
+      if (user?.stalwartEmail) {
+        emailAccount = await EmailAccount.findOneAndUpdate(
+          { userId, provider: 'stalwart' },
+          {
+            userId,
+            provider: 'stalwart',
+            emailAddress: user.stalwartEmail,
+            syncStatus: 'connected',
+            lastSyncedAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+      }
+    }
+
+    const isAutomated = !!emailAccount && emailAccount.syncStatus === 'connected';
 
     // If there is no email account, create a disconnected default
     if (!emailAccount) {
@@ -49,9 +74,41 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch emails
-    const messages = await EmailMessage.find({ jobId, userId }).sort({ receivedAt: 1 });
-    const threads = await EmailThread.find({ jobId, userId }).sort({ lastMessageAt: -1 });
+    // Fetch messages from EmailMessage collection
+    const messages = await EmailMessage.find({ jobId, userId }).sort({ receivedAt: 1 }).lean();
+    const threads = await EmailThread.find({ jobId, userId }).sort({ lastMessageAt: -1 }).lean();
+
+    // Also fetch communications from the unified Communication collection
+    const comms = await Communication.find({ jobId, userId }).sort({ receivedAt: 1 }).lean();
+
+    // Merge Communications that aren't already represented in EmailMessage
+    const existingIds = new Set(messages.map((m: any) => m.providerMessageId || String(m._id)));
+    for (const comm of (comms as any[])) {
+      const commId = String(comm._id || '');
+      const id = comm.messageId || commId;
+      if (!existingIds.has(id)) {
+        messages.push({
+          _id: comm._id,
+          id: commId,
+          providerMessageId: id,
+          providerThreadId: comm.jmapThreadId || comm.inReplyTo || commId,
+          direction: comm.direction,
+          senderEmail: comm.senderEmail,
+          senderName: comm.senderName || (comm.direction === 'outbound' ? 'You' : comm.senderEmail),
+          subject: comm.subject,
+          bodySnippet: comm.bodySnippet || comm.textBody?.substring(0, 500) || '',
+          receivedAt: comm.receivedAt || comm.createdAt,
+          isRead: comm.isRead,
+          stageClassification: comm.classification,
+          triggeredStageChange: false,
+          hasAttachments: comm.hasAttachments,
+          attachmentNames: (comm.attachments || []).map((a: any) => a.filename),
+        } as any);
+      }
+    }
+
+    // Sort combined messages by receivedAt
+    messages.sort((a: any, b: any) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime());
 
     return NextResponse.json({
       success: true,
@@ -90,6 +147,26 @@ export async function POST(request: NextRequest) {
       const emailAccount = await EmailAccount.findOne({ userId });
       const accountId = emailAccount ? emailAccount._id : new mongoose.Types.ObjectId();
 
+      const userDoc: any = await User.findById(userId).select('stalwartEmail firstName lastName email').lean();
+      const senderEmail = userDoc?.stalwartEmail || session.user.email || process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
+      const senderName = (userDoc?.firstName && userDoc?.lastName) ? `${userDoc.firstName} ${userDoc.lastName}` : 'You';
+
+      // Transmit actual email if recipientEmail is provided
+      if (recipientEmail) {
+        try {
+          await sendEmailViaSmtp({
+            from: senderEmail,
+            fromName: senderName,
+            to: [recipientEmail],
+            subject: subject || `Re: Communication regarding job`,
+            textBody: bodyText,
+            replyTo: senderEmail,
+          });
+        } catch (sendErr) {
+          console.error('Failed to send actual reply via SMTP:', sendErr);
+        }
+      }
+
       const newMsg = await EmailMessage.create({
         userId,
         accountId,
@@ -99,8 +176,8 @@ export async function POST(request: NextRequest) {
         matchConfidence: 100,
         matchStatus: 'manual',
         direction: 'outbound',
-        senderEmail: session.user.email || 'user@buildairesume.com',
-        senderName: 'You',
+        senderEmail,
+        senderName,
         subject: subject || `Re: Communication regarding job`,
         bodySnippet: bodyText.substring(0, 500),
         hasAttachments: false,
@@ -108,6 +185,34 @@ export async function POST(request: NextRequest) {
         receivedAt: new Date(),
         isRead: true,
       });
+
+      // Also record in unified Communication collection
+      try {
+        await Communication.create({
+          userId,
+          messageId: newMsg.providerMessageId,
+          inReplyTo: threadId,
+          direction: 'outbound',
+          type: 'user_composed',
+          status: 'sent',
+          subject: subject || `Re: Communication regarding job`,
+          bodySnippet: bodyText.substring(0, 500),
+          textBody: bodyText,
+          senderEmail,
+          senderName,
+          recipients: [{ email: recipientEmail || 'employer@example.com', type: 'to' }],
+          replyTo: senderEmail,
+          jobId,
+          classification: 'UNKNOWN',
+          classificationConfidence: 0,
+          matchConfidence: 'high',
+          isRead: true,
+          sentAt: new Date(),
+          receivedAt: new Date(),
+        });
+      } catch (commErr) {
+        console.warn('Failed to mirror to Communication collection:', commErr);
+      }
 
       // Update thread
       await EmailThread.findOneAndUpdate(

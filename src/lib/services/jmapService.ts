@@ -488,8 +488,10 @@ export async function sendEmailViaJmap(params: SendEmailParams): Promise<{
     const message = buildRfc5322Message(params);
 
     // Create blob
-  const session = await getJmapSession();
-  const auth = Buffer.from(`${JMAP_USER}:${JMAP_PASS}`).toString('base64');
+    const session = await getJmapSession();
+    const { user, pass } = getJmapConfig();
+    const { senderName } = getSmtpConfig();
+    const auth = Buffer.from(`${user}:${pass}`).toString('base64');
     const accountId = await getAccountId();
 
     // Upload blob
@@ -514,7 +516,7 @@ export async function sendEmailViaJmap(params: SendEmailParams): Promise<{
       create: {
         draft: {
           mailboxIds: { [await getSentMailboxId()]: true },
-          from: [{ name: params.fromName || APPLICATION_SENDER_NAME, email: params.from }],
+          from: [{ name: params.fromName || senderName, email: params.from }],
           to: params.to.map(e => ({ email: e })),
           cc: params.cc?.map(e => ({ email: e })),
           bcc: params.bcc?.map(e => ({ email: e })),
@@ -719,9 +721,10 @@ async function getSentMailboxId(): Promise<string> {
  * Build RFC 5322 message from params
  */
 function buildRfc5322Message(params: SendEmailParams): string {
+  const { senderName } = getSmtpConfig();
   const lines: string[] = [];
 
-  lines.push(`From: "${params.fromName || APPLICATION_SENDER_NAME}" <${params.from}>`);
+  lines.push(`From: "${params.fromName || senderName}" <${params.from}>`);
   lines.push(`To: ${params.to.join(', ')}`);
   if (params.cc?.length) lines.push(`Cc: ${params.cc.join(', ')}`);
   if (params.bcc?.length) lines.push(`Bcc: ${params.bcc.join(', ')}`);

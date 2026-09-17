@@ -104,7 +104,19 @@ export const createTransporter = () => {
 };
 
 // Get sender email address
-const getSenderEmail = (): string => {
+const getSenderEmail = (type: 'verification' | 'general' = 'general'): string => {
+  if (type === 'verification') {
+    return process.env.VERIFICATION_SENDER_EMAIL || process.env.EMAIL_FROM || 'verify@morigrid.com';
+  }
+
+  if (process.env.EMAIL_FROM) {
+    return process.env.EMAIL_FROM;
+  }
+
+  if (process.env.VERIFICATION_SENDER_EMAIL) {
+    return process.env.VERIFICATION_SENDER_EMAIL;
+  }
+
   if (process.env.SENDGRID_FROM_EMAIL) {
     return process.env.SENDGRID_FROM_EMAIL;
   }
@@ -117,11 +129,11 @@ const getSenderEmail = (): string => {
     return process.env.AWS_SES_FROM_EMAIL;
   }
 
-  if (process.env.EMAIL_SERVER_USER) {
+  if (process.env.EMAIL_SERVER_USER && !process.env.EMAIL_SERVER_USER.includes('@smtp-brevo.com')) {
     return process.env.EMAIL_SERVER_USER;
   }
 
-  return 'noreply@buildairesume.com';
+  return 'verify@morigrid.com';
 };
 
 // Send email verification
@@ -142,7 +154,7 @@ export async function sendEmailVerification(email: string, verificationLink: str
   }
 
   try {
-    const senderEmail = getSenderEmail();
+    const senderEmail = getSenderEmail('verification');
     const templateData: EmailTemplateData = {
       firstName,
       email,
@@ -150,12 +162,13 @@ export async function sendEmailVerification(email: string, verificationLink: str
     };
 
     const html = getEmailVerificationTemplate(templateData);
-    const text = `Verify Your Email - AIResume\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with AIResume, you can safely ignore this email.\n\n© 2026 AIResume by Morigrid Labs. All rights reserved.`;
+    const text = `Verify Your Email - BuildAIResume\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with BuildAIResume, you can safely ignore this email.\n\n© 2026 BuildAIResume by Morigrid Labs. All rights reserved.`;
 
     const mailOptions = {
-      from: `"AIResume" <${senderEmail}>`,
+      from: `"BuildAIResume Verification" <${senderEmail}>`,
       to: email,
-      subject: 'Verify Your Email - AIResume',
+      replyTo: senderEmail,
+      subject: 'Verify Your Email - BuildAIResume',
       text,
       html,
     };
@@ -372,10 +385,11 @@ Didn't receive a code? You can request a new one from the app.
 © 2026 AIResume by Morigrid Labs. All rights reserved. buildairesume.com
     `;
 
-    const senderEmail = getSenderEmail();
+    const senderEmail = getSenderEmail('verification');
     await transporter.sendMail({
-      from: `"AIResume" <${senderEmail}>`,
+      from: `"BuildAIResume Verification" <${senderEmail}>`,
       to: email,
+      replyTo: senderEmail,
       subject,
       text,
       html,

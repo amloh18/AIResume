@@ -167,6 +167,30 @@ export default async function RootLayout({
             }, true);
           })();
         `}} />
+        {/* Theme initialization: Default to system theme with manual override */}
+        <script
+          id="theme-initializer"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var saved = localStorage.getItem('theme');
+              var isDark = false;
+              if (saved === 'dark') {
+                isDark = true;
+              } else if (saved === 'light') {
+                isDark = false;
+              } else {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+              }
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+              }
+            } catch (e) {}
+          })();
+        `}} />
       </head>
       <body className={`${geistFont.variable} geist-ui font-sans`}>
         <ViewportMeta />
