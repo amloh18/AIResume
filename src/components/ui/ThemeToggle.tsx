@@ -15,7 +15,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
   className = '',
   showLabel = false 
 }) => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const getVariantClasses = () => {
     switch (variant) {
@@ -73,18 +73,18 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({
   return (
     <div className={`${variantClasses.container} ${baseClasses} ${className}`}>
       <button 
-        onClick={toggleTheme}
+        onClick={() => setTheme('light')}
         className={`${variantClasses.button} ${theme === 'light' ? buttonClasses.light : buttonClasses.dark}`}
-        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        title="Switch to light theme"
+        aria-label="Switch to light theme"
       >
         <Sun className={variantClasses.icon} />
       </button>
       <button 
-        onClick={toggleTheme}
+        onClick={() => setTheme('dark')}
         className={`${variantClasses.button} ${theme === 'dark' ? buttonClasses.light : buttonClasses.dark}`}
-        title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-        aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        title="Switch to dark theme"
+        aria-label="Switch to dark theme"
       >
         <Moon className={variantClasses.icon} />
       </button>

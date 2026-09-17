@@ -191,6 +191,34 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
     }
   };
 
+  // Dedicated Stalwart Candidate Email Flow
+  const handleActivateDedicatedEmail = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/communications/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success && data.assignedEmail) {
+        setSuccessDetails({ provider: 'Dedicated (@morigrid.com)', emailAddress: data.assignedEmail });
+        setSuccess(true);
+        if (onConnected) {
+          onConnected({ provider: 'stalwart', emailAddress: data.assignedEmail, syncStatus: 'connected' });
+        }
+        toast.success(`Active application email: ${data.assignedEmail}`);
+      } else {
+        setError(data.error || 'Failed to activate dedicated email.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Activation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetModalState = () => {
     setSuccess(false);
     setError('');
@@ -341,6 +369,54 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
           ) : (
             /* EMAIL SYNC PANEL */
             <div className="space-y-6">
+              {/* Dedicated Stalwart Candidate Email banner */}
+              <div className="p-5 bg-gradient-to-br from-[#013f2e]/10 via-emerald-500/5 to-transparent border border-[#013f2e]/20 dark:border-emerald-500/20 rounded-3xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#013f2e] dark:bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-small font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        Dedicated Application Email
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                          Zero Setup
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Personal username@morigrid.com inbox for candidate applications
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-small text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Send job applications and receive recruiter replies directly inside your Journey Comms dashboard. Keeps your personal inbox clean and unspammed.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleActivateDedicatedEmail}
+                  disabled={loading}
+                  className="w-full py-3 bg-[#013f2e] hover:bg-[#025c43] text-white text-small font-bold rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-[#013f2e]/15"
+                >
+                  {loading ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Activate @morigrid.com Inbox</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-gray-200 dark:border-white/10"></div>
+                <span className="flex-shrink mx-3 text-[11px] uppercase tracking-wider text-gray-400 font-bold">Or connect existing account</span>
+                <div className="flex-grow border-t border-gray-200 dark:border-white/10"></div>
+              </div>
+
               {/* Provider Buttons Selector */}
               <div className="grid grid-cols-3 gap-2">
                 {(['gmail', 'outlook', 'imap'] as const).map((provider) => {
