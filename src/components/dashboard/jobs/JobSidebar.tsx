@@ -19,7 +19,7 @@ import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
 import DocumentPreviewSidebar from './DocumentPreviewSidebar';
 import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { haptic } from '@/lib/utils/haptic';
 import { Button } from '@/components/ui';
 import { useUserData } from '@/lib/hooks/useUserData';

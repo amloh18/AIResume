@@ -60,7 +60,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/hot-toast';
 import { getStrengthDescription, getWeaknessDescription } from '@/lib/cv-descriptions';
 import guestCVService from '@/lib/services/guestCVService';
 

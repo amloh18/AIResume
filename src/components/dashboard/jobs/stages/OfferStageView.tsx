@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake, Loader2 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
 
 interface JobApplication {

@@ -1,6 +1,6 @@
 // @ts-nocheck
 'use client';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';

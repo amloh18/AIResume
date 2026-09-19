@@ -7,7 +7,7 @@ import { ArrowLeft, Clock, FileText, Sparkles, X } from 'lucide-react';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import InterviewCoach from '@/components/dashboard/jobs/ai/InterviewCoach';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface JobApplication {
   id: string;

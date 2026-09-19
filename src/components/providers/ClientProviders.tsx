@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
-import { Toaster as HotToaster } from 'react-hot-toast';
 import SessionProvider from './SessionProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 // AdminAuthProvider removed - use NextAuth useSession() directly
@@ -22,6 +21,7 @@ import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionPr
 import AuthModal from '@/components/auth/AuthModal';
 import ReactQueryProvider from './ReactQueryProvider';
 import ToastSuppressionGate from './ToastSuppressionGate';
+import GatedHotToaster from './GatedHotToaster';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
@@ -42,7 +42,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
                 <CookieConsent />
                 <SessionCleanup />
                 <Toaster />
-                <HotToaster position="bottom-right" />
+                <GatedHotToaster />
                 <ToastSuppressionGate />
                 <AuthModal />
                 {children}

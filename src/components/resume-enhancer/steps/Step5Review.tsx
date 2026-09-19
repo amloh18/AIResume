@@ -22,7 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSession } from 'next-auth/react';
 import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 import AuthPromptModal from '../AuthPromptModal';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import {
   COVER_LETTER_TEMPLATES,
   getCoverLetterTemplateIdForCV,

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';

@@ -314,33 +314,13 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     try {
       // Check if this is a 2FA verification (has twoFactorSessionId)
       if (twoFactorSessionId) {
-        // Verify 2FA code
-        const verifyResponse = await fetch('/api/auth/two-factor/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId: twoFactorSessionId,
-            code,
-          }),
-        });
-
-        const verifyResult = await verifyResponse.json();
-
-        if (!verifyResult.success) {
-          // Check if it's a max attempts error
-          if (verifyResult.error && verifyResult.error.includes('Too many failed attempts')) {
-            setError(verifyResult.error);
-            // Force clear the session and UI
-            setTwoFactorSessionId(null);
-            setTwoFactorUserId(null);
-            setRemainingAttempts(0);
-          } else {
-            setError(verifyResult.error || 'Invalid or expired code. Please try again.');
-          }
-          return;
-        }
-
-        // Complete sign-in with 2FA token
+        // Verify AND consume the 2FA code in one call.
+        //
+        // This used to call /api/auth/two-factor/verify first and then
+        // /api/auth/complete-two-factor-signin with the same sessionId. The code is
+        // single-use, so the first call consumed it and the second always failed with
+        // "Invalid or expired session. Please sign in again." — every 2FA sign-in broke.
+        // It also burned two of the three allowed attempts on a correct code.
         const completeResponse = await fetch('/api/auth/complete-two-factor-signin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -353,7 +333,22 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         const completeResult = await completeResponse.json();
 
         if (!completeResult.success) {
-          setError(completeResult.error || 'Failed to complete sign-in.');
+          const message: string = completeResult.error || 'Invalid or expired code. Please try again.';
+
+          // Once the session is gone (too many attempts, or expired) there is nothing
+          // left to retry against — clear it so the UI can't offer a dead code entry.
+          if (
+            message.includes('Too many failed attempts') ||
+            message.includes('Invalid or expired session')
+          ) {
+            setTwoFactorSessionId(null);
+            setTwoFactorUserId(null);
+            setRemainingAttempts(0);
+          } else if (typeof completeResult.attemptsRemaining === 'number') {
+            setRemainingAttempts(completeResult.attemptsRemaining);
+          }
+
+          setError(message);
           return;
         }
 
@@ -365,16 +360,20 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             userId: completeResult.userId,
             email: completeResult.email,
           }),
+          credentials: 'include',
         });
 
         const sessionResult = await sessionResponse.json();
 
         if (!sessionResult.success) {
-          setError('Failed to create session. Please try again.');
+          setError(
+            sessionResult.error || 'Failed to create session. Please try again.'
+          );
           return;
         }
 
         // Success - redirect
+        setTwoFactorSessionId(null);
         setSuccess('Sign in successful! Redirecting...');
         setTimeout(() => {
           if (!isModal) {

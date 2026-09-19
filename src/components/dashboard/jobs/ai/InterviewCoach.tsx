@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Loader2, Lightbulb, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface InterviewQuestion {
   question: string;
