@@ -190,38 +190,48 @@ export async function extractCandidateProfile(db: Db, userId: string): Promise<C
     };
   }
 
-  // ── Fallback: legacy onboardingPreferences ─────────────────────────────
-  const onboardingPrefs = user?.onboardingPreferences || user?.careerPreferences || {};
+  // ── Fallback: legacy onboarding preferences on User document ────────────
+  // Onboarding saves to user.onboarding.* (snake_case), not user.onboardingPreferences
+  const onboarding = (user as any)?.onboarding || {};
+  const autoApplyPrefs = (user as any)?.autoApplyPreferences || {};
 
-  const targetRoles = onboardingPrefs.targetRoles || (user?.headline ? [user.headline] : ['Software Engineer']);
+  const targetRoles = onboarding.target_roles
+    || autoApplyPrefs.targetRoles
+    || (user?.headline ? [user.headline] : ['Software Engineer']);
   const roleFamilies = targetRoles
     .map((r: string) => resolveRoleFamily(r))
     .filter((f: string | null): f is string => !!f);
+
+  const workplaceTypes = normalizeWorkplaceTypes(
+    onboarding.workplace_types || autoApplyPrefs.workplaceTypes
+  );
+  const remoteOnly = deriveRemoteOnly(workplaceTypes, autoApplyPrefs.remoteOnly === true);
+  const workplacePreference = deriveWorkplacePreference(workplaceTypes);
 
   return {
     userId,
     targetRoles,
     roleFamilies,
-    targetLocations: onboardingPrefs.locations || ['United Kingdom', 'London', 'Remote'],
-    remotePreference: onboardingPrefs.workplaceType || 'any',
-    workplacePreference: onboardingPrefs.workplaceType || 'any',
-    experienceLevel: (onboardingPrefs.seniority || 'mid').toLowerCase(),
-    experienceYears: onboardingPrefs.experienceYears || 0,
-    minSalary: onboardingPrefs.minSalary || 60000,
-    salaryCurrency: onboardingPrefs.currency || 'GBP',
-    skills: Array.from(new Set([...cvSkills, ...(onboardingPrefs.skills || [])])),
-    needsVisaSponsorship: onboardingPrefs.requiresVisa === true,
-    preferredIndustries: onboardingPrefs.industries || [],
+    targetLocations: onboarding.locations || autoApplyPrefs.locations || ['Remote'],
+    remotePreference: remoteOnly ? 'remote' : workplacePreference,
+    workplacePreference,
+    experienceLevel: (onboarding.experience_level || autoApplyPrefs.seniority || 'mid').toLowerCase(),
+    experienceYears: onboarding.experience_years || autoApplyPrefs.experienceYears || 0,
+    minSalary: onboarding.salary_min || autoApplyPrefs.minSalary || 0,
+    salaryCurrency: onboarding.salary_currency || autoApplyPrefs.salaryCurrency || 'USD',
+    skills: Array.from(new Set([...cvSkills, ...(autoApplyPrefs.skills || [])])),
+    needsVisaSponsorship: onboarding.visa_required === true || autoApplyPrefs.requiresVisa === true,
+    preferredIndustries: autoApplyPrefs.industries || [],
     hardConstraints: {
-      remoteOnly: onboardingPrefs.remoteOnly === true,
-      minSalary: onboardingPrefs.minSalary || 0,
-      locations: onboardingPrefs.locations || [],
-      visaRequired: onboardingPrefs.requiresVisa === true,
+      remoteOnly,
+      minSalary: onboarding.salary_min || autoApplyPrefs.minSalary || 0,
+      locations: onboarding.locations || autoApplyPrefs.locations || [],
+      visaRequired: onboarding.visa_required === true || autoApplyPrefs.requiresVisa === true,
     },
     softPreferences: {
-      preferredIndustries: onboardingPrefs.industries || [],
-      preferredCompanySizes: onboardingPrefs.companySizes || [],
-      preferredWorkplace: onboardingPrefs.workplaceType || 'any',
+      preferredIndustries: autoApplyPrefs.industries || [],
+      preferredCompanySizes: autoApplyPrefs.companySizes || [],
+      preferredWorkplace: remoteOnly ? 'remote' : workplacePreference,
     },
   };
 }

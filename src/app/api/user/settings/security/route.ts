@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { SessionService } from '@/lib/services/session-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -152,6 +153,9 @@ async function handlePasswordChange(userId: string, data: any, userSettings: any
   // Update password
   user.password = newPassword;
   await user.save();
+
+  // Revoke all other login sessions (force re-auth on other devices)
+  await SessionService.revokeAllSessions(userId);
 
   // Update security settings
   userSettings.security.lastPasswordChange = new Date();

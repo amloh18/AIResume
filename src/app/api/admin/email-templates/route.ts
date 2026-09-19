@@ -64,7 +64,7 @@ const predefinedTemplates: EmailTemplate[] = [
     sentCount: 0,
     openRate: 0,
     clickRate: 0,
-    previewHtml: getVerificationCodeTemplate({ code: '1234', email: 'john@example.com' }),
+    previewHtml: getVerificationCodeTemplate({ code: '123456', email: 'john@example.com' }),
     variables: ['code', 'email']
   },
   {
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
       firstName: variables?.firstName || 'John',
       lastName: variables?.lastName || 'Doe',
       email: variables?.email || 'john@example.com',
-      code: variables?.code || '1234',
+        code: variables?.code || '123456',
       link: variables?.link || 'https://www.buildairesume.com/example',
       couponCode: variables?.couponCode || 'SAVE30',
       expirationDate: variables?.expirationDate || 'December 31, 2024',

@@ -299,6 +299,7 @@ export default function JobsDashboard() {
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
   const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
   const [isApplying, setIsApplying] = useState<string | null>(null);
@@ -311,6 +312,7 @@ export default function JobsDashboard() {
   const [connectModalOpen, setConnectModalOpen] = useState<boolean>(false);
   const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType>('naukri');
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
+  const [applicationMode, setApplicationMode] = useState<string>('manual_review');
   const [cvTailoringMode, setCvTailoringMode] = useState<CvTailoringMode>(DEFAULT_CV_TAILORING_MODE);
   const [autoApplyBannerDismissed, setAutoApplyBannerDismissed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -365,6 +367,7 @@ export default function JobsDashboard() {
         if (data?.profile) {
           setUserPreferences(data.profile);
           setAutoApplyEnabled(data.profile.enabled === true);
+          if (data.profile.applicationMode) setApplicationMode(data.profile.applicationMode);
         }
       })
       .catch(() => {});
@@ -481,6 +484,29 @@ export default function JobsDashboard() {
       }
     }
     loadSavedJobIds();
+  }, [userId]);
+
+  // Load applied job IDs from server
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    async function loadAppliedIds() {
+      try {
+        const res = await fetch('/api/jobs/applied-ids', { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.appliedIds) {
+            setAppliedIds(new Set(data.appliedIds));
+          }
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.warn('Failed to load applied IDs:', err);
+        }
+      }
+    }
+    loadAppliedIds();
+    return () => controller.abort();
   }, [userId]);
 
   // Listen for jobUpdated events to refresh savedIds when jobs are saved/updated elsewhere
@@ -789,6 +815,7 @@ export default function JobsDashboard() {
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || job._id;
+        setAppliedIds((prev) => new Set(prev).add(job._id));
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
@@ -1326,6 +1353,8 @@ export default function JobsDashboard() {
                         job={job}
                         colorIndex={index}
                         isSaved={isJobSaved(job)}
+                        isApplied={appliedIds.has(job._id)}
+                        applicationMode={applicationMode}
                         saving={savingId === job._id}
                         onOpen={() => {
                           setSelectedJob(job);
@@ -1479,6 +1508,8 @@ export default function JobsDashboard() {
               open={modalOpen}
               onOpenChange={setModalOpen}
               isSaved={selectedJob ? isJobSaved(selectedJob) : false}
+              isApplied={selectedJob ? appliedIds.has(selectedJob._id) : false}
+              applicationMode={applicationMode}
               saving={selectedJob ? savingId === selectedJob._id : false}
               onSave={() => selectedJob && handleSaveJob(selectedJob)}
               onApply={() => selectedJob && handleApplyJob(selectedJob)}

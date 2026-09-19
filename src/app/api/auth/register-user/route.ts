@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Registration successful! Please check your email for a 4-digit verification code.',
+      message: 'Registration successful! Please check your email for a 6-digit verification code.',
       data: {
         user: userResponse,
         requiresVerification: true

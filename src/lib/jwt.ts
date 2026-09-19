@@ -2,8 +2,8 @@
 import { SignJWT, jwtVerify, decodeJwt } from 'jose';
 import { NextRequest } from 'next/server';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'fallback-secret-key');
-const REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-refresh-secret');
+const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+const REFRESH_SECRET = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET || process.env.NEXTAUTH_SECRET);
 
 export interface JWTPayload {
   userId: string;

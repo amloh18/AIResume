@@ -11,6 +11,7 @@ interface CodeVerificationScreenProps {
   onCodeVerified: (code: string) => void;
   onResendCode: () => void;
   isLoading?: boolean;
+  sendingCode?: boolean;
   error?: string;
   success?: string;
   remainingAttempts?: number;
@@ -24,6 +25,7 @@ export default function CodeVerificationScreen({
   onCodeVerified,
   onResendCode,
   isLoading = false,
+  sendingCode = false,
   error,
   success,
   remainingAttempts = 5,
@@ -59,7 +61,7 @@ export default function CodeVerificationScreen({
   };
 
   const handleCodeComplete = (completedCode: string) => {
-    if (completedCode.length === 4) {
+    if (completedCode.length === 6) {
       onCodeVerified(completedCode);
     }
   };
@@ -218,12 +220,27 @@ export default function CodeVerificationScreen({
       )}
       
       {/* Instructions */}
-      <p className="text-gray-600 dark:text-gray-300 text-h3 mb-2">
-        We've sent a 4-digit verification code to your email address.
-      </p>
-      <p className="text-gray-600 dark:text-gray-300 text-h3 mb-8">
-        Please enter it below to continue.
-      </p>
+      {sendingCode ? (
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Loader2 className="w-4 h-4 animate-spin text-[#013f2e]" />
+          <p className="text-gray-600 dark:text-gray-300 text-h3">
+            Sending verification code...
+          </p>
+        </div>
+      ) : error ? null : (
+        <p className="text-gray-600 dark:text-gray-300 text-h3 mb-2">
+          We've sent a 6-digit verification code to your email address.
+        </p>
+      )}
+      {sendingCode ? (
+        <p className="text-gray-500 dark:text-gray-400 text-small mb-8">
+          This usually takes a few seconds.
+        </p>
+      ) : (
+        <p className="text-gray-600 dark:text-gray-300 text-h3 mb-8">
+          Please enter it below to continue.
+        </p>
+      )}
 
       {/* Code Input */}
       <div className="mb-6">
@@ -231,9 +248,9 @@ export default function CodeVerificationScreen({
           value={code}
           onChange={handleCodeChange}
           onComplete={handleCodeComplete}
-          disabled={isLoading}
+          disabled={isLoading || sendingCode}
           error={error}
-          autoFocus={true}
+          autoFocus={!sendingCode}
         />
       </div>
 

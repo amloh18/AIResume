@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         sessionId: codeResult.sessionId,
         userId: authResult.user.id,
         email: authResult.user.email,
-        message: 'Please enter the 4-digit code sent to your email',
+        message: 'Please enter the 6-digit code sent to your email',
       });
     }
 

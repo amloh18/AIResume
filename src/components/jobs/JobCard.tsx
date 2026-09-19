@@ -30,6 +30,8 @@ import {
 export interface JobCardProps {
   job: JobListing;
   isSaved: boolean;
+  isApplied?: boolean;
+  applicationMode?: string;
   saving: boolean;
   onOpen: () => void;
   onSave: () => void;
@@ -83,6 +85,8 @@ const extractExperience = (job: JobListing): number | null => {
 export function JobCard({
   job,
   isSaved,
+  isApplied = false,
+  applicationMode = 'manual_review',
   saving,
   onOpen,
   onSave,
@@ -289,17 +293,31 @@ export function JobCard({
 
               {/* Primary Action Buttons */}
               <div className="grid grid-cols-2 gap-2">
-                {isSaved ? (
+                {isApplied ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="col-span-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm flex justify-center items-center gap-1.5 cursor-default"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Applied</span>
+                  </button>
+                ) : isSaved ? (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onApply();
                     }}
-                    className="col-span-2 px-4 py-2.5 rounded-xl bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400 text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5"
+                    disabled={applicationMode === 'find_only'}
+                    className={`col-span-2 px-4 py-2.5 rounded-xl text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
+                      applicationMode === 'find_only'
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400'
+                    }`}
                   >
                     <Briefcase className="w-3.5 h-3.5" />
-                    <span>Prepare Application</span>
+                    <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Prepare Application'}</span>
                   </button>
                 ) : (
                   <>
@@ -328,9 +346,14 @@ export function JobCard({
                         e.stopPropagation();
                         onApply();
                       }}
-                      className="px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95 text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1"
+                      disabled={applicationMode === 'find_only'}
+                      className={`px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1 ${
+                        applicationMode === 'find_only'
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95'
+                      }`}
                     >
-                      <span>Apply</span>
+                      <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Apply'}</span>
                     </button>
                   </>
                 )}

@@ -5,9 +5,7 @@ import User from '@/models/User';
 
 /**
  * Verify 2FA code
- * This is called to verify the 4-digit code entered by the user
- *
- * Superadmin bypass: superadmin users can always use code "1995"
+ * This is called to verify the 6-digit code entered by the user
  */
 export async function POST(request: NextRequest) {
   try {
@@ -20,33 +18,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate code format (4 digits)
-    if (!/^\d{4}$/.test(code)) {
+    // Validate code format (6 digits)
+    if (!/^\d{6}$/.test(code)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid code format. Please enter a 4-digit code.' },
+        { success: false, error: 'Invalid code format. Please enter a 6-digit code.' },
         { status: 400 }
       );
     }
 
     await getConnection();
-
-    // Superadmin bypass: code "1995" always works for superadmin users
-    if (code === '1995') {
-      // Import twoFactorService to get session userId
-      const { getTwoFactorSession } = await import('@/lib/services/twoFactorService');
-      const session = getTwoFactorSession(sessionId);
-      if (session) {
-        const user = await User.findById(session.userId);
-        if (user && (user.role === 'superadmin' || user.role === 'admin')) {
-          return NextResponse.json({
-            success: true,
-            userId: session.userId,
-            email: user.email,
-            message: 'Code verified successfully',
-          });
-        }
-      }
-    }
 
     // Verify code
     const result = await verifyTwoFactorCode(sessionId, code);
@@ -58,8 +38,6 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-
-    await getConnection();
 
     // Get user info for session creation
     const user = await User.findById(result.userId);

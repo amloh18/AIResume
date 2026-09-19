@@ -112,7 +112,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create JWT token for NextAuth session
-    const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
+    const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+    if (!NEXTAUTH_SECRET) {
+      throw new Error('NEXTAUTH_SECRET is not configured');
+    }
     
     const token = await encode({
       token: {
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
         type: userDoc.role === 'admin' ? 'admin' : 'user',
       },
       secret: NEXTAUTH_SECRET,
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
     // Create response
@@ -144,7 +147,7 @@ export async function POST(request: NextRequest) {
       secure: false, // Since this is dev-only bypass
       sameSite: 'lax',
       path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
     console.log('✅ Dev bypass session created for user:', (userDoc._id as any).toString());

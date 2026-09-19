@@ -20,13 +20,13 @@ export default function CodeInput({
   error,
   autoFocus = true
 }: CodeInputProps) {
-  const [digits, setDigits] = useState(['', '', '', '']);
+  const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Initialize digits from value prop
   useEffect(() => {
-    if (value && value.length <= 4) {
-      const newDigits = value.split('').concat(Array(4 - value.length).fill(''));
+    if (value && value.length <= 6) {
+      const newDigits = value.split('').concat(Array(6 - value.length).fill(''));
       setDigits(newDigits);
     }
   }, [value]);
@@ -58,12 +58,12 @@ export default function CodeInput({
     onChange(code);
 
     // Auto-focus next input
-    if (inputValue && index < 3) {
+    if (inputValue && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
     // Call onComplete when all digits are entered
-    if (code.length === 4 && onComplete) {
+    if (code.length === 6 && onComplete) {
       onComplete(code);
     }
   };
@@ -87,7 +87,7 @@ export default function CodeInput({
     if (e.key === 'ArrowLeft' && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
-    if (e.key === 'ArrowRight' && index < 3) {
+    if (e.key === 'ArrowRight' && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
@@ -101,15 +101,15 @@ export default function CodeInput({
   const handlePaste = async () => {
     try {
       const pastedText = await navigator.clipboard.readText();
-      const digits = pastedText.replace(/\D/g, '').slice(0, 4);
+      const digits = pastedText.replace(/\D/g, '').slice(0, 6);
       
-      if (digits.length === 4) {
+      if (digits.length === 6) {
         const newDigits = digits.split('');
         setDigits(newDigits);
         onChange(digits);
         
         // Focus last input
-        inputRefs.current[3]?.focus();
+        inputRefs.current[5]?.focus();
         
         // Call onComplete
         if (onComplete) {
@@ -128,7 +128,7 @@ export default function CodeInput({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-3">
         {digits.map((digit, index) => (
           <motion.input
             key={index}
@@ -143,7 +143,7 @@ export default function CodeInput({
             onFocus={() => handleFocus(index)}
             disabled={disabled}
             className={`
-              w-16 h-16 text-h2 font-bold text-center
+              w-12 h-14 text-xl font-bold text-center
               bg-white dark:bg-transparent rounded-none
               text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
               outline-none focus:outline-none
@@ -171,7 +171,7 @@ export default function CodeInput({
 
       <div className="text-center">
         <p className="text-gray-500 dark:text-gray-400 text-small">
-          Enter the 4-digit code sent to your email
+          Enter the 6-digit code sent to your email
         </p>
       </div>
     </div>

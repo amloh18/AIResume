@@ -2,11 +2,11 @@ import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 
 /**
- * Generate a secure 4-digit verification code
- * Range: 1000-9999 (10,000 possible combinations)
+ * Generate a secure 6-digit verification code
+ * Range: 100000-999999 (900,000 possible combinations)
  */
 export function generateVerificationCode(): string {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 /**
@@ -102,7 +102,7 @@ export async function cleanupExpiredCodes(): Promise<number> {
  * Validate verification code format
  */
 export function validateCodeFormat(code: string): boolean {
-  return /^\d{4}$/.test(code);
+  return /^\d{6}$/.test(code);
 }
 
 /**

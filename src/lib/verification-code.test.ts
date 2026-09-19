@@ -2,16 +2,16 @@ import { describe, it, expect } from 'vitest';
 
 describe('Verification Code System', () => {
   describe('Code Format Validation', () => {
-    it('should validate 4-digit code format', () => {
-      const validCodes = ['1234', '0000', '9999', '0123'];
-      const invalidCodes = ['123', '12345', '12ab', '', '12 34'];
+    it('should validate 6-digit code format', () => {
+      const validCodes = ['123456', '000000', '999999', '012345'];
+      const invalidCodes = ['12345', '1234567', '12ab34', '', '12 3456'];
       
       validCodes.forEach(code => {
-        expect(code).toMatch(/^\d{4}$/);
+        expect(code).toMatch(/^\d{6}$/);
       });
       
       invalidCodes.forEach(code => {
-        expect(code).not.toMatch(/^\d{4}$/);
+        expect(code).not.toMatch(/^\d{6}$/);
       });
     });
   });

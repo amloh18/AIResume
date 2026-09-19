@@ -22,11 +22,11 @@ const RECOVERY_CODE_LENGTH = 8;
 const BCRYPT_SALT_ROUNDS = 10;
 
 /**
- * Generate a 4-digit verification code
+ * Generate a 6-digit verification code
  */
 export function generateTwoFactorCode(): string {
-  // Generate a random 4-digit code (0000-9999)
-  const code = Math.floor(1000 + Math.random() * 9000).toString();
+  // Generate a random 6-digit code (100000-999999)
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
   return code;
 }
 
@@ -58,7 +58,7 @@ export async function generateAndSendTwoFactorCode(
       }
     }
 
-    // Generate 4-digit code
+    // Generate 6-digit code
     const code = generateTwoFactorCode();
     
     // Create session ID
