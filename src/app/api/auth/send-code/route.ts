@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendVerificationCode } from '@/lib/email-service';
 import { getConnection } from '@/lib/database';
-import VerificationToken from '@/models/VerificationToken';
+import VerificationToken, { EMAIL_CODE_TTL_MS, DEFAULT_MAX_ATTEMPTS } from '@/models/VerificationToken';
 import User from '@/models/User';
 import { 
   generateVerificationCode, 
@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
+    // Resolve the recipient once so the email can greet them by name. For
+    // password-reset this is deliberately best-effort and does not affect the response —
+    // we must not reveal whether an account exists.
+    let userFirstName: string | undefined;
+
     // For passwordless-login, check if user exists FIRST before rate limiting
     // This ensures we show "account not registered" instead of "too many requests"
     if (type === 'passwordless-login') {
@@ -52,6 +57,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+      userFirstName = user.firstName;
     }
 
     // For email-verification, check if user exists and is not verified
@@ -69,6 +75,12 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      userFirstName = user.firstName;
+    }
+
+    if (type === 'password-reset') {
+      const user = await User.findOne({ email: email.toLowerCase() }).select('firstName').lean();
+      userFirstName = (user as any)?.firstName;
     }
 
     // Clean up expired codes
@@ -112,7 +124,13 @@ export async function POST(request: NextRequest) {
       const emailResult = await sendVerificationCode(
         email,
         code,
-        type
+        type,
+        {
+          firstName: userFirstName,
+          expiryMinutes: Math.round(EMAIL_CODE_TTL_MS / 60000),
+          maxAttempts: DEFAULT_MAX_ATTEMPTS,
+          requestedAt: new Date(),
+        }
       );
 
       if (emailResult.success) {
@@ -130,7 +148,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Verification code sent successfully',
         codeId: verificationToken._id,
-        expiresIn: 5 * 60 // 5 minutes in seconds
+        expiresIn: Math.round(EMAIL_CODE_TTL_MS / 1000)
       });
     } else {
       // Still return success but indicate email service issue
@@ -138,7 +156,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Code generated successfully. Email service temporarily unavailable.',
         codeId: verificationToken._id,
-        expiresIn: 5 * 60,
+        expiresIn: Math.round(EMAIL_CODE_TTL_MS / 1000),
         emailServiceStatus: 'unavailable',
         debugCode: code // Only for development
       });

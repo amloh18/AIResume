@@ -27,7 +27,7 @@ import {
   Search,
 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useUserData } from '@/lib/hooks/useUserData';
 

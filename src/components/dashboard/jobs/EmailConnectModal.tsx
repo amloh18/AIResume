@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Shield, AlertCircle, CheckCircle2, Server, Key, HelpCircle, ArrowRight, RefreshCw, Calendar } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface EmailConnectModalProps {
   isOpen: boolean;

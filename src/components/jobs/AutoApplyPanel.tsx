@@ -19,7 +19,7 @@ import {
   Sparkles,
   Check,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import Link from 'next/link';
 import PortalConnectModal, { PortalType } from '@/components/dashboard/settings/PortalConnectModal';
 import ContextualLimitModal from './ContextualLimitModal';

@@ -3,61 +3,39 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { setToastSuppression } from '@/hooks/use-toast';
-
-// Also suppress react-hot-toast on public pages
-let _hotToastOriginal: typeof import('react-hot-toast')['toast'] | null = null;
-
-function overrideHotToast(pathname: string | null, isAuthenticated: boolean) {
-  const isSuppressed = !isAuthenticated && pathname !== null && (
-    pathname === '/' ||
-    pathname === '/features' ||
-    pathname === '/templates' ||
-    pathname === '/privacy-policy' ||
-    pathname === '/terms' ||
-    pathname === '/legal' ||
-    pathname === '/editor' ||
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/sign-up') ||
-    pathname.startsWith('/auth/') ||
-    pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/welcome') ||
-    pathname.startsWith('/admin/login') ||
-    pathname.startsWith('/admin/unauthorized') ||
-    pathname.startsWith('/force-logout')
-  );
-
-  if (isSuppressed && !_hotToastOriginal) {
-    import('react-hot-toast').then(mod => {
-      _hotToastOriginal = mod.toast;
-      // Override toast to no-op on public pages
-      (mod as any).toast = Object.assign(
-        (...args: any[]) => ({ id: 'suppressed', dismiss: () => {}, unmount: () => {} }),
-        _hotToastOriginal
-      );
-    });
-  } else if (!isSuppressed && _hotToastOriginal) {
-    import('react-hot-toast').then(mod => {
-      (mod as any).toast = _hotToastOriginal;
-      _hotToastOriginal = null;
-    });
-  }
-}
+import { setToastSuppression, isToastSuppressedPath } from '@/lib/utils/toast-suppression';
+import { toast } from '@/lib/hot-toast';
 
 /**
  * Global toast suppression gate.
- * Renders nothing. Sets the suppression state based on the current route
- * and authentication status. Toasts are suppressed on public/onboarding pages.
+ *
+ * Publishes the current route + auth state to the shared suppression store, which
+ * both toast systems consult at their call boundary (`src/lib/utils/toast-suppression.ts`).
+ * Renders nothing — the react-hot-toast `<Toaster/>` is gated separately by
+ * `GatedHotToaster`, because the suppression store is module state and only updates
+ * from an effect, i.e. after the first paint.
+ *
+ * The previous implementation tried to suppress react-hot-toast by reassigning
+ * `toast` on the `import('react-hot-toast')` namespace, which throws
+ * `Cannot set property toast of #<Object> which has only a getter` — module
+ * namespace objects are immutable by spec. See `src/lib/hot-toast.ts`.
  */
 export default function ToastSuppressionGate() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const isAuthenticated = status === 'authenticated' && !!session?.user;
+  const suppressed = isToastSuppressedPath(pathname, isAuthenticated);
 
   useEffect(() => {
     setToastSuppression(pathname, isAuthenticated);
-    overrideHotToast(pathname, isAuthenticated);
-  }, [pathname, isAuthenticated]);
+
+    // The store is only current from this effect onwards, so a toast fired during
+    // the first paint (before hydration finished) could still have been queued.
+    // react-hot-toast's auto-dismiss timer lives inside `useToaster`, which never
+    // runs while <Toaster/> is unmounted — so a queued toast would sit in the store
+    // indefinitely and then flash on the next authed page. Drain it.
+    if (suppressed) toast.removeAll();
+  }, [pathname, isAuthenticated, suppressed]);
 
   return null;
 }

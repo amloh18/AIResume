@@ -28,7 +28,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import guestCVService from '@/lib/services/guestCVService';
 import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import LetterGuidePanel from '@/components/resume-enhancer/panels/LetterGuidePanel';
 import MoriCoverLetterChat from '@/components/resume-enhancer/panels/MoriCoverLetterChat';
 

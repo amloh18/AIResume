@@ -1,12 +1,22 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
+import crypto from 'crypto';
+
+export type VerificationTokenType =
+  | 'email'
+  | 'password'
+  | 'email-verification'
+  | 'passwordless-login'
+  | 'password-reset'
+  | 'two-factor';
 
 export interface IVerificationToken extends Document {
   userId: mongoose.Types.ObjectId | string;
   token: string;
   code?: string; // 6-digit verification code
-  type: 'email' | 'password' | 'email-verification' | 'passwordless-login' | 'password-reset';
+  type: VerificationTokenType;
   email: string;
   attempts: number; // Track failed verification attempts
+  maxAttempts?: number; // Per-type ceiling; falls back to DEFAULT_MAX_ATTEMPTS
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +48,28 @@ export interface IVerificationTokenModel extends Model<IVerificationToken> {
     userId?: mongoose.Types.ObjectId | string;
   }>;
   
+  createTwoFactorSession(
+    userId: mongoose.Types.ObjectId | string,
+    email: string,
+    code: string,
+    ttlMs?: number,
+    maxAttempts?: number
+  ): Promise<{ sessionId: string; expiresAt: Date; maxAttempts: number }>;
+
+  verifyTwoFactorSession(
+    sessionId: string,
+    code: string,
+    options?: { consume?: boolean }
+  ): Promise<{
+    valid: boolean;
+    userId?: string;
+    email?: string;
+    error?: string;
+    attemptsRemaining?: number;
+  }>;
+
+  invalidateTwoFactorSessions(userId: mongoose.Types.ObjectId | string): Promise<number>;
+  
   verifyToken(
     token: string,
     email: string,
@@ -50,6 +82,16 @@ export interface IVerificationTokenModel extends Model<IVerificationToken> {
   
   cleanupExpired(): Promise<number>;
 }
+
+// Default ceiling on failed verification attempts when a token does not declare its own.
+export const DEFAULT_MAX_ATTEMPTS = 5;
+
+/**
+ * Lifetime of an emailed verification code. Exported so the API response
+ * (`expiresIn`), the stored record and the email copy all agree instead of each
+ * hardcoding "5 minutes".
+ */
+export const EMAIL_CODE_TTL_MS = 5 * 60 * 1000;
 
 // Create schema with typed statics
 const verificationTokenSchema = new Schema<IVerificationToken>({
@@ -69,7 +111,7 @@ const verificationTokenSchema = new Schema<IVerificationToken>({
   type: {
     type: String,
     required: [true, 'Token type is required'],
-    enum: ['email', 'password', 'email-verification', 'passwordless-login', 'password-reset']
+    enum: ['email', 'password', 'email-verification', 'passwordless-login', 'password-reset', 'two-factor']
     // Note: Index defined in compound indexes below
   },
   code: {
@@ -87,8 +129,15 @@ const verificationTokenSchema = new Schema<IVerificationToken>({
   attempts: {
     type: Number,
     default: 0,
-    min: 0,
-    max: 5
+    min: 0
+    // No schema-level max: the ceiling is per-token (`maxAttempts`) and enforced in code,
+    // because 2FA sessions allow 3 attempts while email codes allow 5.
+  },
+  maxAttempts: {
+    type: Number,
+    required: false,
+    min: 1,
+    default: DEFAULT_MAX_ATTEMPTS
   },
   email: {
     type: String,
@@ -121,7 +170,6 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
   expirationHours: number = 24
 ) {
   // Generate secure random token
-  const crypto = require('crypto');
   const token = crypto.randomBytes(32).toString('hex');
   
   const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
@@ -148,7 +196,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
   type: 'email-verification' | 'passwordless-login' | 'password-reset',
   code: string
 ) {
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  const expiresAt = new Date(Date.now() + EMAIL_CODE_TTL_MS);
   
   // Remove any existing codes for this email/type
   await this.deleteMany({ email, type });
@@ -160,6 +208,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
     type,
     email,
     attempts: 0,
+    maxAttempts: DEFAULT_MAX_ATTEMPTS,
     expiresAt
   });
   
@@ -176,17 +225,26 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
 
   const verificationToken = await this.findOne({
     code,
-    email: email.toLowerCase(),
+    email: normalizedEmail,
     type,
     expiresAt: { $gt: new Date() }
   });
   
   if (!verificationToken) {
+    // Count the miss against the most recent live code for this email/type so that
+    // guessing is actually rate-limited. Without this the attempts ceiling below is
+    // unreachable dead code and a 6-digit code can be brute-forced within its TTL.
+    await this.updateOne(
+      { email: normalizedEmail, type, expiresAt: { $gt: new Date() } },
+      { $inc: { attempts: 1 } }
+    );
     return { valid: false, message: 'Invalid or expired code' };
   }
-  
+
   // Check if max attempts exceeded
-  if (verificationToken.attempts >= 5) {
+  const maxAttempts = verificationToken.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  if (verificationToken.attempts >= maxAttempts) {
+    await this.deleteOne({ _id: verificationToken._id });
     return { valid: false, message: 'Code has exceeded maximum attempts' };
   }
   
@@ -198,6 +256,133 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
     userId: verificationToken.userId,
     message: 'Code verified successfully' 
   };
+};
+
+/**
+ * Create a two-factor authentication session.
+ *
+ * The session id doubles as the `token` field (unique + sparse), so lookups are a
+ * single indexed read and the existing TTL index cleans expired sessions up.
+ * Any prior live session for the same user is invalidated first, so requesting a new
+ * code always supersedes the previous one.
+ */
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).createTwoFactorSession = async function(
+  userId: mongoose.Types.ObjectId | string,
+  email: string,
+  code: string,
+  ttlMs: number = 10 * 60 * 1000,
+  maxAttempts: number = 3
+) {
+  const sessionId = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + ttlMs);
+
+  await this.deleteMany({ userId, type: 'two-factor' });
+
+  await new this({
+    userId,
+    token: sessionId,
+    code,
+    type: 'two-factor',
+    email: email.toLowerCase().trim(),
+    attempts: 0,
+    maxAttempts,
+    expiresAt
+  }).save();
+
+  return { sessionId, expiresAt, maxAttempts };
+};
+
+/**
+ * Verify a two-factor authentication session.
+ *
+ * `consume` defaults to `true` (single-use, the historical behaviour). Pass
+ * `consume: false` for a non-destructive "is this code correct?" check — e.g. the
+ * `/api/auth/two-factor/verify` endpoint, which is followed by
+ * `/api/auth/complete-two-factor-signin`. Consuming on the first call made the second
+ * call fail with "Invalid or expired session" and blocked every 2FA sign-in.
+ *
+ * A successful consume uses `findOneAndDelete`, so two concurrent requests cannot both
+ * win: exactly one gets `valid: true`.
+ */
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).verifyTwoFactorSession = async function(
+  sessionId: string,
+  code: string,
+  options: { consume?: boolean } = {}
+) {
+  const { consume = true } = options;
+
+  const session = await this.findOne({
+    token: sessionId,
+    type: 'two-factor',
+    expiresAt: { $gt: new Date() }
+  });
+
+  if (!session) {
+    return { valid: false, error: 'Invalid or expired session. Please sign in again.' };
+  }
+
+  const maxAttempts = session.maxAttempts ?? 3;
+
+  if (session.attempts >= maxAttempts) {
+    await this.deleteOne({ _id: session._id });
+    return { valid: false, error: 'Too many failed attempts. Please sign in again.' };
+  }
+
+  if (session.code !== code) {
+    // Atomically bump the counter and read the new value back, so concurrent wrong
+    // guesses cannot each see a stale count and slip past the ceiling.
+    const updated = await this.findOneAndUpdate(
+      { _id: session._id },
+      { $inc: { attempts: 1 } },
+      { new: true }
+    );
+    const attempts = updated?.attempts ?? session.attempts + 1;
+    const attemptsRemaining = Math.max(0, maxAttempts - attempts);
+
+    if (attemptsRemaining === 0) {
+      await this.deleteOne({ _id: session._id });
+      return { valid: false, error: 'Too many failed attempts. Please sign in again.', attemptsRemaining: 0 };
+    }
+
+    return {
+      valid: false,
+      error: `Invalid or expired code. ${attemptsRemaining} attempt${attemptsRemaining === 1 ? '' : 's'} remaining.`,
+      attemptsRemaining
+    };
+  }
+
+  if (!consume) {
+    // Non-destructive check: a correct code must NOT burn an attempt.
+    return {
+      valid: true,
+      userId: String(session.userId),
+      email: session.email,
+      attemptsRemaining: Math.max(0, maxAttempts - session.attempts)
+    };
+  }
+
+  // Consume atomically so a race cannot produce two valid sessions from one code.
+  const consumed = await this.findOneAndDelete({ _id: session._id });
+  if (!consumed) {
+    return { valid: false, error: 'Invalid or expired session. Please sign in again.' };
+  }
+
+  return {
+    valid: true,
+    userId: String(consumed.userId),
+    email: consumed.email,
+    attemptsRemaining: Math.max(0, maxAttempts - consumed.attempts)
+  };
+};
+
+/**
+ * Drop every live 2FA session for a user (e.g. when re-issuing a code).
+ */
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).invalidateTwoFactorSessions = async function(
+  userId: mongoose.Types.ObjectId | string
+) {
+  const result = await this.deleteMany({ userId, type: 'two-factor' });
+  return result.deletedCount ?? 0;
 };
 
 // Static method to verify token

@@ -35,7 +35,7 @@ import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';

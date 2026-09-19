@@ -7,6 +7,9 @@ import { encode } from 'next-auth/jwt';
 /**
  * Complete sign-in after 2FA verification
  * Creates a session token for NextAuth
+ *
+ * This endpoint CONSUMES the 2FA code (single use). It is the authoritative check —
+ * /api/auth/two-factor/verify only peeks so that this call still has a session to use.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -19,12 +22,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify 2FA code
-    const verifyResult = await verifyTwoFactorCode(sessionId, code);
+    // Same format gate as /api/auth/two-factor/verify, so both endpoints agree on what
+    // a well-formed code is instead of one 400-ing and the other 401-ing.
+    if (!/^\d{6}$/.test(code)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid code format. Please enter a 6-digit code.' },
+        { status: 400 }
+      );
+    }
+
+    // Verify 2FA code and consume the session (single use)
+    const verifyResult = await verifyTwoFactorCode(sessionId, code, { consume: true });
 
     if (!verifyResult.valid || !verifyResult.userId) {
       return NextResponse.json(
-        { success: false, error: verifyResult.error || 'Invalid code' },
+        {
+          success: false,
+          error: verifyResult.error || 'Invalid code',
+          // Lets the UI show the remaining attempt count without a second round-trip.
+          ...(typeof verifyResult.attemptsRemaining === 'number' && {
+            attemptsRemaining: verifyResult.attemptsRemaining,
+          }),
+        },
         { status: 401 }
       );
     }

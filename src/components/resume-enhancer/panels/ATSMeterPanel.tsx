@@ -6,7 +6,7 @@ import { UtilityPanelPill } from '../components/UtilityPanelPill';
 import {
   Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle, Briefcase, Palette, LayoutTemplate, FileJson, ArrowRight
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/hot-toast';
 import guestCVService from '@/lib/services/guestCVService';
 import { SENIORITY_LEVELS, filterJobTitles, SeniorityLevel } from '@/lib/data/role-profiler-data';
 

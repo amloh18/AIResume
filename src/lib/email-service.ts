@@ -7,7 +7,11 @@ import {
   getAccountDeletionTemplate,
   getEmailVerificationTemplate,
   getPasswordResetTemplate,
-  EmailTemplateData
+  getVerificationCopy,
+  resolveVerificationPurpose,
+  EMAIL_BRAND,
+  EmailTemplateData,
+  VerificationPurpose
 } from './email-templates';
 import SystemEmailTracker from './services/SystemEmailTracker';
 
@@ -162,13 +166,13 @@ export async function sendEmailVerification(email: string, verificationLink: str
     };
 
     const html = getEmailVerificationTemplate(templateData);
-    const text = `Verify Your Email - BuildAIResume\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with BuildAIResume, you can safely ignore this email.\n\n© 2026 BuildAIResume by Morigrid Labs. All rights reserved.`;
+    const text = `Verify Your Email - ${EMAIL_BRAND.productName}\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with ${EMAIL_BRAND.productName}, you can safely ignore this email.\n\n(c) ${EMAIL_BRAND.year} ${EMAIL_BRAND.productName} by ${EMAIL_BRAND.legalName}. All rights reserved.`;
 
     const mailOptions = {
-      from: `"BuildAIResume Verification" <${senderEmail}>`,
+      from: `"${EMAIL_BRAND.productName}" <${senderEmail}>`,
       to: email,
       replyTo: senderEmail,
-      subject: 'Verify Your Email - BuildAIResume',
+      subject: `Verify Your Email - ${EMAIL_BRAND.productName}`,
       text,
       html,
     };
@@ -210,12 +214,12 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
     };
 
     const html = getPasswordResetTemplate(templateData);
-    const text = `Reset Your Password - AIResume\n\nHello ${firstName},\n\nWe received a request to reset your password. Click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this password reset, please ignore this email.\n\n© 2026 AIResume by Morigrid Labs. All rights reserved.`;
+    const text = `Reset Your Password - ${EMAIL_BRAND.productName}\n\nHello ${firstName},\n\nWe received a request to reset your password. Click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this password reset, please ignore this email.\n\n(c) ${EMAIL_BRAND.year} ${EMAIL_BRAND.productName} by ${EMAIL_BRAND.legalName}. All rights reserved.`;
 
     const mailOptions = {
-      from: `"AIResume" <${senderEmail}>`,
+      from: `"${EMAIL_BRAND.productName}" <${senderEmail}>`,
       to: email,
-      subject: 'Reset Your Password - AIResume',
+      subject: `Reset Your Password - ${EMAIL_BRAND.productName}`,
       text,
       html,
     };
@@ -314,11 +318,35 @@ export function getEmailServiceStatus() {
   };
 }
 
-// Send verification code email
+/** Extra context that lets a verification email describe itself accurately. */
+export interface VerificationEmailContext {
+  firstName?: string;
+  /** Minutes until the code expires. Must match the issuing session's TTL. */
+  expiryMinutes?: number;
+  /** Failed attempts allowed before the code is destroyed. */
+  maxAttempts?: number;
+  /** When the code was requested (defaults to now). */
+  requestedAt?: Date;
+  /** Request context, shown so an unexpected request is obvious to the recipient. */
+  device?: string;
+  ipAddress?: string;
+  /** True when the code is confirming 2FA setup rather than a sign-in. */
+  isSetup?: boolean;
+}
+
+/**
+ * Send a verification code email.
+ *
+ * The purpose drives the subject, headline and body copy. Previously this function
+ * computed a `title`/`description` per type and then never passed them to the template,
+ * so every email — sign-in, email verification, password reset and 2FA alike — said
+ * "complete your sign-in".
+ */
 export async function sendVerificationCode(
   email: string,
   code: string,
-  type: 'email-verification' | 'passwordless-login' | 'password-reset'
+  type: VerificationPurpose = 'passwordless-login',
+  context: VerificationEmailContext = {}
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Check daily limits and transactional reservations
@@ -329,73 +357,77 @@ export async function sendVerificationCode(
       return { success: false, error: limitCheck.reason };
     }
 
-    const config = getEmailConfig();
-    if (!config) {
+    // Reuse the pooled transporter so the sign-in path gets connection reuse.
+    const transporter = createTransporter();
+    if (!transporter) {
       console.warn('⚠️ No email service configured');
       return { success: false, error: 'Email service not configured' };
     }
 
-    const transporter = nodemailer.createTransport(config);
-
-    // Get subject and content based on type
-    let subject: string;
-    let title: string;
-    let description: string;
-
-    switch (type) {
-      case 'email-verification':
-        subject = 'Verify Your Email - AIResume';
-        title = 'Verify Your Email Address';
-        description = 'Please enter the code below to verify your email address and complete your account setup.';
-        break;
-      case 'passwordless-login':
-        subject = 'Your Sign-In Code - AIResume';
-        title = 'Sign In to Your Account';
-        description = 'Please enter the code below to sign in to your AIResume account.';
-        break;
-      case 'password-reset':
-        subject = 'Reset Your Password - AIResume';
-        title = 'Reset Your Password';
-        description = 'Please enter the code below to reset your password.';
-        break;
-      default:
-        subject = 'Your Verification Code - AIResume';
-        title = 'Verification Code';
-        description = 'Please enter the code below to complete your request.';
-    }
+    const purpose = resolveVerificationPurpose(type, context.isSetup);
+    const copy = getVerificationCopy(purpose);
+    const expiryMinutes = context.expiryMinutes ?? 10;
+    const requestedAt = context.requestedAt ?? new Date();
 
     const templateData: EmailTemplateData = {
       code,
-      email
+      email,
+      firstName: context.firstName,
+      purpose,
+      expiryMinutes,
+      maxAttempts: context.maxAttempts,
+      requestedAt,
+      device: context.device,
+      ipAddress: context.ipAddress,
+      isSetup: context.isSetup,
     };
 
     const html = getVerificationCodeTemplate(templateData);
 
-    const text = `
-AIResume - Your Verification Code
-
-Hello, enter the code below to complete your sign in.
-
-Your verification code is: ${code}
-
-This code will expire in 10 minutes. Do not share this code with anyone.
-
-Didn't receive a code? You can request a new one from the app.
-
-© 2026 AIResume by Morigrid Labs. All rights reserved. buildairesume.com
-    `;
+    // Plain-text alternative built from the same copy, so it can never contradict the HTML.
+    const greeting = context.firstName?.trim() ? `Hi ${context.firstName.trim()},` : 'Hello,';
+    const textLines = [
+      `${copy.title} - ${EMAIL_BRAND.productName}`,
+      '',
+      greeting,
+      '',
+      `Use the code below to ${copy.action}:`,
+      '',
+      `    ${code}`,
+      '',
+      `This code expires in ${expiryMinutes} minute${expiryMinutes === 1 ? '' : 's'} and can only be used once.`,
+    ];
+    if (typeof context.maxAttempts === 'number' && context.maxAttempts > 0) {
+      textLines.push(`You have ${context.maxAttempts} attempt${context.maxAttempts === 1 ? '' : 's'} to get it right.`);
+    }
+    textLines.push(
+      '',
+      `Requested: ${requestedAt.toUTCString()}`
+    );
+    if (context.device) textLines.push(`Device: ${context.device}`);
+    if (context.ipAddress) textLines.push(`IP address: ${context.ipAddress}`);
+    textLines.push(
+      '',
+      `Didn't try to ${copy.reason}? Someone else may have your credentials. Do not share this code with anyone, and reset your password immediately.`,
+      '',
+      `Need help? Contact ${EMAIL_BRAND.supportEmail}`,
+      '',
+      `(c) ${EMAIL_BRAND.year} ${EMAIL_BRAND.productName} by ${EMAIL_BRAND.legalName}. All rights reserved.`,
+      EMAIL_BRAND.domain
+    );
+    const text = textLines.join('\n');
 
     const senderEmail = getSenderEmail('verification');
     await transporter.sendMail({
-      from: `"BuildAIResume Verification" <${senderEmail}>`,
+      from: `"${EMAIL_BRAND.productName}" <${senderEmail}>`,
       to: email,
       replyTo: senderEmail,
-      subject,
+      subject: copy.subject,
       text,
       html,
     });
 
-    console.log(`✅ Verification code email sent to ${email}`);
+    console.log(`✅ Verification code email (${purpose}) sent to ${email}`);
     // Track in system
     SystemEmailTracker.trackEmail('verification_code');
     return { success: true };

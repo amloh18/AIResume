@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
-import VerificationToken from '@/models/VerificationToken';
+import VerificationToken, { EMAIL_CODE_TTL_MS, DEFAULT_MAX_ATTEMPTS } from '@/models/VerificationToken';
 import { validateEmail, validatePassword, createErrorResponse } from '@/lib/db-utils';
 import { sendVerificationCode } from '@/lib/email-service';
 import { generateVerificationCode } from '@/lib/verification-code';
@@ -215,7 +215,13 @@ export async function POST(request: NextRequest) {
       const emailResult = await sendVerificationCode(
         user.email,
         code,
-        'email-verification'
+        'email-verification',
+        {
+          firstName: user.firstName,
+          expiryMinutes: Math.round(EMAIL_CODE_TTL_MS / 60000),
+          maxAttempts: DEFAULT_MAX_ATTEMPTS,
+          requestedAt: new Date(),
+        }
       );
       
       if (emailResult.success) {

@@ -31,7 +31,7 @@ import {
   Keyboard,
   Loader2,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { useSession } from 'next-auth/react';
 import VoiceInterviewStage from './VoiceInterviewStage';
 

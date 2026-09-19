@@ -22,7 +22,7 @@ import {
   Mail,
   KeyRound,
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 export type PortalType =
   | 'naukri'

@@ -1,20 +1,42 @@
 import { getConnection } from '@/lib/database';
 import UserSettings from '@/models/UserSettings';
+import User from '@/models/User';
+import VerificationToken from '@/models/VerificationToken';
 import { sendVerificationCode } from '@/lib/email-service';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
+/**
+ * 2FA session lifetime. Exported so the email template and the session record can never
+ * disagree about how long the code is valid — the template used to hardcode "10 minutes".
+ */
+export const TWO_FACTOR_CODE_TTL_MS = 10 * 60 * 1000;
+
+/** Failed attempts allowed before a session is destroyed. */
+export const TWO_FACTOR_MAX_ATTEMPTS = 3;
+
+/**
+ * NOTE ON STORAGE
+ *
+ * These sessions used to live in a module-level `Map`. That silently breaks sign-in:
+ *  - any process restart (deploy, crash, container recycle) drops every pending session;
+ *  - `next dev` / Turbopack drops them on every file save;
+ *  - with more than one instance or replica, the code is generated on one process and
+ *    verified on another, so it is never found.
+ * The user-visible symptom is "Invalid or expired session. Please sign in again." after
+ * typing a correct code. Sessions now live in MongoDB (the app's primary store, already
+ * required by this module) via the `VerificationToken` collection, which gives us the
+ * existing TTL index, attempt counting and a shared view across instances.
+ */
+
 export interface TwoFactorSession {
+  sessionId: string;
   userId: string;
   email: string;
-  code: string;
   expiresAt: Date;
   attempts: number;
-  createdAt: Date;
+  maxAttempts: number;
 }
-
-// In-memory store for 2FA sessions (in production, use Redis or database)
-const twoFactorSessions = new Map<string, TwoFactorSession>();
 
 // Recovery code configuration
 const RECOVERY_CODE_COUNT = 5;
@@ -25,9 +47,8 @@ const BCRYPT_SALT_ROUNDS = 10;
  * Generate a 6-digit verification code
  */
 export function generateTwoFactorCode(): string {
-  // Generate a random 6-digit code (100000-999999)
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  return code;
+  // crypto.randomInt is uniform; Math.random() is not and is not a CSPRNG.
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 /**
@@ -40,12 +61,34 @@ export async function isTwoFactorEnabled(userId: string): Promise<boolean> {
 }
 
 /**
+ * Resolve a display name for the email greeting without requiring every caller to
+ * thread it through. Callers that already hold the user can pass it to skip this read.
+ */
+async function resolveFirstName(
+  userId: string,
+  email: string,
+  provided?: string
+): Promise<string | undefined> {
+  const trimmed = provided?.trim();
+  if (trimmed) return trimmed;
+
+  try {
+    const user = await User.findById(userId).select('firstName').lean();
+    const name = (user as any)?.firstName?.trim();
+    return name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Generate and send 2FA code
  */
 export async function generateAndSendTwoFactorCode(
   userId: string,
   email: string,
-  isSetup: boolean = false
+  isSetup: boolean = false,
+  firstName?: string
 ): Promise<{ success: boolean; sessionId: string; error?: string }> {
   try {
     await getConnection();
@@ -60,39 +103,31 @@ export async function generateAndSendTwoFactorCode(
 
     // Generate 6-digit code
     const code = generateTwoFactorCode();
-    
-    // Create session ID
-    const sessionId = crypto.randomBytes(32).toString('hex');
-    
-    // Store session (expires in 10 minutes)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    const session: TwoFactorSession = {
+
+    // Persist the session (also invalidates any previous live session for this user,
+    // so requesting a fresh code always supersedes the old one).
+    const { sessionId } = await VerificationToken.createTwoFactorSession(
       userId,
       email,
       code,
-      expiresAt,
-      attempts: 0,
-      createdAt: new Date(),
-    };
-    
-    twoFactorSessions.set(sessionId, session);
-
-    // Send code via email
-    const emailResult = await sendVerificationCode(
-      email,
-      code,
-      'passwordless-login' // Reuse existing email template
+      TWO_FACTOR_CODE_TTL_MS,
+      TWO_FACTOR_MAX_ATTEMPTS
     );
 
+    // Send code via email
+    const emailResult = await sendVerificationCode(email, code, 'two-factor-login', {
+      firstName: await resolveFirstName(userId, email, firstName),
+      expiryMinutes: Math.round(TWO_FACTOR_CODE_TTL_MS / 60000),
+      maxAttempts: TWO_FACTOR_MAX_ATTEMPTS,
+      isSetup,
+    });
+
     if (!emailResult.success) {
-      twoFactorSessions.delete(sessionId);
+      await VerificationToken.invalidateTwoFactorSessions(userId);
       return { success: false, sessionId: '', error: emailResult.error || 'Failed to send code' };
     }
 
     console.log(`✅ 2FA code generated and sent to ${email} (session: ${sessionId.substring(0, 8)}...)`);
-
-    // Clean up expired sessions periodically
-    cleanupExpiredSessions();
 
     return { success: true, sessionId };
   } catch (error: any) {
@@ -102,52 +137,27 @@ export async function generateAndSendTwoFactorCode(
 }
 
 /**
- * Verify 2FA code
+ * Verify 2FA code.
+ *
+ * `consume` defaults to `true` (single-use). Pass `consume: false` for a read-only
+ * check that leaves the session intact — the sign-in flow checks first and then
+ * completes, and consuming on the check destroyed the session before it could be used.
  */
 export async function verifyTwoFactorCode(
   sessionId: string,
-  code: string
-): Promise<{ valid: boolean; userId?: string; error?: string }> {
+  code: string,
+  options: { consume?: boolean } = {}
+): Promise<{ valid: boolean; userId?: string; error?: string; attemptsRemaining?: number }> {
   try {
-    const session = twoFactorSessions.get(sessionId);
+    await getConnection();
 
-    if (!session) {
-      return { valid: false, error: 'Invalid or expired session. Please sign in again.' };
+    const result = await VerificationToken.verifyTwoFactorSession(sessionId, code, options);
+
+    if (result.valid) {
+      console.log(`✅ 2FA code verified successfully for user ${result.userId}`);
     }
 
-    // Check if session expired
-    if (new Date() > session.expiresAt) {
-      twoFactorSessions.delete(sessionId);
-      return { valid: false, error: 'Code has expired. Please sign in again.' };
-    }
-
-    // Check max attempts (3 attempts)
-    if (session.attempts >= 3) {
-      twoFactorSessions.delete(sessionId);
-      return { valid: false, error: 'Too many failed attempts. Please sign in again.' };
-    }
-
-    // Increment attempts
-    session.attempts++;
-
-    // Verify code
-    if (session.code !== code) {
-      const remainingAttempts = 3 - session.attempts;
-      return {
-        valid: false,
-        error: remainingAttempts > 0 
-          ? 'Invalid or expired code. Please try again.' 
-          : 'Too many failed attempts. Please sign in again.',
-      };
-    }
-
-    // Code is valid - delete session and return userId
-    const userId = session.userId;
-    twoFactorSessions.delete(sessionId);
-
-    console.log(`✅ 2FA code verified successfully for user ${userId}`);
-
-    return { valid: true, userId };
+    return result;
   } catch (error: any) {
     console.error('❌ Error verifying 2FA code:', error);
     return { valid: false, error: error.message || 'Failed to verify code' };
@@ -155,26 +165,11 @@ export async function verifyTwoFactorCode(
 }
 
 /**
- * Clean up expired sessions
- */
-function cleanupExpiredSessions() {
-  const now = new Date();
-  Array.from(twoFactorSessions.entries()).forEach(([sessionId, session]) => {
-    if (now > session.expiresAt) {
-      twoFactorSessions.delete(sessionId);
-    }
-  });
-}
-
-/**
  * Invalidate all 2FA sessions for a user (e.g., when resending code)
  */
 export async function invalidateUserSessions(userId: string): Promise<void> {
-  Array.from(twoFactorSessions.entries()).forEach(([sessionId, session]) => {
-    if (session.userId === userId) {
-      twoFactorSessions.delete(sessionId);
-    }
-  });
+  await getConnection();
+  await VerificationToken.invalidateTwoFactorSessions(userId);
 }
 
 /**
@@ -288,9 +283,25 @@ export async function hasRecoveryCodes(userId: string): Promise<boolean> {
 }
 
 /**
- * Get session info (for debugging)
+ * Read a pending 2FA session without consuming it (diagnostics / support tooling).
  */
-export function getTwoFactorSession(sessionId: string): TwoFactorSession | null {
-  return twoFactorSessions.get(sessionId) || null;
+export async function getTwoFactorSession(sessionId: string): Promise<TwoFactorSession | null> {
+  await getConnection();
+  const doc = await VerificationToken.findOne({
+    token: sessionId,
+    type: 'two-factor',
+    expiresAt: { $gt: new Date() },
+  }).lean();
+
+  if (!doc) return null;
+
+  return {
+    sessionId,
+    userId: String(doc.userId),
+    email: doc.email,
+    expiresAt: doc.expiresAt,
+    attempts: doc.attempts,
+    maxAttempts: doc.maxAttempts ?? TWO_FACTOR_MAX_ATTEMPTS,
+  };
 }
 

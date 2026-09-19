@@ -19,7 +19,7 @@ import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewSidebar';
 import { getAllTemplates } from '@/lib/templates/template-utils';
 import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
 import { Button, IconButton, TableActionGroup } from '@/components/ui';
 
@@ -69,9 +69,102 @@ interface ExistingCV {
   atsScore?: number;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-document cache for thumbnails
+//
+// The documents list is fetched from `/api/cvs`, whose default projection is
+// `summary`. That projection truncates cvData to just enough for completion
+// percentages — it drops `work[].highlights`, `work[].endDate`,
+// `basics.profiles` and the other sections entirely. `normalizeCvDataForCanvas`
+// builds each experience entry's rich-text description from
+// `summary` + `highlights` (cv-canvas-normalizer.ts), so rendering a preview
+// from that payload produced a CV with no bullet points and no end dates —
+// structurally the right template, but nothing like the canvas.
+//
+// Rather than fetch the full `cvData` of every CV up front (there is no cap on
+// how many a user may have), each thumbnail pulls its own complete document
+// once it scrolls into view, and the result is cached for the session.
+// ─────────────────────────────────────────────────────────────────────────────
+const fullCvCache = new Map<string, any>();
+const fullCvInflight = new Map<string, Promise<any>>();
+
+function fetchFullCv(cvId: string): Promise<any> {
+  const cached = fullCvCache.get(cvId);
+  if (cached) return Promise.resolve(cached);
+
+  // Collapse concurrent requests for the same CV (e.g. a paired cover-letter card).
+  const inflight = fullCvInflight.get(cvId);
+  if (inflight) return inflight;
+
+  const request = fetch(`/api/cvs/${cvId}`)
+    .then((res) => (res.ok ? res.json() : null))
+    .then((json) => {
+      const cv = json?.data?.cv;
+      if (cv) fullCvCache.set(cvId, cv);
+      return cv || null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      fullCvInflight.delete(cvId);
+    });
+
+  fullCvInflight.set(cvId, request);
+  return request;
+}
+
+/**
+ * The canvas engine always renders `cvData.metadata.canvasTemplate` — that is the
+ * template the user actually picked in the editor. The list payload's `template` /
+ * `templateData` field is a separate, older copy that can go stale, so prefer the
+ * canvas value and only fall back to the list field when it is absent.
+ */
+function pickCanvasTemplate(doc: any): any {
+  const canvasTemplate = doc?.cvData?.metadata?.canvasTemplate;
+  if (canvasTemplate) return canvasTemplate;
+  return doc?.template || doc?.templateData || null;
+}
+
+/** What the document-preview sidebar is currently showing. */
+type PreviewDocState = {
+  type: 'cv' | 'coverLetter';
+  data: any;
+  id?: string;
+  title?: string;
+  cvData?: any;
+  template?: any;
+  jobData?: any;
+};
+
+const ThumbnailSkeleton = () => (
+  <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative overflow-hidden pointer-events-none">
+    {/* Header placeholder */}
+    <div className="space-y-2 border-b border-gray-100 pb-4">
+      <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
+      <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
+    </div>
+    {/* Body paragraph placeholders */}
+    <div className="space-y-3 pt-2">
+      <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
+      <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
+      <div className="h-2 w-[90%] bg-gray-100 rounded animate-pulse" />
+      <div className="h-2 w-[85%] bg-gray-100 rounded animate-pulse" />
+    </div>
+  </div>
+);
+
 const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: any, isCoverLetter?: boolean, cvData?: any }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = React.useState({ width: 0, height: 0 });
+
+  const cvId = !isCoverLetter ? String(item?.id || item?._id || '') : '';
+
+  // Seed from the session cache during render so a previously-fetched CV shows
+  // its real design immediately, with no loading flash.
+  const [fullDoc, setFullDoc] = React.useState<any>(() => (cvId ? fullCvCache.get(cvId) || null : null));
+  // Without IntersectionObserver there is nothing to wait for, so start visible
+  // (kept in the initialiser to avoid a synchronous setState inside an effect).
+  const [isVisible, setIsVisible] = React.useState(() => typeof IntersectionObserver === 'undefined');
+  const [loadFailed, setLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
     if (!containerRef.current) return;
@@ -107,6 +200,40 @@ const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: a
     };
   }, []);
 
+  // Only fetch once the thumbnail is near the viewport, so a long grid does not
+  // fire a request per card on mount.
+  React.useEffect(() => {
+    if (!cvId || fullDoc) return;
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [cvId, fullDoc]);
+
+  React.useEffect(() => {
+    if (!cvId || fullDoc || !isVisible) return;
+    let cancelled = false;
+    fetchFullCv(cvId).then((cv) => {
+      if (cancelled) return;
+      if (cv) setFullDoc(cv);
+      // On failure fall back to the list payload rather than showing a skeleton
+      // forever — degraded, but better than an empty card.
+      else setLoadFailed(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cvId, fullDoc, isVisible]);
+
   const templateObj = React.useMemo(() => {
     if (item.template && (item.template.zones || item.template.type)) return item.template;
     
@@ -138,13 +265,32 @@ const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: a
     return CANVAS_TEMPLATES.find(t => t.id === '1-col') || CANVAS_TEMPLATES[0] || null;
   }, [item.template, item.templateId, item.metadata?.templateId, item.cvData]);
 
-  if (!isCoverLetter && templateObj) {
+  if (!isCoverLetter) {
+    // Waiting on the complete document: hold the skeleton rather than render a
+    // CV with no bullet points that then visibly swaps. A CV with no id can
+    // never be fetched, so it falls straight through to the list payload.
+    const isPending = Boolean(cvId) && !fullDoc && !loadFailed;
+    if (isPending) {
+      return (
+        <div ref={containerRef} className="w-full h-full">
+          <ThumbnailSkeleton />
+        </div>
+      );
+    }
+
+    // Prefer the CV's own canvas template — the same source the canvas editor
+    // reads — so the preview cannot drift onto a locally-guessed template.
+    const renderData = fullDoc?.cvData || item.cvData;
+    const canvasTemplate = renderData?.metadata?.canvasTemplate;
+
     return (
-      <CVPreviewThumbnail
-        cvData={item.cvData || DEFAULT_UNIFIED_CV_DATA}
-        template={templateObj}
-        className="bg-white pointer-events-none"
-      />
+      <div ref={containerRef} className="w-full h-full">
+        <CVPreviewThumbnail
+          cvData={renderData}
+          template={canvasTemplate || templateObj || CANVAS_TEMPLATES[0] || undefined}
+          className="bg-white pointer-events-none"
+        />
+      </div>
     );
   }
 
@@ -179,20 +325,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false, cvData = null }: { item: a
           </div>
         </div>
       ) : (
-        <div className="w-full h-full p-6 flex flex-col gap-4 bg-white relative overflow-hidden pointer-events-none">
-          {/* Header placeholder */}
-          <div className="space-y-2 border-b border-gray-100 pb-4">
-            <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
-            <div className="h-3 w-1/4 bg-gray-100 rounded animate-pulse" />
-          </div>
-          {/* Body paragraph placeholders */}
-          <div className="space-y-3 pt-2">
-            <div className="h-2 w-full bg-gray-100 rounded animate-pulse" />
-            <div className="h-2 w-[95%] bg-gray-100 rounded animate-pulse" />
-            <div className="h-2 w-[90%] bg-gray-100 rounded animate-pulse" />
-            <div className="h-2 w-[85%] bg-gray-100 rounded animate-pulse" />
-          </div>
-        </div>
+        <ThumbnailSkeleton />
       )}
     </div>
   );
@@ -236,7 +369,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
         whileInView={{ opacity: 1, scale: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ delay: index * 0.05 }}
-        className="step-one-document-card group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
+        className="step-one-document-card group relative overflow-hidden rounded-t-xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
       >
         <div className="relative aspect-[1/1.414] w-full overflow-hidden">
           {/* Document Preview Thumbnail */}
@@ -359,7 +492,7 @@ const CVPairThumbnail: React.FC<CVPairThumbnailProps> = ({
           whileInView={{ opacity: 1, scale: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: (index * 0.05) + 0.02 }}
-          className="step-one-document-card group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
+          className="step-one-document-card group relative overflow-hidden rounded-t-xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
         >
           <div className="relative aspect-[1/1.414] w-full overflow-hidden">
             <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">
@@ -857,15 +990,92 @@ export default function Step1Dashboard({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Preview Sidebar State
-  const [previewDoc, setPreviewDoc] = useState<{
-    type: 'cv' | 'coverLetter';
-    data: any;
-    id?: string;
-    title?: string;
-    cvData?: any;
-    template?: any;
-    jobData?: any;
-  } | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
+
+  /**
+   * The sidebar renders the real canvas, so it needs the same document the editor
+   * gets. The list endpoint answers with the truncated `summary` projection — no
+   * bullet points, no end dates, no degree type, and no certifications/languages at
+   * all — because the grid only needs it for completion math. Rendering the preview
+   * from that payload produced a visibly different CV (missing bullets and whole
+   * sections), so: paint immediately with whatever we already hold, then swap in the
+   * complete document from GET /api/cvs/[id] (normally already warm from the
+   * thumbnail's own fetch, so the swap happens within a microtask and is invisible).
+   *
+   * `previewId`/`type` guard against a late response landing on a document the user
+   * has already navigated away from.
+   */
+  const hydratePreviewDoc = useCallback(
+    (
+      cvId: string,
+      previewId: string | undefined,
+      type: 'cv' | 'coverLetter',
+      apply: (full: any) => PreviewDocState
+    ) => {
+      if (!cvId || fullCvCache.has(cvId)) return;
+      fetchFullCv(cvId).then((full) => {
+        if (!full) return;
+        setPreviewDoc((prev) =>
+          prev && prev.type === type && prev.id === previewId ? apply(full) : prev
+        );
+      });
+    },
+    [setPreviewDoc]
+  );
+
+  /** Open the CV preview sidebar with the complete document behind it. */
+  const openCvPreview = useCallback(
+    (cv: any) => {
+      const cvId = String(cv?.id || cv?._id || '');
+      const seed = (cvId && fullCvCache.get(cvId)) || cv;
+
+      setPreviewDoc({
+        type: 'cv',
+        data: seed?.cvData || seed,
+        template: pickCanvasTemplate(seed),
+        id: cvId || undefined,
+        title: cv?.title,
+      });
+
+      hydratePreviewDoc(cvId, cvId || undefined, 'cv', (full) => ({
+        type: 'cv',
+        data: full.cvData || full,
+        template: pickCanvasTemplate(full),
+        id: cvId,
+        title: cv?.title,
+      }));
+    },
+    [hydratePreviewDoc, setPreviewDoc]
+  );
+
+  /**
+   * Cover-letter previews print the candidate's letterhead from the paired CV, so
+   * they hit the same truncated payload — warm it up identically.
+   */
+  const openCoverLetterPreview = useCallback(
+    (cl: any, pairedCv?: any) => {
+      const cvId = String(pairedCv?.id || pairedCv?._id || '');
+      const seed = (cvId && fullCvCache.get(cvId)) || pairedCv;
+      const clId = cl?.id || cl?._id;
+
+      setPreviewDoc({
+        type: 'coverLetter',
+        data: cl,
+        cvData: seed?.cvData || seed,
+        id: clId,
+        title: cl?.title,
+      });
+
+      hydratePreviewDoc(cvId, clId, 'coverLetter', (full) => ({
+        type: 'coverLetter',
+        data: cl,
+        cvData: full.cvData || full,
+        id: clId,
+        title: cl?.title,
+      }));
+    },
+    [hydratePreviewDoc, setPreviewDoc]
+  );
 
   // Rename Modal State
   const [renameDoc, setRenameDoc] = useState<{ type: 'cv' | 'cover-letter' | 'draft'; id: string; title: string } | null>(null);
@@ -1720,7 +1930,7 @@ export default function Step1Dashboard({
               {isLoadingCVs ? (
                 <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 px-1"}>
                   {[1, 2, 3, 4, 5, 6].map(i => (
-                    <div key={i} className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-gray-200/80 dark:border-white/5 bg-gray-100 dark:bg-white/[0.03]">
+                    <div key={i} className="relative rounded-t-xl overflow-hidden border border-gray-200/80 dark:border-white/5 bg-gray-100 dark:bg-white/[0.03]">
                       <div className="w-full aspect-[1/1.414] animate-pulse relative">
                         {/* Soft Diluting Glass Backdrop Shimmer */}
                         <div
@@ -1753,7 +1963,7 @@ export default function Step1Dashboard({
                       initial={{ opacity: 0, scale: 0.9, y: 20 }}
                       whileInView={{ opacity: 1, scale: 1, y: 0 }}
                       viewport={{ once: true }}
-                      className="step-one-document-card group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-dashed border-orange-400/60 dark:border-orange-500/40 shadow-md hover:shadow-2xl transition-all duration-300 bg-gradient-to-b from-orange-100/40 to-white dark:from-orange-950/20 dark:to-[#141810]"
+                      className="step-one-document-card group relative overflow-hidden rounded-t-xl border border-dashed border-orange-400/60 dark:border-orange-500/40 shadow-md hover:shadow-2xl transition-all duration-300 bg-gradient-to-b from-orange-100/40 to-white dark:from-orange-950/20 dark:to-[#141810]"
                     >
                       <div className="relative aspect-[1/1.414] w-full overflow-hidden">
                         {/* Center Icon & Draft Label */}
@@ -1846,7 +2056,7 @@ export default function Step1Dashboard({
                             {/* Preview */}
                             <button
                               type="button"
-                              onClick={() => setPreviewDoc({ type: 'cv', data: draftCV.cvData || draftCV, template: draftCV.template })}
+                              onClick={() => setPreviewDoc({ type: 'cv', data: draftCV.cvData || draftCV, template: pickCanvasTemplate(draftCV), title: draftCV.title })}
                               className={`flex-1 rounded-xl bg-gray-100 hover:bg-blue-500 hover:text-white dark:bg-white/10 dark:hover:bg-blue-500 border border-gray-200/80 dark:border-white/10 text-gray-800 dark:text-white flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm ${
                                 viewLayout === 'compact' ? 'py-1.5' : 'py-2 sm:py-2.5'
                               }`}
@@ -1899,11 +2109,11 @@ export default function Step1Dashboard({
                          compact={viewLayout === 'compact'}
                          onEditCV={() => handleEditExistingCV(cv)}
                          onDeleteCV={(e) => { e.stopPropagation(); handleDeleteCV(cv.id || cv._id || '', e); }}
-                         onPreviewCV={(cv) => setPreviewDoc({ type: 'cv', data: cv.cvData || cv, template: cv.template, id: cv.id || cv._id, title: cv.title })}
+                         onPreviewCV={openCvPreview}
                          onRenameCV={(cv) => handleOpenRename({ type: 'cv', id: cv.id || cv._id, title: cv.title || '' })}
                          onEditCoverLetter={(cl) => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
                          onDeleteCoverLetter={(cl, e) => { e.stopPropagation(); handleDeleteCoverLetter(cl.id || cl._id || '', e); }}
-                         onPreviewCoverLetter={(cl) => setPreviewDoc({ type: 'coverLetter', data: cl, cvData: cv.cvData, id: cl.id || cl._id, title: cl.title })}
+                         onPreviewCoverLetter={(cl) => openCoverLetterPreview(cl, cv)}
                          onRenameCoverLetter={(cl) => handleOpenRename({ type: 'cover-letter', id: cl.id || cl._id, title: cl.title || '' })}
                          getRelativeTime={getRelativeTime}
                          getScoreForCV={getScoreForCV}
@@ -1916,7 +2126,7 @@ export default function Step1Dashboard({
                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
                        viewport={{ once: true }}
-                       className="step-one-document-card group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
+                       className="step-one-document-card group relative overflow-hidden rounded-t-xl border border-gray-200/80 dark:border-white/10 shadow-md hover:shadow-2xl transition-all duration-300 bg-white dark:bg-[#141810]"
                      >
                        <div className="relative aspect-[1/1.414] w-full overflow-hidden">
                          <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-105">

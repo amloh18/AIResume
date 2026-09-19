@@ -25,7 +25,7 @@ import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';

@@ -35,7 +35,7 @@ import Play from 'lucide-react/dist/esm/icons/play';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useSession } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import { useRouter } from 'next/navigation';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';

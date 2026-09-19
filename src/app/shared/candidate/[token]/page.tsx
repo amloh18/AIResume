@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, User, Star, Briefcase, GraduationCap, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/hot-toast';
 
 export default function SharedCandidatePage() {
   const params = useParams();

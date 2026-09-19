@@ -51,7 +51,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanLabel } from '@/lib/entitlements/catalog';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
 import LoginSessions from '@/components/settings/LoginSessions';
 

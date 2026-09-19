@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Monitor, Smartphone, Tablet, Globe, LogOut, Loader2, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface SessionData {
   id: string;

@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { XCircle, Building, Calendar, TrendingUp, Archive, RefreshCw, BarChart3, Eye } from 'lucide-react';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface JobApplication {
   id: string;

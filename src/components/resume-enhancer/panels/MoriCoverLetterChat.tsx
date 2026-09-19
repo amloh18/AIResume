@@ -7,7 +7,7 @@ import {
   Send, Trash2, MousePointer2, MessageSquare, History, Edit2, X, Plus, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import toast from '@/lib/hot-toast';
 
 interface SuggestedImprovement {
   original: string;
