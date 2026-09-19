@@ -36,7 +36,7 @@ const mockHandler = async (request: NextRequest) => {
       );
     }
 
-    if (code === '9999') {
+    if (code === '999999') {
       throw new Error('Database error');
     }
 
@@ -88,7 +88,7 @@ describe('2FA Verify Route', () => {
     it('should return 401 for invalid code', async () => {
       const request = new NextRequest('http://localhost/api/auth/two-factor/verify', {
         method: 'POST',
-        body: JSON.stringify({ sessionId: 'abc123', code: '0000' }),
+        body: JSON.stringify({ sessionId: 'abc123', code: '000000' }),
       });
 
       const response = await mockHandler(request);
@@ -101,7 +101,7 @@ describe('2FA Verify Route', () => {
     it('should return 401 for too many failed attempts', async () => {
       const request = new NextRequest('http://localhost/api/auth/two-factor/verify', {
         method: 'POST',
-        body: JSON.stringify({ sessionId: 'abc123', code: '1111' }),
+        body: JSON.stringify({ sessionId: 'abc123', code: '111111' }),
       });
 
       const response = await mockHandler(request);
@@ -130,7 +130,7 @@ describe('2FA Verify Route', () => {
     it('should return 500 for server errors', async () => {
       const request = new NextRequest('http://localhost/api/auth/two-factor/verify', {
         method: 'POST',
-        body: JSON.stringify({ sessionId: 'abc123', code: '9999' }),
+        body: JSON.stringify({ sessionId: 'abc123', code: '999999' }),
       });
 
       const response = await mockHandler(request);
