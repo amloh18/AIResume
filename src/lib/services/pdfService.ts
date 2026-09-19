@@ -394,7 +394,10 @@ export class PDFService extends BaseService {
 
         doc.setFontSize(12);
         doc.setTextColor(50, 50, 50);
-        doc.text(`${skill.category}: ${skill.skills.join(', ')}`, 20, yPos);
+        const skillAny = skill as any;
+        const skillCategory = skillAny.category || skillAny.name || 'Skills';
+        const skillItems = Array.isArray(skillAny.skills) ? skillAny.skills : Array.isArray(skillAny.keywords) ? skillAny.keywords : [];
+        doc.text(`${skillCategory}: ${skillItems.join(', ')}`, 20, yPos);
         yPos += 7;
       });
     }

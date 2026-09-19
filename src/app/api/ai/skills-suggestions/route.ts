@@ -138,9 +138,30 @@ export async function POST(req: NextRequest) {
           existingSkills: uniqueSkills(existingSkills).slice(0, 80),
         };
 
-        const prompt = `You are an expert resume analyst. Suggest skills to add to a CV for the target role.\n\nReturn ONLY valid JSON with this shape:\n{\n  \"categories\": [\n    { \"category\": \"Core\", \"skills\": [\"Skill 1\", \"Skill 2\"] },\n    { \"category\": \"Tools\", \"skills\": [\"Skill 1\", \"Skill 2\"] }\n  ]\n}\n\nRules:\n- Use the CV context and target role.\n- Do NOT include duplicates of existingSkills.\n- Keep skills concise (1-3 words).\n- Provide 2-4 categories and up to 8 skills each.\n\nCV CONTEXT:\n${JSON.stringify(profile)}\n`;
+        const systemPrompt = `You are an expert resume analyst. Return ONLY valid JSON with the exact shape specified. No conversational filler, no markdown code blocks.`;
 
-        const aiResponse = await callAIWithFallback({ prompt, maxTokens: 1200, temperature: 0.2 });
+        const prompt = `Suggest skills to add to a CV for the target role.
+
+Return ONLY valid JSON with this shape:
+{
+  "categories": [
+    { "category": "Core", "skills": ["Skill 1", "Skill 2"] },
+    { "category": "Tools", "skills": ["Skill 1", "Skill 2"] }
+  ]
+}
+
+Rules:
+- Use the CV context and target role.
+- Do NOT include duplicates of existingSkills.
+- Keep skills concise (1-3 words).
+- Provide 2-4 categories and up to 8 skills each.
+- Categories should be logical groupings (e.g., "Frontend", "Backend", "DevOps", "Data", "Soft Skills").
+
+CV CONTEXT:
+${JSON.stringify(profile)}
+`;
+
+        const aiResponse = await callAIWithFallback({ prompt, systemPrompt, maxTokens: 1200, temperature: 0.2, responseMimeType: 'application/json' });
         let parsed: any = null;
         try {
           parsed = JSON.parse(aiResponse?.content || '');

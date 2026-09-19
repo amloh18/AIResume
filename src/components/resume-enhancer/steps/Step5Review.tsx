@@ -1229,7 +1229,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                   <Zap className="w-5 h-5 text-yellow-300" />
                 </div>
                 <div>
-                  <p className="font-black text-sm tracking-wide text-white">Interview Coach</p>
+                  <p className="font-black text-sm tracking-wide text-white">Interview Prep</p>
                   <p className="text-[11px] font-semibold text-purple-100 mt-0.5">Practice & get interview ready with AI</p>
                 </div>
               </div>

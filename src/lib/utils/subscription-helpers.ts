@@ -1,4 +1,12 @@
 /**
+ * @deprecated This file is FROZEN. Do not add new entitlement logic here.
+ *
+ * Use the new entitlement engine instead:
+ *   import { can, requireFeature, resolveEntitlements } from '@/lib/entitlements';
+ *
+ * This file exists for backward compatibility with existing callers.
+ * New code must use src/lib/entitlements/ exclusively.
+ *
  * Subscription & System Helper Utilities
  * 
  * Handles edge cases for System & Subscription (EC-41 to EC-50)
@@ -163,10 +171,12 @@ export function getPlanLimits(planKey: string): PlanLimits {
 
 /**
  * Check if a plan key belongs to the free tier.
- * Both 'free' and 'starter_monthly' are the free plan (starter_monthly is just the renamed free).
+ * starter_monthly is a PAID plan — it is NOT the free tier.
+ * During the launch trial, starter_monthly is free via Stripe trial_end,
+ * but it still has paid-tier entitlements.
  */
 export function isFreeTierPlan(planKey: string): boolean {
-  return planKey === 'free' || planKey === 'starter_monthly';
+  return planKey === 'free';
 }
 
 export function isUnlimited(limit: number): boolean {

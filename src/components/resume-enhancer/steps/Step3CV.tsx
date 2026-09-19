@@ -663,21 +663,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       const handleSelection = (e: CustomEvent) => {
         if (!state.moriChatMode) return;
         const { path } = e.detail;
-        if (lastSelectedPathRef.current === path) {
-          pathClickCountRef.current += 1;
-          if (pathClickCountRef.current >= 3) {
-            dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
-            toast.success("Resuming direct editing mode", {
-              icon: '✍️',
-              duration: 3500
-            });
-            lastSelectedPathRef.current = null;
-            pathClickCountRef.current = 0;
-          }
-        } else {
-          lastSelectedPathRef.current = path;
-          pathClickCountRef.current = 1;
-        }
+        lastSelectedPathRef.current = path;
+        pathClickCountRef.current = 1;
       };
 
       window.addEventListener('mori-cv-selection', handleSelection as EventListener);
@@ -798,7 +785,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           const limitCheck = await limitCheckResponse.json();
           if (!limitCheck.allowed) {
             // Show limit modal or paywall
-            alert(limitCheck.message || 'You have reached your Journey CV limit. Archive or delete an existing Journey CV to create a new one, or upgrade to Pro.');
+            alert(limitCheck.message || 'You have reached your Tailored Resume limit. Archive or delete an existing Tailored Resume to create a new one, or upgrade to Focused.');
             return;
           }
         }

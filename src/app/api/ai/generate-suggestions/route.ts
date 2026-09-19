@@ -387,8 +387,11 @@ function createCoverLetterBodyPrompt({
   // Format skills for prompt
   const skillsText = skills.map((skill: any) => {
     if (typeof skill === 'string') return skill;
-    return skill.name || skill;
-  }).join(', ');
+    const category = skill.category || skill.name || '';
+    const skillItems = Array.isArray(skill.skills) ? skill.skills : Array.isArray(skill.keywords) ? skill.keywords : [];
+    if (skillItems.length > 0) return `${category}: ${skillItems.join(', ')}`;
+    return category || skill;
+  }).join('\n');
 
   // Experience level-specific guidance
   const experienceGuidance = experienceLevel === 'Senior' 
@@ -448,7 +451,7 @@ ${jobDescription || 'No job description provided'}
 CANDIDATE PROFILE:
 - Name: ${basics.name || 'Not specified'}
 - Summary: ${basics.summary || 'N/A'}
-- Location: ${basics.location ? (typeof basics.location === 'string' ? basics.location : `${basics.location.city || ''}, ${basics.location.state || ''}`) : 'N/A'}
+- Location: ${basics.location ? (typeof basics.location === 'string' ? basics.location : `${basics.location.city || ''}, ${basics.location.region || ''}`) : 'N/A'}
 
 WORK EXPERIENCE:
 ${workExperienceText || 'No work experience provided'}

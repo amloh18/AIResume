@@ -12,7 +12,7 @@ import { getCurrencySymbol } from '@/lib/config/job-constants';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
 
 interface ParsedJobData {
@@ -62,7 +62,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
   matchScore = 82
 }) => {
   const { user } = useUnifiedAuth();
-  const { membership, loading: membershipLoading, canAccess } = useMembership();
+  const { loading: membershipLoading, can } = useEntitlements();
   const [inputText, setInputText] = useState(initialData?.jobDescription || '');
   const [urlInput, setUrlInput] = useState('');
   const [activeTab, setActiveTab] = useState<'paste' | 'upload' | 'url'>('paste');
@@ -188,7 +188,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    if (!canAccess('jobParsing')) {
+    if (!can('match.job_parsing')) {
       setShowUpgradePopup(true);
       return;
     }
@@ -606,10 +606,10 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Analyzing...
                     </>
-                  ) : !canAccess('jobParsing') ? (
+                  ) : !can('match.job_parsing') ? (
                     <>
                       <Crown className="w-4 h-4" />
-                      Analyze with AI (Pro)
+                      Analyze with AI (Focused)
                     </>
                   ) : (
                     <>

@@ -134,15 +134,15 @@ export function inferCvSectionFromPrompt(text: string): { path: string; text: st
 }
 
 /**
- * Normalize AI-returned options into the canonical `{ label, prompt }` shape.
+ * Normalize AI-returned options into the canonical `{ label, prompt, description? }` shape.
  * The model may return options as strings, as objects with different keys
  * (e.g. `{ label, value }`), or as a mix — normalize defensively so the chat
  * UI always renders clickable cards with a valid prompt.
  */
-export function normalizeMoriChatOptions(raw: any): Array<{ label: string; prompt: string }> | null {
+export function normalizeMoriChatOptions(raw: any): Array<{ label: string; prompt: string; description?: string }> | null {
   if (!Array.isArray(raw) || raw.length === 0) return null;
   const seen = new Set<string>();
-  const out: Array<{ label: string; prompt: string }> = [];
+  const out: Array<{ label: string; prompt: string; description?: string }> = [];
   for (const entry of raw) {
     if (typeof entry === 'string') {
       const label = entry.trim();
@@ -157,18 +157,19 @@ export function normalizeMoriChatOptions(raw: any): Array<{ label: string; promp
       const label = String(entry.label ?? entry.title ?? entry.text ?? entry.value ?? entry.prompt ?? '').trim();
       if (!label) continue;
       const prompt = String(entry.prompt ?? entry.value ?? entry.label ?? entry.text ?? entry.title ?? label).trim() || label;
+      const description = typeof entry.description === 'string' ? entry.description.trim() : undefined;
       const key = `${label.toLowerCase()}::${prompt.toLowerCase()}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ label, prompt });
+      out.push({ label, prompt, description });
     }
   }
-  return out.length > 0 ? out.slice(0, 6) : null;
+  return out.length > 0 ? out.slice(0, 8) : null;
 }
 
 export type MoriTargetResolution =
   | { status: 'resolved'; selection: { path: string; text: string } | null }
-  | { status: 'ask'; message: string; options: Array<{ label: string; prompt: string }> };
+  | { status: 'ask'; message: string; options: Array<{ label: string; prompt: string; description?: string }> };
 
 export function resolveMoriEditTarget(text: string, cvData: any): MoriTargetResolution {
   const raw = (text || '').trim();
@@ -265,7 +266,7 @@ export function sanitizeMoriChatMessage(raw: any): string {
 
 export function parseMoriChatContent(raw: string): {
   message: string;
-  options: Array<{ label: string; prompt: string }> | null;
+  options: Array<{ label: string; prompt: string; description?: string }> | null;
   operations: CVEditOperation[] | null;
   patch: Record<string, any> | null;
   updatedCV: any | null;
@@ -422,7 +423,7 @@ export function mergeMoriCvIntoCanvas(
       const diffs = diffCVData(currentCv, session.cvData);
       if (diffs.length === 0) {
         // No actual changes — operations were valid but produced no diff
-        console.warn('[mori-chat] Operations applied but no changes detected');
+        console.warn('[mori-chat] Operations applied but no changes detected. Operations:', parsed.operations.map(op => `${op.operation}:${(op as any).sectionId}/${(op as any).recordId}`).join(', '));
         return null;
       }
 
@@ -430,11 +431,16 @@ export function mergeMoriCvIntoCanvas(
       return session.cvData;
     } else {
       // Operations failed validation — fall through to legacy patch if available
-      console.warn('[mori-chat] Operations failed:', session.results.filter(r => !r.success).map(r => r.error));
+      const failedOps = session.results.filter(r => !r.success);
+      console.warn('[mori-chat] Operations failed:', failedOps.map(r => `${r.operation.operation}:${r.error}`).join('; '));
       if (!parsed.patch && !parsed.updatedCV) {
+        console.warn('[mori-chat] No patch/updatedCV fallback — CV will NOT be updated');
         return null; // No fallback available
       }
+      console.log('[mori-chat] Falling back to patch/updatedCV merge');
     }
+  } else if (parsed.operations && parsed.operations.length === 0) {
+    console.warn('[mori-chat] Operations array is empty — nothing to apply');
   }
 
   // ── PATH B: Legacy section-level patch (backward compatibility) ──
@@ -448,13 +454,16 @@ export function mergeMoriCvIntoCanvas(
       applySection(next, key, incoming[key], false);
     });
     changed = true;
+    console.log(`[mori-chat] Applied updatedCV with keys: ${keys.join(', ')}`);
   }
 
   if (parsed.patch && typeof parsed.patch === 'object') {
+    const patchKeys = Object.keys(parsed.patch);
     Object.entries(parsed.patch).forEach(([key, value]) => {
       applySection(next, key, value, true);
     });
     changed = true;
+    console.log(`[mori-chat] Applied patch with keys: ${patchKeys.join(', ')}`);
   }
 
   return changed ? next : null;

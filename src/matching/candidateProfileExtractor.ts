@@ -102,13 +102,22 @@ export async function extractCandidateProfile(db: Db, userId: string): Promise<C
     });
 
     if (masterCv) {
-      // Skills section
-      if (masterCv.skills && Array.isArray(masterCv.skills)) {
-        for (const s of masterCv.skills) {
-          if (typeof s === 'string') cvSkills.push(s);
-          else if (s?.name) cvSkills.push(s.name);
-          else if (s?.keywords) {
-            for (const kw of s.keywords) cvSkills.push(kw);
+      // Skills section — supports both unified { category, skills[] } and legacy { name, keywords[] }
+      const skillsSource = masterCv.cvData?.skills || masterCv.skills || [];
+      if (skillsSource && Array.isArray(skillsSource)) {
+        for (const s of skillsSource) {
+          if (typeof s === 'string') {
+            cvSkills.push(s);
+          } else if (s?.skills && Array.isArray(s.skills)) {
+            // Unified format: { category, skills[] }
+            cvSkills.push(...s.skills.filter((item: any) => typeof item === 'string' && item));
+          } else if (s?.keywords && Array.isArray(s.keywords)) {
+            // Legacy format: { name, keywords[] }
+            cvSkills.push(...s.keywords.filter((item: any) => typeof item === 'string' && item));
+          } else if (s?.category) {
+            cvSkills.push(s.category);
+          } else if (s?.name) {
+            cvSkills.push(s.name);
           }
         }
       }

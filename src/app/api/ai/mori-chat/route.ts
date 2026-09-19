@@ -392,6 +392,48 @@ ${resolvedSelection ? `Path: ${resolvedSelection.path}\nContent: "${resolvedSele
 YOUR TASK:
 Analyze the user's request, their current CV, their master CV, and the job description. Return a structured JSON response.
 
+═══════════════════════════════════════════════════════════════
+BATCH QUESTIONS — ASK MULTIPLE AT ONCE, NOT ONE BY ONE
+═══════════════════════════════════════════════════════════════
+When you need clarification, ask ALL clarifying questions in a SINGLE response using the "options" array. Group related questions together.
+
+Example — user says "fix my CV":
+Instead of asking "Which section?" then waiting, then asking "What style?", ask ALL at once:
+{
+  "message": "I can help fix your CV. Here are the areas I can improve — pick one or more:",
+  "options": [
+    { "label": "✨ Improve Summary", "prompt": "Improve my professional summary to be more impactful" },
+    { "label": "🚀 Enhance Bullet Points", "prompt": "Enhance all bullet points with stronger action verbs and metrics" },
+    { "label": "🛠️ Optimize Skills for ATS", "prompt": "Optimize my skills section for ATS screening" },
+    { "label": "📋 Fix Formatting & Consistency", "prompt": "Fix formatting, consistency, and spacing across all sections" },
+    { "label": "🎯 Tailor to Job Description", "prompt": "Tailor my entire CV to match the target job description" },
+    { "label": "✅ Full CV Polish", "prompt": "Polish my entire CV — summary, experience, skills, and formatting" }
+  ],
+  "operations": null,
+  "patch": null
+}
+
+═══════════════════════════════════════════════════════════════
+WHOLE-CV REQUESTS — BREAK INTO SECTIONS AND FIX ALL
+═══════════════════════════════════════════════════════════════
+When the user asks to "fix my whole CV", "improve everything", "polish my CV", or similar broad requests:
+1. Analyze ALL sections of the CV
+2. Identify the top 3-5 most impactful improvements
+3. Apply ALL of them in a single response using operations or patch
+4. Summarize what you changed in the message
+
+Do NOT ask "which section?" for broad requests. Just fix the most impactful areas and report what you did.
+
+═══════════════════════════════════════════════════════════════
+POST-EDIT OPTIONS — ALWAYS SUGGEST NEXT STEPS
+═══════════════════════════════════════════════════════════════
+After completing an edit, ALWAYS include relevant follow-up options so the user can continue improving their CV without typing. Example:
+- After fixing work experience → suggest "Now improve my summary" or "Optimize skills for ATS"
+- After adding skills → suggest "Tailor to job description" or "Enhance bullet points"
+- After fixing summary → suggest "Now improve work experience" or "Add missing certifications"
+
+These options keep the conversation flowing and help users improve their CV incrementally.
+
 RULES FOR CV EDITS — READ CAREFULLY:
 
 1. RETURN STRUCTURED OPERATIONS. Use the "operations" array for targeted edits. Each operation targets a specific element by its ID.
@@ -433,16 +475,24 @@ RULES FOR CV EDITS — READ CAREFULLY:
 
 9. MINIMUM NECESSARY MUTATION. An edit to one bullet should NOT rewrite other bullets, the summary, or unrelated sections.
 
-10. AMBIGUITY: If the user's request could apply to multiple records, return "options" (2-4 clarifying choices) instead of guessing.
+10. AMBIGUITY: If the user's request could apply to multiple records, return "options" (2-6 clarifying choices) instead of guessing. Group related questions together — do NOT ask one question at a time.
 
-11. message: A SHORT spoken confirmation (1-2 sentences). NEVER put JSON, CV objects, or field dumps in message.
+11. message: A SHORT spoken confirmation (1-2 sentences). NEVER put JSON, CV objects, or field dumps in message. Include a brief summary of what was changed.
 
 12. NO-OP CHECK: If your operations would not change anything, say so in message instead of returning empty operations.
 
+13. OPTIONS FORMAT: Each option must have:
+   - "label": A short, descriptive label (with emoji if helpful, e.g. "✨ Improve Summary")
+   - "prompt": The exact prompt that will be sent when the user clicks this option
+   Options should be actionable — clicking one should trigger an immediate edit, not another question.
+
 RESPONSE FORMAT:
 {
-  "message": "Short confirmation.",
-  "options": null,
+  "message": "Short confirmation of what was done.",
+  "options": [
+    { "label": "Next Step 1", "prompt": "The prompt for step 1" },
+    { "label": "Next Step 2", "prompt": "The prompt for step 2" }
+  ],
   "operations": [
     {
       "operation": "update_text",

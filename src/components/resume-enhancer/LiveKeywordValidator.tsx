@@ -35,10 +35,15 @@ function extractTextFromCV(cvData: UnifiedCVDataStructure): string {
     cvData.skills.forEach((skill) => {
       if (typeof skill === 'string') {
         sections.push(skill);
-      } else if (skill.name) {
-        sections.push(skill.name);
-        if (skill.keywords) {
-          sections.push(skill.keywords.join(' '));
+      } else if (skill.category) {
+        sections.push(skill.category);
+        if (skill.skills && Array.isArray(skill.skills)) {
+          sections.push(skill.skills.join(' '));
+        }
+      } else if ((skill as any).name) {
+        sections.push((skill as any).name);
+        if ((skill as any).keywords && Array.isArray((skill as any).keywords)) {
+          sections.push((skill as any).keywords.join(' '));
         }
       }
     });

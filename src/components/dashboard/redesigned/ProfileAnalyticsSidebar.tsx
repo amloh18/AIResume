@@ -112,10 +112,25 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
   const candidateLocation = cvData?.basics?.location?.city || cvData?.personalInfo?.location || cvData?.basics?.location?.address || '';
   const candidateSummary = cvData?.basics?.summary || cvData?.personalInfo?.summary || '';
   
-  // Extract skills
+  // Extract skills (flatten all skill groups into individual skill strings)
   const skillsList: string[] = useMemo(() => {
     if (Array.isArray(cvData?.skills)) {
-      return cvData.skills.map((s: any) => typeof s === 'string' ? s : s?.name || s?.title || '').filter(Boolean);
+      const result: string[] = [];
+      for (const s of cvData.skills) {
+        if (typeof s === 'string') {
+          result.push(s);
+        } else if (s && typeof s === 'object') {
+          // Unified format: { category, skills[] }
+          if (Array.isArray(s.skills)) {
+            result.push(...s.skills.filter((item: any) => typeof item === 'string' && item));
+          }
+          // Legacy format: { name, keywords[] }
+          if (Array.isArray(s.keywords)) {
+            result.push(...s.keywords.filter((item: any) => typeof item === 'string' && item));
+          }
+        }
+      }
+      return result;
     }
     if (Array.isArray(cvData?.skillsKeywords)) {
       return cvData.skillsKeywords.filter(Boolean);
@@ -342,7 +357,7 @@ export default function ProfileAnalyticsSidebar({ cv, isOpen, onClose }: Profile
                         {workList.length > 0 ? `${workList.length} Roles Listed` : 'Ready to add'}
                       </div>
                       <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate block">
-                        {workList[0]?.company ? `Latest: ${workList[0].company}` : 'Standard timeline'}
+                        {workList[0]?.name ? `Latest: ${workList[0].name}` : workList[0]?.company ? `Latest: ${workList[0].company}` : 'Standard timeline'}
                       </span>
                     </div>
 

@@ -79,7 +79,6 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     }
 
     // 4. Check for CAPTCHA or anti-bot (pre-flight)
-    // In Phase 5, Playwright runs here. For now, mark as needing review.
     await applicationStateMachine.transition({
       applicationId,
       userId,
@@ -90,7 +89,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       reason: `ATS ${atsType} detected. Playwright automation ready.`,
     });
 
-    // 5. Attempt Playwright automation (Phase 5 will expand this)
+    // 5. Attempt Playwright automation via UnifiedApplyService
     const { UnifiedApplyService } = await import('@/lib/services/unifiedApplyService');
     const applyResult = await UnifiedApplyService.apply(userId, {
       jobId: jobApplication.jobId || jobApplication._id.toString(),

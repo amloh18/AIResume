@@ -9,7 +9,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save, Edit2, Bookmark, CheckCircle2
+  Eye, ArrowRight, Sparkles, Loader2, FileCheck, Tag, Download, Pencil, Check, RefreshCw, Send, Shield, Save, Edit2, Bookmark, CheckCircle2, BarChart3, Inbox
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -18,7 +18,6 @@ import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
 import DocumentPreviewSidebar from './DocumentPreviewSidebar';
-import { CommunicationSidebar } from './CommunicationSidebar';
 import FormattedJobDescription from '@/components/jobs/FormattedJobDescription';
 import toast from 'react-hot-toast';
 import { haptic } from '@/lib/utils/haptic';
@@ -135,9 +134,9 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsModalView, setDetailsModalView] = useState<'details' | 'insights'>('details');
   
-  // 5 Tab Navigation: details | insights | communication | notes | documents
-  type SidebarTab = 'details' | 'insights' | 'communication' | 'notes' | 'documents';
-  const [activeTab, setActiveTab] = useState<SidebarTab>('details');
+  // 5 Tab Navigation: analytics | details | communication | documents | notes
+  type SidebarTab = 'analytics' | 'details' | 'communication' | 'documents' | 'notes';
+  const [activeTab, setActiveTab] = useState<SidebarTab>('analytics');
   const [jobNotes, setJobNotes] = useState<string>(job.notes || '');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -249,8 +248,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
 
   const jobId = job.id || job._id;
 
-  // Comms sidebar states
-  const [showCommsSidebar, setShowCommsSidebar] = useState(false);
+  // Email connection status
   const [isEmailConnected, setIsEmailConnected] = useState(false);
   const [connectedEmailAddress, setConnectedEmailAddress] = useState('');
 
@@ -495,10 +493,13 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     return '[Your Name]';
   };
 
-  // Get user email from CV data or user object
+  // Get user email — prefer Stalwart/application sender email, not CV data
   const getUserEmail = () => {
-    if (cvData?.basics?.email) {
-      return cvData.basics.email;
+    if ((user as any)?.stalwartEmail) {
+      return (user as any).stalwartEmail;
+    }
+    if (process.env.NEXT_PUBLIC_APPLICATION_SENDER_EMAIL) {
+      return process.env.NEXT_PUBLIC_APPLICATION_SENDER_EMAIL;
     }
     if (user?.email) {
       return user.email;
@@ -840,6 +841,31 @@ ${userName}`
       year: parsedDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
     });
   }, []);
+
+  const formatStageDateTime = useCallback((date?: string | Date | null) => {
+    if (!date) return null;
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) return null;
+    const month = parsedDate.toLocaleDateString('en-US', { month: 'short' });
+    const day = parsedDate.getDate();
+    const time = parsedDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${month} ${day} · ${time}`;
+  }, []);
+
+  const formatTimeAgo = useCallback((date?: string | Date | null) => {
+    if (!date) return null;
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) return null;
+    const now = new Date();
+    const diffMs = now.getTime() - parsedDate.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay}d ago`;
+  }, []);
   const getStageTransitionDate = useCallback((stageKey: string) => {
     if (stageKey === 'draft') {
       return job.createdAt || null;
@@ -862,21 +888,25 @@ ${userName}`
 
     return null;
   }, [job.createdAt, job.status, job.statusHistory, job.updatedAt]);
+  type StageStatus = 'completed' | 'current' | 'processing' | 'blocked' | 'failed' | 'upcoming';
+
   const stageItems = useMemo(() => {
     const normalizedTimelineStatus = job.status === 'screening' ? 'applied' : job.status;
+    const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
+
     const items = [
       {
         key: 'draft',
         label: 'Saved',
-        info: 'Job bookmarked to tracker',
+        subLabel: 'Job bookmarked to tracker',
         icon: Bookmark,
         activeColor: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
       },
       {
         key: 'created',
-        label: 'Staging',
-        info: 'Tailoring CV & Cover Letter',
+        label: 'Tailored',
+        subLabel: 'CV & cover letter tailored',
         icon: Sparkles,
         activeColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -884,7 +914,7 @@ ${userName}`
       {
         key: 'applied',
         label: 'Applied',
-        info: job.status === 'screening' ? 'In recruiter screening' : 'Application submitted',
+        subLabel: job.status === 'screening' ? 'In recruiter screening' : 'Application submitted',
         icon: Send,
         activeColor: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -892,7 +922,7 @@ ${userName}`
       {
         key: 'interview',
         label: 'Interview',
-        info: 'Interview rounds & prep',
+        subLabel: 'Interview rounds & prep',
         icon: Calendar,
         activeColor: 'text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -900,7 +930,7 @@ ${userName}`
       {
         key: 'offer',
         label: 'Offer',
-        info: 'Offer package review & terms',
+        subLabel: 'Offer package review & terms',
         icon: Target,
         activeColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -908,7 +938,7 @@ ${userName}`
       {
         key: job.status === 'rejected' ? 'rejected' : 'accepted',
         label: job.status === 'rejected' ? 'Rejected' : 'Accepted',
-        info: job.status === 'rejected' ? 'Application closed' : 'Offer accepted & confirmed',
+        subLabel: job.status === 'rejected' ? 'Application closed' : 'Offer accepted & confirmed',
         icon: job.status === 'rejected' ? X : CheckCircle2,
         activeColor: job.status === 'rejected' ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
         completedColor: job.status === 'rejected' ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -920,32 +950,53 @@ ${userName}`
       return getStageTransitionDate(item.key) ? index : lastIndex;
     }, -1);
 
-    return items.map((item, index) => ({
-      ...item,
-      isCurrent: currentIndex > -1 ? item.key === normalizedTimelineStatus : false,
-      isCompleted:
-        currentIndex > -1
-          ? index < currentIndex
-          : index <= lastReachedIndex,
-      isUpcoming:
-        currentIndex > -1
-          ? index > currentIndex
-          : index > lastReachedIndex,
-      stageDate: getStageTransitionDate(item.key),
-      statusLabel:
-        job.status === 'screening' && item.key === 'applied'
-          ? 'In screening'
-          : item.key === normalizedTimelineStatus
-            ? 'Current stage'
-            : currentIndex > -1
-              ? index < currentIndex
-                ? 'Completed'
-                : 'Upcoming'
-              : index <= lastReachedIndex
-                ? 'Completed'
-                : 'Upcoming',
-    }));
-  }, [getStageTransitionDate, job.status]);
+    return items.map((item, index) => {
+      const isCurrent = currentIndex > -1 ? item.key === normalizedTimelineStatus : false;
+      const isCompleted = currentIndex > -1 ? index < currentIndex : index <= lastReachedIndex;
+      const isUpcoming = currentIndex > -1 ? index > currentIndex : index > lastReachedIndex;
+      const stageDate = getStageTransitionDate(item.key);
+
+      let status: StageStatus = 'upcoming';
+      if (isCompleted) {
+        status = 'completed';
+      } else if (isCurrent) {
+        if (liveStatus && liveStatus.step === 'failed') {
+          status = 'failed';
+        } else if (liveStatus && (liveStatus.step === 'submitting' || liveStatus.step === 'tailoring' || liveStatus.step === 'matching' || liveStatus.step === 'queued')) {
+          status = 'processing';
+        } else if (job.status === 'screening' && item.key === 'applied') {
+          status = 'current';
+        } else {
+          status = 'current';
+        }
+      }
+
+      let dateLabel = 'Upcoming';
+      if (status === 'completed' && stageDate) {
+        dateLabel = formatStageDateTime(stageDate) || formatTimelineDate(stageDate);
+      } else if (status === 'current') {
+        if (stageDate) {
+          dateLabel = formatTimeAgo(stageDate) || formatStageDateTime(stageDate) || 'In progress';
+        } else {
+          dateLabel = 'In progress';
+        }
+      } else if (status === 'processing') {
+        dateLabel = 'In progress';
+      } else if (status === 'failed') {
+        dateLabel = stageDate ? `Failed · ${formatStageDateTime(stageDate)}` : 'Failed';
+      }
+
+      return {
+        ...item,
+        status,
+        isCurrent,
+        isCompleted,
+        isUpcoming,
+        stageDate,
+        dateLabel,
+      };
+    });
+  }, [getStageTransitionDate, job.status, jobId]);
   const terminalStageLabel = useMemo(() => {
     if (job.status === 'withdrawn') return 'Withdrawn';
     return null;
@@ -1945,7 +1996,7 @@ ${userName}`
         title: 'Application Active — Recruiter Review',
         description: 'Your application has been recorded. Check recruiter emails in the Communication tab or practice role-specific interview questions to stay prepared.',
         primaryAction: {
-          label: 'AI Interview Coach',
+          label: 'Interview Prep',
           icon: Sparkles,
           onClick: () => handleOpenInterviewCoach(),
         },
@@ -1972,7 +2023,7 @@ ${userName}`
         title: 'Interview Preparation Active',
         description: 'Ace your upcoming interview rounds with tailored question analysis, AI coaching feedback, and talking points.',
         primaryAction: {
-          label: 'Launch Interview Coach',
+          label: 'Launch Interview Prep',
           icon: Sparkles,
           onClick: () => handleOpenInterviewCoach(),
         },
@@ -2111,7 +2162,7 @@ ${userName}`
           }`}
           style={{
             width: sidebarWidth,
-            right: windowWidth >= 768 ? (showCommsSidebar ? '474px' : '12px') : '0px',
+            right: windowWidth >= 768 ? '12px' : '0px',
             top: windowWidth >= 768 ? '12px' : '0px',
             bottom: windowWidth >= 768 ? '12px' : '0px',
           }}
@@ -2215,20 +2266,6 @@ ${userName}`
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="space-y-3 px-5 py-4 pb-6">
-              {/* Live Status Card if active for this job */}
-              {(() => {
-                const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
-                if (!liveStatus) return null;
-                return (
-                  <div className="rounded-2xl overflow-hidden shadow-sm">
-                    <JobLiveStatusCard
-                      status={liveStatus}
-                      onClose={() => useJobLiveStatusStore.getState().clearStatus(jobId)}
-                    />
-                  </div>
-                );
-              })()}
-
               {/* Two-Column Main Workspace */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
                 {/* Column 1: Small Width & Borderless Vertical Stage Timeline */}
@@ -2247,9 +2284,25 @@ ${userName}`
                       <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-gray-200/80 dark:bg-white/10" />
 
                       {stageItems.map((stage, stageIndex) => {
-                        const isCompleted = stage.isCompleted;
-                        const isCurrent = stage.isCurrent;
                         const Icon = stage.icon;
+                        const status = stage.status as StageStatus;
+
+                        const nodeClasses = (() => {
+                          switch (status) {
+                            case 'completed':
+                              return `${stage.completedColor} shadow-sm`;
+                            case 'current':
+                              return `${stage.activeColor} ring-4 ring-current/15 shadow-md scale-105`;
+                            case 'processing':
+                              return 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30 ring-4 ring-blue-500/10 shadow-md scale-105 animate-pulse';
+                            case 'blocked':
+                              return 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30 ring-4 ring-amber-500/10 shadow-md';
+                            case 'failed':
+                              return 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-sm';
+                            default:
+                              return 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10';
+                          }
+                        })();
 
                         return (
                           <motion.div
@@ -2261,35 +2314,66 @@ ${userName}`
                           >
                             {/* Round Icon Node */}
                             <div
-                              className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 border ${
-                                isCurrent
-                                  ? `${stage.activeColor} ring-4 ring-current/15 shadow-md scale-105 animate-stage-pulse`
-                                  : isCompleted
-                                  ? `${stage.completedColor} shadow-sm animate-stage-glow`
-                                  : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10'
-                              }`}
+                              className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 border ${nodeClasses}`}
                             >
-                              <Icon className="w-4 h-4 stroke-[2]" />
+                              {status === 'completed' ? (
+                                <Check className="w-4 h-4 stroke-[2.5]" />
+                              ) : status === 'processing' ? (
+                                <Loader2 className="w-4 h-4 stroke-[2] animate-spin" />
+                              ) : status === 'blocked' ? (
+                                <span className="text-sm font-black">!</span>
+                              ) : status === 'failed' ? (
+                                <X className="w-4 h-4 stroke-[2.5]" />
+                              ) : (
+                                <Icon className="w-4 h-4 stroke-[2]" />
+                              )}
                             </div>
 
                             {/* Stage Text & Info Details */}
                             <div className="min-w-0 flex-1 pt-0.5">
-                              <p
-                                className={`text-xs font-bold leading-tight ${
-                                  isCurrent
-                                    ? 'text-gray-900 dark:text-white'
-                                    : isCompleted
-                                    ? 'text-gray-800 dark:text-gray-200'
-                                    : 'text-gray-500 dark:text-gray-400'
-                                }`}
-                              >
-                                {stage.label}
+                              <div className="flex items-center gap-2">
+                                <p
+                                  className={`text-xs font-bold leading-tight ${
+                                    status === 'current' || status === 'processing'
+                                      ? 'text-gray-900 dark:text-white'
+                                      : status === 'completed'
+                                      ? 'text-gray-800 dark:text-gray-200'
+                                      : status === 'blocked'
+                                      ? 'text-amber-700 dark:text-amber-400'
+                                      : status === 'failed'
+                                      ? 'text-rose-700 dark:text-rose-400'
+                                      : 'text-gray-500 dark:text-gray-400'
+                                  }`}
+                                >
+                                  {stage.label}
+                                </p>
+                                {status === 'current' && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-[#013f2e] dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full">
+                                    Current
+                                  </span>
+                                )}
+                                {status === 'processing' && (
+                                  <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">
+                                    Processing
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-[11px] mt-0.5 leading-snug ${
+                                status === 'blocked' ? 'text-amber-600 dark:text-amber-400' :
+                                status === 'failed' ? 'text-rose-600 dark:text-rose-400' :
+                                'text-gray-500 dark:text-gray-400'
+                              }`}>
+                                {status === 'blocked' ? 'Action required' :
+                                 status === 'failed' ? 'Submission failed' :
+                                 status === 'processing' ? 'In progress...' :
+                                 stage.subLabel}
                               </p>
-                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                                {stage.info}
-                              </p>
-                              <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
-                                {stage.stageDate ? formatTimelineDate(stage.stageDate) : stage.statusLabel}
+                              <p className={`text-[10px] mt-0.5 font-medium ${
+                                status === 'failed' ? 'text-rose-500 dark:text-rose-400' :
+                                status === 'blocked' ? 'text-amber-500 dark:text-amber-400' :
+                                'text-gray-400 dark:text-gray-500'
+                              }`}>
+                                {stage.dateLabel}
                               </p>
                             </div>
                           </motion.div>
@@ -2299,171 +2383,51 @@ ${userName}`
                   </div>
                 </div>
 
-                {/* Column 2: Journey Card & Tab Content */}
+                {/* Column 2: Tab Content */}
                 <div className="lg:col-span-8 space-y-3 min-w-0">
-                  {/* Guiding Section: Application Guidance Hub */}
-                  <section className="space-y-2">
-                    <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all ${guidanceHub.toneClasses}`}>
-                      {/* Header Strip: Mode pill, Stage pill, Document health badges */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-gray-200/60 dark:border-white/10">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {/* Application Mode Pill */}
-                          {isAtsSupported ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40 shadow-2xs">
-                              <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                              <span>Auto-Apply ({atsType?.toUpperCase()})</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 shadow-2xs">
-                              <ExternalLink className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                              <span>Direct / Manual Apply</span>
-                            </span>
-                          )}
 
-                          {/* Current State Pill */}
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold ${guidanceHub.badgeClasses}`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                            <span>{guidanceHub.badgeText}</span>
-                          </span>
-                        </div>
-
-                        {/* Document Health Pills */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
-                              hasCvReady
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
-                                : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10'
-                            }`}
-                          >
-                            {hasCvReady ? <Check className="w-3 h-3 stroke-[2.5]" /> : <Clock className="w-3 h-3" />}
-                            <span>CV: {hasCvReady ? 'Ready' : 'Not generated'}</span>
-                          </span>
-
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
-                              hasCoverLetterReady
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
-                                : 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10'
-                            }`}
-                          >
-                            {hasCoverLetterReady ? <Check className="w-3 h-3 stroke-[2.5]" /> : <Clock className="w-3 h-3" />}
-                            <span>Cover Letter: {hasCoverLetterReady ? 'Ready' : 'Not generated'}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Context Message */}
-                      <div className="space-y-1 mb-3">
-                        <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white tracking-tight">
-                          {guidanceHub.title}
-                        </h3>
-                        <p className="text-xs sm:text-small text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
-                          {guidanceHub.description}
-                        </p>
-                      </div>
-
-                      {/* Action Bar */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-gray-200/60 dark:border-white/10">
-                        <div className="flex flex-wrap items-center gap-2.5">
-                          {/* Primary Action Button */}
-                          {guidanceHub.primaryAction && (
-                            <motion.button
-                              type="button"
-                              onClick={() => {
-                                haptic('medium');
-                                guidanceHub.primaryAction!.onClick();
-                              }}
-                              disabled={guidanceHub.primaryAction.disabled}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.97 }}
-                              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#013f2e] text-white text-xs font-black shadow-sm transition hover:brightness-95 dark:bg-[#013f2e] disabled:opacity-60"
-                            >
-                              {guidanceHub.primaryAction.icon && (
-                                <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
-                              )}
-                              <span>{guidanceHub.primaryAction.label}</span>
-                              <ArrowRight className="w-3.5 h-3.5 opacity-80" />
-                            </motion.button>
-                          )}
-
-                          {/* Secondary Actions */}
-                          {guidanceHub.secondaryActions.map((action, idx) => (
-                            <motion.button
-                              key={idx}
-                              type="button"
-                              onClick={() => {
-                                haptic('light');
-                                action.onClick();
-                              }}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.97 }}
-                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-250 bg-white text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all shadow-2xs"
-                            >
-                              {action.icon && <action.icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
-                              <span>{action.label}</span>
-                            </motion.button>
-                          ))}
-                        </div>
-
-                        {/* Stage Status Nudge */}
-                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>Current Stage: <strong className="text-gray-900 dark:text-white capitalize">{job.status}</strong></span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-              {/* 5 Tab Navigation: Job Details, Insights, Communication, Notes, Documents */}
-              <section className="space-y-2">
-                {/* Tab Bar */}
-                <div className="flex items-center gap-1 p-1 rounded-2xl bg-gray-100/60 dark:bg-white/[0.03] border border-gray-200/60 dark:border-white/[0.06] backdrop-blur-sm overflow-x-auto scrollbar-none">
+              {/* 5 Tab Navigation: Analytics, Job Details, Communication, Documents, Notes */}
+              <section className="space-y-3 pt-3 pb-3">
+                {/* Tab Bar — dashboard-style with underline */}
+                <div className="flex items-center gap-0 border-b border-gray-200 dark:border-white/10 overflow-x-auto scrollbar-none">
                   {[
+                    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
                     { id: 'details', label: 'Job Details', icon: Briefcase },
-                    { id: 'insights', label: 'Insights', icon: Sparkles, badge: typeof keywordMatchScore === 'number' && keywordMatchScore > 0 ? `${keywordMatchScore}%` : undefined },
-                    { id: 'communication', label: 'Communication', icon: Mail, badge: isEmailConnected ? 'Synced' : undefined },
-                    { id: 'notes', label: 'Notes', icon: FileText, badge: (jobNotes || job.notes || jobTags.length > 0) ? (jobTags.length > 0 ? `${jobTags.length}` : '1') : undefined },
-                    { id: 'documents', label: 'Documents', icon: FileCheck, badge: (primaryJourney?.cvId || primaryJourney?.coverLetterId || (job as any).cvId || fallbackMasterCvId || job.status !== 'draft') ? 'Ready' : undefined },
+                    { id: 'communication', label: 'Comms', icon: Mail },
+                    { id: 'documents', label: 'Docs', icon: FileCheck },
+                    { id: 'notes', label: 'Notes', icon: FileText },
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activeTab === tab.id;
                     return (
-                      <motion.button
+                      <button
                         key={tab.id}
                         type="button"
                         onClick={() => {
                           haptic('selection');
                           setActiveTab(tab.id as SidebarTab);
                         }}
-                        whileTap={{ scale: 0.97 }}
-                        className={`relative flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all duration-200 whitespace-nowrap flex-1 ${
+                        className={`relative flex items-center gap-1.5 px-4 py-3 text-xs font-semibold transition-colors whitespace-nowrap ${
                           isActive
-                            ? 'bg-white dark:bg-[#1a2315] text-gray-900 dark:text-white shadow-sm border border-gray-200/80 dark:border-white/10'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-white/50 dark:hover:bg-white/[0.04] border border-transparent'
+                            ? 'text-[#013f2e] dark:text-[#013f2e]'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white'
                         }`}
                       >
-                        <Icon className={`w-3.5 h-3.5 shrink-0 transition-colors duration-200 ${isActive ? 'text-[#013f2e] dark:text-[#013f2e]' : ''}`} />
+                        <Icon className="w-4 h-4 shrink-0" />
                         <span>{tab.label}</span>
-                        {tab.badge && (
-                          <motion.span
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-extrabold ${
-                              isActive 
-                                ? 'bg-[#013f2e]/15 text-[#013f2e] dark:text-[#013f2e]' 
-                                : 'bg-gray-200/80 dark:bg-white/10 text-gray-500 dark:text-gray-400'
-                            }`}
-                          >
-                            {tab.badge}
-                          </motion.span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="sidebar-tab-underline"
+                            className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#013f2e] dark:bg-[#013f2e]"
+                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                          />
                         )}
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
 
-                {/* Tab 1: Job Details */}
+                {/* Tab 2: Job Details */}
                 {activeTab === 'details' && (
                   <motion.div
                     key="tab-details"
@@ -2618,101 +2582,537 @@ ${userName}`
                   </motion.div>
                 )}
 
-                {/* Tab 2: Insights */}
-                {activeTab === 'insights' && (
+                {/* Tab 1: Analytics — Command Center */}
+                {activeTab === 'analytics' && (
                   <motion.div
-                    key="tab-insights"
+                    key="tab-analytics"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-3"
                   >
-                    {/* Performance & Score Card */}
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Live Status (absorbed from JobLiveStatusCard) */}
+                    {(() => {
+                      const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
+                      if (!liveStatus) return null;
+                      const isSuccess = liveStatus.step === 'submitted' || liveStatus.success;
+                      return (
+                        <div className={`rounded-2xl border p-4 shadow-sm ${
+                          isSuccess
+                            ? 'border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-b from-emerald-50/30 to-white dark:from-emerald-950/20 dark:to-[#131810]'
+                            : 'border-blue-200 dark:border-blue-800/40 bg-gradient-to-b from-blue-50/30 to-white dark:from-blue-950/20 dark:to-[#131810]'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {isSuccess ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              ) : (
+                                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                              )}
+                              <span className="text-xs font-bold text-gray-900 dark:text-white">{liveStatus.title}</span>
+                            </div>
+                            <button
+                              onClick={() => useJobLiveStatusStore.getState().clearStatus(jobId)}
+                              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-gray-600 dark:text-gray-400 mb-2">{liveStatus.description}</p>
+                          <div className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${isSuccess ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                              style={{ width: `${liveStatus.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Current Stage + Readiness */}
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                      {(() => {
+                        const currentStage = stageItems.find(s => s.status === 'current') || stageItems.find(s => s.status === 'processing');
+                        const Icon = currentStage?.icon || Bookmark;
+                        const status = currentStage?.status || 'current';
+                        return (
+                          <>
+                            {/* Stage Header */}
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
+                                status === 'processing'
+                                  ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30 animate-pulse'
+                                  : currentStage
+                                  ? `${currentStage.activeColor} ring-2 ring-current/10`
+                                  : 'bg-gray-100 dark:bg-white/5 text-gray-400 border-gray-200 dark:border-white/10'
+                              }`}>
+                                {status === 'processing' ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Icon className="w-4 h-4" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                    {currentStage?.label || job.status}
+                                  </span>
+                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                                    status === 'processing'
+                                      ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
+                                      : 'text-[#013f2e] dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30'
+                                  }`}>
+                                    {status === 'processing' ? 'Processing' : 'Current'}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                  {currentStage?.dateLabel || ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Stage Meta */}
+                            <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                              {isAtsSupported && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30">
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  Auto-Apply · {atsType?.toUpperCase()}
+                                </span>
+                              )}
+                              {!isAtsSupported && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30">
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                  Manual Apply
+                                </span>
+                              )}
+                              {job.location && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 border border-gray-200 dark:border-white/10">
+                                  <MapPin className="w-2.5 h-2.5" />
+                                  {job.location}
+                                </span>
+                              )}
+                              {job.sponsorship && job.sponsorship !== 'unknown' && (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                  job.sponsorship === 'yes'
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/30'
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-100 dark:border-rose-800/30'
+                                }`}>
+                                  {job.sponsorship === 'yes' ? 'Sponsorship' : 'No Sponsorship'}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Timeline: Application Date → Deadline */}
+                            {(job.applicationDate || job.createdAt || job.deadline) && (() => {
+                              const appDateRaw = job.applicationDate || job.createdAt;
+                              const appDate = appDateRaw ? new Date(appDateRaw) : null;
+                              const deadlineDate = job.deadline ? new Date(job.deadline) : null;
+                              const now = new Date();
+                              const totalDays = appDate && deadlineDate ? Math.ceil((deadlineDate.getTime() - appDate.getTime()) / 86400000) : null;
+                              const elapsedDays = appDate ? Math.ceil((now.getTime() - appDate.getTime()) / 86400000) : null;
+                              const remainingDays = deadlineDate ? Math.ceil((deadlineDate.getTime() - now.getTime()) / 86400000) : null;
+                              const progressPct = totalDays && elapsedDays !== null ? Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)) : null;
+                              const isOverdue = remainingDays !== null && remainingDays < 0;
+                              const isUrgent = remainingDays !== null && remainingDays >= 0 && remainingDays <= 3;
+
+                              return (
+                                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                                  <div className="flex items-center justify-between text-[10px] mb-1.5">
+                                    {appDate && (
+                                      <span className="text-gray-500 dark:text-gray-400">
+                                        Applied {formatStageDateTime(appDate) || formatTimelineDate(appDate)}
+                                      </span>
+                                    )}
+                                    {deadlineDate && (
+                                      <span className={`font-bold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {isOverdue ? `${Math.abs(remainingDays)}d overdue` : `${remainingDays}d left`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {progressPct !== null && (
+                                    <div className="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-500 ${
+                                          isOverdue ? 'bg-rose-500' : isUrgent ? 'bg-amber-500' : 'bg-[#013f2e]'
+                                        }`}
+                                        style={{ width: `${progressPct}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {/* Speed Graph: Expected vs Actual — Smooth Curve with Date Labels */}
+                            {(() => {
+                              // Entry point: job posted date from postedAgeDays (how many days ago the job was made live)
+                              const now = new Date();
+                              const postedAgeDays = (job as any).postedAgeDays;
+                              const postedDate = typeof postedAgeDays === 'number' && postedAgeDays >= 0
+                                ? new Date(now.getTime() - postedAgeDays * 86400000)
+                                : job.createdAt
+                                  ? new Date(job.createdAt)
+                                  : null;
+                              if (!postedDate) return null;
+
+                              const daysSincePosted = Math.max(0, (now.getTime() - postedDate.getTime()) / 86400000);
+
+                              const appDateRaw = job.applicationDate;
+                              const appDate = appDateRaw ? new Date(appDateRaw) : null;
+
+                              const stageDefinitions: Array<{ key: string; label: string; expected: number; actual: number | null; date: Date | null }> = [
+                                { key: 'posted', label: 'Posted', expected: 0, actual: 0, date: postedDate },
+                                { key: 'created', label: 'Tailored', expected: 3, actual: null, date: null },
+                                { key: 'applied', label: 'Applied', expected: 5, actual: null, date: null },
+                                { key: 'interview', label: 'Interview', expected: 18, actual: null, date: null },
+                                { key: 'offer', label: 'Offer', expected: 35, actual: null, date: null },
+                                { key: 'accepted', label: 'Accepted', expected: 40, actual: null, date: null },
+                              ];
+
+                              // Fill actual values from statusHistory
+                              const history = (job.statusHistory || []) as any[];
+                              stageDefinitions.forEach((def) => {
+                                if (def.key === 'posted') return;
+                                const entry = history.find((h: any) => h.status === def.key && h.changedAt);
+                                if (entry) {
+                                  const entryDate = new Date(entry.changedAt);
+                                  def.actual = Math.max(0, (entryDate.getTime() - postedDate.getTime()) / 86400000);
+                                  def.date = entryDate;
+                                }
+                              });
+
+                              // Use applicationDate if available for the "Applied" stage
+                              if (appDate) {
+                                const appliedDef = stageDefinitions.find(d => d.key === 'applied');
+                                if (appliedDef && appliedDef.actual === null) {
+                                  appliedDef.actual = Math.max(0, (appDate.getTime() - postedDate.getTime()) / 86400000);
+                                  appliedDef.date = appDate;
+                                }
+                              }
+
+                              // Mark current stage
+                              const currentStageKey = stageItems.find(s => s.status === 'current')?.key || stageItems.find(s => s.status === 'processing')?.key;
+                              if (currentStageKey) {
+                                const def = stageDefinitions.find(d => d.key === currentStageKey);
+                                if (def && def.actual === null) {
+                                  def.actual = daysSincePosted;
+                                  def.date = now;
+                                }
+                              }
+
+                              // Show stages up to current + 1
+                              const currentIdx = currentStageKey ? stageDefinitions.findIndex(d => d.key === currentStageKey) : 0;
+                              const visibleStages = stageDefinitions.slice(0, Math.max(2, Math.min(stageDefinitions.length, currentIdx + 2)));
+
+                              const maxDays = Math.max(
+                                ...visibleStages.map(s => s.expected),
+                                ...visibleStages.filter(s => s.actual !== null).map(s => s.actual!),
+                                daysSincePosted,
+                                1
+                              );
+
+                              // SVG dimensions
+                              const W = 200, H = 64, PAD_L = 4, PAD_R = 4, PAD_T = 4, PAD_B = 4;
+                              const plotW = W - PAD_L - PAD_R;
+                              const plotH = H - PAD_T - PAD_B;
+                              const n = visibleStages.length;
+
+                              const toX = (i: number) => (i / Math.max(1, n - 1)) * plotW + PAD_L;
+                              const toY = (days: number) => H - PAD_B - (maxDays > 0 ? (days / maxDays) * plotH : 0);
+
+                              const ptsExpected = visibleStages.map((s, i) => ({ x: toX(i), y: toY(s.expected) }));
+                              const actualStages = visibleStages.filter(s => s.actual !== null);
+                              const ptsActual = actualStages.map((s) => {
+                                const origIdx = visibleStages.indexOf(s);
+                                return { x: toX(origIdx), y: toY(s.actual!) };
+                              });
+
+                              // Smooth cubic bezier path
+                              const smoothPath = (pts: Array<{ x: number; y: number }>) => {
+                                if (pts.length < 2) return '';
+                                if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
+                                let d = `M ${pts[0].x},${pts[0].y}`;
+                                for (let i = 0; i < pts.length - 1; i++) {
+                                  const p0 = pts[Math.max(0, i - 1)];
+                                  const p1 = pts[i];
+                                  const p2 = pts[i + 1];
+                                  const p3 = pts[Math.min(pts.length - 1, i + 2)];
+                                  const t = 0.3;
+                                  d += ` C ${p1.x + (p2.x - p0.x) * t},${p1.y + (p2.y - p0.y) * t} ${p2.x - (p3.x - p1.x) * t},${p2.y - (p3.y - p1.y) * t} ${p2.x},${p2.y}`;
+                                }
+                                return d;
+                              };
+
+                              const smoothFill = (pts: Array<{ x: number; y: number }>) => {
+                                if (pts.length < 2) return '';
+                                return `${smoothPath(pts)} L ${pts[pts.length - 1].x},${H} L ${pts[0].x},${H} Z`;
+                              };
+
+                              // Format date: "Sep 19"
+                              const fmtDate = (d: Date | null) => {
+                                if (!d) return '';
+                                const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                                return `${m[d.getMonth()]} ${d.getDate()}`;
+                              };
+
+                              return (
+                                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress Speed</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="flex items-center gap-1 text-[9px] text-gray-400 dark:text-gray-500">
+                                        <span className="w-2 h-[2px] bg-gray-300 dark:bg-gray-600 rounded" /> Expected
+                                      </span>
+                                      <span className="flex items-center gap-1 text-[9px] text-[#013f2e] dark:text-emerald-400">
+                                        <span className="w-2 h-[2px] bg-[#013f2e] dark:bg-emerald-400 rounded" /> Actual
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="relative w-full">
+                                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
+                                      {[0.25, 0.5, 0.75].map(pct => (
+                                        <line key={pct} x1={PAD_L} y1={H - PAD_B - pct * plotH} x2={W - PAD_R} y2={H - PAD_B - pct * plotH}
+                                          stroke="currentColor" className="text-gray-100 dark:text-white/5" strokeWidth="0.5" />
+                                      ))}
+                                      {ptsExpected.length > 1 && (
+                                        <>
+                                          <path d={smoothFill(ptsExpected)} fill="currentColor" className="text-gray-200/40 dark:text-white/5" />
+                                          <path d={smoothPath(ptsExpected)} fill="none" stroke="currentColor" className="text-gray-300 dark:text-gray-600" strokeWidth="1.5" strokeLinecap="round" />
+                                        </>
+                                      )}
+                                      {ptsActual.length > 1 && (
+                                        <>
+                                          <path d={smoothFill(ptsActual)} fill="currentColor" className="text-[#013f2e]/10 dark:text-emerald-400/10" />
+                                          <path d={smoothPath(ptsActual)} fill="none" stroke="currentColor" className="text-[#013f2e] dark:text-emerald-400" strokeWidth="2" strokeLinecap="round" />
+                                        </>
+                                      )}
+                                      {ptsActual.map((p, i) => (
+                                        <circle key={i} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" />
+                                      ))}
+                                      {ptsActual.length < ptsExpected.length && ptsExpected[ptsActual.length] && (
+                                        <circle cx={ptsExpected[ptsActual.length].x} cy={ptsExpected[ptsActual.length].y} r="2.5"
+                                          fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" stroke="currentColor"
+                                          strokeWidth="1" strokeDasharray="2 1" />
+                                      )}
+                                    </svg>
+                                    {/* X-axis labels: date + stage */}
+                                    <div className="flex justify-between px-1 mt-1">
+                                      {visibleStages.map((s) => {
+                                        const dateStr = s.key === 'posted' ? fmtDate(postedDate) : fmtDate(s.date);
+                                        const isCurrent = s.key === currentStageKey;
+                                        return (
+                                          <span key={s.key} className={`text-[7px] font-bold leading-tight text-center ${isCurrent ? 'text-[#013f2e] dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                            {dateStr}<br/>{s.label}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Readiness Items */}
+                            <div className="space-y-2.5">
+                              {/* CV */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {hasCvReady ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600 shrink-0" />
+                                  )}
+                                  <div className="min-w-0">
+                                    <span className={`text-[11px] font-semibold ${hasCvReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                      Tailored CV
+                                    </span>
+                                    {hasCvReady && keywordMatchScore > 0 && (
+                                      <span className={`ml-1.5 text-[10px] font-bold ${keywordMatchScore >= 70 ? 'text-emerald-600 dark:text-emerald-400' : keywordMatchScore >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                        {keywordMatchScore}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                {hasCvReady ? (
+                                  <button
+                                    onClick={() => primaryJourney ? handleContinueJourney(primaryJourney as any) : void handleOpenDocumentPreview('cv')}
+                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap"
+                                  >
+                                    Edit
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => void handleTailorAndApply()}
+                                    disabled={isCreatingJourney}
+                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    {isCreatingJourney ? 'Generating...' : 'Generate'}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Cover Letter */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {hasCoverLetterReady ? (
+                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600 shrink-0" />
+                                  )}
+                                  <span className={`text-[11px] font-semibold ${hasCoverLetterReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    Cover Letter
+                                  </span>
+                                </div>
+                                {hasCoverLetterReady ? (
+                                  <button
+                                    onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap"
+                                  >
+                                    View
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => void handleTailorAndApply()}
+                                    disabled={isCreatingJourney}
+                                    className="text-[10px] font-bold text-gray-400 dark:text-gray-500 hover:text-[#013f2e] dark:hover:text-emerald-400 whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    {isCreatingJourney ? 'Generating...' : 'Optional'}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Job Info */}
+                              <div className="flex items-center gap-2">
+                                {Boolean(job.company && job.jobTitle) ? (
+                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                ) : (
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                )}
+                                <span className={`text-[11px] font-semibold ${Boolean(job.company && job.jobTitle) ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                  {job.company && job.jobTitle ? `${job.company} · ${job.jobTitle}` : 'Missing job details'}
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Activity Log */}
+                    {job.statusHistory && job.statusHistory.length > 0 && (
                       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Match Score</span>
-                        <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-2xl font-black text-emerald-600 dark:text-[#013f2e]">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
-                          <span className="text-xs text-gray-500">ATS Alignment</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">Activity</span>
+                        <div className="space-y-2">
+                          {(job.statusHistory as any[]).slice(-5).reverse().map((entry: any, i: number) => (
+                            <div key={i} className="flex items-start gap-2.5">
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap mt-0.5">
+                                {formatStageDateTime(entry.changedAt) || formatTimelineDate(entry.changedAt)}
+                              </span>
+                              <span className="text-xs text-gray-700 dark:text-gray-300 capitalize">{entry.status}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
+                    )}
 
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Success Probability</span>
-                        <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-2xl font-black text-blue-600 dark:text-blue-400">{successProb}%</span>
-                          <span className="text-xs text-gray-500">Estimated</span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Sponsorship</span>
-                        <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-lg font-black capitalize text-gray-900 dark:text-white">
-                            {job.sponsorship === 'yes' ? 'Verified' : job.sponsorship === 'no' ? 'Not Provided' : 'Unknown'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Priority Level</span>
-                        <div className="mt-2 flex items-baseline gap-2">
-                          <span className="text-lg font-black capitalize text-gray-900 dark:text-white">{job.priority || 'Medium'}</span>
-                        </div>
+                    {/* Next Action */}
+                    <div className={`rounded-2xl border p-4 shadow-sm ${guidanceHub.toneClasses}`}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-2">Next Action</span>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">{guidanceHub.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {guidanceHub.primaryAction && (
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              haptic('medium');
+                              guidanceHub.primaryAction!.onClick();
+                            }}
+                            disabled={guidanceHub.primaryAction.disabled}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#013f2e] text-white text-xs font-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          >
+                            {guidanceHub.primaryAction.icon && (
+                              <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
+                            )}
+                            <span>{guidanceHub.primaryAction.label}</span>
+                          </motion.button>
+                        )}
+                        {guidanceHub.secondaryActions.map((action, idx) => (
+                          <motion.button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              haptic('light');
+                              action.onClick();
+                            }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
+                          >
+                            {action.icon && <action.icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
+                            <span>{action.label}</span>
+                          </motion.button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Market & Trend Insights */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
-                      <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Market Intelligence & Trends</h4>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Company Hiring Pace</span>
-                          <span className="text-small font-bold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Steady Hiring'}</span>
-                        </div>
-                        <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Salary Competitiveness</span>
-                          <span className="text-small font-bold text-emerald-600 dark:text-emerald-400">
-                            {salaryComp.comparison === 'above' ? 'Above Market Average' : salaryComp.comparison === 'below' ? 'Below Market Average' : 'At Market Average'}
-                          </span>
+                    {/* Market Intelligence (collapsible) */}
+                    <details className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                      <summary className="p-4 cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-300 select-none">
+                        Market Intelligence & Trends
+                      </summary>
+                      <div className="px-4 pb-4 space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Company Hiring Pace</span>
+                            <span className="text-xs font-bold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Steady Hiring'}</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Salary Competitiveness</span>
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              {salaryComp.comparison === 'above' ? 'Above Market' : salaryComp.comparison === 'below' ? 'Below Market' : 'At Market'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </details>
 
-                    {/* JD Quality Audit & Flags */}
+                    {/* JD Quality Audit (collapsible) */}
                     {job.extractedJd?.jd_quality && (
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
-                        <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
-                          <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Job Posting Quality Audit</h4>
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-black ${
+                      <details className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                        <summary className="p-4 cursor-pointer flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300 select-none">
+                          <span>Job Posting Quality Audit</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
                             job.extractedJd.jd_quality.jd_quality_score >= 70
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                               : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                           }`}>
-                            Score: {job.extractedJd.jd_quality.jd_quality_score}/100 ({job.extractedJd.jd_quality.jd_quality_grade})
+                            {job.extractedJd.jd_quality.jd_quality_score}/100
                           </span>
-                        </div>
-
-                        {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
-                          <div className="space-y-2">
-                            <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Potential Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
-                            {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
-                              <div key={i} className="flex items-start gap-2.5 p-3 bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-xs text-gray-700 dark:text-gray-300">
-                                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                                <div>
-                                  <strong className="block text-red-900 dark:text-red-300">{flag.flag}</strong>
-                                  <span className="text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
+                        </summary>
+                        <div className="px-4 pb-4 space-y-2">
+                          {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
+                              {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
+                                <div key={i} className="flex items-start gap-2 p-2.5 bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-[11px] text-gray-700 dark:text-gray-300">
+                                  <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                                  <div>
+                                    <strong className="block text-red-900 dark:text-red-300">{flag.flag}</strong>
+                                    <span className="text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
                     )}
                   </motion.div>
                 )}
 
-                {/* Tab 3: Communication */}
+                {/* Tab 3: Communication — Thread View */}
                 {activeTab === 'communication' && (
                   <motion.div
                     key="tab-communication"
@@ -2721,98 +3121,130 @@ ${userName}`
                     transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-3"
                   >
-                    {/* Recruiter Outreach Action Card */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
-                      <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-white/5 pb-3">
-                        <div>
-                          <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
-                          <h3 className="text-h3 font-semibold text-gray-900 dark:text-white">Direct Recruiter Outreach</h3>
-                        </div>
-                        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-                          {job.status === 'screening' ? 'Screening follow-up' : 'Applied follow-up'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {recruiterVisibilitySteps.map((step, index) => (
-                          <div key={`${step}-${index}`} className="flex items-start gap-3 text-small text-gray-700 dark:text-gray-300">
-                            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
-                            <p>{step}</p>
+                    {/* Thread Container */}
+                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810] overflow-hidden">
+                      {/* Recruiter Message (Left) */}
+                      <div className="border-b border-gray-100 dark:border-white/5">
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 dark:bg-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                              {(job.contactDetails?.name || job.company || 'R').charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[11px] font-bold text-gray-900 dark:text-white block">
+                                {job.contactDetails?.name || 'Recruiter'}
+                              </span>
+                              <span className="text-[9px] text-gray-400 dark:text-gray-500">
+                                {job.contactDetails?.role || job.company || 'Hiring Team'}
+                              </span>
+                            </div>
+                            {job.status === 'applied' || job.status === 'screening' ? (
+                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">Applied follow-up</span>
+                            ) : job.status === 'interview' ? (
+                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">Interview follow-up</span>
+                            ) : null}
                           </div>
-                        ))}
-                      </div>
-
-                      {/* 1-Click Outreach Buttons */}
-                      <div className="flex flex-wrap gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEmail(0)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#013f2e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:brightness-95"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                          {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-bold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
-                        >
-                          <Copy className="w-3.5 h-3.5" />
-                          Copy Message Script
-                        </button>
-                      </div>
-
-                      {/* Script Preview Box */}
-                      <div className="mt-3 rounded-xl border border-gray-200/80 bg-gray-50/50 p-4 dark:border-white/10 dark:bg-[#181f16]">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Subject: {getEmailSubject(job)}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                            className="text-[11px] font-bold text-emerald-600 dark:text-[#013f2e] hover:underline"
-                          >
-                            Copy Subject
-                          </button>
+                          <div className="ml-9">
+                            <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                              {job.status === 'applied' || job.status === 'screening'
+                                ? 'Thank you for your application'
+                                : job.status === 'interview'
+                                ? 'Interview scheduled'
+                                : 'Waiting for response'}
+                            </p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+                              {job.status === 'applied' || job.status === 'screening'
+                                ? `Your application for ${job.jobTitle} at ${job.company} has been received. The hiring team is reviewing candidates.`
+                                : job.status === 'interview'
+                                ? `Interview round for ${job.jobTitle} at ${job.company} is being coordinated.`
+                                : `No messages yet from ${job.company}.`}
+                            </p>
+                          </div>
                         </div>
-                        <div className="whitespace-pre-wrap rounded-lg bg-white p-3 text-xs leading-relaxed text-gray-700 dark:bg-[#20281d] dark:text-gray-300 border border-gray-100 dark:border-white/5 max-h-[220px] overflow-y-auto">
-                          {getEmailTemplate(job)}
+                      </div>
+
+                      {/* Your Message (Right) — Always show drafted email */}
+                      <div className="bg-gray-50/50 dark:bg-white/[0.02]">
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-2 justify-end">
+                            <span className="text-[11px] font-bold text-gray-900 dark:text-white">
+                              {getUserName()}<span className="text-[9px] font-normal text-gray-400 dark:text-gray-500 ml-1.5">{getUserEmail() || 'your@email.com'}</span>
+                            </span>
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#013f2e] text-[10px] font-bold text-white shrink-0">
+                              {(getUserName() || 'Y').charAt(0).toUpperCase()}
+                            </div>
+                          </div>
+                          <div className="ml-9">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                                Subject: {getEmailSubject(job)}
+                              </span>
+                              <button
+                                onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
+                                className="text-[9px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                            <div className="rounded-lg bg-white dark:bg-[#20281d] border border-gray-100 dark:border-white/5 p-3 max-h-[200px] overflow-y-auto">
+                              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                                {getEmailTemplate(job)}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 mt-2.5">
+                              <button
+                                onClick={() => handleOpenEmail(0)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#013f2e] text-white text-[10px] font-bold hover:brightness-95 transition"
+                              >
+                                <Send className="w-3 h-3" />
+                                Send Draft
+                              </button>
+                              <button
+                                onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#20281d] text-gray-700 dark:text-gray-300 text-[10px] font-bold hover:bg-gray-50 dark:hover:bg-[#273021] transition"
+                              >
+                                <Copy className="w-3 h-3" />
+                                Copy
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Integrated Inbox & Emails Sync */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-emerald-500" />
-                          <h4 className="text-small font-bold text-gray-900 dark:text-white">Recruiter Inbox Sync</h4>
-                        </div>
-                        {isEmailConnected ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Connected: {connectedEmailAddress || 'Active'}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
-                            Disconnected
-                          </span>
-                        )}
+                    {/* Quick Actions */}
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">Quick Actions</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleOpenEmail(0)}
+                          className="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.03] transition text-left"
+                        >
+                          <Mail className="w-3.5 h-3.5 text-[#013f2e] dark:text-emerald-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-800 dark:text-gray-200 block">Email Recruiter</span>
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500">Open in mail client</span>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Navigate to Comms tab in JobsDashboard home view
+                            window.dispatchEvent(new CustomEvent('navigate-to-comms'));
+                          }}
+                          className="flex items-center gap-2 p-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/[0.03] transition text-left"
+                        >
+                          <Inbox className="w-3.5 h-3.5 text-[#013f2e] dark:text-emerald-400 shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-bold text-gray-800 dark:text-gray-200 block">Inbox</span>
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500">View all threads</span>
+                          </div>
+                        </button>
                       </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                        Sync recruiter responses, automated interview invitations, and status updates directly from your connected inbox.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowCommsSidebar(true)}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-[#013f2e] hover:underline"
-                      >
-                        Open Communication Threads Drawer <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Tab 4: Notes */}
+                {/* Tab 5: Notes */}
                 {activeTab === 'notes' && (
                   <motion.div
                     key="tab-notes"
@@ -2988,7 +3420,7 @@ ${userName}`
                   </motion.div>
                 )}
 
-                {/* Tab 5: Documents */}
+                {/* Tab 4: Documents */}
                 {activeTab === 'documents' && (() => {
                   const resolvedCvId = primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId;
                   const resolvedCoverLetterId = primaryJourney?.coverLetterId || (job as any).coverLetterId;
@@ -3912,15 +4344,6 @@ ${userName}`
           cvData={cvData || previewDocumentData}
           jobData={job}
           template={previewTemplate}
-        />
-        <CommunicationSidebar
-          isOpen={showCommsSidebar}
-          onClose={() => setShowCommsSidebar(false)}
-          job={job}
-          onRefreshJob={() => {
-            fetchEmailStatus();
-            if (onRefresh) onRefresh();
-          }}
         />
       </>
     </AnimatePresence>,

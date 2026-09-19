@@ -47,7 +47,7 @@ export interface WebhookEvent {
 
 export interface WebhookResult {
   handled: boolean;
-  action?: 'subscription_activated' | 'subscription_cancelled' | 'subscription_renewed' | 'payment_failed' | 'payment_succeeded';
+  action?: string;
   subscriptionId?: string;
   planKey?: string;
   error?: string;

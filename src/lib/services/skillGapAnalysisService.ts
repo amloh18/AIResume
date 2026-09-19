@@ -185,11 +185,13 @@ ${cvText}
 
 Your task:
 1. Extract all required skills from the job description
-2. Categorize skills into these 4 categories:
-   - Technical Analytics (Hard Skills): Technical tools, software, programming languages, data analysis tools, etc.
-   - Domain Expertise (Industry Knowledge): Industry-specific knowledge, domain expertise, business knowledge
-   - Reporting & Enablement (Delivery): Dashboard creation, reporting tools, data visualization, data governance
-   - Stakeholder & Project Mgmt (Soft Skills): Communication, project management, stakeholder management, leadership
+2. Dynamically categorize skills into logical groups based on the job's actual requirements. Common categories include:
+   - Technical Skills (Hard Skills): programming languages, tools, frameworks, platforms, data analysis tools
+   - Domain Expertise (Industry Knowledge): industry-specific knowledge, domain expertise, business knowledge
+   - Delivery & Tools (Delivery): dashboards, reporting, visualization, governance, CI/CD, DevOps
+   - Soft Skills (Communication): communication, project management, stakeholder management, leadership, collaboration
+   - Create additional categories as needed based on the JD (e.g., "Design Skills", "Sales Skills", "Operations")
+   - Do NOT force skills into predefined categories — create categories that naturally fit the job
 
 3. For each skill, determine the match status:
    - "mastered": The skill is explicitly mentioned in the CV with quantifiable metrics or clear evidence
@@ -211,7 +213,7 @@ Return a JSON object with this exact structure:
   "overallMatchScore": <number 0-100>,
   "categories": [
     {
-      "name": "Technical Analytics",
+      "name": "<dynamic category name based on JD>",
       "requiredSkills": <number>,
       "matchedSkills": <number>,
       "skills": [
@@ -224,29 +226,11 @@ Return a JSON object with this exact structure:
           "cvRephraseSuggestion": "<suggested CV rephrase for transferable skills, optional>"
         }
       ]
-    },
-    {
-      "name": "Domain Expertise",
-      "requiredSkills": <number>,
-      "matchedSkills": <number>,
-      "skills": [...]
-    },
-    {
-      "name": "Reporting & Enablement",
-      "requiredSkills": <number>,
-      "matchedSkills": <number>,
-      "skills": [...]
-    },
-    {
-      "name": "Stakeholder & Project Mgmt",
-      "requiredSkills": <number>,
-      "matchedSkills": <number>,
-      "skills": [...]
     }
   ]
 }
 
-Be thorough and accurate. Include all skills mentioned in the job description.`;
+Be thorough and accurate. Include all skills mentioned in the job description. Create 3-6 natural categories based on the JD content.`;
 
     try {
       const result = await callAIWithFallback({

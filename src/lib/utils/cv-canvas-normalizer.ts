@@ -67,7 +67,8 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
     }
   }
 
-  if (Array.isArray(cvData.work)) {
+  // Support both `work` (Unified format) and `experience` (canvas/legacy format)
+  if (Array.isArray(cvData.work) && cvData.work.length > 0) {
     translated.experience = cvData.work.map((w: any, index: number) => ({
       id: w.id || `exp-${index}`,
       role: w.position,
@@ -75,6 +76,16 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       startDate: w.startDate || '',
       endDate: w.endDate || '',
       description: buildRichTextDescription(w.summary, w.highlights),
+    }));
+  } else if (Array.isArray((cvData as any).experience) && (cvData as any).experience.length > 0) {
+    // Already in canvas format or legacy format — normalize field names
+    translated.experience = (cvData as any).experience.map((exp: any, index: number) => ({
+      id: exp.id || `exp-${index}`,
+      role: exp.role || exp.position || '',
+      company: exp.company || exp.name || '',
+      startDate: exp.startDate || '',
+      endDate: exp.endDate || '',
+      description: exp.description || buildRichTextDescription(exp.summary, exp.highlights),
     }));
   }
 
@@ -87,21 +98,32 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
   }
 
   if (Array.isArray(cvData.education)) {
-    translated.education = cvData.education.map((e: any, index: number) => ({
-      id: e.id || `edu-${index}`,
-      degree: e.studyType ? `${e.studyType} in ${e.area}` : e.area,
-      institution: e.institution,
-      startDate: e.startDate || '',
-      endDate: e.endDate || '',
-      description: [e.score ? `Score: ${e.score}` : '', e.description || ''].filter(Boolean).join('\n'),
-    }));
+    translated.education = cvData.education.map((e: any, index: number) => {
+      // Support both Unified format ({studyType, area}) and canvas format ({degree})
+      let degree = e.degree || '';
+      if (!degree && (e.studyType || e.area)) {
+        degree = e.studyType ? `${e.studyType} in ${e.area || ''}`.trim() : (e.area || '');
+      }
+
+      return {
+        id: e.id || `edu-${index}`,
+        degree,
+        institution: e.institution || '',
+        startDate: e.startDate || '',
+        endDate: e.endDate || '',
+        description: [e.score ? `Score: ${e.score}` : '', e.description || ''].filter(Boolean).join('\n'),
+      };
+    });
   }
 
   if (Array.isArray(cvData.projects)) {
     translated.projects = cvData.projects.map((p: any, index: number) => ({
       ...p,
       id: p.id || `proj-${index}`,
-      description: buildRichTextDescription(p.description, p.highlights),
+      // Support both plain text description and rich HTML with highlights
+      description: p.description && p.description.includes('<')
+        ? (p.description || '')
+        : buildRichTextDescription(p.description, p.highlights),
     }));
   }
 
@@ -117,19 +139,26 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
         };
       }
 
-      const skills = Array.isArray(skillGrp.skills)
-        ? skillGrp.skills.map((item: any) => (typeof item === 'string' ? item : item?.name || item?.skill || '')).filter(Boolean)
+      // Handle old format: {name, keywords[]} → {category, skills[]}
+      const sourceSkills = skillGrp.skills || skillGrp.keywords || [];
+      const skills = Array.isArray(sourceSkills)
+        ? sourceSkills.map((item: any) => (typeof item === 'string' ? item : item?.name || item?.skill || '')).filter(Boolean)
         : [];
       const levels = Array.isArray(skillGrp.levels)
         ? skillGrp.levels.map((level: any) => clampLevel(level, skillGrp.rating || 3))
         : skills.map((_skill: string, skillIndex: number) => clampLevel(skillGrp.rating, 5 - (skillIndex % 3)));
 
+      // Category: support both {category} and {name} formats
+      const category = skillGrp.category || skillGrp.name || `Skills ${index + 1}`;
+
+      // SkillsText: support skillsText, skills array, or keywords array
+      const skillsText = normalizeSkillsText(skillGrp.skillsText || skills || skillGrp.keywords || []);
+
       return {
-        ...skillGrp,
         id: skillGrp.id || `skill-${index}`,
-        category: skillGrp.category || skillGrp.name || `Skills ${index + 1}`,
+        category,
         skills,
-        skillsText: normalizeSkillsText(skillGrp.skillsText || skills || skillGrp.keywords || []),
+        skillsText,
         levels,
         rating: typeof skillGrp.rating === 'number' ? clampLevel(skillGrp.rating) : undefined,
       };

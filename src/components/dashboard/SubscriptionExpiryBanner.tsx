@@ -117,10 +117,10 @@ export default function SubscriptionExpiryBanner({
   };
 
   const styles = getBannerStyles();
-  const planName = planKey === 'focused_monthly' ? 'Pro Monthly' :
-                   planKey === 'focused_quarterly' ? 'Pro Quarterly' :
-                   planKey === 'focused_yearly' ? 'Pro Yearly' :
-                   planKey === 'focused_yearly' ? 'Pro Lifetime' : 'Subscription';
+  const planName = planKey === 'focused_monthly' ? 'Focused Monthly' :
+                   planKey === 'focused_quarterly' ? 'Focused Quarterly' :
+                   planKey === 'focused_yearly' ? 'Focused Yearly' :
+                   planKey === 'focused_yearly' ? 'Focused Lifetime' : 'Subscription';
 
   return (
     <AnimatePresence>

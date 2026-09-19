@@ -55,7 +55,7 @@ import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewS
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -398,16 +398,15 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
 
 function KpiStrip() {
   const { cvs, coverLetters, jobs, goals, criticalLoading, secondaryLoading } = useDashboardData();
-  const { membership, loading: membershipLoading } = useMembership();
+  const { plan, loading: membershipLoading } = useEntitlements();
   const stats = computeKpiStats(cvs, jobs, goals, coverLetters);
   const kpisLoading = criticalLoading || membershipLoading || secondaryLoading.streak || secondaryLoading.goals || secondaryLoading.cvs || secondaryLoading.jobs;
 
-  const planKey = membership?.planKey || 'free';
-  const isStarterMonthly = planKey === 'starter_monthly' || planKey === 'free';
-  const limit = 10;
+  const isFreePlan = plan === 'free';
+  const limit = isFreePlan ? 3 : 10;
   const remaining = Math.max(0, limit - stats.aiJourneyUsage);
 
-  const usageMetric = isStarterMonthly
+  const usageMetric = isFreePlan
     ? {
         label: 'Usage',
         value: `${stats.aiJourneyUsage} / ${limit}`,
@@ -433,10 +432,10 @@ function KpiStrip() {
     trendExtra?: string;
   }> = [
     {
-      label: 'Total CVs',
-      value: String(stats.cvs),
-      icon: <FileText size={16} strokeWidth={1.75} />,
-      trend: stats.cvsThisWeek > 0 ? `↑ ${stats.cvsThisWeek} this week` : 'Steady',
+      label: 'Auto Usage',
+      value: String(stats.aiJourneyUsage),
+      icon: <Zap size={16} strokeWidth={1.75} />,
+      trend: stats.cvsThisWeek > 0 ? `↑ ${stats.cvsThisWeek} this week` : 'Documents generated',
       trendUp: stats.cvsThisWeek > 0,
     },
     {
@@ -490,7 +489,7 @@ function KpiStrip() {
               </>
             ) : (
               <>
-                <div className="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none tabular-nums">
+                <div className="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none tabular-nums block">
                   {m.value}
                 </div>
                 <div className="mt-1 text-xs text-[var(--text-secondary)]">{m.label}</div>
@@ -1442,15 +1441,20 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
       {/* Top job matches */}
       <TopJobMatchesSection />
 
-      {/* Needs attention — items requiring user intervention */}
-      <NeedsAttentionWidget limit={3} />
+      {/* Mobile-only reorder container: Continue → Profile Analytics → Recent Jobs → My CVs */}
+      <div className="lg:hidden space-y-6">
+        <ContinuePanel />
+        <ProfileAnalyticsPanel />
+        <RecentJobsPanel />
+        <MyCvsPanel />
+      </div>
 
-      {/* Two-column workspace — fills the full content-area width */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Desktop two-column workspace */}
+      <div className="hidden lg:grid grid-cols-3 gap-6 items-start">
         {/* Left: primary workspace */}
-        <div className="lg:col-span-2 space-y-6 min-w-0">
-          <MyCvsPanel />
+        <div className="col-span-2 space-y-6 min-w-0">
           <RecentJobsPanel />
+          <MyCvsPanel />
         </div>
 
         {/* Right: contextual rail */}
@@ -1460,6 +1464,9 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
           <ProfileAnalyticsPanel />
         </div>
       </div>
+
+      {/* Needs attention — items requiring user intervention */}
+      <NeedsAttentionWidget limit={3} />
     </div>
   );
 }

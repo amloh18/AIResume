@@ -59,7 +59,7 @@ async function resolveDefaultSourceCv(): Promise<CVSelectionItem | null> {
       if (activeJourney?.cvId) {
         const journeyName = activeJourney?.jobTitle
           ? `${activeJourney.jobTitle}${activeJourney?.company ? ` · ${activeJourney.company}` : ''}`
-          : 'Journey CV';
+          : 'Tailored Resume';
         return {
           id: activeJourney.cvId,
           name: journeyName,
@@ -312,7 +312,7 @@ export default function LinkedInEnhancementFlow(_props: { onBackToDashboard?: ()
                                     Create a CV First
                                 </h2>
                                 <p className="text-[var(--text-secondary)] text-xs sm:text-sm mb-6 leading-relaxed">
-                                    To enhance your LinkedIn profile, you&apos;ll need a journey CV or master CV first.
+                                    To enhance your LinkedIn profile, you&apos;ll need a tailored resume or master CV first.
                                 </p>
                                 <motion.button
                                     onClick={() => router.push('/dashboard/jobs?tab=documents')}

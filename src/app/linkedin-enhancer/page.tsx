@@ -2,7 +2,7 @@
 
 import LinkedInEnhancerContainer from '@/components/linkedin-enhancer/LinkedInEnhancerContainer';
 import RouteGuard from '@/components/auth/RouteGuard';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { motion } from 'framer-motion';
 import { Linkedin, Sparkles, Sliders, FileText, Lock, ChevronRight, CheckCircle, X } from 'lucide-react';
@@ -91,7 +91,7 @@ function LinkedInGate() {
                         Unlock LinkedIn Enhancer with Focused
                     </h2>
                     <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-6 max-w-lg mx-auto leading-relaxed">
-                        Get LinkedIn Enhancer, Interview Coach, unlimited job tracking, and full AI tools — starting from Focused.
+                        Get LinkedIn Enhancer, Interview Prep, unlimited job tracking, and full AI tools — starting from Focused.
                     </p>
                     <button
                         onClick={handleUpgrade}
@@ -110,14 +110,13 @@ function LinkedInGate() {
 import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardLayout';
 
 function LinkedInEnhancerPageContent() {
-    const { membership, loading } = useMembership();
+    const { loading, can } = useEntitlements();
 
     // Show nothing while loading (avoids flash of wrong content)
     if (loading) return null;
 
     // Gate: LinkedIn Enhancer requires Focused plan or higher
-    // Check linkedinToneChange as the proxy for full enhancer access
-    const hasAccess = membership?.limits.linkedinToneChange ?? false;
+    const hasAccess = can('tailor.linkedin_tone');
 
     if (!hasAccess) {
         return (

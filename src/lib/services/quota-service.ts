@@ -324,10 +324,8 @@ export class QuotaService {
 
   private static normalizePlanType(planType: string): PlanType {
     if (!planType) return 'free';
-    if (planType === 'power') return 'power';
-    if (planType.startsWith('pro_') || planType === 'focused_monthly') {
-      return 'pro';
-    }
+    if (planType.includes('focused')) return 'pro';
+    if (planType.includes('starter')) return 'pro';
     return 'free';
   }
 

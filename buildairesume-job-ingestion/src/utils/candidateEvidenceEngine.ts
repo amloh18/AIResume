@@ -41,21 +41,58 @@ export function extractVerifiedSkills(cvData: any): CandidateEvidence[] {
 
   if (!cvData) return evidence;
 
-  // Extract from skills section
+  // Extract from skills section — supports unified { category, skills[] } and legacy { name, keywords[] }
   const skills = cvData.skills || cvData.resumeData?.skills || [];
   for (const skill of skills) {
-    const skillName = typeof skill === 'string' ? skill : skill.name || skill.skill;
-    if (skillName) {
+    if (typeof skill === 'string') {
       evidence.push({
-        id: `skill_${skillName.toLowerCase().replace(/\s+/g, '_')}`,
+        id: `skill_${skill.toLowerCase().replace(/\s+/g, '_')}`,
         type: 'skill',
-        claim: skillName,
+        claim: skill,
         source: 'skills',
         verified: true,
         confidence: 0.9,
-        metadata: {
-          keywords: [skillName.toLowerCase()],
-        },
+        metadata: { keywords: [skill.toLowerCase()] },
+      });
+    } else if (skill?.skills && Array.isArray(skill.skills)) {
+      // Unified format: { category, skills[] }
+      for (const s of skill.skills) {
+        if (typeof s === 'string' && s) {
+          evidence.push({
+            id: `skill_${s.toLowerCase().replace(/\s+/g, '_')}`,
+            type: 'skill',
+            claim: s,
+            source: `skills.${skill.category || 'uncategorized'}`,
+            verified: true,
+            confidence: 0.9,
+            metadata: { keywords: [s.toLowerCase()] },
+          });
+        }
+      }
+    } else if (skill?.keywords && Array.isArray(skill.keywords)) {
+      // Legacy format: { name, keywords[] }
+      for (const kw of skill.keywords) {
+        if (typeof kw === 'string' && kw) {
+          evidence.push({
+            id: `skill_${kw.toLowerCase().replace(/\s+/g, '_')}`,
+            type: 'skill',
+            claim: kw,
+            source: `skills.${skill.name || 'uncategorized'}`,
+            verified: true,
+            confidence: 0.9,
+            metadata: { keywords: [kw.toLowerCase()] },
+          });
+        }
+      }
+    } else if (skill?.name) {
+      evidence.push({
+        id: `skill_${skill.name.toLowerCase().replace(/\s+/g, '_')}`,
+        type: 'skill',
+        claim: skill.name,
+        source: 'skills',
+        verified: true,
+        confidence: 0.9,
+        metadata: { keywords: [skill.name.toLowerCase()] },
       });
     }
   }
@@ -71,13 +108,13 @@ export function extractVerifiedExperience(cvData: any): CandidateEvidence[] {
 
   if (!cvData) return evidence;
 
-  // Extract from experience section
-  const experience = cvData.experience || cvData.resumeData?.experience || [];
+  // Extract from experience section — unified schema uses work[] with position/name
+  const experience = cvData.work || cvData.experience || cvData.resumeData?.work || cvData.resumeData?.experience || [];
   for (const exp of experience) {
-    const role = exp.role || exp.title || exp.position;
-    const company = exp.company || exp.organization;
-    const description = exp.description || exp.responsibilities || '';
-    const achievements = exp.achievements || exp.accomplishments || [];
+    const role = exp.position || exp.role || exp.title;
+    const company = exp.name || exp.company || exp.organization;
+    const description = exp.summary || exp.description || exp.responsibilities || '';
+    const achievements = exp.highlights || exp.achievements || exp.accomplishments || [];
 
     if (role && company) {
       evidence.push({

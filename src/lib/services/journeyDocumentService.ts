@@ -513,14 +513,28 @@ export async function createJourneyDocuments(
           const basicCV = new CV({
             title: cvTitle,
             cvData: {
-              personalInfo: {},
-              workExperience: [],
+              basics: {
+                name: '',
+                label: '',
+                image: '',
+                email: '',
+                phone: '',
+                url: '',
+                summary: '',
+                location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
+                profiles: []
+              },
+              work: [],
+              volunteer: [],
               education: [],
               skills: [],
               projects: [],
-              certifications: [],
+              certificates: [],
               languages: [],
-              summary: ''
+              awards: [],
+              publications: [],
+              interests: [],
+              references: []
             },
             status: 'draft',
             isMaster: false,

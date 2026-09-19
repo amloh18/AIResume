@@ -75,7 +75,7 @@ const SIDEBAR_TOOLS: ToolItem[] = [
   },
   {
     id: 'interview',
-    title: 'Interview Coach',
+    title: 'Interview Prep',
     description: 'AI mock prep & questions',
     icon: Mic,
     route: '/dashboard/interview',

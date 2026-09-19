@@ -494,7 +494,7 @@ async function fetchGreenhouse(signal?: AbortSignal): Promise<RawJob[]> {
       const res = await withRetry(
         () => fetch(
           `https://boards-api.greenhouse.io/v1/boards/${company.token}/jobs?content=true`,
-          { headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
+          { headers: { 'User-Agent': 'AIResume-Ingestion/1.0' }, signal: AbortSignal.timeout(15000) }
         ),
         { label: `Greenhouse/${company.token}`, maxAttempts: 2, baseDelayMs: 1000 }
       );
@@ -729,7 +729,7 @@ async function fetchRemoteOK(signal?: AbortSignal): Promise<RawJob[]> {
     log('FETCH', 'RemoteOK: fetching remote jobs');
     const res = await withRetry(
       () => fetch('https://remoteok.com/api', {
-        headers: { 'User-Agent': 'CVCircle-Ingestion/1.0' },
+        headers: { 'User-Agent': 'AIResume-Ingestion/1.0' },
         signal: AbortSignal.timeout(30000),
       }),
       { label: 'RemoteOK', maxAttempts: 3, baseDelayMs: 2000 }
@@ -797,7 +797,7 @@ async function fetchWorkday(signal?: AbortSignal): Promise<RawJob[]> {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'CVCircle-Ingestion/1.0',
+                'User-Agent': 'AIResume-Ingestion/1.0',
                 Accept: 'application/json',
               },
               body: JSON.stringify({ appliedFacets: {}, limit: PAGE_SIZE, offset, searchText: '' }),

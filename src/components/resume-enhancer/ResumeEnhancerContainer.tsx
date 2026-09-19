@@ -29,7 +29,6 @@ import OptimizedNavigation from '@/components/dashboard/OptimizedNavigation';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
-import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
@@ -2112,7 +2111,7 @@ export default function ResumeEnhancerContainer({
 
               // EDGE CASE 9: Check for tier/plan errors
               if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-                alert('This feature requires a Pro membership. Please upgrade your plan to continue.');
+                alert('This feature requires a Focused plan. Please upgrade your plan to continue.');
               } else {
                 alert(`Failed to create job: ${errorMessage}`);
               }
@@ -2223,7 +2222,7 @@ export default function ResumeEnhancerContainer({
 
           // EDGE CASE 9: Check for tier/plan errors
           if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-            throw new Error('This feature requires a Pro membership. Please upgrade your plan to continue.');
+            throw new Error('This feature requires a Focused plan. Please upgrade your plan to continue.');
           }
           throw new Error(errorMessage);
         }

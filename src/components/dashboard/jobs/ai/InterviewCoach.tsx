@@ -85,7 +85,7 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
         <div>
           <h3 className="text-h3 font-semibold flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Interview Coach
+            Interview Prep
           </h3>
           <p className="text-small text-gray-600 dark:text-gray-400">
             AI-generated questions for {jobTitle} at {company}

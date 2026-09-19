@@ -18,7 +18,7 @@ import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
 import PaymentPastDueBanner from './PaymentPastDueBanner';
-import { getPlanName } from '@/lib/utils/userPlanUtils';
+import { getPlanLabel } from '@/lib/entitlements/catalog';
 import { useBillingData } from '@/lib/hooks/useBillingData';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { useDashboardPrefetch } from '@/lib/hooks/useDashboardPrefetch';
@@ -352,7 +352,7 @@ const OptimizedNavigation: React.FC = () => {
       id: 'analytics',
       name: 'Home',
       icon: Home,
-      description: 'Tracker, Documents & Analytics',
+      description: 'Your career dashboard',
       route: '/dashboard/jobs'
     },
   ];
@@ -360,9 +360,9 @@ const OptimizedNavigation: React.FC = () => {
   const toolSections = [
     {
       id: 'documents',
-      name: 'Documents',
+      name: 'Resumes',
       icon: FileText,
-      description: 'CVs, cover letters & master profile',
+      description: 'Build and manage your resumes',
       route: '/dashboard/jobs?tab=docs',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
@@ -370,9 +370,9 @@ const OptimizedNavigation: React.FC = () => {
     },
     {
       id: 'tracker',
-      name: 'Tracker',
+      name: 'Jobs',
       icon: Kanban,
-      description: 'Job application tracker',
+      description: 'Discover and track applications',
       route: '/dashboard/jobs?tab=applications',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
@@ -392,7 +392,7 @@ const OptimizedNavigation: React.FC = () => {
       id: 'linkedin-enhancer',
       name: 'LinkedIn',
       icon: Linkedin,
-      description: 'LinkedIn profile optimizer',
+      description: 'Optimize your LinkedIn profile',
       route: '/linkedin-enhancer',
       color: 'text-gray-600 dark:text-gray-400',
       bg: 'bg-gray-50 dark:bg-gray-800/30',
@@ -677,7 +677,10 @@ const OptimizedNavigation: React.FC = () => {
 
             // Use the utility function to get plan display name
             const planDisplayName = (planKey: string) => {
-              return getPlanName(planKey as any);
+              // Map old billing keys to canonical plan keys
+              if (planKey.includes('focused')) return getPlanLabel('focused');
+              if (planKey.includes('starter')) return getPlanLabel('starter');
+              return getPlanLabel('free');
             };
 
             // Common usage data
@@ -726,7 +729,7 @@ const OptimizedNavigation: React.FC = () => {
 
                   {!hasCredits && (
                     <div className="text-small text-yellow-300 mb-2 font-medium">
-                      ⚠️ Job Tracker requires Pro membership. Upgrade to track jobs.
+                      ⚠️ Job Tracker requires Focused membership. Upgrade to track jobs.
                     </div>
                   )}
 
@@ -822,7 +825,7 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="text-small text-white/95 mb-2 leading-relaxed">
-                    <span>We have created tailored CVs/CLs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
+                    <span>We have created tailored Resumes/CLs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
                   </div>
 
                   {!isUnlimited && limit > 0 && (
@@ -879,7 +882,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="text-small font-semibold">Monthly Plan</div>
-                      <div className="text-small text-white/80">Pro subscriber</div>
+                      <div className="text-small text-white/80">Focused subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -924,7 +927,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="text-small font-semibold">Quarterly Plan</div>
-                      <div className="text-small text-white/80">Pro subscriber</div>
+                      <div className="text-small text-white/80">Focused subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -946,7 +949,7 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="text-small text-white/90 leading-relaxed">
-                    <span>Quarterly plan • Unlimited job creation & CV/CL generation</span>
+                    <span>Quarterly plan • Unlimited job creation & Resume/Cover Letter generation</span>
                   </div>
                 </div>
               );
@@ -964,7 +967,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="text-small font-semibold">Yearly Plan</div>
-                      <div className="text-small text-white/80">Pro subscriber</div>
+                      <div className="text-small text-white/80">Focused subscriber</div>
                     </div>
                     {nextReset && (
                       <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -997,11 +1000,11 @@ const OptimizedNavigation: React.FC = () => {
               return (
                 <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20 bg-gradient-to-br from-indigo-600 to-purple-700`}>
                   <div className="text-small font-semibold mb-1">
-                    Starter Monthly
+                    Starter
                   </div>
-                  <div className="text-[11px] text-white/80 mb-2">
-                    Free Subscription ($0/mo)
-                  </div>
+                    <div className="text-[11px] text-white/80 mb-2">
+                      Free Plan ($0/mo)
+                    </div>
 
                   {!isUnlimited && limit > 0 && (
                     <div className="mb-3">
@@ -1022,12 +1025,12 @@ const OptimizedNavigation: React.FC = () => {
 
                   {!hasCredits && (
                     <div className="text-small text-yellow-300 mb-2 font-medium">
-                      ⚠️ Job Tracker limit reached. Upgrade to Pro.
+                       ⚠️ Job Tracker limit reached. Upgrade to Focused.
                     </div>
                   )}
 
                   <p className="text-[10px] text-white/80 leading-snug mb-3">
-                    You are subscribed to the $0/mo Starter plan. You will receive $0 invoice receipts.
+                     You are on the Free Starter plan. You will receive $0 invoice receipts.
                   </p>
 
                   <div className="text-[11px] font-semibold mb-1.5">
@@ -1056,7 +1059,7 @@ const OptimizedNavigation: React.FC = () => {
                       whileTap={{ scale: 0.97 }}
                     >
                       <Star className="w-3 h-3" />
-                      Upgrade to Pro
+                      Upgrade to Focused
                     </motion.button>
 
                     <motion.button
@@ -1093,9 +1096,9 @@ const OptimizedNavigation: React.FC = () => {
                   </div>
 
                   <div className="bg-white/15 rounded-xl p-3 mb-2">
-                    <div className="text-small text-white/80 mb-0.5">CVs created this year</div>
+                    <div className="text-small text-white/80 mb-0.5">Resumes created this year</div>
                     <div className="text-h3 font-bold">{totalCreated}</div>
-                    <div className="text-[10px] text-white/70 mt-0.5">Unlimited CVs & AI Cover Letters</div>
+                    <div className="text-[10px] text-white/70 mt-0.5">Unlimited Resumes & Cover Letters</div>
                   </div>
 
                   <div className="text-small text-white/90 leading-relaxed mb-3">

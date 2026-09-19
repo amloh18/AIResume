@@ -1,3 +1,13 @@
+/**
+ * @deprecated This file is FROZEN. Do not add new entitlement logic here.
+ *
+ * Use the new entitlement engine instead:
+ *   import { can, requireFeature, resolveEntitlements } from '@/lib/entitlements';
+ *
+ * This file exists for backward compatibility with the /api/entitlements route.
+ * New code must use src/lib/entitlements/ exclusively.
+ */
+
 import { getConnection } from '@/lib/database';
 import { ObjectId } from 'mongodb';
 
@@ -69,6 +79,11 @@ export class EntitlementService {
       plan = 'focused';
       planName = 'Focused';
       billingInterval = rawPlanKey.includes('yearly') ? 'yearly' : 'monthly';
+    } else if (rawPlanKey === 'free') {
+      // Free plan users get starter-level entitlements but are not paid members
+      plan = 'starter';
+      planName = 'Free';
+      billingInterval = 'monthly';
     } else {
       plan = 'starter';
       planName = 'Starter';

@@ -50,7 +50,7 @@ import { uploadToS3 } from '@/lib/utils/upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { getPlanName } from '@/lib/utils/userPlanUtils';
+import { getPlanLabel } from '@/lib/entitlements/catalog';
 import toast from 'react-hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
 
@@ -2000,7 +2000,13 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
   // Determine the current plan key - use subscription planKey if available, otherwise use user's currentPlanKey
   const currentPlanKey = subscription?.planKey || userData?.currentPlanKey || 'free';
-  const currentPlanName = subscription?.planName || getPlanName(currentPlanKey as any);
+  // Map old billing keys to canonical plan labels
+  const resolveCanonical = (key: string) => {
+    if (key.includes('focused')) return 'focused';
+    if (key.includes('starter')) return 'starter';
+    return 'free';
+  };
+  const currentPlanName = subscription?.planName || getPlanLabel(resolveCanonical(currentPlanKey) as any);
   const currentPlanDetails = pricingHookResult.plans?.find((p: any) => p.key === currentPlanKey);
 
   const formatCurrency = (amount: number, currency: string) => {

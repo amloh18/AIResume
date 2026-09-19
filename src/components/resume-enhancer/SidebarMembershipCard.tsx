@@ -5,7 +5,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AlertCircle, Clock, Star, Zap } from 'lucide-react';
-import { getPlanName, PlanKey } from '@/lib/utils/userPlanUtils';
+import { getPlanLabel } from '@/lib/entitlements/catalog';
+import type { PlanKey } from '@/lib/entitlements';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 type CreditsInfo = {
@@ -178,14 +179,14 @@ export default function SidebarMembershipCard() {
           )}
 
           <div className="text-xs font-semibold mb-1.5">
-            Go Pro to get:
+            Go Focused to get:
           </div>
 
           <ul className="text-xs text-white/90 space-y-0.5 mb-3">
             <li>• Unlimited job creation</li>
-            <li>• 1st CV Free</li>
+            <li>• 1st Resume Free</li>
             <li>• Unlimited ATS checks per job</li>
-            <li>• Premium templates</li>
+            <li>• All templates</li>
             <li>• Priority support</li>
           </ul>
 
@@ -197,7 +198,7 @@ export default function SidebarMembershipCard() {
               whileTap={{ scale: 0.97 }}
             >
               <Star className="w-3 h-3" />
-              Upgrade to Pro
+              Upgrade to Focused
             </motion.button>
 
             <motion.button
@@ -265,13 +266,13 @@ export default function SidebarMembershipCard() {
           </p>
 
           <div className="text-[11px] font-semibold mb-1.5">
-            Upgrade to Pro to get:
+            Upgrade to Focused to get:
           </div>
 
           <ul className="text-[10px] text-white/95 space-y-0.5 mb-3 list-none p-0">
             <li>• Unlimited job creation & tracking</li>
             <li>• Unlimited ATS checks per job</li>
-            <li>• Premium templates</li>
+            <li>• All templates</li>
             <li>• Priority support</li>
           </ul>
 
@@ -283,7 +284,7 @@ export default function SidebarMembershipCard() {
               whileTap={{ scale: 0.97 }}
             >
               <Star className="w-3 h-3" />
-              Upgrade to Pro
+              Upgrade to Focused
             </motion.button>
 
             <motion.button
@@ -327,9 +328,9 @@ export default function SidebarMembershipCard() {
         </div>
 
         <div className="bg-white/15 rounded-xl p-3 mb-2">
-          <div className="text-xs text-white/80 mb-0.5">CVs created this year</div>
+          <div className="text-xs text-white/80 mb-0.5">Resumes created this year</div>
           <div className="text-xl font-bold">{totalCreated}</div>
-          <div className="text-[10px] text-white/70 mt-0.5">Unlimited CVs & AI Cover Letters</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited Resumes & Cover Letters</div>
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed mb-3">
@@ -356,7 +357,7 @@ export default function SidebarMembershipCard() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="text-sm font-semibold">Monthly Plan</div>
-            <div className="text-xs text-white/80">Pro subscriber</div>
+            <div className="text-xs text-white/80">Focused subscriber</div>
           </div>
           {nextReset && (
             <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -395,7 +396,7 @@ export default function SidebarMembershipCard() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="text-sm font-semibold">Quarterly Plan</div>
-            <div className="text-xs text-white/80">Pro subscriber</div>
+            <div className="text-xs text-white/80">Focused subscriber</div>
           </div>
           {nextReset && (
             <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -411,7 +412,7 @@ export default function SidebarMembershipCard() {
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed">
-          <span>Quarterly plan • Unlimited job creation & CV/CL generation</span>
+          <span>Quarterly plan • Unlimited job creation & Resume/Cover Letter generation</span>
         </div>
       </div>
     );
@@ -424,7 +425,7 @@ export default function SidebarMembershipCard() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="text-sm font-semibold">Yearly Plan</div>
-            <div className="text-xs text-white/80">Pro subscriber</div>
+            <div className="text-xs text-white/80">Focused subscriber</div>
           </div>
           {nextReset && (
             <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
@@ -440,7 +441,7 @@ export default function SidebarMembershipCard() {
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed">
-          <span>Yearly plan • Unlimited job creation & CV/CL generation</span>
+          <span>Yearly plan • Unlimited job creation & Resume/Cover Letter generation</span>
         </div>
       </div>
     );
@@ -457,7 +458,7 @@ export default function SidebarMembershipCard() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <div className="text-sm font-semibold">Lifetime Plan</div>
-            <div className="text-xs text-white/80">Pro subscriber</div>
+            <div className="text-xs text-white/80">Focused subscriber</div>
           </div>
           <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
             Lifetime Access

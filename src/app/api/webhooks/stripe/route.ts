@@ -15,15 +15,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
-    // Verify webhook event
+    // 1. Verify webhook signature
     const event = await stripeProvider.verifyWebhookEvent(rawBody, signature);
     if (!event) {
+      console.error('[Stripe Webhook] Invalid signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
     await getConnection();
 
-    // Idempotency check
+    // 2. Deduplicate by Stripe event ID
     const existingLog = await WebhookLog.findOne({
       provider: 'stripe',
       eventType: event.type,
@@ -32,13 +33,15 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingLog) {
+      console.log(`[Stripe Webhook] Duplicate event ignored: ${event.type} (${event.id})`);
       return NextResponse.json({ received: true, duplicate: true });
     }
 
-    // Process the event
+    // 3. Process the event
+    console.log(`[Stripe Webhook] Processing: ${event.type} (${event.id})`);
     const result = await stripeProvider.handleWebhookEvent(event);
 
-    // Log the webhook
+    // 4. Log the webhook result
     await WebhookLog.create({
       provider: 'stripe',
       eventType: event.type,
@@ -48,6 +51,10 @@ export async function POST(request: NextRequest) {
       error: result.error,
       processedAt: new Date(),
     });
+
+    if (!result.handled && result.error) {
+      console.error(`[Stripe Webhook] Failed to handle ${event.type}: ${result.error}`);
+    }
 
     return NextResponse.json({
       received: true,

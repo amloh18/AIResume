@@ -20,7 +20,7 @@ export const LevelMeter = ({
   isDark?: boolean;
 }) => {
   const ctx = React.useContext(CanvasContext);
-  const readOnly = !ctx?.handleDataChange || ctx?.moriChatMode;
+  const readOnly = !ctx?.handleDataChange;
   const level = valueType === 'number' ? clampLevel(value) : fluencyToLevel(value);
   const setLevel = (next: number, event: React.MouseEvent) => {
     event.preventDefault();

@@ -196,7 +196,7 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
             <AlertCircle className="text-red-400 shrink-0" size={20} />
             <div className="text-small text-red-100 leading-relaxed">
               <span className="font-bold block mb-1">Limit Reached</span>
-              Upgrade to Pro for unlimited AI-powered contextual suggestions and career coaching.
+              Upgrade to Focused for unlimited AI-powered contextual suggestions and career coaching.
               <button
                 type="button"
                 onClick={() =>
@@ -685,11 +685,104 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   // Copy the JSON template (DEFAULT_UNIFIED_CV_DATA) to the user's clipboard
   const handleCopyJsonTemplate = async () => {
+    const templateWithInstructions = `# BuildAIResume CV Data Template
+# ==================================
+# This is the UnifiedCVDataStructure format used by BuildAIResume.com
+# Paste this JSON into the Raw JSON Editor to populate your CV.
+#
+# FIELD REFERENCE (for AI agents parsing this data):
+# ─────────────────────────────────────────────────
+# basics.name          → Full name (string)
+# basics.label         → Professional title/headline (string, e.g. "Senior Software Engineer")
+# basics.email         → Email address (string)
+# basics.phone         → Phone number (string)
+# basics.url           → Portfolio/website URL (string)
+# basics.summary       → Professional summary paragraph (string)
+# basics.location      → { city, region, countryCode, address, postalCode }
+# basics.profiles      → Array of { network, username, url } (e.g. LinkedIn)
+#
+# work[]               → Work experience array
+#   .name              → Company name (string) — NOT "company"
+#   .position          → Job title/role (string) — NOT "role" or "title"
+#   .summary           → Job description/summary (string) — NOT "description"
+#   .highlights[]      → Array of achievement bullet points (string[])
+#   .startDate         → "YYYY-MM-DD" format
+#   .endDate           → "YYYY-MM-DD" or "" if current
+#   .url               → Company URL (string)
+#
+# education[]          → Education array
+#   .institution       → School/university name (string)
+#   .studyType         → Degree type (string, e.g. "Bachelor of Science")
+#   .area              → Field of study (string, e.g. "Computer Science")
+#   .score             → GPA or grade (string)
+#   .courses[]         → Relevant courses (string[])
+#   .startDate/.endDate → "YYYY-MM-DD"
+#
+# skills[]             → Skills grouped by category
+#   .category          → Skill group name (string, e.g. "Programming Languages")
+#   .skills[]          → Individual skill names (string[])
+#   .rating            → Proficiency level 1-5 (number, optional)
+#
+# projects[]           → Notable projects
+#   .name              → Project name (string)
+#   .description       → What it does (string)
+#   .highlights[]      → Key achievements (string[])
+#   .keywords[]        → Technologies used (string[])
+#   .url               → Live/demo URL (string)
+#   .startDate/.endDate → "YYYY-MM-DD"
+#
+# certificates[]       → Professional certifications
+#   .name              → Certification name (string)
+#   .issuer            → Issuing organization (string)
+#   .date              → Date earned (string)
+#   .url               → Verification URL (string)
+#
+# languages[]          → Language proficiencies
+#   .language          → Language name (string)
+#   .fluency           → Proficiency level (string: "Native", "Fluent", "Advanced", "Intermediate", "Basic")
+#
+# awards[]             → Awards and recognition
+#   .title             → Award name (string)
+#   .awarder           → Who gave the award (string)
+#   .date              → Date received (string)
+#
+# publications[]       → Published works
+#   .name              → Publication title (string)
+#   .publisher         → Publisher name (string)
+#   .releaseDate       → Publication date (string)
+#
+# volunteer[]          → Volunteer experience
+#   .organization      → Organization name (string)
+#   .position          → Role (string)
+#   .summary           → Description (string)
+#   .highlights[]      → Achievements (string[])
+#
+# interests[]          → Personal interests
+#   .name              → Interest name (string)
+#   .keywords[]        → Related keywords (string[])
+#
+# references[]         → Professional references
+#   .name              → Referee name (string)
+#   .reference         → Reference text or contact (string)
+#
+# IMPORTANT RULES:
+# - Use "work" (NOT "experience") for work history
+# - Use "skills[].category" (NOT "skills[].name") for skill group names
+# - Use "skills[].skills[]" (NOT "skills[].keywords") for individual skills
+# - Use "certificates" (NOT "certifications")
+# - Use "basics.location.region" (NOT "basics.location.state")
+# - Use "work.position" (NOT "work.role" or "work.title")
+# - Use "work.name" for company name (NOT "work.company")
+# - Dates should be "YYYY-MM-DD" format
+# - Empty arrays [] are valid — include only sections you have data for
+
+${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
+
     try {
-      await navigator.clipboard.writeText(JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2));
+      await navigator.clipboard.writeText(templateWithInstructions);
     } catch {
       const textarea = document.createElement('textarea');
-      textarea.value = JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2);
+      textarea.value = templateWithInstructions;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');

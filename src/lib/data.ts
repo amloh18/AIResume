@@ -118,11 +118,18 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
         projectUrl: project.url,
         technologies: [] // Can be extracted from description or added as separate field
       })),
-      skills: (cv?.cvData?.skills || []).map((skill: any, index: number) => ({
-        name: skill.name,
-        level: skill.level,
-        category: 'Technical' // Default category, can be added to skill model
-      })),
+      skills: (cv?.cvData?.skills || []).flatMap((skill: any, index: number) => {
+        if (typeof skill === 'string') {
+          return [{ name: skill, level: '', category: 'Technical' }];
+        }
+        const category = skill.category || skill.name || 'Skills';
+        const skillItems = Array.isArray(skill.skills) ? skill.skills : Array.isArray(skill.keywords) ? skill.keywords : [];
+        return skillItems.map((s: string) => ({
+          name: s,
+          level: typeof skill.rating === 'number' ? String(skill.rating) : '',
+          category
+        }));
+      }),
       education: (cv?.cvData?.education || []).map((edu: any, index: number) => ({
         institution: edu.institution,
         degree: edu.studyType,

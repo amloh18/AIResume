@@ -200,7 +200,7 @@ function getDraftStageBullets(preview: TrackerCreatedStagePreview | null) {
     preview.entitlementReasonCode === 'ai_credits_exhausted'
       ? `Your tailored AI allowance is exhausted${typeof preview.aiCreditsRemaining === 'number' ? ` with ${preview.aiCreditsRemaining} generations left this cycle` : ''}.`
       : preview.entitlementReasonCode === 'subscription_inactive'
-        ? 'Tailored AI generation is part of Pro right now.'
+        ? 'Tailored AI generation is part of Focused right now.'
         : 'Tailored AI generation is not available right now.';
 
   return [

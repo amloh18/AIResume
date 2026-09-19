@@ -198,11 +198,11 @@ export default function InterviewCoachContainer({ userId }: InterviewCoachContai
                   Dashboard
                 </span>
                 <span>›</span>
-                <span className="text-[var(--text-primary)] font-semibold">Interview Coach</span>
+                <span className="text-[var(--text-primary)] font-semibold">Interview Prep</span>
               </div>
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[var(--text-primary)]">
-                  Interview Coach
+                  Interview Prep
                 </h1>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/40">
                   <Sparkles className="w-3 h-3 text-emerald-600 dark:text-lime-400" />

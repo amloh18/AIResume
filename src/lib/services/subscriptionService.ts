@@ -359,7 +359,8 @@ class SubscriptionService {
     currency: string,
     price: number,
     providerSubscriptionId?: string,
-    providerCustomerId?: string
+    providerCustomerId?: string,
+    provider: 'stripe' | 'razorpay' | 'polar' | 'admin' = 'polar'
   ): Promise<SubscriptionActivationResult> {
     try {
       await connectToDatabase();
@@ -435,7 +436,7 @@ class SubscriptionService {
         'subscription.currentPeriodStart': now,
         'subscription.currentPeriodEnd': expiresAt,
         'subscription.usageResetDate': usageResetDate,
-        'subscription.provider': 'polar',
+        'subscription.provider': provider,
         'subscription.interval': interval,
         'subscription.purchaseRegion': region,
         'subscription.purchaseCurrency': currency,
