@@ -80,8 +80,10 @@ const calculateSkillsScore = (skills: any[]): number => {
   skills.slice(0, maxSkills).forEach(skill => {
     let skillScore = 0;
     let maxSkillScore = 2;
-    if (skill.name && skill.name.trim()) skillScore += 1;
-    if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
+    const category = skill.category || skill.name || '';
+    const skillItems = Array.isArray(skill.skills) ? skill.skills : Array.isArray(skill.keywords) ? skill.keywords : [];
+    if (category && category.trim()) skillScore += 1;
+    if (skillItems.length > 0) skillScore += 1;
     totalScore += (skillScore / maxSkillScore) * 100;
   });
   return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
@@ -301,13 +303,16 @@ const CVManagementSection: React.FC<{
         skillsCount = masterCV.cvData.skills.reduce((count: number, skill: any) => {
           if (typeof skill === 'string') {
             return count + 1;
-          } else if (skill?.name) {
-            return count + 1;
           } else if (skill?.skills && Array.isArray(skill.skills)) {
-            // If skills are grouped by category
+            // Unified format: { category, skills[] }
             return count + skill.skills.length;
           } else if (skill?.keywords && Array.isArray(skill.keywords)) {
+            // Legacy format: { name, keywords[] }
             return count + skill.keywords.length;
+          } else if (skill?.category) {
+            return count + 1;
+          } else if (skill?.name) {
+            return count + 1;
           }
           return count;
         }, 0);
@@ -907,7 +912,14 @@ export const IntelligenceDashboard: React.FC<{
 
     // Extract skills
     if (masterCV.cvData.skills && Array.isArray(masterCV.cvData.skills)) {
-      profile.skills = masterCV.cvData.skills.map((skill: any) => skill.name || skill).filter(Boolean);
+      profile.skills = masterCV.cvData.skills.flatMap((skill: any) => {
+        if (typeof skill === 'string') return [skill];
+        if (skill?.skills && Array.isArray(skill.skills)) return skill.skills;
+        if (skill?.keywords && Array.isArray(skill.keywords)) return skill.keywords;
+        if (skill?.category) return [skill.category];
+        if (skill?.name) return [skill.name];
+        return [];
+      }).filter(Boolean);
     }
 
     // Extract location

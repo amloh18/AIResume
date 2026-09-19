@@ -60,7 +60,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
 
   // Calculate insights
   const avgMatchScore = jobs.length > 0
-    ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || job.atsScore || 0), 0) / jobs.length)
+    ? Math.round(jobs.reduce((sum, job) => sum + (job.matchScore || 0), 0) / jobs.length)
     : 0;
 
   const avgDaysToRejection = jobs.length > 0
@@ -129,7 +129,7 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
       <div className="space-y-4">
         {jobs.map((job) => {
           const daysToRejection = getDaysBetween(job.applicationDate, job.updatedAt);
-          const matchScore = job.matchScore || job.atsScore || 0;
+          const matchScore = job.matchScore || 0;
 
           // COMPACT FULL SCREEN LAYOUT
           if (isFullScreen) {

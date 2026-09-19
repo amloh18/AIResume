@@ -20,10 +20,10 @@ export default function CvTailoringModeToggle({
   return (
     <div
       className="flex items-center gap-1.5 shrink-0"
-      title="How auto-generated CVs and cover letters are tailored for every job (manual, extension, and job boards)."
+      title="How auto-generated Resumes and cover letters are tailored for every job (manual, extension, and job boards)."
     >
       <span className="hidden xl:inline text-[11px] font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        Auto CV:
+        Auto Resume:
       </span>
       <div
         className="flex items-center h-10 p-1 rounded-xl border border-gray-200/90 dark:border-white/10 bg-gray-50/80 dark:bg-white/[0.03] shadow-2xs"

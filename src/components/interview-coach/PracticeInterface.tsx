@@ -392,7 +392,7 @@ export default function PracticeInterface({
                   className="cursor-pointer hover:text-[var(--text-primary)] transition-colors"
                   onClick={() => router.push('/dashboard/interview')}
                 >
-                  Interview Coach
+                  Interview Prep
                 </span>
                 <span>›</span>
                 <span
@@ -491,7 +491,7 @@ export default function PracticeInterface({
                     Upgrade to Unlock All Practice Questions
                   </h3>
                   <p className="text-xs text-[var(--text-secondary)] mb-6 max-w-sm">
-                    Upgrade to Focused or Pro to practice unlimited role-specific questions with AI speech analysis.
+                    Upgrade to Focused to practice unlimited role-specific questions with AI speech analysis.
                   </p>
                   <button
                     onClick={() => router.push('/dashboard/settings?tab=billing')}

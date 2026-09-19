@@ -333,9 +333,13 @@ function generateHTMLContent(cvData: any, template: any): string {
         <div class="section">
           <div class="section-title">Skills</div>
           <div class="skills">
-            ${cvData.skills.map((skill: any) => `
-              <span class="skill">${skill.name || skill}</span>
-            `).join('')}
+            ${cvData.skills.map((skill: any) => {
+              if (typeof skill === 'string') return `<span class="skill">${skill}</span>`;
+              const category = skill.category || skill.name || '';
+              const skillItems = Array.isArray(skill.skills) ? skill.skills : Array.isArray(skill.keywords) ? skill.keywords : [];
+              if (skillItems.length > 0) return `<span class="skill"><strong>${category}:</strong> ${skillItems.join(', ')}</span>`;
+              return category ? `<span class="skill">${category}</span>` : '';
+            }).join('')}
           </div>
         </div>
       ` : ''}

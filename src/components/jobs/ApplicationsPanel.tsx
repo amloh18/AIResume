@@ -24,7 +24,7 @@ import { Button, IconButton, Pill, SearchInput, Dropdown } from '@/components/ui
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import toast from 'react-hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
@@ -102,7 +102,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const searchParams = useSearchParams();
   const { user } = useUnifiedAuth();
   const { userData } = useUserData();
-  const { membership } = useMembership();
+  const { plan } = useEntitlements();
   const { openPaymentModal } = usePaymentModal();
   const { preferences, savePreferences } = useJobsPersistence();
   const { isFocusMode } = useFocusMode();
@@ -258,11 +258,11 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
       return ['applied', 'screening', 'assessment', 'phone_screen', 'technical_test', 'interview', 'offer', 'accepted'].includes(j.status) && !isNaN(t) && now - t < weekMs;
     }).length;
 
-    const scoredJobs = jobs.filter((j) => typeof (j.atsScore ?? j.matchScore) === 'number' && (j.atsScore ?? j.matchScore) > 0);
+    const scoredJobs = jobs.filter((j) => typeof j.matchScore === 'number' && j.matchScore > 0);
     const avgScore = scoredJobs.length > 0
-      ? Math.round(scoredJobs.reduce((sum, j) => sum + (j.atsScore ?? j.matchScore ?? 0), 0) / scoredJobs.length)
+      ? Math.round(scoredJobs.reduce((sum, j) => sum + (j.matchScore ?? 0), 0) / scoredJobs.length)
       : 0;
-    const strongMatches = scoredJobs.filter((j) => (j.atsScore ?? j.matchScore ?? 0) >= 70).length;
+    const strongMatches = scoredJobs.filter((j) => (j.matchScore ?? 0) >= 70).length;
 
     const successRate = total > 0 ? Math.round(((interview + offer) / total) * 100) : 0;
 
@@ -332,8 +332,8 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
         const dateB = new Date(b.applicationDate || b.appliedAt || b.createdAt || 0).getTime();
         comp = dateA - dateB;
       } else if (sortBy === 'matchScore') {
-        const scoreA = a.atsScore ?? a.matchScore ?? 0;
-        const scoreB = b.atsScore ?? b.matchScore ?? 0;
+        const scoreA = a.matchScore ?? 0;
+        const scoreB = b.matchScore ?? 0;
         comp = scoreA - scoreB;
       } else if (sortBy === 'company') {
         comp = (a.company || '').localeCompare(b.company || '');
@@ -600,12 +600,11 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   };
 
-  const planKey = membership?.planKey || 'free';
-  const isStarterMonthly = planKey === 'starter_monthly' || planKey === 'free';
-  const limit = 10;
+  const isFreePlan = plan === 'free';
+  const limit = isFreePlan ? 3 : 10;
   const remaining = Math.max(0, limit - stats.aiJourneyUsage);
 
-  const usageMetric = isStarterMonthly
+  const usageMetric = isFreePlan
     ? {
         label: 'Usage',
         value: `${stats.aiJourneyUsage} / ${limit}`,
@@ -678,7 +677,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
                 </>
               ) : (
                 <>
-                  <div className="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none tabular-nums">
+                  <div className="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none tabular-nums block">
                     {m.value}
                   </div>
                   <div className="mt-1 text-xs text-[var(--text-secondary)]">{m.label}</div>

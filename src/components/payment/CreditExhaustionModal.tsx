@@ -33,7 +33,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
       : 'Upgrade to Continue';
 
   const subtitle = exhaustionType === 'gate'
-    ? 'Unlock this feature with Pro'
+    ? 'Unlock this feature with Focused'
     : exhaustionType === 'quota'
       ? 'Upgrade to store more documents'
       : 'Get unlimited AI generations and documents';

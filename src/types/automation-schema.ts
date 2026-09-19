@@ -1,6 +1,10 @@
 import { ObjectId } from 'mongodb';
 
-export type UserTier = 'free' | 'auto' | 'power';
+/**
+ * Automation tier types — aligned with billing plan keys.
+ * Maps: free → free, starter → starter_*, focused → focused_*
+ */
+export type UserTier = 'free' | 'starter' | 'focused';
 export type UserRole = 'user' | 'admin' | 'super_admin';
 export type JobSource = 'google_talent' | 'serpapi' | 'apify' | 'discovery' | 'naukri' | 'linkedin' | 'indeed' | 'adzuna' | 'lever' | 'ashby' | 'workable';
 export type ATSType = 'greenhouse' | 'lever' | 'workable' | 'naukri' | 'indeed' | 'adzuna' | 'ashby' | 'workday' | 'unknown';
@@ -309,19 +313,29 @@ export interface KillSwitchAction {
   action: 'disable_auto_apply' | 'disable_fetching' | 'lock_new_users';
 }
 
+/**
+ * Automation tier limits — aligned with billing plan keys.
+ * free = no auto-apply
+ * starter = 10/day, 10/month
+ * focused = 50/day, unlimited monthly
+ *
+ * @deprecated This file's TIER_LIMITS is FROZEN. Do not add new tier logic here.
+ * Use the new entitlement engine instead:
+ *   import { getDefaultLimit, TIER_LIMITS } from '@/lib/entitlements';
+ */
 export const TIER_LIMITS: Record<UserTier, { dailyApplyCap: number; jobsFetchedPerMonth: number; autoModeAllowed: boolean }> = {
   free: {
     dailyApplyCap: 0,
     jobsFetchedPerMonth: 0,
     autoModeAllowed: false,
   },
-  auto: {
+  starter: {
     dailyApplyCap: 10,
     jobsFetchedPerMonth: 500,
     autoModeAllowed: false,
   },
-  power: {
-    dailyApplyCap: 20,
+  focused: {
+    dailyApplyCap: 50,
     jobsFetchedPerMonth: -1,
     autoModeAllowed: true,
   },

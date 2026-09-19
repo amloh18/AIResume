@@ -12,7 +12,7 @@ import {
   Sliders,
   Check,
 } from 'lucide-react';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import type { LinkedInUserContext, LinkedInCvType } from '@/types/linkedin';
 
 interface LinkedInHeaderProps {
@@ -35,7 +35,7 @@ const TONES: LinkedInUserContext['tone_selection'][] = [
 ];
 
 const SOURCE_TYPE_LABEL: Record<LinkedInCvType, string> = {
-  journey: 'Journey CV',
+  journey: 'Tailored Resume',
   master: 'Master CV',
   standalone: 'Standalone CV',
 };
@@ -52,10 +52,10 @@ export default function LinkedInHeader({
   sourceCvType,
 }: LinkedInHeaderProps) {
   const router = useRouter();
-  const { canAccess } = useMembership();
+  const { can } = useEntitlements();
   const [showToneDropdown, setShowToneDropdown] = useState(false);
 
-  const canChangeTone = canAccess('linkedinToneChange');
+  const canChangeTone = can('tailor.linkedin_tone');
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 bg-transparent">

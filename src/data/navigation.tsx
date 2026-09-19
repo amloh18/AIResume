@@ -89,7 +89,7 @@ export const navLinks: NavLink[] = [
       },
     ],
     featured: {
-      title: 'Interview Coach AI',
+      title: 'Interview Prep',
       description: 'Master your next interview with our real-time AI coach that analyzes your responses and provides instant feedback.',
       href: '/interview-coach',
       image: '/images/interviewcoach_dashbaord.png',

@@ -84,7 +84,7 @@ export default function InterviewHub({
                   className="cursor-pointer hover:text-[var(--text-primary)] transition-colors"
                   onClick={() => router.push('/dashboard/interview')}
                 >
-                  Interview Coach
+                  Interview Prep
                 </span>
                 <span>›</span>
                 <span className="text-[var(--text-primary)] font-semibold truncate max-w-[240px]">

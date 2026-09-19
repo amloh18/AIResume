@@ -192,7 +192,7 @@ export class GlobalJobService {
       company: job.company,
       location: job.location || 'Remote',
       remote: (job.location || '').toLowerCase().includes('remote'),
-      matchScore: job.matchScore || job.atsScore || null,
+      matchScore: job.matchScore ?? null,
       source: job.source,
       atsType: job.atsType || 'unknown',
       applyUrl: job.jobUrl || '',

@@ -17,7 +17,7 @@ const FAQ = () => {
     {
       id: 1,
       question: "What is AIResume and how does it help me get hired?",
-      answer: "AIResume is an all-in-one AI career workspace designed to help you land interviews faster. It builds ATS-optimized resumes from scratch or improves existing ones, generates tailored cover letters matching job descriptions, simulates AI interview coaching, and tracks all your job applications in a single Kanban dashboard."
+      answer: "AIResume is an all-in-one AI career workspace designed to help you land interviews faster. It builds ATS-optimized resumes from scratch or improves existing ones, generates tailored cover letters matching job descriptions, simulates interview prep, and tracks all your job applications in a single Kanban dashboard."
     },
     {
       id: 2,
@@ -37,7 +37,7 @@ const FAQ = () => {
     {
       id: 5,
       question: "What is the difference between the Starter and Focused plans?",
-      answer: "The Starter plan ($0 for monthly with limited usage, or $2/mo yearly) gives you core studio editing, standard templates, live ATS scoring, and 10 tracked applications. The Focused plan ($7/mo yearly or $9.99/mo) unlocks unlimited AI usage, automated applications, the LinkedIn Profile Enhancer, AI Interview Coach, and 24/7 priority support."
+      answer: "The Starter plan ($0 for monthly with limited usage, or $2/mo yearly) gives you core studio editing, standard templates, live ATS scoring, and 10 tracked applications. The Focused plan ($9.99/mo or $7/mo billed yearly) unlocks unlimited AI usage, automated applications, the LinkedIn Profile Enhancer, Interview Prep, and 24/7 priority support."
     },
     {
       id: 6,

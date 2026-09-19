@@ -45,6 +45,31 @@ const SUGGESTIONS = [
   { label: '🛠️ Optimize Skills for ATS', prompt: 'Optimize my skills section for ATS screening based on the target job' }
 ];
 
+const FOLLOW_UP_SUGGESTIONS: Record<string, Array<{ label: string; prompt: string }>> = {
+  work: [
+    { label: '✨ Now improve summary', prompt: 'Improve my professional summary' },
+    { label: '🛠️ Optimize skills for ATS', prompt: 'Optimize my skills section for ATS' },
+    { label: '📋 Fix formatting', prompt: 'Fix formatting and consistency across all sections' },
+  ],
+  education: [
+    { label: '🚀 Improve work bullets', prompt: 'Enhance bullet points in my work experience' },
+    { label: '✨ Improve summary', prompt: 'Improve my professional summary' },
+  ],
+  skills: [
+    { label: '🎯 Tailor to job', prompt: 'Tailor my CV to the target job description' },
+    { label: '🚀 Improve work bullets', prompt: 'Enhance bullet points in my work experience' },
+  ],
+  basics: [
+    { label: '🚀 Improve work bullets', prompt: 'Enhance bullet points in my work experience' },
+    { label: '🛠️ Optimize skills', prompt: 'Optimize my skills section for ATS' },
+  ],
+  default: [
+    { label: '✨ Polish entire CV', prompt: 'Polish my entire CV — summary, experience, skills, and formatting' },
+    { label: '🎯 Tailor to job', prompt: 'Tailor my CV to the target job description' },
+    { label: '🛠️ Optimize for ATS', prompt: 'Optimize my entire CV for ATS screening' },
+  ],
+};
+
 const MoriChatInterface: React.FC = () => {
   const { state, updateCVData } = useResumeEnhancer();
   const { data: session, status: sessionStatus } = useSession();
@@ -347,6 +372,9 @@ const MoriChatInterface: React.FC = () => {
             });
           }
         }
+      } else if (result.updatedCV === null && recovered.updatedCV === null) {
+        // No CV changes returned — Mori may have returned only a message/options
+        console.warn('[mori-chat] No CV changes in response');
       }
 
       setCurrentSelection(null);
@@ -633,24 +661,50 @@ const MoriChatInterface: React.FC = () => {
           ref={scrollRef}
           className="absolute inset-0 overflow-y-auto p-4 space-y-4 hide-scrollbar pb-32"
         >
-          {messages.map((m, idx) => (
-            <div key={m.id} className="group">
-              <MoriMessageBubble
-                message={m}
-                onOptionClick={(prompt) => handleSend(prompt)}
-                isLatest={idx === messages.length - 1 && m.role === 'assistant'}
-                disabled={isLoading}
-              />
-              {/* Suggestion chips on welcome message */}
-              {m.id === 'welcome' && messages.length === 1 && (
-                <MoriSuggestionChips
-                  suggestions={SUGGESTIONS}
-                  onSelect={(prompt) => handleSend(prompt)}
+          {messages.map((m, idx) => {
+            const isLatestAssistant = idx === messages.length - 1 && m.role === 'assistant' && !isLoading;
+            const hasAiOptions = m.options && m.options.length > 0;
+            const isWelcome = m.id === 'welcome' && messages.length === 1;
+            const isOnlyUserMsg = messages.length === 2 && idx === 1 && m.role === 'assistant';
+
+            // Determine which section was last edited for follow-up suggestions
+            let followUpChips: Array<{ label: string; prompt: string }> | null = null;
+            if (isLatestAssistant && !hasAiOptions && !isWelcome) {
+              const lastUserMsg = [...messages].reverse().find(msg => msg.role === 'user');
+              if (lastUserMsg) {
+                const selectionPath = lastUserMsg.selection?.path;
+                followUpChips = FOLLOW_UP_SUGGESTIONS[selectionPath || 'default'] || FOLLOW_UP_SUGGESTIONS.default;
+              }
+            }
+
+            return (
+              <div key={m.id} className="group">
+                <MoriMessageBubble
+                  message={m}
+                  onOptionClick={(prompt) => handleSend(prompt)}
+                  isLatest={isLatestAssistant}
                   disabled={isLoading}
                 />
-              )}
-            </div>
-          ))}
+                {/* Welcome suggestion chips */}
+                {isWelcome && (
+                  <MoriSuggestionChips
+                    suggestions={SUGGESTIONS}
+                    onSelect={(prompt) => handleSend(prompt)}
+                    disabled={isLoading}
+                  />
+                )}
+                {/* AI-provided options are rendered inside MoriMessageBubble */}
+                {/* Dynamic follow-up chips after assistant responses (when AI didn't provide its own options) */}
+                {isLatestAssistant && !hasAiOptions && !isWelcome && followUpChips && (
+                  <MoriSuggestionChips
+                    suggestions={followUpChips}
+                    onSelect={(prompt) => handleSend(prompt)}
+                    disabled={isLoading}
+                  />
+                )}
+              </div>
+            );
+          })}
           {isLoading && <MoriLoadingIndicator />}
         </div>
       </div>

@@ -92,11 +92,11 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
   }, [plans, getRegionalPrice, getMonthlyEquivalent, getCurrencySymbol, pricingLoading]);
 
   const benefits = [
-    'Unlimited Journey CVs',
+    'Unlimited Tailored Resumes',
     'Unlimited Job Applications',
     'Full AI Rewrite & Keyword Injection',
     'AI-Generated Cover Letters',
-    'Premium Templates & DOCX Export',
+    'All Templates & DOCX Export',
     'Priority Support'
   ];
 

@@ -43,7 +43,7 @@ export default function PageHeader(props: PageHeaderProps) {
     // Check nested routes
     if (pathname.includes('/dashboard/tracker')) return 'Tracker';
     if (pathname.includes('/dashboard/settings')) return 'Settings';
-    if (pathname.includes('/dashboard/interview')) return 'Interview Coach';
+    if (pathname.includes('/dashboard/interview')) return 'Interview Prep';
 
     const segment = pathname.split('/').pop() || '';
     return segment.charAt(0).toUpperCase() + segment.slice(1);

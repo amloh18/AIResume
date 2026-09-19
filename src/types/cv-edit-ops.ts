@@ -74,6 +74,7 @@ export interface CVAddress {
 /**
  * Validate that a CV address resolves to an actual element in cvData.
  * Returns the resolved element or null if invalid.
+ * Includes fallback resolution when IDs don't match exactly.
  */
 export function resolveCVAddress(cvData: any, address: CVAddress): { found: boolean; element?: any; error?: string } {
   const { sectionId, recordId, descriptionId, field } = address;
@@ -97,7 +98,30 @@ export function resolveCVAddress(cvData: any, address: CVAddress): { found: bool
     return { found: false, error: `Section "${sectionId}" is not an array` };
   }
 
-  const record = sectionData.find((r: any) => r.id === recordId);
+  let record = sectionData.find((r: any) => r.id === recordId);
+
+  // Fallback: try matching by name/position/company if ID not found
+  if (!record && recordId) {
+    record = sectionData.find((r: any) => {
+      if (!r) return false;
+      const recordName = (r.name || r.company || r.position || r.role || r.title || '').toLowerCase();
+      const idLower = recordId.toLowerCase();
+      return recordName && (idLower.includes(recordName) || recordName.includes(idLower));
+    });
+  }
+
+  // Fallback: try matching by content hash if provided in recordId
+  if (!record && recordId && recordId.includes('::')) {
+    const contentHint = recordId.split('::')[1]?.toLowerCase();
+    if (contentHint) {
+      record = sectionData.find((r: any) => {
+        if (!r) return false;
+        const text = JSON.stringify(r).toLowerCase();
+        return text.includes(contentHint.substring(0, 20));
+      });
+    }
+  }
+
   if (!record) {
     return { found: false, error: `Record "${recordId}" not found in section "${sectionId}"` };
   }
@@ -105,7 +129,29 @@ export function resolveCVAddress(cvData: any, address: CVAddress): { found: bool
   // Resolve description within record
   if (descriptionId) {
     const descriptions = record.descriptions || [];
-    const desc = descriptions.find((d: any) => d.id === descriptionId);
+    let desc = descriptions.find((d: any) => d.id === descriptionId);
+
+    // Fallback: try matching by content if ID not found
+    if (!desc && descriptionId) {
+      desc = descriptions.find((d: any) => {
+        if (!d) return false;
+        const descId = (d.id || '').toLowerCase();
+        const targetId = descriptionId.toLowerCase();
+        return descId && (targetId.includes(descId) || descId.includes(targetId));
+      });
+    }
+
+    // Fallback: try matching by content hash
+    if (!desc && descriptionId.includes('::')) {
+      const contentHint = descriptionId.split('::')[1]?.toLowerCase();
+      if (contentHint) {
+        desc = descriptions.find((d: any) => {
+          if (!d || !d.content) return false;
+          return d.content.toLowerCase().includes(contentHint.substring(0, 20));
+        });
+      }
+    }
+
     if (!desc) {
       return { found: false, error: `Description "${descriptionId}" not found in record "${recordId}"` };
     }
@@ -248,16 +294,60 @@ export interface MoriChatAIResponse {
 /**
  * Validate a CVEditOperation against the current CV data.
  * Returns validation result with specific error messages.
+ * Uses fallback resolution when exact IDs don't match.
  */
 export function validateEditOperation(cvData: any, op: CVEditOperation): { valid: boolean; error?: string } {
+  // Helper: find record with fallback
+  const findRecordInSection = (section: any[], recordId: string): any => {
+    if (!Array.isArray(section)) return null;
+    let record = section.find((r: any) => r.id === recordId);
+    if (record) return record;
+    return section.find((r: any) => {
+      if (!r) return false;
+      const recordName = (r.name || r.company || r.position || r.role || r.title || '').toLowerCase();
+      const idLower = recordId.toLowerCase();
+      return recordName && (idLower.includes(recordName) || recordName.includes(idLower));
+    });
+  };
+
+  // Helper: find description with fallback
+  const findDescriptionInRecord = (record: any, descriptionId: string): any => {
+    if (!record) return null;
+    const descs = record.descriptions || [];
+    let desc = descs.find((d: any) => d.id === descriptionId);
+    if (desc) return desc;
+    if (descriptionId.includes('::')) {
+      const contentHint = descriptionId.split('::')[1]?.toLowerCase();
+      if (contentHint) {
+        desc = descs.find((d: any) => {
+          if (!d || !d.content) return false;
+          return d.content.toLowerCase().includes(contentHint.substring(0, 20));
+        });
+        if (desc) return desc;
+      }
+    }
+    return descs.find((d: any) => {
+      if (!d) return false;
+      const descId = (d.id || '').toLowerCase();
+      const targetId = descriptionId.toLowerCase();
+      return descId && (targetId.includes(descId) || descId.includes(targetId));
+    });
+  };
+
   switch (op.operation) {
     case 'update_text': {
-      const res = resolveCVAddress(cvData, {
-        sectionId: op.sectionId,
-        recordId: op.recordId,
-        descriptionId: op.descriptionId,
-      });
-      if (!res.found) return { valid: false, error: res.error };
+      const sectionData = cvData[op.sectionId];
+      if (!sectionData || !Array.isArray(sectionData)) {
+        return { valid: false, error: `Section "${op.sectionId}" not found or not an array` };
+      }
+      const record = findRecordInSection(sectionData, op.recordId);
+      if (!record) {
+        return { valid: false, error: `Record "${op.recordId}" not found in section "${op.sectionId}"` };
+      }
+      const desc = findDescriptionInRecord(record, op.descriptionId);
+      if (!desc) {
+        return { valid: false, error: `Description "${op.descriptionId}" not found in record "${op.recordId}"` };
+      }
       if (typeof op.content !== 'string' || op.content.trim().length === 0) {
         return { valid: false, error: 'Content cannot be empty' };
       }
@@ -265,12 +355,18 @@ export function validateEditOperation(cvData: any, op: CVEditOperation): { valid
     }
 
     case 'change_description_type': {
-      const res = resolveCVAddress(cvData, {
-        sectionId: op.sectionId,
-        recordId: op.recordId,
-        descriptionId: op.descriptionId,
-      });
-      if (!res.found) return { valid: false, error: res.error };
+      const sectionData = cvData[op.sectionId];
+      if (!sectionData || !Array.isArray(sectionData)) {
+        return { valid: false, error: `Section "${op.sectionId}" not found or not an array` };
+      }
+      const record = findRecordInSection(sectionData, op.recordId);
+      if (!record) {
+        return { valid: false, error: `Record "${op.recordId}" not found in section "${op.sectionId}"` };
+      }
+      const desc = findDescriptionInRecord(record, op.descriptionId);
+      if (!desc) {
+        return { valid: false, error: `Description "${op.descriptionId}" not found` };
+      }
       if (!['paragraph', 'bullet'].includes(op.type)) {
         return { valid: false, error: `Invalid description type: ${op.type}` };
       }
@@ -278,18 +374,18 @@ export function validateEditOperation(cvData: any, op: CVEditOperation): { valid
     }
 
     case 'add_description': {
-      // Validate section and record exist
       const sectionData = cvData[op.sectionId];
       if (!sectionData || !Array.isArray(sectionData)) {
         return { valid: false, error: `Section "${op.sectionId}" not found or not an array` };
       }
-      const record = sectionData.find((r: any) => r.id === op.recordId);
+      const record = findRecordInSection(sectionData, op.recordId);
       if (!record) {
         return { valid: false, error: `Record "${op.recordId}" not found in section "${op.sectionId}"` };
       }
       if (op.afterDescriptionId) {
         const descs = record.descriptions || [];
-        if (!descs.find((d: any) => d.id === op.afterDescriptionId)) {
+        const refDesc = findDescriptionInRecord(record, op.afterDescriptionId);
+        if (!refDesc) {
           return { valid: false, error: `Reference description "${op.afterDescriptionId}" not found` };
         }
       }
@@ -303,22 +399,36 @@ export function validateEditOperation(cvData: any, op: CVEditOperation): { valid
     }
 
     case 'delete_description': {
-      const res = resolveCVAddress(cvData, {
-        sectionId: op.sectionId,
-        recordId: op.recordId,
-        descriptionId: op.descriptionId,
-      });
-      if (!res.found) return { valid: false, error: res.error };
+      const sectionData = cvData[op.sectionId];
+      if (!sectionData || !Array.isArray(sectionData)) {
+        return { valid: false, error: `Section "${op.sectionId}" not found or not an array` };
+      }
+      const record = findRecordInSection(sectionData, op.recordId);
+      if (!record) {
+        return { valid: false, error: `Record "${op.recordId}" not found in section "${op.sectionId}"` };
+      }
+      const desc = findDescriptionInRecord(record, op.descriptionId);
+      if (!desc) {
+        return { valid: false, error: `Description "${op.descriptionId}" not found` };
+      }
       return { valid: true };
     }
 
     case 'update_field': {
-      const res = resolveCVAddress(cvData, {
-        sectionId: op.sectionId,
-        recordId: op.recordId,
-        field: op.field,
-      });
-      if (!res.found) return { valid: false, error: res.error };
+      const sectionData = cvData[op.sectionId];
+      if (!sectionData) {
+        return { valid: false, error: `Section "${op.sectionId}" not found` };
+      }
+      if (op.sectionId === 'basics') {
+        return { valid: true };
+      }
+      if (!Array.isArray(sectionData)) {
+        return { valid: false, error: `Section "${op.sectionId}" is not an array` };
+      }
+      const record = findRecordInSection(sectionData, op.recordId);
+      if (!record) {
+        return { valid: false, error: `Record "${op.recordId}" not found in section "${op.sectionId}"` };
+      }
       return { valid: true };
     }
 
@@ -358,20 +468,69 @@ export function validateEditOperation(cvData: any, op: CVEditOperation): { valid
 /**
  * Apply a single edit operation to CV data (produces a new object, does not mutate).
  * Returns the modified CV data and before/after values for auditing.
+ * Includes fallback ID resolution when exact IDs don't match.
  */
 export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: any; before?: any; after?: any; error?: string } {
   // Deep clone to prevent mutation
   const next = JSON.parse(JSON.stringify(cvData));
 
+  // Helper: find record with fallback
+  const findRecord = (section: any[], recordId: string): any => {
+    if (!Array.isArray(section)) return null;
+    let record = section.find((r: any) => r.id === recordId);
+    if (record) return record;
+    // Fallback: match by name/position/company
+    return section.find((r: any) => {
+      if (!r) return false;
+      const recordName = (r.name || r.company || r.position || r.role || r.title || '').toLowerCase();
+      const idLower = recordId.toLowerCase();
+      return recordName && (idLower.includes(recordName) || recordName.includes(idLower));
+    });
+  };
+
+  // Helper: find description with fallback
+  const findDescription = (record: any, descriptionId: string): any => {
+    if (!record) return null;
+    const descs = record.descriptions || [];
+    let desc = descs.find((d: any) => d.id === descriptionId);
+    if (desc) return desc;
+    // Fallback: match by content hash
+    if (descriptionId.includes('::')) {
+      const contentHint = descriptionId.split('::')[1]?.toLowerCase();
+      if (contentHint) {
+        desc = descs.find((d: any) => {
+          if (!d || !d.content) return false;
+          return d.content.toLowerCase().includes(contentHint.substring(0, 20));
+        });
+        if (desc) return desc;
+      }
+    }
+    // Fallback: match by ID similarity
+    return descs.find((d: any) => {
+      if (!d) return false;
+      const descId = (d.id || '').toLowerCase();
+      const targetId = descriptionId.toLowerCase();
+      return descId && (targetId.includes(descId) || descId.includes(targetId));
+    });
+  };
+
   switch (op.operation) {
     case 'update_text': {
       const section = next[op.sectionId];
       if (!Array.isArray(section)) return { cvData: next, error: 'Section not found' };
-      const record = section.find((r: any) => r.id === op.recordId);
+      const record = findRecord(section, op.recordId);
       if (!record) return { cvData: next, error: 'Record not found' };
       const descs = record.descriptions || [];
       const descIdx = descs.findIndex((d: any) => d.id === op.descriptionId);
-      if (descIdx === -1) return { cvData: next, error: 'Description not found' };
+      if (descIdx === -1) {
+        // Fallback: find by content similarity
+        const fallbackDesc = findDescription(record, op.descriptionId);
+        if (!fallbackDesc) return { cvData: next, error: 'Description not found' };
+        const fallbackIdx = descs.indexOf(fallbackDesc);
+        const before = fallbackDesc.content;
+        descs[fallbackIdx] = { ...fallbackDesc, content: op.content };
+        return { cvData: next, before, after: op.content };
+      }
       const before = descs[descIdx].content;
       descs[descIdx] = { ...descs[descIdx], content: op.content };
       return { cvData: next, before, after: op.content };
@@ -380,11 +539,18 @@ export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: 
     case 'change_description_type': {
       const section = next[op.sectionId];
       if (!Array.isArray(section)) return { cvData: next, error: 'Section not found' };
-      const record = section.find((r: any) => r.id === op.recordId);
+      const record = findRecord(section, op.recordId);
       if (!record) return { cvData: next, error: 'Record not found' };
       const descs = record.descriptions || [];
       const descIdx = descs.findIndex((d: any) => d.id === op.descriptionId);
-      if (descIdx === -1) return { cvData: next, error: 'Description not found' };
+      if (descIdx === -1) {
+        const fallbackDesc = findDescription(record, op.descriptionId);
+        if (!fallbackDesc) return { cvData: next, error: 'Description not found' };
+        const fallbackIdx = descs.indexOf(fallbackDesc);
+        const before = fallbackDesc.type;
+        descs[fallbackIdx] = { ...fallbackDesc, type: op.type };
+        return { cvData: next, before, after: op.type };
+      }
       const before = descs[descIdx].type;
       descs[descIdx] = { ...descs[descIdx], type: op.type };
       return { cvData: next, before, after: op.type };
@@ -393,14 +559,23 @@ export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: 
     case 'add_description': {
       const section = next[op.sectionId];
       if (!Array.isArray(section)) return { cvData: next, error: 'Section not found' };
-      const record = section.find((r: any) => r.id === op.recordId);
+      const record = findRecord(section, op.recordId);
       if (!record) return { cvData: next, error: 'Record not found' };
       if (!record.descriptions) record.descriptions = [];
       const newDesc: DescriptionBlock = { id: generateCVId(), type: op.type, content: op.content };
       if (op.afterDescriptionId) {
         const idx = record.descriptions.findIndex((d: any) => d.id === op.afterDescriptionId);
-        if (idx === -1) return { cvData: next, error: 'Reference description not found' };
-        record.descriptions.splice(idx + 1, 0, newDesc);
+        if (idx === -1) {
+          const fallbackDesc = findDescription(record, op.afterDescriptionId);
+          if (fallbackDesc) {
+            const fallbackIdx = record.descriptions.indexOf(fallbackDesc);
+            record.descriptions.splice(fallbackIdx + 1, 0, newDesc);
+          } else {
+            return { cvData: next, error: 'Reference description not found' };
+          }
+        } else {
+          record.descriptions.splice(idx + 1, 0, newDesc);
+        }
       } else {
         record.descriptions.unshift(newDesc);
       }
@@ -410,11 +585,18 @@ export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: 
     case 'delete_description': {
       const section = next[op.sectionId];
       if (!Array.isArray(section)) return { cvData: next, error: 'Section not found' };
-      const record = section.find((r: any) => r.id === op.recordId);
+      const record = findRecord(section, op.recordId);
       if (!record) return { cvData: next, error: 'Record not found' };
       const descs = record.descriptions || [];
       const idx = descs.findIndex((d: any) => d.id === op.descriptionId);
-      if (idx === -1) return { cvData: next, error: 'Description not found' };
+      if (idx === -1) {
+        const fallbackDesc = findDescription(record, op.descriptionId);
+        if (!fallbackDesc) return { cvData: next, error: 'Description not found' };
+        const fallbackIdx = descs.indexOf(fallbackDesc);
+        const before = descs[fallbackIdx];
+        record.descriptions = descs.filter((_: any, i: number) => i !== fallbackIdx);
+        return { cvData: next, before, after: null };
+      }
       const before = descs[idx];
       record.descriptions = descs.filter((_: any, i: number) => i !== idx);
       return { cvData: next, before, after: null };
@@ -429,7 +611,7 @@ export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: 
         return { cvData: next, before, after: op.value };
       }
       if (!Array.isArray(section)) return { cvData: next, error: 'Section not found' };
-      const record = section.find((r: any) => r.id === op.recordId);
+      const record = findRecord(section, op.recordId);
       if (!record) return { cvData: next, error: 'Record not found' };
       const before = record[op.field];
       record[op.field] = op.value;

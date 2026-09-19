@@ -233,7 +233,7 @@ export class UnifiedApplyService {
           outcome: applyResult.status === 'applied' ? 'submitted' : 'action_required',
           atsType: context.atsType,
           source: context.source,
-          matchScore: context.screeningQuestions?.length ? 50 : 50,
+          matchScore: 0,
         });
       } catch {
         // Outcome recording is best-effort

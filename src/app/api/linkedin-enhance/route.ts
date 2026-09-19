@@ -350,10 +350,8 @@ function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?:
   const mappedTone = tone.toLowerCase();
 
   // Extract details for placeholder replacement
-  const candidateName = cvData.basics?.name || 
-    (cvData.personalInfo ? `${cvData.personalInfo.firstName || ''} ${cvData.personalInfo.lastName || ''}`.trim() : '') || 
-    'Candidate';
-  const targetRole = targetIndustry || cvData.basics?.label || cvData.personalInfo?.title || '';
+  const candidateName = cvData.basics?.name || 'Candidate';
+  const targetRole = targetIndustry || cvData.basics?.label || '';
 
   // Replace placeholders in the prompt template
   let finalPrompt = promptTemplate

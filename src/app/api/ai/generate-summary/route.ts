@@ -50,7 +50,13 @@ async function generateProfessionalSummary({
   const company = jobData?.company || 'target company';
   
   // Extract skills from CV
-  const skills = cvData?.skills?.map((skill: any) => skill.name).filter(Boolean).slice(0, 5) || [];
+  const skills = cvData?.skills?.map((skill: any) => {
+    if (skill.category) return skill.category;
+    if (skill.name) return skill.name;
+    if (Array.isArray(skill.skills)) return skill.skills[0];
+    if (Array.isArray(skill.keywords)) return skill.keywords[0];
+    return null;
+  }).filter(Boolean).slice(0, 5) || [];
   
   // Extract experience years
   const experienceYears = calculateExperienceYears(cvData?.work || []);

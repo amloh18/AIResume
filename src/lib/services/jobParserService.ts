@@ -474,7 +474,7 @@ export class JobParserService {
       }
 
       const { callGeminiWithFallback } = await import('@/lib/utils/gemini-api-helper');
-      const systemPrompt = `You are an expert job description analyst. Extracts structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown.`;
+      const systemPrompt = `You are an expert job description analyst. Extract structured data from any JD, however vague. Keep all text fields, descriptions, and list items extremely concise (under 120 characters each) to fit output token limits. Return ONLY valid JSON, no markdown, no code fences. Fill in all fields, handling missing information gracefully by setting defaults or marked as unknown.`;
       
       let userPrompt = '';
       try {

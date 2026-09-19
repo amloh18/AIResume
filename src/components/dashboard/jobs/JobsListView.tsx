@@ -288,8 +288,8 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                   />
                 </th>
               )}
-              <th className="py-3.5 px-5">Job Role & Title</th>
-              <th className="py-3.5 px-4">Company</th>
+              <th className="py-3.5 px-5">Company</th>
+              <th className="py-3.5 px-4">Job Role & Title</th>
               <th className="py-3.5 px-4">Location</th>
               <th className="py-3.5 px-4">Portal</th>
               <th className="py-3.5 px-4">Match Score</th>
@@ -308,10 +308,10 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     </td>
                   )}
                   <td className="py-4 px-5">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-44 animate-pulse" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28 animate-pulse" />
                   </td>
                   <td className="py-4 px-4">
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28 animate-pulse" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-44 animate-pulse" />
                   </td>
                   <td className="py-4 px-4">
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 animate-pulse" />
@@ -354,7 +354,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                 const jobId = job.id || job._id;
                 const isSelected = selectedJobs.has(jobId);
                 const jobJourneys = getJobJourneys ? getJobJourneys(jobId) : [];
-                const score = job.atsScore ?? (job.matchScore ?? null);
+                const score = job.matchScore ?? null;
                 const salaryStr = formatSalary(job.salary);
 
                 let appliedDateStr = '-';
@@ -385,9 +385,19 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       </td>
                     )}
 
+                    {/* Company */}
+                    <td className="py-3.5 px-5 text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center gap-2">
+                        <CompanyLogo company={job.company} size={22} logoUrl={job.companyLogo} jobId={jobId} />
+                        <span className="font-medium text-xs truncate max-w-[110px] sm:max-w-[140px]">
+                          {job.company || 'Unknown Company'}
+                        </span>
+                      </div>
+                    </td>
+
                     {/* Job Role & Title */}
-                    <td className="py-3.5 px-5">
-                      <div className="font-semibold text-gray-900 dark:text-white text-xs group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-gray-900 dark:text-white text-xs group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors truncate max-w-[180px]">
                         {job.jobTitle || job.title || 'Untitled Role'}
                       </div>
                       {salaryStr && (
@@ -395,16 +405,6 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                           {salaryStr}
                         </div>
                       )}
-                    </td>
-
-                    {/* Company */}
-                    <td className="py-3.5 px-4 text-gray-700 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <CompanyLogo company={job.company} size={22} logoUrl={job.companyLogo} jobId={jobId} />
-                        <span className="font-medium text-xs truncate max-w-[110px] sm:max-w-[140px]">
-                          {job.company || 'Unknown Company'}
-                        </span>
-                      </div>
                     </td>
 
                     {/* Location */}

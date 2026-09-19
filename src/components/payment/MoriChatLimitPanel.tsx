@@ -20,7 +20,7 @@ interface MoriChatLimitPanelProps {
 export default function MoriChatLimitPanel({
   className = '',
   title = 'Mori Chat Limit Reached',
-  description = "You've exhausted your limit of 5 free AI conversations this month. Upgrade to Pro for unlimited edits!",
+  description = "You've exhausted your limit of 5 free AI conversations this month. Upgrade to Focused for unlimited edits!",
   triggerContext = 'mori-chat-limit',
 }: MoriChatLimitPanelProps) {
   const { openPaymentModal } = usePaymentModal();
@@ -50,7 +50,7 @@ export default function MoriChatLimitPanel({
         }
         className="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98] flex items-center justify-center gap-1.5"
       >
-        <span>Upgrade to Pro</span>
+        <span>Upgrade to Focused</span>
         <Sparkles className="w-3.5 h-3.5" />
       </button>
     </div>

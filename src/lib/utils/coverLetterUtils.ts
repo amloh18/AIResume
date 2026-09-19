@@ -22,8 +22,8 @@ export function formatCoverLetterHeader(cvData: UnifiedCVDataStructure, jobData?
     } else if (typeof basics.location === 'object') {
       const parts: string[] = [];
       if (basics.location.city) parts.push(basics.location.city);
-      if (basics.location.state) parts.push(basics.location.state);
-      if (basics.location.country) parts.push(basics.location.country);
+      if (basics.location.region) parts.push(basics.location.region);
+      if (basics.location.countryCode) parts.push(basics.location.countryCode);
       locationStr = parts.join(', ') || 'Your Location';
     }
   }

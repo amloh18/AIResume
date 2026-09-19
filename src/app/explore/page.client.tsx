@@ -515,7 +515,7 @@ export default function ExploreStudioClient() {
                       Live Template Thumbnails
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
-                      {CANVAS_TEMPLATES.length} Pro Layouts
+                      {CANVAS_TEMPLATES.length} Layouts
                     </span>
                   </div>
 

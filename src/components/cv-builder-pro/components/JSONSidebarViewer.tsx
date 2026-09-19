@@ -29,11 +29,13 @@ const SECTION_COLORS: Record<string, string> = {
 
 const SECTION_ORDER = [
   'basics',
+  'work',
   'experience',
   'education',
   'projects',
   'skills',
   'languages',
+  'certificates',
   'certifications',
   'awards',
   'publications',
@@ -243,11 +245,12 @@ export const JSONSidebarViewer = ({ data, focusedPath, onChange, onCopyTemplate 
                 onClick={async () => {
                   await onCopyTemplate();
                   setCopiedTemplate(true);
-                  window.setTimeout(() => setCopiedTemplate(false), 1600);
+                  window.setTimeout(() => setCopiedTemplate(false), 2000);
                 }}
-                className="text-[10px] uppercase tracking-widest font-bold text-emerald-400 hover:text-emerald-300"
+                className={`text-[10px] uppercase tracking-widest font-bold transition-all duration-200 ${copiedTemplate ? 'text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded' : 'text-emerald-400 hover:text-emerald-300'}`}
+                title="Copy CV template with AI agent instructions to clipboard"
               >
-                {copiedTemplate ? 'Copied' : 'Copy JSON Template'}
+                {copiedTemplate ? '✓ Copied' : 'Copy JSON Template'}
               </button>
             )}
             <button
@@ -260,28 +263,70 @@ export const JSONSidebarViewer = ({ data, focusedPath, onChange, onCopyTemplate 
           </div>
         </div>
         <div className="flex flex-wrap gap-1">
-          {sections.map((section) => (
-            <button
-              key={section}
-              type="button"
-              onClick={() => jumpToSection(section)}
-              className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${focusedPath === section || focusedPath?.startsWith(section + '.') ? 'border-emerald-400 text-emerald-300 bg-emerald-500/10' : 'border-white/10 text-gray-400 hover:text-gray-200'}`}
-              style={{ color: focusedPath === section || focusedPath?.startsWith(section + '.') ? undefined : getKeyColor(section, 0) }}
-            >
-              {section}
-            </button>
-          ))}
+          {sections.map((section) => {
+            const labelMap: Record<string, string> = {
+              basics: 'Basics',
+              work: 'Work',
+              experience: 'Experience',
+              education: 'Education',
+              projects: 'Projects',
+              skills: 'Skills',
+              languages: 'Languages',
+              certificates: 'Certs',
+              certifications: 'Certs (old)',
+              awards: 'Awards',
+              publications: 'Pubs',
+              volunteer: 'Volunteer',
+              references: 'Refs',
+              interests: 'Interests',
+              stats: 'Stats',
+              sectionTitles: 'Titles',
+              structure: 'Structure',
+              content: 'Content',
+              metadata: 'Meta',
+              snippetOverrides: 'Overrides',
+            };
+            return (
+              <button
+                key={section}
+                type="button"
+                onClick={() => jumpToSection(section)}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${focusedPath === section || focusedPath?.startsWith(section + '.') ? 'border-emerald-400 text-emerald-300 bg-emerald-500/10' : 'border-white/10 text-gray-400 hover:text-gray-200 hover:border-white/20'}`}
+                style={{ color: focusedPath === section || focusedPath?.startsWith(section + '.') ? undefined : getKeyColor(section, 0) }}
+                title={section}
+              >
+                {labelMap[section] || section}
+              </button>
+            );
+          })}
         </div>
       </div>
-      {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 p-2 text-small font-mono">{error}</div>}
+      {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 px-3 py-2 text-xs font-mono break-all">{error}</div>}
       {rawMode ? (
-        <textarea
-          className="flex-1 w-full bg-[#0a0a0a] outline-none p-4 font-mono text-[11px] leading-relaxed resize-none custom-scrollbar"
-          style={{ color: '#86efac' }}
-          value={jsonText}
-          onChange={(event) => handleRawChange(event.target.value)}
-          spellCheck={false}
-        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="shrink-0 px-3 py-1.5 bg-[#111] border-b border-white/5 flex items-center justify-between">
+            <span className="text-[10px] text-gray-500 font-mono">Paste or edit JSON below</span>
+            <button
+              type="button"
+              onClick={() => {
+                const raw = JSON.stringify(data ?? {}, null, 2);
+                setJsonText(raw);
+                setError(null);
+              }}
+              className="text-[10px] text-gray-500 hover:text-emerald-400 font-mono transition-colors"
+            >
+              Reset to current
+            </button>
+          </div>
+          <textarea
+            className="flex-1 w-full bg-[#0a0a0a] outline-none p-4 font-mono text-[11px] leading-relaxed resize-none custom-scrollbar"
+            style={{ color: '#86efac', tabSize: 2 }}
+            value={jsonText}
+            onChange={(event) => handleRawChange(event.target.value)}
+            spellCheck={false}
+            placeholder="Paste your CV JSON here..."
+          />
+        </div>
       ) : (
         <div className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed custom-scrollbar">
           <span style={{ color: '#9ca3af' }}>{'{'}</span>

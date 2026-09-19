@@ -48,14 +48,14 @@ export default function ModeTransitionDialog({
                 return {
                     title: 'Adding Job Description',
                     description: cvType === 'master'
-                        ? 'Master CVs cannot use job descriptions. Would you like to convert this to a Journey CV?'
+                        ? 'Master CVs cannot use job descriptions. Would you like to convert this to a Tailored Resume?'
                         : 'Adding a job description will enable ATS-optimized analysis.',
                     icon: Zap,
                     iconColor: 'text-blue-400',
                     bgColor: 'bg-blue-500/10',
                     borderColor: 'border-blue-500/30',
                     impacts: cvType === 'master'
-                        ? ['CV type will change from Master to Journey', 'Analysis will focus on job description instead of role', 'ATS score will be calculated']
+                        ? ['CV type will change from Master to Tailored', 'Analysis will focus on job description instead of role', 'ATS score will be calculated']
                         : ['Analysis mode will switch to JD-based', 'ATS keywords will be extracted', 'Cached scores will be recalculated']
                 };
 
@@ -63,27 +63,27 @@ export default function ModeTransitionDialog({
                 return {
                     title: 'Removing Job Description',
                     description: cvType === 'journey'
-                        ? 'Journey CVs require a job description. Removing it will convert this to a Standalone CV.'
+                        ? 'Tailored Resumes require a job description. Removing it will convert this to a Standalone Resume.'
                         : 'Removing the job description will fall back to role-based analysis.',
                     icon: AlertTriangle,
                     iconColor: 'text-yellow-400',
                     bgColor: 'bg-yellow-500/10',
                     borderColor: 'border-yellow-500/30',
                     impacts: cvType === 'journey'
-                        ? ['CV will convert to Standalone type', 'Analysis will switch to role-based if role is set', 'Journey link will be removed', 'Job-specific data will be lost']
+                        ? ['CV will convert to Standalone type', 'Analysis will switch to role-based if role is set', 'Tailored link will be removed', 'Job-specific data will be lost']
                         : ['Analysis mode will switch to role-based', 'ATS score will be cleared', 'JD-specific keywords will be removed']
                 };
 
             case 'convert-to-journey':
                 return {
-                    title: 'Converting to Journey CV',
-                    description: 'This will create a Journey CV linked to the selected job. Your analysis will focus on the job description.',
+                    title: 'Converting to Tailored Resume',
+                    description: 'This will create a Tailored Resume linked to the selected job. Your analysis will focus on the job description.',
                     icon: Zap,
                     iconColor: 'text-purple-400',
                     bgColor: 'bg-purple-500/10',
                     borderColor: 'border-purple-500/30',
                     impacts: [
-                        'CV type will change to Journey',
+                        'CV type will change to Tailored',
                         'Analysis will switch from role-based to JD-based',
                         'All scores will be recalculated for this job',
                         'Original CV will remain unchanged'
@@ -93,13 +93,13 @@ export default function ModeTransitionDialog({
             case 'unlink-job':
                 return {
                     title: 'Unlinking Job',
-                    description: 'Removing the job link will convert this Journey CV to a Standalone CV.',
+                    description: 'Removing the job link will convert this Tailored Resume to a Standalone Resume.',
                     icon: AlertTriangle,
                     iconColor: 'text-orange-400',
                     bgColor: 'bg-orange-500/10',
                     borderColor: 'border-orange-500/30',
                     impacts: [
-                        'Journey CV will become Standalone',
+                        'Tailored Resume will become Standalone',
                         'Job-specific data will be preserved but unlinked',
                         'You can manually keep or remove the job description',
                         'Analysis can continue with the existing JD'
@@ -118,7 +118,7 @@ export default function ModeTransitionDialog({
                         'Job description will be updated to new job',
                         'All ATS scores will be recalculated',
                         'Previous job-specific keywords will be replaced',
-                        'Changes are irreversible for this Journey CV'
+                        'Changes are irreversible for this Tailored Resume'
                     ]
                 };
 

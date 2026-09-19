@@ -1,5 +1,10 @@
 'use client';
 
+/**
+ * @deprecated Use `useEntitlements` from `@/lib/hooks/useEntitlements` instead.
+ * This hook is kept for backward compatibility only.
+ */
+
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { UserPlan, hasAIAccess, hasSpecificAIAccess } from '@/lib/utils/userPlanUtils';

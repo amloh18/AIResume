@@ -939,7 +939,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     },
     {
       id: 'interview-coach',
-      title: 'Interview Coach',
+      title: 'Interview Prep',
       description: 'Access the AI-driven mock interview simulator to practice and perfect your answers.',
       icon: BarChart3,
       color: 'from-green-400 to-green-500',
@@ -1481,10 +1481,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">
                               {(() => {
                                 if (!selectedPlan) return 'No Plan Selected';
-                                if (selectedPlan.key === 'focused_yearly') return 'Pro Annual Plan';
-                                if (selectedPlan.key === 'focused_yearly') return 'Pro Yearly Plan';
-                                if (selectedPlan.key === 'focused_quarterly') return 'Pro Quarterly Plan';
-                                if (selectedPlan.key === 'focused_monthly') return 'Pro Monthly Plan';
+                                if (selectedPlan.key === 'focused_yearly') return 'Focused Annual Plan';
+                                if (selectedPlan.key === 'focused_yearly') return 'Focused Yearly Plan';
+                                if (selectedPlan.key === 'focused_quarterly') return 'Focused Quarterly Plan';
+                                if (selectedPlan.key === 'focused_monthly') return 'Focused Monthly Plan';
                                 return selectedPlan.name || `Plan ${selectedPlan.key}`;
                               })()}
                             </h3>

@@ -351,7 +351,8 @@ Professional, encouraging, and luxury-focused. Avoid generic advice; be hyper-sp
                 prompt: userPrompt,
                 systemPrompt,
                 temperature: 0.6,
-                model: 'gemini-2.5-flash-lite'
+                model: 'gemini-2.5-flash-lite',
+                responseMimeType: 'application/json'
             });
 
             return parseRobustJson(result.content);

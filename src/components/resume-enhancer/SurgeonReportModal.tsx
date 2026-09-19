@@ -715,7 +715,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   }
                   className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-full font-medium transition-colors"
                 >
-                  Upgrade to Pro
+                  Upgrade to Focused
                 </button>
               </div>
             )}

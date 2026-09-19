@@ -2,7 +2,7 @@
 
 import React from 'react';
 import InterviewCoachContainer from '@/components/interview-coach/InterviewCoachContainer';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { motion } from 'framer-motion';
 import { Mic, Sparkles, Target, TrendingUp, Lock, ChevronRight } from 'lucide-react';
@@ -41,7 +41,7 @@ function InterviewCoachGate() {
                         <Mic className="w-7 h-7 text-lime-400" />
                     </div>
                     <h1 className="text-h1 font-bold text-gray-900 dark:text-white mb-3">
-                        AI Interview Coach
+                        Interview Prep
                     </h1>
                     <p className="text-gray-500 dark:text-white/50 text-body max-w-md mx-auto">
                         Practice smarter with AI-powered mock interviews tailored to your exact job description.
@@ -73,10 +73,10 @@ function InterviewCoachGate() {
                         Focused Plan Required
                     </div>
                     <h2 className="text-h3 font-bold text-gray-900 dark:text-white mb-2">
-                        Unlock Interview Coach with Focused
+                        Unlock Interview Prep with Focused
                     </h2>
                     <p className="text-small text-gray-500 dark:text-white/50 mb-5">
-                        Get Interview Coach, unlimited job tracking, LinkedIn Enhancer, and full AI tools — all in one plan.
+                        Get Interview Prep, unlimited job tracking, LinkedIn Enhancer, and full AI tools — all in one plan.
                     </p>
                     <button
                         onClick={handleUpgrade}
@@ -93,13 +93,13 @@ function InterviewCoachGate() {
 }
 
 const InterviewDashboard = () => {
-    const { membership, loading } = useMembership();
+    const { loading, can } = useEntitlements();
 
     // Show nothing while loading (avoids flash)
     if (loading) return null;
 
     // Gate: Interview Coach requires Focused plan or higher
-    const hasAccess = membership?.limits.interviewCoach ?? false;
+    const hasAccess = can('track.interview_coach');
 
     if (!hasAccess) {
         return <InterviewCoachGate />;

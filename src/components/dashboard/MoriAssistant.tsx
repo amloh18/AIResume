@@ -254,7 +254,7 @@ export default function MoriAssistant() {
     } else {
       setCancelLayer(3);
       addMoriMessage(
-        "To ensure you don't lose access to premium templates, we recommend switching to the Free Tier instead of full deletion. Would you prefer this?",
+        "To ensure you don't lose access to templates, we recommend switching to the Free Tier instead of full deletion. Would you prefer this?",
         'cancel_solutions'
       );
     }

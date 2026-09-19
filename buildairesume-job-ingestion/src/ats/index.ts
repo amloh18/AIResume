@@ -1,15 +1,15 @@
 import { BaseATSAdapter } from './BaseATSAdapter';
 import { GreenhouseAdapter } from './GreenhouseAdapter';
-// import { LeverAdapter } from './LeverAdapter';
-// import { AshbyAdapter } from './AshbyAdapter';
-// import { WorkdayAdapter } from './WorkdayAdapter';
+import { LeverAdapter } from './LeverAdapter';
+import { AshbyAdapter } from './AshbyAdapter';
+import { WorkdayAdapter } from './WorkdayAdapter';
 
 export { BaseATSAdapter } from './BaseATSAdapter';
 export type { ATSField, ATSDetectionResult, FillResult, SubmissionResult } from './BaseATSAdapter';
 export { GreenhouseAdapter } from './GreenhouseAdapter';
-// export { LeverAdapter } from './LeverAdapter';
-// export { AshbyAdapter } from './AshbyAdapter';
-// export { WorkdayAdapter } from './WorkdayAdapter';
+export { LeverAdapter } from './LeverAdapter';
+export { AshbyAdapter } from './AshbyAdapter';
+export { WorkdayAdapter } from './WorkdayAdapter';
 
 /**
  * Get an ATS adapter based on the URL
@@ -17,9 +17,9 @@ export { GreenhouseAdapter } from './GreenhouseAdapter';
 export function getATSAdapter(url: string): BaseATSAdapter | null {
   const adapters: BaseATSAdapter[] = [
     new GreenhouseAdapter(),
-    // new LeverAdapter(),
-    // new AshbyAdapter(),
-    // new WorkdayAdapter(),
+    new LeverAdapter(),
+    new AshbyAdapter(),
+    new WorkdayAdapter(),
   ];
 
   for (const adapter of adapters) {
@@ -39,12 +39,12 @@ export function getATSAdapterByType(atsType: string): BaseATSAdapter | null {
   switch (atsType.toLowerCase()) {
     case 'greenhouse':
       return new GreenhouseAdapter();
-    // case 'lever':
-    //   return new LeverAdapter();
-    // case 'ashby':
-    //   return new AshbyAdapter();
-    // case 'workday':
-    //   return new WorkdayAdapter();
+    case 'lever':
+      return new LeverAdapter();
+    case 'ashby':
+      return new AshbyAdapter();
+    case 'workday':
+      return new WorkdayAdapter();
     default:
       return null;
   }
@@ -73,8 +73,8 @@ export function detectATSType(url: string): { atsType: string; confidence: numbe
 export function getSupportedATSTypes(): string[] {
   return [
     'greenhouse',
-    // 'lever',
-    // 'ashby',
-    // 'workday',
+    'lever',
+    'ashby',
+    'workday',
   ];
 }

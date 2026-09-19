@@ -89,7 +89,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                 AI Suggestions Locked
               </h4>
               <p className="text-sm text-gray-200 mb-6 max-w-[250px] text-center">
-                Upgrade to Pro to unlock unlimited contextual AI suggestions.
+                Upgrade to Focused to unlock unlimited contextual AI suggestions.
               </p>
               <button
                 type="button"
@@ -102,7 +102,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                 }
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
               >
-                Upgrade to Pro
+                Upgrade to Focused
               </button>
             </div>
           )}

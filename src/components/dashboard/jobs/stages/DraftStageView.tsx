@@ -119,7 +119,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
           <tbody className="divide-y divide-gray-200 dark:divide-white/10">
             {sortedJobs.map((job) => {
               // Only show a real score — never fabricate one
-              const matchScore = job.matchScore ?? job.atsScore ?? 0;
+              const matchScore = job.matchScore ?? 0;
               return (
                 <motion.tr
                   key={job.id || job._id}

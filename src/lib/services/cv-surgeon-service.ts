@@ -363,7 +363,7 @@ export class CVSurgeonService {
                 );
                 keywordGapAnalysis = gapResult;
                 keywordGaps = gapResult.gaps;
-                atsScore = gapResult.matchScore;
+                // Keep atsScore from surgeon analysis — don't overwrite with keyword matchScore
             } catch (error) {
                 console.warn('⚠️ CVSurgeonService - Keyword gap analysis failed:', error);
             }

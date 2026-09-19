@@ -30,7 +30,7 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
       icon={<Briefcase className="w-4 h-4" />}
       preselectedPlanKey={preselectedPlanKey}
       triggerContext="job-creation-limit"
-      primaryLabel="Upgrade to Pro"
+      primaryLabel="Upgrade to Focused"
       secondaryLabel="Maybe Later"
     >
       {/* Job usage meter */}

@@ -109,6 +109,7 @@ export const applyCouponSchema = z.object({
 export const createCVSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
   templateId: z.string().optional(),
+  cvData: z.any().optional(), // UnifiedCVDataStructure
   personalInfo: z.object({
     fullName: z.string().min(1).max(100),
     email: z.string().email(),
@@ -123,11 +124,13 @@ export const createCVSchema = z.object({
 export const updateCVSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   templateId: z.string().optional(),
-  personalInfo: z.any().optional(), // Complex nested structure
-  workExperience: z.array(z.any()).optional(),
+  cvData: z.any().optional(), // UnifiedCVDataStructure
+  personalInfo: z.any().optional(), // Legacy format (backward compat)
+  workExperience: z.array(z.any()).optional(), // Legacy format (backward compat)
   education: z.array(z.any()).optional(),
   skills: z.array(z.any()).optional(),
-  certifications: z.array(z.any()).optional(),
+  certificates: z.array(z.any()).optional(), // Unified format
+  certifications: z.array(z.any()).optional(), // Legacy format (backward compat)
   projects: z.array(z.any()).optional(),
   summary: z.string().optional(),
 });

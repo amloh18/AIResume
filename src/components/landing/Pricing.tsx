@@ -74,7 +74,7 @@ export const PRICING_FEATURES: FeatureRow[] = [
     focused_yearly: true,
   },
   {
-    name: 'AI Interview Coach & Simulator',
+    name: 'Interview Prep & Practice',
     starter_monthly: false,
     starter_yearly: false,
     focused_monthly: true,

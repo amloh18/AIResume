@@ -93,7 +93,7 @@ export function calculateSuccessProbability(job: JobIntelligenceInput): number {
   }
 
   // Modifiers
-  const score = job.atsScore || job.matchScore;
+  const score = job.matchScore || job.atsScore;
   if (score) {
     // Add up to 10% based on score (assuming score is 0-100)
     probability += (score / 100) * 10;

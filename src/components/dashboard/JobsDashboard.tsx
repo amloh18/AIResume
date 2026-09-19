@@ -18,7 +18,7 @@ import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
@@ -190,8 +190,8 @@ export default function JobsDashboard() {
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
-  const { isPaidMember } = useMembership();
-  const isPaidUser = isPaidMember;
+  const { plan } = useEntitlements();
+  const isPaidUser = plan !== 'free';
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
   const [userPreferences, setUserPreferences] = useState<any>(null);
 
@@ -1518,7 +1518,7 @@ export default function JobsDashboard() {
           //
           // `min-h-0` is required: without it a flex item refuses to shrink below
           // its content size and the chain does nothing.
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 flex flex-col px-6 pb-6">
             <CommsPanel />
           </div>
         )}

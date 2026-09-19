@@ -171,12 +171,12 @@ export function extractUserSkills(cvData: any): string[] {
   // From skills section (array of { category, skills: string[] })
   if (Array.isArray(cvData.skills)) {
     for (const cat of cvData.skills) {
-      if (cat.name) skills.add(cat.name.toLowerCase());
-      if (cat.keywords) {
-        for (const kw of cat.keywords) skills.add(kw.toLowerCase());
-      }
+      if (cat.category) skills.add(cat.category.toLowerCase());
       if (Array.isArray(cat.skills)) {
         for (const s of cat.skills) skills.add(s.toLowerCase());
+      } else if (Array.isArray(cat.keywords)) {
+        // Legacy format support
+        for (const kw of cat.keywords) skills.add(kw.toLowerCase());
       }
     }
   }

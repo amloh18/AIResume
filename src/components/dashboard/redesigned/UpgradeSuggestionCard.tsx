@@ -15,7 +15,7 @@ import {
   Bot,
   CheckCircle2,
 } from 'lucide-react';
-import { useMembership } from '@/lib/hooks/useMembership';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
@@ -29,13 +29,11 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
  */
 const PLAN_TIER: Record<string, number> = {
   free: 0,
-  starter_monthly: 0,
-  starter_yearly: 1,
-  focused_monthly: 2,
-  focused_yearly: 3,
+  starter: 1,
+  focused: 2,
 };
 
-const TOP_TIER = 3; // focused_yearly — nothing above it to suggest
+const TOP_TIER = 2; // focused — nothing above it to suggest
 
 interface UsageSignals {
   jobCount: number;
@@ -77,49 +75,33 @@ function buildSuggestion(
   })();
 
   if (tier === 0) {
-    // Free / Starter Monthly → Starter Yearly or Focused Monthly
+    // Free → Starter
     return {
-      planKey: 'focused_monthly',
-      planName: 'Focused',
+      planKey: 'starter',
+      planName: 'Starter',
       tier,
       eyebrow: 'Supercharge your job hunt',
-      headline: 'Unlock unlimited CVs, AI Cover Letters & Mock Interviews',
+      headline: 'Unlock unlimited Resumes, AI Cover Letters & Mock Interviews',
       description:
         'Focused gives you everything unlimited — ATS scoring, AI interview mock simulator, LinkedIn enhancer, and Kanban job tracker.',
-      features: ['Unlimited CV & Cover Letter Edits', 'AI Interview Coach Mock Simulator', 'LinkedIn Enhancer'],
-      cta: 'Upgrade to Focused',
+      features: ['Unlimited Resume & Cover Letter Edits', 'Interview Practice Simulator', 'LinkedIn Enhancer'],
+      cta: 'Upgrade to Starter',
       usage,
     };
   }
 
   if (tier === 1) {
-    // Starter Yearly → Focused (adds unlimited features + interview coach + linkedin enhancer)
+    // Starter → Focused (adds unlimited features + interview coach + linkedin enhancer)
     return {
-      planKey: 'focused_monthly',
+      planKey: 'focused',
       planName: 'Focused',
       tier,
       eyebrow: 'Complete your toolkit',
       headline: 'Upgrade to Focused for unlimited features & mock interview prep',
       description:
-        'Starter covers AI documents — Focused adds all features unlimited, interview coaching simulator, and LinkedIn profile enhancer.',
-      features: ['Unlimited CV edits & exports', 'AI Interview Coach Simulator', 'LinkedIn Profile Enhancer'],
+        'Starter covers AI documents — Focused adds all features unlimited, interview practice simulator, and LinkedIn profile enhancer.',
+      features: ['Unlimited Resume edits & exports', 'Interview Practice Simulator', 'LinkedIn Profile Enhancer'],
       cta: 'Upgrade to Focused',
-      usage,
-    };
-  }
-
-  if (tier === 2) {
-    // Focused Monthly → Focused Yearly (save 30% / $7/mo)
-    return {
-      planKey: 'focused_yearly',
-      planName: 'Focused Yearly',
-      tier,
-      eyebrow: 'Save over 30%',
-      headline: 'Switch to Focused Yearly at just $7/mo',
-      description:
-        'Keep all your unlimited tools active year-round for $79.99/year ($7/mo) and maximize your interview callback rate.',
-      features: ['All Features Unlimited', 'Priority VIP Support', 'Save 30% vs monthly'],
-      cta: 'Switch to Yearly & Save',
       usage,
     };
   }
@@ -195,7 +177,7 @@ const VARIANTS: Record<VariantId, CardVariant> = {
         0: 'Unlock Focused now',
         1: 'Unlock Focused now',
         2: 'Start Smart today',
-        3: 'Go Pro today',
+        3: 'Go Focused today',
         4: 'Lock in yearly savings',
         5: 'Lock in yearly savings',
         6: 'Go Lifetime now',
@@ -219,7 +201,7 @@ const VARIANTS: Record<VariantId, CardVariant> = {
         1: 'Complete your toolkit and track every application',
         2: 'Reclaim hours every week with autopilot',
         3: 'Keep your whole career history, forever',
-        4: 'Same Pro suite. Better annual value.',
+        4: 'Same Focused suite. Better annual value.',
         5: 'The smart money move: yearly pricing',
         6: 'Pay once. Keep everything. Best value we offer.',
       })[s.tier] ?? s.headline,
@@ -228,7 +210,7 @@ const VARIANTS: Record<VariantId, CardVariant> = {
         0: 'Try Focused risk-free',
         1: 'Try Focused risk-free',
         2: 'Get Smart value',
-        3: 'Get Pro — keep it all',
+        3: 'Get Focused — keep it all',
         4: 'Switch & save',
         5: 'Switch & save',
         6: 'One payment. Lifetime value.',
@@ -312,7 +294,7 @@ function shouldShow(): boolean {
 export default function UpgradeSuggestionCard() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { membership, loading: membershipLoading } = useMembership();
+  const { plan, loading: membershipLoading } = useEntitlements();
   const { jobs, cvs, coverLetters } = useDashboardData();
   const { openPaymentModal } = usePaymentModal();
   const [visible, setVisible] = useState(false);
@@ -320,13 +302,13 @@ export default function UpgradeSuggestionCard() {
   const impressionLoggedRef = useRef(false);
 
   const suggestion = useMemo<Suggestion | null>(() => {
-    if (!membership) return null;
-    return buildSuggestion(membership.planKey, {
+    if (!plan) return null;
+    return buildSuggestion(plan, {
       jobCount: jobs?.length ?? 0,
       cvCount: cvs?.length ?? 0,
       coverLetterCount: coverLetters?.length ?? 0,
     });
-  }, [membership, jobs, cvs, coverLetters]);
+  }, [plan, jobs, cvs, coverLetters]);
 
   // Stable per-user A/B variant. Membership only resolves once authenticated,
   // so by the time the card is visible the user id (and thus variant) is final.
@@ -364,11 +346,11 @@ export default function UpgradeSuggestionCard() {
     impressionLoggedRef.current = true;
     track('upgrade_card_impression', {
       variant: variant,
-      current_plan: membership?.planKey ?? null,
+      current_plan: plan,
       suggested_plan: suggestion?.planKey ?? null,
       trigger: 'dashboard_home',
     });
-  }, [visible, variant, membership?.planKey, suggestion?.planKey]);
+  }, [visible, variant, plan, suggestion?.planKey]);
 
   // Hides the card and applies the weekly dismissal cooldown. Only a true
   // dismiss (X) logs a dismissal event — upgrades log their own conversion.
@@ -377,7 +359,7 @@ export default function UpgradeSuggestionCard() {
     if (reason === 'dismiss') {
       track('upgrade_card_dismissed', {
         variant,
-        current_plan: membership?.planKey ?? null,
+        current_plan: plan,
         suggested_plan: suggestion?.planKey ?? null,
         trigger: 'dashboard_home',
       });
@@ -394,7 +376,7 @@ export default function UpgradeSuggestionCard() {
     // Conversion signal — feeds the impression → CTA → checkout funnel.
     track('upgrade_card_cta_clicked', {
       variant,
-      current_plan: membership?.planKey ?? null,
+      current_plan: plan,
       suggested_plan: suggestion.planKey,
       trigger: 'dashboard_home',
     });

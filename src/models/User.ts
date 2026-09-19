@@ -170,6 +170,8 @@ export interface IUser extends Document {
     providerSubscriptionId?: string;
     providerCustomerId?: string;
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
+    trialStart?: Date;
+    trialEnd?: Date;
     seats: number;
     storageUsed: number;
     downgradeStatus?: 'pending' | 'none';

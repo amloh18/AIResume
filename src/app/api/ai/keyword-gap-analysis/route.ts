@@ -105,8 +105,10 @@ function extractCVContent(cvData: any): string {
   // Skills
   if (cvData.skills && Array.isArray(cvData.skills)) {
     cvData.skills.forEach((skill: any) => {
-      if (skill.name) parts.push(skill.name);
-      if (skill.keywords && Array.isArray(skill.keywords)) {
+      if (skill.category) parts.push(skill.category);
+      if (skill.skills && Array.isArray(skill.skills)) {
+        parts.push(...skill.skills);
+      } else if (skill.keywords && Array.isArray(skill.keywords)) {
         parts.push(...skill.keywords);
       }
     });

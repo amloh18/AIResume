@@ -35,7 +35,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const [isEditing, setIsEditing] = useState(false);
   const value = overrideValue !== undefined ? overrideValue : (getNestedValue(data, path) || '');
 
-  const isEditable = !readOnly && !moriChatMode;
+  const isEditable = !readOnly;
 
   useEffect(() => {
     if (contentRef.current) {
@@ -147,7 +147,8 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   };
   const handleClick = (e: React.MouseEvent) => {
-    if (moriChatMode) {
+    // Alt+Click always sends selection to Mori, regardless of mode
+    if (e.altKey) {
       e.preventDefault();
       e.stopPropagation();
       const text = contentRef.current?.innerText || '';
@@ -479,7 +480,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance.id] ?? 0;
   const isHeaderPage = assignedPage === pageIdx;
 
-  const showInlineControls = !readOnly && !ctx?.moriChatMode && primaryTitleKey && isHeaderPage;
+  const showInlineControls = !readOnly && primaryTitleKey && isHeaderPage;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References', 'Languages', 'Interests', 'Skills'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
     <div className="absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0.5 z-[200] no-print top-[-24px] right-1 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded px-1 py-0.5">
@@ -690,9 +691,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   ) : null;
 
   const handleMoriClick = (e: React.MouseEvent) => {
-    if (!ctx?.moriChatMode) return;
-    // We only want to trigger this if we didn't click on an inner element that already triggered it.
-    // e.stopPropagation() handles that if inner elements also call it.
+    if (!e.altKey) return;
     e.stopPropagation();
     const text = (e.currentTarget as HTMLElement).innerText || '';
     const path = SnippetComponent.category.toLowerCase();
@@ -703,7 +702,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId: zoneId.replace(/_page_\d+$/, ''), isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones, readOnly });
   
-  const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] cursor-pointer rounded-lg transition-all' : '';
+  const moriHoverClass = ctx?.moriChatMode ? 'hover:bg-emerald-500/10 hover:shadow-[0_0_0_2px_rgba(16,185,129,0.4)] rounded-lg transition-all' : '';
   
   return (
     <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
