@@ -35,7 +35,16 @@ export class UnifiedAuthService {
    */
   static getAuthConfig(): NextAuthOptions {
     const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
-    if (!NEXTAUTH_SECRET) {
+    // `next build` prerenders pages, and the root layout reads the session
+    // (src/app/layout.tsx:146), so the config gets resolved during the build — where no runtime
+    // secret exists. `getServerSession()` spreads the options object *before* it touches
+    // `cookies()`, so that spread is what triggers resolution; throwing here aborts the build on
+    // every page the layout wraps. Nothing signs a token during a build, so resolve with an empty
+    // secret and keep the guard for runtime, where the secret is present. The pages that read the
+    // session are then correctly bailed out to dynamic rendering by Next's own `cookies()` handling.
+    // See src/lib/auth-config.ts for why the config is also resolved lazily.
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+    if (!NEXTAUTH_SECRET && !isBuildPhase) {
       throw new Error('NEXTAUTH_SECRET environment variable is required');
     }
     const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
