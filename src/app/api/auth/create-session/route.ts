@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { encode } from 'next-auth/jwt';
+import crypto from 'crypto';
+import { SessionService } from '@/lib/services/session-service';
 
 /**
  * Create NextAuth session server-side
@@ -48,20 +50,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate jti for session tracking
+    const jti = crypto.randomUUID();
+
     // Create JWT token for NextAuth session
-    // The token structure must match what NextAuth's JWT callback expects
-    const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
+    const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+    if (!NEXTAUTH_SECRET) {
+      throw new Error('NEXTAUTH_SECRET is not configured');
+    }
     
     const token = await encode({
       token: {
         id: (userDoc._id as any).toString(),
         email: userDoc.email,
-        // NextAuth JWT callback only uses id and email from token
-        // Other data is fetched fresh in the session callback
+        jti,
       },
       secret: NEXTAUTH_SECRET,
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
+
+    // Record login session
+    try {
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'unknown';
+      const userAgent = request.headers.get('user-agent') || '';
+
+      await SessionService.createSession({
+        userId: (userDoc._id as any).toString(),
+        jti,
+        ip,
+        userAgent,
+        provider: 'credentials',
+      });
+    } catch (sessionError) {
+      console.error('Failed to record login session:', sessionError);
+    }
 
     // Update last login
     await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
@@ -87,7 +109,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: 7 * 24 * 60 * 60, // 7 days
     });
 
     console.log('✅ Session created server-side for user:', (userDoc._id as any).toString());

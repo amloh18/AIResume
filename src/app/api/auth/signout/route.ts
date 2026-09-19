@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
 import { UnifiedAuthService } from '@/lib/auth/unified-auth-service';
+import { SessionService } from '@/lib/services/session-service';
 
 /**
  * Custom signout endpoint that handles empty request bodies gracefully
@@ -57,6 +58,25 @@ export async function POST(request: NextRequest) {
       }
       
       await UnifiedAuthService.invalidateUserCache(sessionUserId);
+
+      // Revoke the login session from MongoDB
+      try {
+        // Extract jti from the JWT token in the request cookie
+        const cookieHeader = request.headers.get('cookie') || '';
+        const tokenMatch = cookieHeader.match(/(?:__Secure-)?next-auth\.session-token=([^;]+)/);
+        if (tokenMatch?.[1]) {
+          const parts = tokenMatch[1].split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+            if (payload.jti) {
+              await SessionService.revokeSession(payload.jti);
+            }
+          }
+        }
+      } catch (sessionError) {
+        // Don't fail signout if session revocation fails
+        console.error('Failed to revoke session on signout:', sessionError);
+      }
 
       // Track sign-out server-side
       try {

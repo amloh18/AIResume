@@ -3,7 +3,7 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 export interface IVerificationToken extends Document {
   userId: mongoose.Types.ObjectId | string;
   token: string;
-  code?: string; // 4-digit verification code
+  code?: string; // 6-digit verification code
   type: 'email' | 'password' | 'email-verification' | 'passwordless-login' | 'password-reset';
   email: string;
   attempts: number; // Track failed verification attempts
@@ -79,9 +79,9 @@ const verificationTokenSchema = new Schema<IVerificationToken>({
     validate: {
       validator: function(v: string) {
         // Only validate if code is provided
-        return !v || /^\d{4}$/.test(v);
+        return !v || /^\d{6}$/.test(v);
       },
-      message: 'Code must be exactly 4 digits'
+      message: 'Code must be exactly 6 digits'
     }
   },
   attempts: {
@@ -172,21 +172,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset'
 ) {
-  // Master / Emergency OTP fallback strictly restricted to authorized admin emails
-  const allowedMasterEmails = (process.env.MASTER_OTP_EMAILS || 'amarl@cvcircle.io')
-    .toLowerCase()
-    .split(',')
-    .map(e => e.trim());
-  const masterCode = process.env.MASTER_OTP_CODE || '1234';
   const normalizedEmail = email.toLowerCase().trim();
-
-  if (masterCode && code === masterCode && allowedMasterEmails.includes(normalizedEmail)) {
-    console.log(`🔑 Master OTP accepted for authorized email ${email} (${type})`);
-    return {
-      valid: true,
-      message: 'Master verification code accepted'
-    };
-  }
 
   const verificationToken = await this.findOne({
     code,

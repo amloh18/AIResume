@@ -37,6 +37,8 @@ export interface JobDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isSaved: boolean;
+  isApplied?: boolean;
+  applicationMode?: string;
   saving: boolean;
   onSave: () => void;
   onApply: () => void;
@@ -76,6 +78,8 @@ export function JobDetailModal({
   open,
   onOpenChange,
   isSaved,
+  isApplied = false,
+  applicationMode = 'manual_review',
   saving,
   onSave,
   onApply,
@@ -527,15 +531,23 @@ export function JobDetailModal({
 
             {/* Footer */}
             <div className="p-6 pt-4 border-t border-gray-100 dark:border-white/10 gap-2 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 flex-shrink-0">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={onApply}
-                leftIcon={<ExternalLink className="w-4 h-4" />}
-                className="flex-1"
-              >
-                Apply Now
-              </Button>
+              {isApplied ? (
+                <div className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Applied
+                </div>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={onApply}
+                  disabled={applicationMode === 'find_only'}
+                  leftIcon={<ExternalLink className="w-4 h-4" />}
+                  className="flex-1"
+                >
+                  {applicationMode === 'automatic' ? 'Auto Apply' : 'Apply Now'}
+                </Button>
+              )}
               {isSaved ? (
                 <Button
                   variant="secondary"

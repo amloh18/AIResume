@@ -53,6 +53,7 @@ import { useUserData } from '@/lib/hooks/useUserData';
 import { getPlanLabel } from '@/lib/entitlements/catalog';
 import toast from 'react-hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
+import LoginSessions from '@/components/settings/LoginSessions';
 
 const fetchSettingsUserData = async (): Promise<User> => {
   const response = await fetch('/api/user');
@@ -1417,8 +1418,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   };
 
   const confirmEnableTwoFactor = async () => {
-    if (!twoFactorCode || twoFactorCode.length !== 4) {
-      setTwoFactorError('Please enter a valid 4-digit code');
+    if (!twoFactorCode || twoFactorCode.length !== 6) {
+      setTwoFactorError('Please enter a valid 6-digit code');
       return;
     }
     
@@ -1508,23 +1509,23 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                 <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-2">Verify Your Email</h4>
                 <p className="text-small text-gray-600 dark:text-gray-400 mb-4">
-                  We've sent a 4-digit code to {user.email}. Enter it below to enable two-factor authentication.
+                    We've sent a 6-digit code to {user.email}. Enter it below to enable two-factor authentication.
                 </p>
                 <div className="flex items-center gap-3">
                   <input
                     type="text"
-                    maxLength={4}
+                    maxLength={6}
                     value={twoFactorCode}
                     onChange={(e) => {
                       setTwoFactorCode(e.target.value.replace(/\D/g, ''));
                       setTwoFactorError(null);
                     }}
-                    placeholder="0000"
-                    className="w-24 px-3 py-2 text-center text-h3 tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                    placeholder="000000"
+                    className="w-32 px-3 py-2 text-center text-h3 tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                   />
                   <button
                     onClick={confirmEnableTwoFactor}
-                    disabled={twoFactorLoading || twoFactorCode.length !== 4}
+                    disabled={twoFactorLoading || twoFactorCode.length !== 6}
                     className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg font-medium text-small transition-colors disabled:opacity-50"
                   >
                     {twoFactorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
@@ -1735,6 +1736,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Login Sessions Section */}
+        <div className="space-y-6">
+          <LoginSessions />
         </div>
 
         {/* Notifications Section */}

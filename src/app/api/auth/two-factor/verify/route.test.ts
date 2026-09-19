@@ -13,23 +13,23 @@ const mockHandler = async (request: NextRequest) => {
       );
     }
 
-    // Validate code format (4 digits)
-    if (!/^\d{4}$/.test(code)) {
+    // Validate code format (6 digits)
+    if (!/^\d{6}$/.test(code)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid code format. Please enter a 4-digit code.' },
+        { success: false, error: 'Invalid code format. Please enter a 6-digit code.' },
         { status: 400 }
       );
     }
 
     // Simulate verification result
-    if (code === '0000') {
+    if (code === '000000') {
       return NextResponse.json(
         { success: false, error: 'Invalid or expired code. Please try again.' },
         { status: 401 }
       );
     }
 
-    if (code === '1111') {
+    if (code === '111111') {
       return NextResponse.json(
         { success: false, error: 'Too many failed attempts. Please sign in again.' },
         { status: 401 }
@@ -115,7 +115,7 @@ describe('2FA Verify Route', () => {
     it('should return 200 for successful verification', async () => {
       const request = new NextRequest('http://localhost/api/auth/two-factor/verify', {
         method: 'POST',
-        body: JSON.stringify({ sessionId: 'abc123', code: '1234' }),
+        body: JSON.stringify({ sessionId: 'abc123', code: '123456' }),
       });
 
       const response = await mockHandler(request);

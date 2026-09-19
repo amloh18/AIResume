@@ -47,6 +47,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [showSendCodeButton, setShowSendCodeButton] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
   const [showPasswordResetForm, setShowPasswordResetForm] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
@@ -143,7 +144,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         setEmail(formData.email);
         setVerificationType('passwordless-login');
         setMode('verify-code');
-        setSuccess('Please enter the 4-digit code sent to your email.');
+        setSuccess('Please enter the 6-digit code sent to your email.');
         return;
       }
 
@@ -255,35 +256,55 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     await handleSendCode(formData.email, 'passwordless-login');
   };
 
-  const handleSendCode = async (email: string, type: 'email-verification' | 'passwordless-login' | 'password-reset') => {
-    setIsLoading(true);
+  const handleSendCode = async (emailInput: string, type: 'email-verification' | 'passwordless-login' | 'password-reset') => {
     setError('');
     setSuccess('');
 
-    try {
-      const response = await fetch('/api/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, type }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setEmail(email);
-        setVerificationType(type);
-        setMode('verify-code');
-        setCooldownSeconds(60);
-        setRemainingAttempts(3);
-      } else {
-        setError(result.message || 'Failed to send verification code. Please try again.');
+    // Step 1: Validate email exists (fast check)
+    if (type === 'passwordless-login') {
+      try {
+        const checkRes = await fetch('/api/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailInput }),
+        });
+        const checkData = await checkRes.json();
+        if (!checkData.exists) {
+          setError('No account found with this email. Please sign up first.');
+          return;
+        }
+      } catch {
+        setError('Failed to verify email. Please try again.');
+        return;
       }
-    } catch (error: any) {
-      console.error('Send code error:', error);
-      setError('Failed to send verification code. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
+
+    // Step 2: Navigate to code screen immediately + send code in parallel
+    setEmail(emailInput);
+    setVerificationType(type);
+    setMode('verify-code');
+    setCooldownSeconds(60);
+    setRemainingAttempts(3);
+    setSendingCode(true);
+
+    // Send code in background (don't await before navigating)
+    fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailInput, type }),
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!result.success) {
+          setError(result.message || 'Failed to send verification code. Please try again.');
+        }
+      })
+      .catch(() => {
+        setError('Failed to send verification code. Please try again.');
+      })
+      .finally(() => {
+        setSendingCode(false);
+      });
   };
 
   const handleCodeVerification = async (code: string) => {
@@ -620,7 +641,29 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   };
 
   const handleResendCode = async () => {
-    await handleSendCode(email, verificationType);
+    setError('');
+    setSuccess('');
+    setSendingCode(true);
+
+    fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, type: verificationType }),
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!result.success) {
+          setError(result.message || 'Failed to resend code. Please try again.');
+        } else {
+          setCooldownSeconds(60);
+        }
+      })
+      .catch(() => {
+        setError('Failed to resend code. Please try again.');
+      })
+      .finally(() => {
+        setSendingCode(false);
+      });
   };
 
   const handlePasswordResetSubmit = async (formData: Record<string, string>) => {
@@ -974,9 +1017,9 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       case 'signup':
         return 'Sign up now to start managing your job applications and CVs.';
       case 'reset':
-        return 'Enter your email address and we\'ll send you a 4-digit code to reset your password.';
+        return 'Enter your email address and we\'ll send you a 6-digit code to reset your password.';
       case 'magic-link':
-        return 'Enter your email address and we\'ll send you a 4-digit code to sign in without a password.';
+        return 'Enter your email address and we\'ll send you a 6-digit code to sign in without a password.';
       default:
         return 'Welcome back! Please enter your credentials to access your account.';
     }
@@ -1177,6 +1220,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
           onCodeVerified={handleCodeVerification}
           onResendCode={handleResendCode}
           isLoading={isLoading}
+          sendingCode={sendingCode}
           error={error}
           success={success}
           remainingAttempts={remainingAttempts}

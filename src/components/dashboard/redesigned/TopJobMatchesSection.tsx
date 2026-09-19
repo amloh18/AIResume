@@ -137,6 +137,7 @@ export default function TopJobMatchesSection() {
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [applicationMode, setApplicationMode] = useState<string>('manual_review');
   const [entitlementNoticeData, setEntitlementNoticeData] = useState<EntitlementNoticeData | null>(null);
   const [entitlementNoticeOpen, setEntitlementNoticeOpen] = useState(false);
 
@@ -197,6 +198,39 @@ export default function TopJobMatchesSection() {
       }
     }
     loadSaved();
+    return () => controller.abort();
+  }, [userId]);
+
+  // Load applied job IDs and application mode from server
+  useEffect(() => {
+    if (!userId) return;
+    const controller = new AbortController();
+    async function loadApplied() {
+      try {
+        const res = await fetch('/api/jobs/applied-ids', { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.appliedIds) {
+            setAppliedIds(new Set(data.appliedIds));
+          }
+        }
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.warn('Failed to load applied IDs:', err);
+        }
+      }
+    }
+    async function loadMode() {
+      try {
+        const res = await fetch('/api/job-search-profile', { signal: controller.signal });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.applicationMode) setApplicationMode(data.applicationMode);
+        }
+      } catch {}
+    }
+    loadApplied();
+    loadMode();
     return () => controller.abort();
   }, [userId]);
 
@@ -804,15 +838,24 @@ export default function TopJobMatchesSection() {
                     <button
                       type="button"
                       onClick={(e) => handleApply(job, e)}
-                      disabled={isApplied}
+                      disabled={isApplied || applicationMode === 'find_only'}
                       className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs ${
                         isApplied
                           ? 'bg-emerald-600 text-white cursor-default'
-                          : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
+                          : applicationMode === 'find_only'
+                            ? 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                            : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
                       }`}
                     >
                       {isApplied ? (
                         <span>Applied</span>
+                      ) : applicationMode === 'automatic' ? (
+                        <>
+                          <Zap className="w-3 h-3" />
+                          <span>Auto Apply</span>
+                        </>
+                      ) : applicationMode === 'find_only' ? (
+                        <span>Find Only</span>
                       ) : (
                         <>
                           <Zap className="w-3 h-3" />
@@ -836,6 +879,8 @@ export default function TopJobMatchesSection() {
           open={modalOpen}
           onOpenChange={setModalOpen}
           isSaved={Boolean((selectedJob._id && savedIds.has(selectedJob._id)) || (selectedJob.id && savedIds.has(selectedJob.id)))}
+          isApplied={Boolean((selectedJob._id && appliedIds.has(selectedJob._id)) || (selectedJob.id && appliedIds.has(selectedJob.id)))}
+          applicationMode={applicationMode}
           saving={Boolean((selectedJob._id && savingId === selectedJob._id) || (selectedJob.id && savingId === selectedJob.id))}
           onSave={() => {
             const matchJob = jobs.find((j) => j._id === selectedJob._id || (selectedJob.id && j._id === selectedJob.id));

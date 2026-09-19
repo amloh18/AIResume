@@ -15,6 +15,7 @@ import { headers } from 'next/headers';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
 import { getAppleClientSecret } from './apple-provider-secret';
+import { SessionService } from '@/lib/services/session-service';
 
 /**
  * Unified Authentication Service
@@ -33,8 +34,10 @@ export class UnifiedAuthService {
    * Get NextAuth configuration
    */
   static getAuthConfig(): NextAuthOptions {
-    const NEXTAUTH_SECRET =
-      process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
+    const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+    if (!NEXTAUTH_SECRET) {
+      throw new Error('NEXTAUTH_SECRET environment variable is required');
+    }
     const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
     const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -42,7 +45,7 @@ export class UnifiedAuthService {
     return {
       session: {
         strategy: 'jwt',
-        maxAge: 30 * 24 * 60 * 60, // 30 days
+        maxAge: 7 * 24 * 60 * 60, // 7 days
         updateAge: 24 * 60 * 60, // 24 hours
       },
 
@@ -58,7 +61,7 @@ export class UnifiedAuthService {
             sameSite: 'lax',
             path: '/',
             secure: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
-            maxAge: 30 * 24 * 60 * 60, // 30 days
+            maxAge: 7 * 24 * 60 * 60, // 7 days
           },
         },
       },
@@ -508,6 +511,34 @@ export class UnifiedAuthService {
           // The JWT token is what gets stored in the cookie, so it must be tiny
 
           if (user) {
+            // Generate a unique jti for this session
+            token.jti = crypto.randomUUID();
+
+            // Record login session in MongoDB
+            try {
+              const headersList = await headers();
+              const ip = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || 'unknown';
+              const userAgent = headersList.get('user-agent') || '';
+
+              // Detect region from IP
+              let location: string | undefined;
+              try {
+                const regionInfo = await detectUserRegion(ip);
+                if (regionInfo) location = regionInfo.countryName;
+              } catch {}
+
+              await SessionService.createSession({
+                userId: String(user.id),
+                jti: token.jti,
+                ip,
+                userAgent,
+                provider: (user as any).authProvider || 'credentials',
+                location,
+              });
+            } catch (error) {
+              console.error('Failed to record login session:', error);
+            }
+
             // Only store essential identifiers - fetch full data in session callback
             // Ensure all values are strings and limited in length
             token.id = String(user.id || '').substring(0, 100);
@@ -586,6 +617,29 @@ export class UnifiedAuthService {
          async session({ session, token }) {
           // Check if this is an admin user
           const isAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+
+          // Validate session jti against LoginSession collection
+          // Old JWTs without jti get a grace period (they'll expire naturally in 7 days)
+          if (token.jti && typeof token.jti === 'string') {
+            try {
+              const isValid = await SessionService.validateSession(token.jti);
+              if (!isValid) {
+                // Session was revoked or expired — return empty session to force re-auth
+                console.warn(`⚠️ Session jti ${token.jti} is invalid/revoked — forcing re-auth`);
+                return { user: null, expires: '' } as any;
+              }
+              // Touch session to update lastActiveAt (throttled to once per 5 min)
+              const lastTouch = (token as any)._lastTouch as number | undefined;
+              const now = Date.now();
+              if (!lastTouch || now - lastTouch > 5 * 60 * 1000) {
+                (token as any)._lastTouch = now;
+                SessionService.touchSession(token.jti).catch(() => {});
+              }
+            } catch (error) {
+              // Don't fail the session if validation errors — but log it
+              console.error('Session validation error:', error);
+            }
+          }
 
           // Fetch fresh user data from cache or DB for all users with an ID
           if (token && session?.user && token.id) {
@@ -742,6 +796,14 @@ export class UnifiedAuthService {
           }
         },
         async signOut({ token }) {
+          // Revoke the login session
+          if (token?.jti && typeof token.jti === 'string') {
+            try {
+              await SessionService.revokeSession(token.jti);
+            } catch (error) {
+              console.error('Failed to revoke session on signOut:', error);
+            }
+          }
           // Invalidate user cache on sign out
           if (token?.id) {
             await invalidateCache(`user:${token.id}`);

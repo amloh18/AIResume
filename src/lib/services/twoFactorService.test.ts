@@ -7,9 +7,9 @@ import {
 
 describe('TwoFactorService', () => {
   describe('generateTwoFactorCode', () => {
-    it('should generate a 4-digit code', () => {
+    it('should generate a 6-digit code', () => {
       const code = generateTwoFactorCode();
-      expect(code).toMatch(/^\d{4}$/);
+      expect(code).toMatch(/^\d{6}$/);
     });
 
     it('should generate different codes on multiple calls', () => {
