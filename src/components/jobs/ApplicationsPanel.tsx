@@ -40,6 +40,7 @@ import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { isJourneyCv, isJourneyCoverLetter } from '@/lib/utils/document-kind';
 import {
   type TrackerCreatedStagePreview,
 } from '@/lib/utils/tracker-created-stage-modal';
@@ -117,6 +118,8 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
 
   const [jobs, setJobs] = useState<JobApplication[]>([]);
   const [journeys, setJourneys] = useState<CVJourney[]>([]);
+  const [cvs, setCvs] = useState<any[]>([]);
+  const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobApplication | null>(null);
   const [sidebarOpenContext, setSidebarOpenContext] = useState<TrackerSidebarOpenContext | null>(null);
@@ -137,6 +140,22 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const [showTrackerAccessPrompt, setShowTrackerAccessPrompt] = useState(false);
   const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
   const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
+  /**
+   * Job ids with a document-generation request in flight.
+   *
+   * This has to live here rather than in the card: `loadData` replaces the
+   * `jobs` array as soon as the request starts, so the cards remount and any
+   * card-local in-flight flag is wiped — which is exactly how the user was able
+   * to fire the same request repeatedly and stack up duplicate "application
+   * submitted" notifications.
+   */
+  const [creatingJourneys, setCreatingJourneys] = useState<Set<string>>(new Set());
+  /**
+   * Authoritative re-entry guard. React batches same-tick state updates, so two
+   * clicks in the same frame both read the pre-update `creatingJourneys`; a ref
+   * is the only thing that sees the first click synchronously.
+   */
+  const creatingJourneysRef = useRef<Set<string>>(new Set());
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
   const [trackerCreatedStagePreview, setTrackerCreatedStagePreview] = useState<TrackerCreatedStagePreview | null>(null);
@@ -169,9 +188,11 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const loadData = useCallback(async (silent = false, signal?: AbortSignal) => {
     try {
       if (!silent) setLoading(true);
-      const [jobsRes, journeysRes] = await Promise.all([
+      const [jobsRes, journeysRes, cvsRes, coverLettersRes] = await Promise.all([
         fetch('/api/jobs?limit=all', { cache: 'no-store', signal }),
         fetch('/api/journeys?limit=all', { cache: 'no-store', signal }),
+        fetch('/api/cvs?projection=summary', { cache: 'no-store', signal }),
+        fetch('/api/cover-letters', { cache: 'no-store', signal }),
       ]);
 
       if (jobsRes.ok) {
@@ -189,6 +210,16 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
         const journeysData = await journeysRes.json();
         const rawJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
         setJourneys(rawJourneys);
+      }
+
+      if (cvsRes.ok) {
+        const cvsData = await cvsRes.json();
+        setCvs(Array.isArray(cvsData) ? cvsData : cvsData?.data?.cvs || []);
+      }
+
+      if (coverLettersRes.ok) {
+        const clData = await coverLettersRes.json();
+        setCoverLetters(Array.isArray(clData) ? clData : clData?.data?.coverLetters || []);
       }
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
@@ -278,6 +309,18 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
       const key = jy.id || (jy as any)._id || jy.jobId;
       if (key) journeyAppIds.add(String(key));
     });
+    cvs.forEach((c: any) => {
+      if (isJourneyCv(c)) {
+        const key = c.journeyId || c.jobId || c.targetJobId || c.metadata?.jobId || c.id || c._id;
+        if (key) journeyAppIds.add(String(key));
+      }
+    });
+    coverLetters.forEach((cl: any) => {
+      if (isJourneyCoverLetter(cl)) {
+        const key = cl.journeyId || cl.jobId || cl.jobApplicationId || cl.metadata?.jobId || cl.id || cl._id;
+        if (key) journeyAppIds.add(String(key));
+      }
+    });
     const aiJourneyUsage = journeyAppIds.size;
 
     return {
@@ -294,7 +337,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
       appliedThisWeek,
       aiJourneyUsage,
     };
-  }, [jobs, journeys]);
+  }, [jobs, journeys, cvs, coverLetters]);
 
   const filteredJobs = useMemo(() => {
     let result = [...jobs];
@@ -512,6 +555,19 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     const jobId = typeof jobOrId === 'string' ? jobOrId : (jobOrId.id || jobOrId._id);
     if (!job) return;
 
+    // Re-entry guard. Without it, a double-click (or a click while the first
+    // request is still in flight) creates two journeys and two sets of
+    // documents for the same job.
+    if (creatingJourneysRef.current.has(jobId)) {
+      toast('Already in progress', {
+        id: `journey-${jobId}`,
+        description: 'Documents for this job are already being generated. Please wait.',
+      });
+      return;
+    }
+    creatingJourneysRef.current.add(jobId);
+    setCreatingJourneys(new Set(creatingJourneysRef.current));
+
     try {
       toast.loading('Creating journey & generating documents…', { id: `journey-${jobId}` });
 
@@ -542,12 +598,28 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     } catch (err: any) {
       console.error('Error creating journey:', err);
       toast.error(err.message || 'Failed to create journey', { id: `journey-${jobId}` });
+    } finally {
+      // Release the guard once the request settles. The card keeps showing
+      // progress from `journeys` state after this — the guard only exists to
+      // stop duplicate requests, not to be the progress source of truth.
+      creatingJourneysRef.current.delete(jobId);
+      setCreatingJourneys(new Set(creatingJourneysRef.current));
     }
   };
 
   const handleImproveATS = (jobId: string) => {
     router.push(`/editor?mode=improve&jobId=${jobId}`);
   };
+
+  /**
+   * Stable identity matters: `JobKanbanCard`'s poll effect lists this in its
+   * dependency array, so a fresh arrow on every render would tear down and
+   * restart the interval on each progress tick — the 3s poll would never fire
+   * and the 5-minute deadline would never be reached.
+   */
+  const handleRefresh = useCallback(() => {
+    loadData(true);
+  }, [loadData]);
 
   const handleDownload = (jobId: string) => {
     setDownloadJobId(jobId);
@@ -926,7 +998,8 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
             journeys={journeys}
             onJobStatusUpdate={handleJobStatusUpdate}
             onCreateJourney={handleCreateJourney}
-            onRefresh={() => loadData(true)}
+            onRefresh={handleRefresh}
+            pendingJourneyJobIds={creatingJourneys}
             onImproveATS={handleImproveATS}
             onDownload={handleDownload}
           />

@@ -242,6 +242,21 @@ export function buildCvTailoringPrompt(params: {
 **Mode**: ${mode === 'standout' ? 'STANDOUT' : 'NORMAL'}
 **Goal**: Return a tailored UnifiedCVDataStructure JSON that raises ATS keyword match while staying truthful to the Master CV.
 
+### OUTPUT CONTRACT (NON-NEGOTIABLE)
+- Return EVERY top-level key that the Master CV JSON below contains. Omitting a
+  key deletes that section from the candidate's CV.
+- Keep \`structure\`, \`content\`, \`templateId\` and \`snippetOverrides\` exactly as
+  given. They control the document's layout; changing or dropping them breaks
+  rendering.
+- Never return an entry with empty \`highlights\`, \`description\`, \`courses\` or
+  \`summary\` where the Master CV has content for it. An entry with no content is
+  a rendering bug, not a style choice.
+- Copy \`basics.name\`, \`basics.email\`, \`basics.phone\`, \`basics.url\`,
+  \`basics.location\` and \`basics.profiles\` through UNCHANGED. You may rewrite
+  \`basics.summary\` and \`basics.label\`.
+- If you cannot fit everything, shorten wording — never drop a section, an entry
+  or a bullet.
+
 ### ATS LOGIC (APPLY IN BOTH MODES)
 - Mirror the job description's exact tokens when the candidate already has that skill or a close synonym in the Master CV (e.g. "JS" → "JavaScript" if JD says JavaScript).
 - Put the target job title (or a truthful close variant) in the professional summary.
@@ -250,6 +265,9 @@ export function buildCvTailoringPrompt(params: {
 - Prefer quantified bullets: [verb] + [scope] + [result]. Improve weak bullets instead of deleting evidence.
 - Never omit a role that would create a 6+ month employment gap.
 - Preserve every number that already exists on the Master CV.
+- Education entries must keep their \`description\` AND their \`courses\` array.
+  Coursework is evidence of relevant training and is scored by parsers — keep
+  every course the Master CV lists.
 ${seedBlock}
 ${modeRules}
 
@@ -268,7 +286,13 @@ ${JSON.stringify(cvData)}
 Return ONLY valid JSON matching the input UnifiedCVDataStructure keys 1:1. No markdown.`;
 }
 
-const STANDARD_CV_RULES = `### NORMAL MODE RULES (CONSERVATIVE)
+const STANDARD_CV_RULES = `### NORMAL MODE RULES (CONSERVATIVE — KEEP EVERYTHING)
+- **Keep every section and every entry.** This is the defining rule of Normal
+  mode: the candidate wants their full history, rephrased for this job. Do not
+  remove a job, a degree, a project, a certificate or an award.
+- **Keep every bullet.** You may rewrite a bullet's wording to use the job
+  description's language, and you may reorder bullets so the most relevant comes
+  first — but the count must not drop and no achievement may disappear.
 - Stay faithful to the Master CV. Do not invent new jobs, degrees, or tools the candidate never used.
 - You MAY add a missing skill to the skills section only if it is already evidenced in a bullet, project, or tool list (including obvious synonyms).
 - Lightly rewrite bullets to include JD language the candidate already earned. Do not inflate seniority.
@@ -278,10 +302,22 @@ const STANDARD_CV_RULES = `### NORMAL MODE RULES (CONSERVATIVE)
 
 const STAND_OUT_CV_RULES = `### STANDOUT RULES (POSITION AS TOP CANDIDATE)
 - Still do not fabricate employers, dates, degrees, or metrics.
+- **Prune irrelevant experience.** You MAY remove an entire entry from \`work\`,
+  \`volunteer\`, \`projects\`, \`awards\`, \`publications\` or \`interests\` when it does
+  not support this role — that is the point of Standout mode. Prefer removing
+  the oldest and least relevant entries, and keep the timeline continuous.
+- **Never prune a credential.** \`education\`, \`certificates\` and \`languages\`
+  must come through complete. A missing degree reads as concealment and breaks
+  ATS screening.
+- **Never open an employment gap.** If removing a role would leave more than six
+  months unexplained between two retained roles, keep it.
+- **Aggressively retarget the entries you keep.** Rewrite bullets around the JD's
+  problems and vocabulary, lead with the strongest evidence, and reorder for
+  impact. Cutting a weak bullet inside a kept role is allowed; leaving a kept
+  role with no bullets is not.
 - Aggressively reframe transferable experience using the JD's own nouns and verbs.
 - You MAY retitle roles toward the JD title when the work is genuinely the same function (e.g. "Support Lead" → "Customer Success Manager") — keep the original employer and dates.
 - Fill skill gaps with adjacent, evidenced capabilities and functional synonyms. You may surface implied tools only when the Master CV clearly describes that work (e.g. SQL from "wrote reporting queries").
-- Lead with the strongest, most JD-relevant bullets; reorder highlights within a role for impact.
 - Write the summary as a top-1% fit: years + target title + 2 JD problem/proof points.
 - If underskilled vs JD seniority, emphasise ownership, scale, and learning velocity without claiming a title the person never held at that company beyond the retitle rule above.`;
 
@@ -303,9 +339,44 @@ export function buildCoverLetterTailoringPrompt(params: {
   return `Write a cover letter for ${jobTitle} at ${company}.
 ${modeLine}
 
-Keep the body under 220 words. End with a short sign-off and the candidate's name if present in the experience block.
+### HARD RULES
+- Never invent an employer, title, date, metric, or skill. Everything must be
+  traceable to the candidate experience block below. If a claim has no support
+  there, cut the claim.
+- Every paragraph must cite at least one concrete, specific detail from the
+  experience block — a named project, a tool, a system, or a number. Generic
+  sentences carry no weight and are the main reason cover letters get skipped.
+- Plain prose inside each section. No bullet points, no markdown.
 
-Priority ATS keywords to weave in naturally: ${keywordBlock}
+### SECTION-BY-SECTION BRIEF
+The JSON schema below splits the letter into five sections. Fill them like this:
+
+1. **introduction** — the hook. Name a specific problem, priority, or direction
+   you can see in the job description or the company's product, and state the
+   candidate's relationship to it. Do NOT open with "I am writing to apply",
+   "I am excited to", or a restatement of the job title. 2–3 sentences.
+2. **experience_bridge_1** — the single most relevant achievement from the
+   experience block, with its number and scope. Explain the mechanism, not just
+   the outcome. Set \`jd_context\` to the exact requirement from the job
+   description this answers. Title it after the capability, not "Key Skill 1".
+3. **experience_bridge_2** — a second capability the role asks for, tied to
+   something the candidate actually did. Set \`jd_context\` to that requirement.
+   Address the most demanding requirement in the JD directly and honestly.
+4. **motivation** — why this role at this company specifically, grounded in
+   something concrete about them. No generic culture praise.
+5. **closing** — one forward-looking sentence about what the candidate would do
+   in the role, then a short sign-off ("Sincerely," + the candidate's name if
+   present in the experience block).
+
+### STYLE
+- Total body 200–320 words across the five sections. No section longer than 5
+  sentences; keep each to one idea.
+- Use the job description's own vocabulary where it matches real experience.
+- Active voice, first person. Avoid clichés: "team player", "passionate",
+  "hit the ground running", "think outside the box", "perfect fit".
+
+Priority ATS keywords to weave in naturally (do not list them — use them in
+sentences): ${keywordBlock}
 
 Candidate experience:
 ${experience}

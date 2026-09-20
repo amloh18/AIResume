@@ -467,7 +467,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
   // 2. Full Step Before UI: Dedicated Application Email Setup (When not linked)
   if (!assignedEmail && !adminBypass) {
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-[#121811] rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm overflow-hidden relative">
+      <div className="flex flex-col h-auto bg-white dark:bg-[#121811] rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm overflow-hidden relative">
         {/* Subtle animated accent shimmer line across the top */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent animate-pulse pointer-events-none" />
 

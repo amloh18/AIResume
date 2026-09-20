@@ -4,27 +4,21 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { JobsMetrics, JobsFilter } from '@/types/automation-schema';
 import {
   Search,
-  Sparkles,
   Bookmark,
   Clock,
   Globe,
-  X,
   Zap,
   Check,
   ChevronDown,
   ChevronRight,
   Shield,
   Briefcase,
-  MapPin,
-  DollarSign,
-  Settings,
   Target,
+  Settings,
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
-import CvTailoringModeToggle from '@/components/jobs/CvTailoringModeToggle';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
-import Link from 'next/link';
 import { Pill, SearchInput } from '@/components/ui';
 
 interface FiltersBarProps {
@@ -154,90 +148,175 @@ export default function FiltersBar({
     ? 'all'
     : 'recommended';
 
-  // 2. Real Auto-Apply Quota & State Logic
+  /**
+   * Entering the Saved view clears the discover filters first.
+   *
+   * `filters` (including `searchText`) is shared across the three views, and
+   * the fetch applies the search term even when `savedOnly` is on. So a user
+   * who searched, saved a job, then clicked "Saved" saw a filtered — often
+   * empty — Saved list and concluded their save had failed.
+   *
+   * `onReset` replaces the whole filters object while `onChange` merges into
+   * it; both are queued in this one handler, so React applies the replacement
+   * first and the merge second. The merge therefore wins on the view keys and
+   * nothing else survives from the previous view.
+   */
+  const handleSelectSavedView = () => {
+    onReset();
+    onChange({
+      savedOnly: true,
+      unpersonalized: false,
+      sortBy: 'matchScore',
+      sortOrder: 'desc',
+      matchScoreMin: undefined,
+    });
+  };
+
+  // Auto-Apply quota computation
   const autoApplyQuota = useMemo(() => {
     const isStarter = entitlements?.plan === 'starter' || !isPaidUser;
     if (isStarter) {
       const limit = entitlements?.application?.limit ?? 10;
       const remaining = entitlements?.application?.remaining ?? 10;
       const used = Math.max(0, limit - remaining);
-      return {
-        used,
-        limit,
-        enabled: autoApplyEnabled,
-        isStarter: true,
-        label: 'Monthly',
-        isLimitReached: remaining <= 0,
-      };
+      return { used, limit, enabled: autoApplyEnabled };
     }
-
-    // Focused / Pro plan
     const limit = entitlements?.autoApply?.limit ?? 50;
     const remaining = entitlements?.autoApply?.remaining ?? 50;
     const used = Math.max(0, limit - remaining);
-    return {
-      used,
-      limit,
-      enabled: autoApplyEnabled,
-      isStarter: false,
-      label: 'Daily',
-      isLimitReached: remaining <= 0,
-    };
+    return { used, limit, enabled: autoApplyEnabled };
   }, [entitlements, isPaidUser, autoApplyEnabled]);
 
   const handleAutoApplyClick = () => {
-    if (autoApplyQuota.isLimitReached) {
-      onOpenSettings?.();
-    } else {
-      onToggleAutoApply?.();
-    }
+    onToggleAutoApply?.();
   };
 
   return (
     <div ref={dropdownRef} className="w-full">
       {/* Integrated Command Surface Container — clean card background matching dashboard */}
       <div
-        className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-4 sm:p-5 shadow-xs space-y-3.5 transition-colors"
+        className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-3.5 sm:p-5 shadow-xs space-y-3 transition-colors overflow-hidden"
       >
-        {/* Frosted layer.
-            The controls below are translucent (the search field is
-            `bg-gray-50/80`), so the orange zigzag pattern showed through them
-            and made the text noisy. `backdrop-filter` blurs everything painted
-            behind the element — including this container's own gradient — so an
-            absolutely-positioned child is what softens the pattern.
-            `pointer-events-none` keeps it from swallowing clicks. */}
+        {/* Frosted layer — softens the gradient behind translucent controls. */}
         <div
           aria-hidden="true"
           className="absolute inset-0 z-0 rounded-2xl sm:rounded-3xl backdrop-blur-[3px] pointer-events-none"
         />
 
-        {/* ========================================================================= */}
-        {/* ROW 1: Search Bar & Country Button Inline */}
-        {/* ========================================================================= */}
-        <div className="relative z-10 flex items-center gap-2 sm:gap-3 w-full">
-          <div className="flex-1 min-w-0">
+        {/* ================================================================= */}
+        {/* HERO ROW: Title + Auto-Apply Pill                                 */}
+        {/* ================================================================= */}
+        <div className="relative z-10 flex items-start justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-white leading-tight">
+              Find your next{' '}
+              <span className="text-[#36D39B]">opportunity</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-300 mt-0.5">
+              Search, filter and let AI find the best jobs for you.
+            </p>
+          </div>
+
+          {/* Auto-Apply Pill */}
+          <div
+            className={`shrink-0 h-9 sm:h-10 px-1 rounded-xl border flex items-center gap-1 text-[11px] sm:text-xs font-bold transition-all shadow-2xs ${
+              autoApplyQuota.enabled
+                ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600/50'
+                : 'bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-300 border-[var(--border-primary)]'
+            }`}
+          >
+            <button
+              type="button"
+              onClick={handleAutoApplyClick}
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 hover:opacity-80 transition-opacity cursor-pointer"
+              title={
+                autoApplyQuota.enabled
+                  ? `Auto-Apply Active (${autoApplyQuota.used}/${autoApplyQuota.limit}). Click to pause.`
+                  : `Auto-Apply Paused (${autoApplyQuota.used}/${autoApplyQuota.limit}). Click to activate.`
+              }
+            >
+              <Zap
+                className={`w-4 h-4 transition-transform ${
+                  autoApplyQuota.enabled
+                    ? 'fill-emerald-600 text-emerald-600 dark:fill-lime-400 dark:text-lime-400'
+                    : 'text-gray-400 dark:text-gray-500 stroke-[1.75]'
+                }`}
+              />
+              <span className="font-extrabold tracking-tight">Auto-Apply</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[11px] font-black tracking-tight ${
+                  autoApplyQuota.enabled
+                    ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
+                    : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {autoApplyQuota.used}/{autoApplyQuota.limit}
+              </span>
+            </button>
+
+            <span className="h-4 w-px bg-gray-200 dark:bg-white/10" />
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSettings?.();
+              }}
+              className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
+              title="Job Search & Auto-Apply Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* ================================================================= */}
+        {/* ROW 1: Search Bar, Country Selector & Search Button */}
+        {/* Mobile: search full-width, then country + button on next line    */}
+        {/* Desktop: all three inline in one row                              */}
+        {/*                                                                   */}
+        {/* z-30 is load-bearing, not decoration. CountrySelector renders an  */}
+        {/* absolutely-positioned panel, but `absolute` + `z-[100]` can only  */}
+        {/* win INSIDE the stacking context of this row. Because each sibling */}
+        {/* row sets its own z-index, the rows must therefore be ordered      */}
+        {/* explicitly: hero z-10 < filter chips z-20 < this row z-30 — or the */}
+        {/* country panel paints under the filter chips (the reported bug).   */}
+        {/* ================================================================= */}
+        <div className="relative z-30 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3 w-full">
+          <div className="w-full sm:flex-1 sm:min-w-0">
             <SearchInput
               value={filters.searchText || ''}
               onChange={(e) => onChange({ searchText: e.target.value || undefined })}
               onClear={() => onChange({ searchText: undefined })}
-              placeholder="Search jobs, companies, skills..."
+              placeholder="Search jobs, companies, skills, or keywords..."
               size="md"
             />
           </div>
-          <CountrySelector
-            value={countries}
-            onChange={onCountriesChange}
-            align="right"
-            variant="default"
-          />
+          <div className="flex items-center gap-2 sm:shrink-0">
+            <CountrySelector
+              value={countries}
+              onChange={onCountriesChange}
+              align="right"
+              variant="default"
+            />
+            <button
+              type="submit"
+              className="h-10 px-5 rounded-xl bg-[var(--accent-primary)] text-white dark:text-black text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          </div>
         </div>
 
-        {/* ========================================================================= */}
-        {/* ROW 2: Navigation Switcher & Action Controls (Auto-Apply, Location, Mode) */}
-        {/* ========================================================================= */}
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Left: Result Segment Navigation Switcher (icon-only on the smallest screens) */}
-          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 self-start lg:self-auto h-10 shadow-2xs">
+        {/* ================================================================= */}
+        {/* ROW 2: Filter Chips — collapsed rows on mobile, single row desktop */}
+        {/* z-20: kept below ROW 1 (z-30) so the country panel overlays these  */}
+        {/* chips; kept above the hero (z-10) to keep the order monotonic.     */}
+        {/* ================================================================= */}
+        <div className="relative z-20 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 text-xs">
+          {/* Row 2a: Segment Navigation Switcher — full width on mobile */}
+          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 h-9 shadow-2xs w-full sm:w-auto">
             <button
               type="button"
               onClick={() =>
@@ -249,7 +328,7 @@ export default function FiltersBar({
                   unpersonalized: false,
                 })
               }
-              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'recommended'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
@@ -270,7 +349,7 @@ export default function FiltersBar({
                   unpersonalized: true,
                 })
               }
-              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'all'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
@@ -282,8 +361,8 @@ export default function FiltersBar({
 
             <button
               type="button"
-              onClick={() => onChange({ savedOnly: true, unpersonalized: false })}
-              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 ${
+              onClick={handleSelectSavedView}
+              className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'saved'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
@@ -299,74 +378,7 @@ export default function FiltersBar({
             </button>
           </div>
 
-          {/* Right: Auto-Apply Pill with Settings Icon + Location Selector + Auto CV Mode */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
-            {/* Auto-Apply Button with Settings Icon */}
-            <div
-              className={`h-10 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-2xs ${
-                autoApplyQuota.enabled
-                  ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600/50'
-                  : 'bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-300 border-[var(--border-primary)]'
-              }`}
-            >
-              {/* Toggle action */}
-              <button
-                type="button"
-                onClick={handleAutoApplyClick}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                title={
-                  autoApplyQuota.enabled
-                    ? `Auto-Apply Active (${autoApplyQuota.used}/${autoApplyQuota.limit} used ${autoApplyQuota.label.toLowerCase()}). Click to pause.`
-                    : `Auto-Apply Paused (${autoApplyQuota.used}/${autoApplyQuota.limit} used ${autoApplyQuota.label.toLowerCase()}). Click to activate.`
-                }
-              >
-                <Zap
-                  className={`w-4 h-4 transition-transform ${
-                    autoApplyQuota.enabled
-                      ? 'fill-emerald-600 text-emerald-600 dark:fill-lime-400 dark:text-lime-400'
-                      : 'text-gray-400 dark:text-gray-500 stroke-[1.75]'
-                  }`}
-                />
-                <span className="font-extrabold tracking-tight">Auto-Apply</span>
-                <span
-                  className={`px-1.5 py-0.5 rounded-md text-[11px] font-black tracking-tight ${
-                    autoApplyQuota.enabled
-                      ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
-                      : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {autoApplyQuota.used}/{autoApplyQuota.limit}
-                </span>
-              </button>
-
-              {/* Divider */}
-              <span className="h-4 w-px bg-gray-200 dark:bg-white/10" />
-
-              {/* Settings icon */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenSettings?.();
-                }}
-                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
-                title="Job Search & Auto-Apply Preferences"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* CV Tailoring Mode */}
-            {onCvTailoringModeChange && (
-              <CvTailoringModeToggle value={cvTailoringMode} onChange={onCvTailoringModeChange} />
-            )}
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* ROW 3: Unified Single-Row Quick Filter Bar */}
-        {/* ========================================================================= */}
-        <div className="relative z-10 pt-0.5 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+          {/* Row 2b: Quick filter chips — wrap on mobile, inline on desktop */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {/* Workplace Type Pills */}
             <div className="flex items-center gap-1 shrink-0">
@@ -388,16 +400,6 @@ export default function FiltersBar({
                 );
               })}
             </div>
-
-            {/* Auto-Apply Supported Chip */}
-            <Pill
-              selected={Boolean(filters.easyApplyOnly)}
-              onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
-              leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
-              title="Only show jobs where Auto-Apply is supported"
-            >
-              <span className="hidden sm:inline">Auto-Apply supported</span>
-            </Pill>
 
             {/* Visa Sponsorship Chip */}
             <Pill
@@ -524,6 +526,16 @@ export default function FiltersBar({
                 </div>
               )}
             </div>
+
+            {/* Auto-Apply Supported Chip */}
+            <Pill
+              selected={Boolean(filters.easyApplyOnly)}
+              onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
+              leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
+              title="Only show jobs where Auto-Apply is supported"
+            >
+              <span className="hidden sm:inline">Auto-Apply supported</span>
+            </Pill>
           </div>
 
           {/* Reset Filters Action */}

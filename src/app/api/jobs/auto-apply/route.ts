@@ -178,18 +178,72 @@ export async function POST(request: NextRequest) {
 
     // ── Enqueue into ApplicationQueue ────────────────────────────────
     const ApplicationQueue = (await import('@/models/ApplicationQueue')).default;
-    const mongoose = await import('mongoose');
 
-    const idempotencyKey = `${auth.userId}_${jobApp._id}_${Date.now()}`;
-    const queueItem = await ApplicationQueue.create({
+    /**
+     * Deduplicate before enqueueing.
+     *
+     * The previous key was `${userId}_${jobApp._id}_${Date.now()}`. Because
+     * `Date.now()` makes every call unique, the unique index on
+     * `idempotencyKey` never deduped anything, so each repeated click enqueued
+     * another row and the user saw the "application submitted" notification
+     * several times for one job.
+     *
+     * Two layers now: an explicit active-queue lookup (the common case — a
+     * double-click), and a coarse time-bucketed key so two requests that race
+     * past each other still collide on the unique index. The bucket is
+     * deliberately wide enough to absorb a double-submit but short enough that
+     * a genuine re-apply later is still allowed.
+     */
+    const activeQueueItem = await ApplicationQueue.findOne({
       applicationId: jobApp._id,
-      userId: auth.userId,
-      jobId: jobApp.jobId || jobApp._id.toString(),
-      status: 'queued',
-      priority: decision.mode === 'auto' ? 90 : decision.mode === 'review' ? 60 : 30,
-      scheduledAt: new Date(),
-      idempotencyKey,
-    });
+      status: { $in: ['queued', 'processing'] },
+    }).select('_id status');
+
+    if (activeQueueItem) {
+      return NextResponse.json({
+        success: true,
+        status: 'already_queued',
+        applicationId: jobApp._id.toString(),
+        queueItemId: activeQueueItem._id.toString(),
+        mode: decision.mode,
+        matchScore: decision.matchScore,
+        message: 'This application is already queued for processing',
+        warnings: decision.warnings,
+      }, { status: 200 });
+    }
+
+    const submitBucket = Math.floor(Date.now() / (60 * 1000));
+    const idempotencyKey = `${auth.userId}_${jobApp._id}_${submitBucket}`;
+
+    let queueItem;
+    try {
+      queueItem = await ApplicationQueue.create({
+        applicationId: jobApp._id,
+        userId: auth.userId,
+        jobId: jobApp.jobId || jobApp._id.toString(),
+        status: 'queued',
+        priority: decision.mode === 'auto' ? 90 : decision.mode === 'review' ? 60 : 30,
+        scheduledAt: new Date(),
+        idempotencyKey,
+      });
+    } catch (queueErr: any) {
+      // Duplicate key ⇒ a concurrent request won the race and already
+      // enqueued this application. That is the desired outcome, not an error.
+      if (queueErr?.code === 11000) {
+        const existing = await ApplicationQueue.findOne({ idempotencyKey }).select('_id');
+        return NextResponse.json({
+          success: true,
+          status: 'already_queued',
+          applicationId: jobApp._id.toString(),
+          queueItemId: existing?._id?.toString(),
+          mode: decision.mode,
+          matchScore: decision.matchScore,
+          message: 'This application is already queued for processing',
+          warnings: decision.warnings,
+        }, { status: 200 });
+      }
+      throw queueErr;
+    }
 
     return NextResponse.json({
       success: true,

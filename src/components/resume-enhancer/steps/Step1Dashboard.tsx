@@ -13,6 +13,11 @@ import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
+import {
+  isJourneyCv,
+  isUserOwnedCv,
+  isUserOwnedCoverLetter,
+} from '@/lib/utils/document-kind';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import CVPreviewDocument from '@/components/cv-preview/CVPreviewDocument';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
@@ -867,38 +872,58 @@ export default function Step1Dashboard({
     onDocumentTabChange?.(tab);
   }, [onDocumentTabChange]);
 
+  /**
+   * The documents page lists the documents the user owns.
+   *
+   * Journey documents are generated per job application — one CV and one cover
+   * letter each — and they are already surfaced from the application they
+   * belong to. Listing them here meant every generated application added rows
+   * that read as duplicates of the user's real CVs, and pushed the documents
+   * they actually maintain off the first screen. They remain reachable through
+   * the explicit "Tailored to Jobs" filter and from the job tracker.
+   */
+  const userOwnedCVs = React.useMemo(
+    () => existingCVs.filter(isUserOwnedCv),
+    [existingCVs]
+  );
+
+  const userOwnedCoverLetters = React.useMemo(
+    () => existingCoverLetters.filter(isUserOwnedCoverLetter),
+    [existingCoverLetters]
+  );
+
   const kpiStats = React.useMemo(() => {
     const now = Date.now();
     const weekMs = 7 * 24 * 60 * 60 * 1000;
 
-    const cvsThisWeek = existingCVs.filter((c) => {
+    const cvsThisWeek = userOwnedCVs.filter((c) => {
       const t = new Date(c.createdAt || c.updatedAt).getTime();
       return !isNaN(t) && now - t < weekMs;
     }).length;
 
-    const coverLettersThisWeek = existingCoverLetters.filter((cl) => {
+    const coverLettersThisWeek = userOwnedCoverLetters.filter((cl) => {
       const t = new Date(cl.createdAt || cl.updatedAt).getTime();
       return !isNaN(t) && now - t < weekMs;
     }).length;
 
-    const scoredCVs = existingCVs.filter(cv => getScoreForCV(cv) !== undefined);
+    const scoredCVs = userOwnedCVs.filter(cv => getScoreForCV(cv) !== undefined);
     const avgAts = scoredCVs.length > 0 
       ? Math.round(scoredCVs.reduce((sum, cv) => sum + (getScoreForCV(cv) ?? 0), 0) / scoredCVs.length) 
       : 0;
     const strongAts = scoredCVs.filter(cv => (getScoreForCV(cv) ?? 0) >= 70).length;
-    const journeyCount = existingCVs.filter(c => c.cvType === 'journey').length;
+    const journeyCount = existingCVs.filter(isJourneyCv).length;
 
     return {
-      cvCount: existingCVs.length,
+      cvCount: userOwnedCVs.length,
       cvsThisWeek,
-      clCount: existingCoverLetters.length,
+      clCount: userOwnedCoverLetters.length,
       coverLettersThisWeek,
       avgAts,
       strongAts,
       scoredCount: scoredCVs.length,
       journeyCount,
     };
-  }, [existingCVs, existingCoverLetters, getScoreForCV]);
+  }, [userOwnedCVs, userOwnedCoverLetters, existingCVs, getScoreForCV]);
 
   const [filterType, setFilterType] = useState<'all' | 'cv' | 'cover-letter' | 'master' | 'standalone' | 'journey' | 'interview-ready' | 'archived'>('all');
 
@@ -1258,6 +1283,13 @@ export default function Step1Dashboard({
       const isArchived = cv.status === 'archived';
       if (filterType === 'archived') return isArchived;
       if (isArchived) return false;
+      /*
+        The "Tailored to Jobs" filter is the one place journey CVs are listed —
+        it is an explicit request for them. Every other view shows only the CVs
+        the user owns, so generated per-job documents do not crowd the library.
+      */
+      if (filterType === 'journey') return isJourneyCv(cv);
+      if (isJourneyCv(cv)) return false;
       if (filterType === 'all' || filterType === 'cv') return true;
       if (filterType === 'interview-ready') {
         const score = getScoreForCV(cv);
@@ -1274,7 +1306,9 @@ export default function Step1Dashboard({
     }
 
     const map = new Map<string, any[]>();
-    existingCoverLetters.forEach((cl: any) => {
+    // `userOwnedCoverLetters` already excludes job-specific letters, so a
+    // journey cover letter cannot reappear here via its cvId link.
+    userOwnedCoverLetters.forEach((cl: any) => {
       const rawCvId = cl?.cvId;
       const cvId = rawCvId ? String(rawCvId) : null;
       if (cvId && cvId !== 'undefined' && cvId !== 'null') {
@@ -1291,17 +1325,22 @@ export default function Step1Dashboard({
       }
     });
     return map;
-  }, [existingCoverLetters, existingCVs, filterType]);
+  }, [userOwnedCoverLetters, existingCVs, filterType]);
 
   const orphanedCoverLetters = React.useMemo(() => {
-    // Hide cover letters when filtering specifically for CVs or primary CVs
-    if (filterType === 'cv' || filterType === 'master' || filterType === 'standalone' || filterType === 'interview-ready' || filterType === 'archived') {
+    // Hide cover letters when filtering specifically for CVs or primary CVs.
+    // `journey` is a CV-only view too, so it gets the same treatment.
+    if (filterType === 'cv' || filterType === 'master' || filterType === 'standalone' || filterType === 'interview-ready' || filterType === 'archived' || filterType === 'journey') {
       return [];
     }
 
-    // Show ALL cover letters when filtered by 'cover-letter'
+    /*
+      "Cover Letters" lists the user's own letters. Job-specific letters are
+      excluded here too — they are reachable from the application that generated
+      them, and including them made the list read as duplicates.
+    */
     if (filterType === 'cover-letter') {
-      return existingCoverLetters;
+      return userOwnedCoverLetters;
     }
 
     const pairedCvIds = new Set<string>();
@@ -1309,7 +1348,7 @@ export default function Step1Dashboard({
       const cvId = String(cv.id || cv._id);
       if (coverLetterMap.has(cvId)) pairedCvIds.add(cvId);
     });
-    return existingCoverLetters.filter((cl: any) => {
+    return userOwnedCoverLetters.filter((cl: any) => {
       const rawCvId = cl?.cvId;
       const cvId = rawCvId ? String(rawCvId) : null;
       
@@ -1325,7 +1364,7 @@ export default function Step1Dashboard({
       }
       return true;
     });
-  }, [filterType, filteredCVs, existingCoverLetters, coverLetterMap]);
+  }, [filterType, filteredCVs, userOwnedCoverLetters, coverLetterMap]);
 
   // Handle editing an existing CV - navigate to editor with full fetch
   const handleEditExistingCV = (cv: ExistingCV) => {

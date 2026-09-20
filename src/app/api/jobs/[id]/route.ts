@@ -913,7 +913,14 @@ export async function PUT(
     }
 
     // Bidirectional sync: If job status changed to 'applied', mark associated journeys as completed
-    if (body.status === 'applied' && job.status === 'applied') {
+    //
+    // The guard must be on `previousStatus`, not on `job.status`. By this point
+    // `job` is the *updated* document, so `job.status === 'applied'` is true on
+    // every repeat PUT — a client that sent `status: 'applied'` three times
+    // produced three "Application Submitted!" notifications for one job. The
+    // sibling checks below (interview/offer/rejected, accepted) already compare
+    // against `previousStatus`; this one did not.
+    if (body.status === 'applied' && previousStatus !== 'applied') {
       try {
         const { ApplicationJourney } = await import('@/models');
         const now = new Date();

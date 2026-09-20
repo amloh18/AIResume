@@ -119,6 +119,12 @@ interface JobsKanbanViewProps {
   onRefresh?: () => void;
   onImproveATS?: (job: JobApplication) => void;
   onDownload?: (job: JobApplication) => void;
+  /**
+   * Job ids whose document generation has been requested but not yet reflected
+   * in the `journeys` payload. Owned by the parent so the block survives the
+   * card remounting mid-request.
+   */
+  pendingJourneyJobIds?: Set<string>;
 }
 
 const isJobExpired = (job: JobApplication) => {
@@ -131,6 +137,22 @@ const isJobExpired = (job: JobApplication) => {
     (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
   return diffDays < 0;
+};
+
+/**
+ * Job ids arrive as `id` from the tracker API and `_id` from others, and the
+ * parent cannot know which the caller used. Checking both is cheap and avoids
+ * the failure mode where the block silently never applies.
+ */
+const isPendingJourney = (
+  job: JobApplication,
+  pending?: Set<string>,
+): boolean => {
+  if (!pending || pending.size === 0) return false;
+  return (
+    (Boolean(job.id) && pending.has(job.id)) ||
+    (Boolean(job._id) && pending.has(job._id))
+  );
 };
 
 const ExpiredJobsAccordion: React.FC<{
@@ -149,6 +171,7 @@ const ExpiredJobsAccordion: React.FC<{
   onDownload?: (job: JobApplication) => void;
   onJobStatusUpdate?: (jobId: string, newStatus: string) => Promise<void>;
   onRefresh?: () => void;
+  pendingJourneyJobIds?: Set<string>;
 }> = ({
   jobs,
   stage,
@@ -165,6 +188,7 @@ const ExpiredJobsAccordion: React.FC<{
   onDownload,
   onJobStatusUpdate,
   onRefresh,
+  pendingJourneyJobIds,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -201,6 +225,7 @@ const ExpiredJobsAccordion: React.FC<{
                 canDrag={canDrag}
                 isExpired={true}
                 colorIndex={index}
+                isJourneyPending={isPendingJourney(job, pendingJourneyJobIds)}
                 onClick={onJobClick as any}
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
@@ -254,6 +279,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onRefresh,
   onImproveATS,
   onDownload,
+  pendingJourneyJobIds,
 }) => {
   // Saved color (used as default for all stages)
   const savedColor =
@@ -591,6 +617,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                       isDragging={isDragging}
                                       canDrag={canDrag}
                                       colorIndex={index}
+                                      isJourneyPending={isPendingJourney(job, pendingJourneyJobIds)}
                                       onClick={onJobClick}
                                       onDragStart={onDragStart}
                                       onDragEnd={onDragEnd}
@@ -627,6 +654,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                   onDownload={onDownload as any}
                                   onJobStatusUpdate={onJobStatusUpdate as any}
                                   onRefresh={onRefresh}
+                                  pendingJourneyJobIds={pendingJourneyJobIds}
                                 />
                               </>
                             );

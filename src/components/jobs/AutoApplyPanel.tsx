@@ -183,6 +183,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
           const loadedPrefs = {
             ...preferences,
             ...profileFields,
+            enabled: profileFields.autoApplyEnabled ?? profileFields.enabled ?? false,
             locations: normalizedLocations,
             workplaceTypes: effectiveWorkplaceTypes,
             // Keep the canonical `remoteOnly` flag coherent with the workplace
@@ -257,6 +258,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
       // they belong in `workplaceTypes` only.
       const payload = {
         ...preferences,
+        autoApplyEnabled: preferences.enabled,
         locations: preferences.locations.filter((l) => !workplaceLabelToId(l.trim())),
       };
       const res = await fetch('/api/job-search-profile', {

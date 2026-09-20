@@ -517,6 +517,24 @@ export default function TopJobMatchesSection() {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
         }
 
+        /*
+          Already queued — the endpoint deduped instead of enqueueing again.
+          The generic branch below would claim "Documents ready", which is
+          false; report the real state once.
+        */
+        if (resData.status === 'already_queued') {
+          applyProgress.completeApply(
+            targetJob.title,
+            targetJob.company,
+            true,
+            'This application is already queued for processing.',
+            jobId,
+            'queued'
+          );
+          updateProgress(appId, 100, `Already in progress — ${targetJob.title} is queued`, 'progress');
+          return;
+        }
+
         // Show queued or applied feedback based on actual status
         if (resData.status === 'queued') {
           applyProgress.updateToQueued(targetJob.company, resData.mode || 'auto', jobId);

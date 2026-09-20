@@ -1273,6 +1273,17 @@ ${userName}`
         throw new Error(applyData?.error?.message || 'Auto-apply failed');
       }
 
+      /*
+        The endpoint dedupes rather than enqueueing a second row. Nothing was
+        submitted, so do NOT force this record to 'applied' — that would mark a
+        job as applied when it is merely sitting in the queue.
+      */
+      if (applyData?.status === 'already_queued') {
+        toast.success('This application is already queued for processing.');
+        onRefresh?.();
+        return;
+      }
+
       // Update the existing record's status to applied
       await fetch(`/api/jobs/${jobId}`, {
         method: 'PUT',

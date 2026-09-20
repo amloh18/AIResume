@@ -46,24 +46,18 @@
     font-weight: var(--weight-medium, 500);
   }
 
-  /* Jobs discover search surface — orange geometric gradient */
+  /* Jobs discover search surface — dark green gradient with decorative curves */
   .job-search-gradient {
     background:
-      linear-gradient(135deg, rgba(255,255,255,0.12) 25%, transparent 25%) -50px 0,
-      linear-gradient(225deg, rgba(255,255,255,0.12) 25%, transparent 25%) -50px 0,
-      linear-gradient(315deg, rgba(255,255,255,0.12) 25%, transparent 25%),
-      linear-gradient(45deg, rgba(255,255,255,0.12) 25%, transparent 25%),
-      linear-gradient(105deg, #f97316 0%, #ea580c 46%, #dc2626 100%);
-    background-size: 80px 80px, 80px 80px, 80px 80px, 80px 80px, 100% 100%;
+      radial-gradient(ellipse 80% 50% at 80% 20%, rgba(1,63,46,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 20% 80%, rgba(1,63,46,0.15) 0%, transparent 50%),
+      linear-gradient(135deg, #0a1a14 0%, #0d2418 40%, #0a1a14 100%);
   }
   .dark .job-search-gradient {
     background:
-      linear-gradient(135deg, rgba(255,255,255,0.04) 25%, transparent 25%) -50px 0,
-      linear-gradient(225deg, rgba(255,255,255,0.04) 25%, transparent 25%) -50px 0,
-      linear-gradient(315deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-      linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%),
-      linear-gradient(105deg, #431407 0%, #7c2d12 46%, #9a3412 100%);
-    background-size: 80px 80px, 80px 80px, 80px 80px, 80px 80px, 100% 100%;
+      radial-gradient(ellipse 80% 50% at 80% 20%, rgba(54,211,155,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 60% at 20% 80%, rgba(54,211,155,0.08) 0%, transparent 50%),
+      linear-gradient(135deg, #070f0b 0%, #0a1a14 40%, #070f0b 100%);
   }
 
   /* 6-Color Job Card Background Themes */
