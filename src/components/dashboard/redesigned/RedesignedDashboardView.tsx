@@ -31,6 +31,7 @@ import {
   Layers,
   Flame,
   AlertTriangle,
+  Mail,
 } from 'lucide-react';
 import {
   Radar,
@@ -56,6 +57,15 @@ import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import {
+  isJourneyCv,
+  isJourneyCoverLetter,
+  isMasterCv,
+  isUserOwnedCv,
+  isUserOwnedCoverLetter,
+  sortCoverLettersForDisplay,
+  sortCvsForDisplay,
+} from '@/lib/utils/document-kind';
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -93,6 +103,25 @@ function cvId(cv: any): string {
 
 function cvAtsScore(cv: any): number {
   return Math.round(getCvScoreForDisplay(cv) || 0);
+}
+
+function clId(coverLetter: any): string {
+  return String(coverLetter?.id || coverLetter?._id || '');
+}
+
+/**
+ * Cover letters carry a persisted ATS score, but it is not always under the same
+ * key depending on which path produced the document. Falls back to the seeded
+ * score so a generated letter does not display as unmeasured.
+ */
+function clAtsScore(coverLetter: any): number {
+  const raw =
+    coverLetter?.metadata?.atsScore ??
+    coverLetter?.metadata?.seededAtsScore ??
+    coverLetter?.atsScore ??
+    0;
+  const score = Number(raw);
+  return Number.isFinite(score) ? Math.round(score) : 0;
 }
 
 function findLinkedCvForJob(job: any, cvList: any[]): any | null {
@@ -346,9 +375,10 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
     }
   });
 
-  // Journey CVs
+  // Journey CVs — classified by the shared helper so this count cannot drift
+  // from what the CV table and the documents page consider a journey document.
   cvs.forEach((c: any) => {
-    if (c.cvType === 'journey' || c.journeyId || c.isJourney || c.metadata?.journeyId || c.jobId || c.targetJobId) {
+    if (isJourneyCv(c)) {
       const key = c.journeyId || c.jobId || c.targetJobId || c.metadata?.jobId || c.id || c._id;
       if (key) journeyApplicationIds.add(String(key));
     }
@@ -356,7 +386,7 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
 
   // Journey / AI Tailored Cover Letters
   coverLetters.forEach((cl: any) => {
-    if (cl.journeyId || cl.isJourney || cl.metadata?.journeyId || cl.jobId || cl.jobApplicationId || cl.isTailored) {
+    if (isJourneyCoverLetter(cl)) {
       const key = cl.journeyId || cl.jobId || cl.jobApplicationId || cl.metadata?.jobId || cl.id || cl._id;
       if (key) journeyApplicationIds.add(String(key));
     }
@@ -544,9 +574,14 @@ function MyCvsPanel() {
 
   const sorted = useMemo(
     () =>
-      [...cvs].sort(
-        (a: any, b: any) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime()
-      ),
+      /*
+        Journey CVs are excluded: they are generated per job, already surfaced
+        in the application tracker, and listing them here made the table look
+        like it was full of duplicates of one CV. `sortCvsForDisplay` also pins
+        the Profile CV to the top, so the user's canonical CV is always the
+        first row regardless of when it was last edited.
+      */
+      sortCvsForDisplay(cvs.filter(isUserOwnedCv)),
     [cvs]
   );
 
@@ -616,7 +651,7 @@ function MyCvsPanel() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5 font-medium">
               {sorted.slice(0, 10).map((cv: any) => {
-                const isMaster = cv.metadata?.isMaster || cv.cvType === 'master';
+                const isMaster = isMasterCv(cv);
                 const score = cvAtsScore(cv);
                 const linked = linkedCounts.get(cvId(cv)) || 0;
                 return (
@@ -693,6 +728,213 @@ function MyCvsPanel() {
         documentTitle={previewCv?.title}
         cvData={previewCv?.cvData}
         template={previewCv?.template || null}
+      />
+    </Panel>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Cover Letters table                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The cover-letter counterpart to the CV table, rendered directly beneath it.
+ *
+ * Journey cover letters are excluded for the same reason journey CVs are: they
+ * are generated per job application, already reachable from the tracker, and
+ * listing them here turns the panel into a wall of near-identical documents.
+ * What remains is the set of cover letters the user owns.
+ */
+function CoverLettersPanel() {
+  const router = useRouter();
+  const { coverLetters, secondaryLoading } = useDashboardData();
+  const { toast } = useToast();
+  const [previewCl, setPreviewCl] = useState<any>(null);
+
+  const sorted = useMemo(
+    () => sortCoverLettersForDisplay(coverLetters.filter(isUserOwnedCoverLetter)),
+    [coverLetters]
+  );
+
+  const openEditor = (cl: any) => {
+    const id = clId(cl);
+    router.push(id ? `/editor?mode=edit-cover-letter&coverLetterId=${id}` : '/editor?tab=cover-letter');
+  };
+
+  const openPreview = async (cl: any) => {
+    const id = clId(cl);
+    if (!id) return;
+    try {
+      const res = await authenticatedFetch(`/api/cover-letters/${id}`);
+      const result = await res.json();
+      // The route returns `{ success, coverLetter }`, not `data.coverLetter`.
+      const letter = result?.coverLetter || result?.data?.coverLetter;
+      if (letter) {
+        setPreviewCl(letter);
+        return;
+      }
+      /*
+        A preview button that silently does nothing is indistinguishable from a
+        broken button. Say why instead.
+      */
+      toast({
+        title: 'Could not open preview',
+        description:
+          result?.error || 'The cover letter could not be loaded. Please try again.',
+        variant: 'destructive',
+      });
+    } catch (err) {
+      console.error('Failed to load cover letter for preview:', err);
+      toast({
+        title: 'Could not open preview',
+        description:
+          err instanceof Error ? err.message : 'The cover letter could not be loaded. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  return (
+    <Panel
+      title="My Cover Letters"
+      subtitle="Your saved cover letters and their performance overview."
+      noPadding
+      actions={
+        <>
+          <button
+            onClick={() => router.push('/editor?tab=cover-letter')}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#013f2e] text-white font-bold px-3.5 py-2 text-xs hover:bg-[#025c43] transition-colors shadow-sm cursor-pointer"
+          >
+            <Plus size={14} strokeWidth={2} />
+            Create Cover Letter
+          </button>
+          <GhostButton onClick={() => router.push('/editor?tab=cover-letter')}>
+            <span>View all</span>
+            {sorted.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+                {sorted.length}
+              </span>
+            )}
+            <ArrowUpRight size={13} />
+          </GhostButton>
+        </>
+      }
+    >
+      {sorted.length === 0 && secondaryLoading.coverLetters ? (
+        <div className="divide-y divide-gray-100 dark:divide-white/5 p-4" aria-hidden="true">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3.5">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="ml-auto h-8 w-8 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
+        <div className="py-16 px-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-3 text-gray-400">
+            <Mail className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+            No cover letters yet
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+            Write a cover letter to pair with your CV, or let a job application generate one for you.
+          </p>
+        </div>
+      ) : (
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-gray-50/80 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider text-[11px]">
+              <tr>
+                <th className="py-3 px-5">Cover Letter</th>
+                <th className="py-3 px-4 w-[140px]">ATS Score</th>
+                <th className="py-3 px-4">Target Role</th>
+                <th className="py-3 px-4">Last Updated</th>
+                <th className="py-3 px-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5 font-medium">
+              {sorted.slice(0, 10).map((cl: any) => {
+                const score = clAtsScore(cl);
+                const targetPosition = cl.metadata?.targetPosition || '';
+                const targetCompany = cl.metadata?.targetCompany || '';
+                const targetLabel = [targetPosition, targetCompany].filter(Boolean).join(' · ');
+
+                return (
+                  <tr
+                    key={clId(cl) || cl.title}
+                    className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group"
+                    onClick={() => openEditor(cl)}
+                  >
+                    <td className="py-3 px-5 max-w-[280px]">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                        <span
+                          className="truncate font-semibold text-gray-900 dark:text-white text-xs group-hover:text-lime-600 dark:group-hover:text-lime-400 transition-colors"
+                          title={cl.title}
+                        >
+                          {cl.title || 'Untitled Cover Letter'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {score > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${score >= 70 ? 'bg-lime-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-400'}`} />
+                          <span className="font-bold text-gray-900 dark:text-white text-xs tabular-nums">{score}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-xs max-w-[200px]">
+                      {targetLabel ? (
+                        <span className="truncate block" title={targetLabel}>{targetLabel}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      {timeAgo(cl.updatedAt || cl.createdAt)}
+                    </td>
+                    <td className="py-3 px-5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => openPreview(cl)}
+                          aria-label={`Preview ${cl.title}`}
+                          title="Preview"
+                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => openEditor(cl)}
+                          aria-label={`Edit ${cl.title}`}
+                          title="Edit Cover Letter"
+                          className="w-7 h-7 inline-flex items-center justify-center rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <DocumentPreviewSidebar
+        isOpen={!!previewCl}
+        onClose={() => setPreviewCl(null)}
+        documentType="coverLetter"
+        documentData={previewCl}
+        documentId={clId(previewCl)}
+        documentTitle={previewCl?.title}
       />
     </Panel>
   );
@@ -1441,12 +1683,13 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
       {/* Top job matches */}
       <TopJobMatchesSection />
 
-      {/* Mobile-only reorder container: Continue → Profile Analytics → Recent Jobs → My CVs */}
+      {/* Mobile-only reorder container: Continue → Profile Analytics → Recent Jobs → My CVs → Cover Letters */}
       <div className="lg:hidden space-y-6">
         <ContinuePanel />
         <ProfileAnalyticsPanel />
         <RecentJobsPanel />
         <MyCvsPanel />
+        <CoverLettersPanel />
       </div>
 
       {/* Desktop two-column workspace */}
@@ -1455,6 +1698,7 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
         <div className="col-span-2 space-y-6 min-w-0">
           <RecentJobsPanel />
           <MyCvsPanel />
+          <CoverLettersPanel />
         </div>
 
         {/* Right: contextual rail */}

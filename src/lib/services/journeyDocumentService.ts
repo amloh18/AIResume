@@ -21,6 +21,7 @@ import {
   type CvTailoringMode,
   type CvRefinementSeedInput,
 } from '@/lib/cv-tailoring/tailoringMode';
+import { repairTailoredCv } from '@/lib/cv-tailoring/tailoringRepair';
 import {
   buildGenerationContext,
   summarizeGenerationContext,
@@ -931,7 +932,11 @@ async function tailorCVContent(
       prompt,
       systemPrompt: 'You are a JSON-only API. You must return valid JSON matching the UnifiedCVDataStructure schema.',
       temperature: 0.4,
-      maxTokens: 4000
+      // 4000 was the original budget and it truncated realistic CVs — the model
+      // dropped trailing sections (education, certificates, projects) purely to
+      // fit. The repair pass below now guarantees those come back, but a budget
+      // that lets the model finish is the better first line of defence.
+      maxTokens: 8000
     });
 
     // Parse the response
@@ -943,8 +948,29 @@ async function tailorCVContent(
         jobTitle,
         atsKeywords,
       });
+
+      /*
+        `applyDeterministicAtsPass` can only ADD pinned keywords. Nothing so far
+        has compared the model's output against the Master CV, so every section,
+        entry and bullet the model omitted was silently lost — which is how a
+        submission-ready CV ended up with education entries carrying no bullet
+        points. `repairTailoredCv` restores those deterministically; see
+        `@/lib/cv-tailoring/tailoringRepair` for the mode semantics.
+      */
+      const repair = repairTailoredCv(passResult.cvData, cvData, mode);
+
+      if (
+        repair.restoredSections.length > 0 ||
+        repair.restoredShapeKeys.length > 0 ||
+        repair.restoredEntries > 0
+      ) {
+        console.log(
+          `🔧 Journey Document Service - Tailoring repair (${mode}): restored sections [${repair.restoredSections.join(', ') || 'none'}], shape [${repair.restoredShapeKeys.join(', ') || 'none'}], entries ${repair.restoredEntries}`
+        );
+      }
+
       return {
-        cvData: passResult.cvData as UnifiedCVDataStructure,
+        cvData: repair.cvData,
         pinnedKeywords: passResult.pinnedKeywords,
         skippedKeywords: passResult.skippedKeywords,
       };

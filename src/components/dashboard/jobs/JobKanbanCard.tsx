@@ -96,6 +96,8 @@ interface JobKanbanCardProps {
   canDrag: boolean;
   isExpired?: boolean;
   colorIndex?: number;
+  /** A document-generation request for this job is already in flight. */
+  isJourneyPending?: boolean;
   onClick: (job: JobApplication) => void;
   onDragStart: (e: React.DragEvent, jobId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
@@ -118,6 +120,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   canDrag,
   isExpired,
   colorIndex,
+  isJourneyPending = false,
   onClick,
   onDragStart,
   onDragEnd,
@@ -132,16 +135,55 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const hasAnalyzedRef = React.useRef(false);
 
   const [progress, setProgress] = useState(0);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
   const primaryJourney = jobJourneys && jobJourneys.length > 0 ? jobJourneys[0] : null;
   // `job.matchScore` is a job-fit metric, NOT an ATS score. Falling back to it
   // here would display a different measurement under the "ATS Score" label, so
   // an unmeasured document correctly resolves to `undefined` instead.
   const atsScore = getJourneyAtsScore(primaryJourney, job);
-  const isGenerating = stage === "created" && primaryJourney?.status === "processing_documents";
+
+  const jobId = String(job.id || job._id || '');
+  const journeyStatus = primaryJourney?.status;
+  const hasCV = Boolean(primaryJourney?.cvId);
+  const hasCoverLetter = Boolean(primaryJourney?.coverLetterId);
+  const documentsReady = hasCV && hasCoverLetter;
+  const generationFailed = journeyStatus === 'creation_failed';
+
+  /**
+   * A journey can stop "processing" *before* its document links are written —
+   * `createJourneyDocuments` sets status/ids on the same document but the
+   * parent's `journeys` payload is a separate read, so there is a real window
+   * where status is terminal and `cvId`/`coverLetterId` are still absent.
+   * Watching status alone left those cards pinned on two red document icons
+   * with a "Documents ready" label and nothing to click.
+   *
+   * So keep watching while EITHER the journey is mid-flight OR the documents it
+   * promises are not linked yet — unless the journey failed, which is terminal.
+   */
+  const journeyStillProcessing =
+    journeyStatus === 'processing_documents' ||
+    journeyStatus === 'in-progress' ||
+    journeyStatus === 'paused';
+
+  const shouldPoll =
+    stage === 'created' &&
+    Boolean(primaryJourney) &&
+    !generationFailed &&
+    (journeyStillProcessing || !documentsReady);
+
+  const isGenerating = shouldPoll && !pollTimedOut;
+
+  /**
+   * `isJourneyPending` is the parent's knowledge that it has *asked* for
+   * documents but the journey has not shown up in `jobJourneys` yet. Without
+   * folding it in here, the card would flash "Documents ready" (with two red
+   * icons) for the whole round-trip of the create request.
+   */
+  const isWorking = isGenerating || isJourneyPending;
 
   // Progress simulation timer
   React.useEffect(() => {
-    if (!isGenerating) {
+    if (!isWorking) {
       setProgress(0);
       return;
     }
@@ -155,43 +197,81 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isGenerating]);
+  }, [isWorking]);
 
-  // Polling database for updates on journey status ONLY if actively generating
+  /**
+   * Poll the journey until the outcome is settled, then ask the parent to
+   * reload. Bounded by a deadline: a document link that never arrives must not
+   * leave the card spinning forever — after the deadline it offers a retry.
+   */
   React.useEffect(() => {
-    if (!isGenerating) return;
+    if (!shouldPoll) return;
 
-    let isMounted = true;
-    const pollTimer = setInterval(async () => {
+    let cancelled = false;
+    const POLL_INTERVAL_MS = 3000;
+    const MAX_POLL_MS = 5 * 60 * 1000;
+    const startedAt = Date.now();
+
+    const timer = setInterval(async () => {
+      if (cancelled) return;
+
+      if (Date.now() - startedAt > MAX_POLL_MS) {
+        clearInterval(timer);
+        if (!cancelled) setPollTimedOut(true);
+        return;
+      }
+
       try {
-        const jobId = job.id || job._id;
-        const res = await fetch(`/api/application-journey?jobId=${jobId}`);
-        if (res.ok && isMounted) {
-          const result = await res.json();
-          if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
-            const updatedJourney = primaryJourney
-              ? result.data.journeys.find(
-                  (j: any) => j.id === primaryJourney.id || j._id === primaryJourney.id || j.jobId === jobId
-                )
-              : result.data.journeys[0];
-            if (updatedJourney && updatedJourney.status !== "processing_documents") {
-              clearInterval(pollTimer);
-              if (isMounted) {
-                onRefresh?.();
-              }
-            }
-          }
+        const res = await fetch(
+          `/api/application-journey?jobId=${encodeURIComponent(jobId)}`
+        );
+        if (!res.ok || cancelled) return;
+
+        const result = await res.json();
+        const list = result?.data?.journeys;
+        if (!Array.isArray(list) || list.length === 0) return;
+
+        // Match on jobId first: this endpoint is already filtered by jobId, but
+        // matching explicitly means a changed response shape cannot silently
+        // attach another job's journey to this card.
+        const updated = list.find((j: any) => String(j.jobId) === jobId) || list[0];
+
+        const changed =
+          updated.status !== journeyStatus ||
+          Boolean(updated.cvId) !== hasCV ||
+          Boolean(updated.coverLetterId) !== hasCoverLetter;
+
+        if (changed) {
+          clearInterval(timer);
+          if (!cancelled) onRefresh?.();
+          return;
+        }
+
+        /*
+          Safety net. `shouldPoll` is already false once the journey is settled
+          AND both links exist, so this is normally unreachable — reaching it
+          means the server has settled state this card has not applied. Stopping
+          without a refresh would strand the card on the stale view, so ask the
+          parent to reload first and only then give up.
+        */
+        const settled =
+          updated.status !== 'processing_documents' &&
+          updated.status !== 'in-progress' &&
+          updated.status !== 'paused';
+        if (settled && updated.cvId && updated.coverLetterId) {
+          clearInterval(timer);
+          if (!cancelled) onRefresh?.();
         }
       } catch (err) {
         console.error("Error polling journey status in Kanban card:", err);
       }
-    }, 3000);
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      isMounted = false;
-      clearInterval(pollTimer);
+      cancelled = true;
+      clearInterval(timer);
     };
-  }, [isGenerating, primaryJourney?.id, job.id, job._id, onRefresh]);
+  }, [shouldPoll, jobId, journeyStatus, hasCV, hasCoverLetter, onRefresh]);
 
   const handlePracticeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -307,11 +387,25 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isJourneyPending) return;
                   onAction?.("generate_docs", job, e);
                 }}
-                className="w-full py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors shadow-sm"
+                disabled={isJourneyPending}
+                title={isJourneyPending ? 'Documents are already being generated for this job' : undefined}
+                className={`w-full py-1.5 text-small font-bold rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1.5 ${
+                  isJourneyPending
+                    ? 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                    : 'bg-[#013f2e] text-white hover:bg-[#025c43]'
+                }`}
               >
-                Generate Docs
+                {isJourneyPending ? (
+                  <>
+                    <Clock size={11} />
+                    Please wait — generating…
+                  </>
+                ) : (
+                  'Generate Docs'
+                )}
               </button>
             </div>
           </motion.div>
@@ -321,11 +415,17 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   );
 
   const renderCreatedContent = () => {
-    const primaryJourney = jobJourneys[0];
-    const hasCV = !!primaryJourney?.cvId;
-    const hasCL = !!primaryJourney?.coverLetterId;
+    /*
+      The old version of this renderer only asked "is generation still
+      running?" and treated every other answer as success. A journey that ended
+      in `creation_failed` — or that settled without ever linking a document —
+      therefore rendered "Documents ready" beside two red icons, with nothing to
+      click. Success is now proven by the document links themselves, and the
+      three outcomes (working / failed / ready) are mutually exclusive.
+    */
+    const generationFailedNow = generationFailed || (!documentsReady && pollTimedOut);
 
-    if (isGenerating) {
+    if (isWorking) {
       return (
         <>
           {/* Compact View */}
@@ -373,10 +473,81 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10">
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 italic">
                     Tailoring your CV and cover letter to match this job description...
                   </p>
+                  <button
+                    disabled
+                    className="w-full py-1.5 bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-gray-500 text-small font-bold rounded-lg cursor-not-allowed flex items-center justify-center gap-1.5"
+                    title="Generation is already running for this job"
+                  >
+                    <Clock size={11} />
+                    Please wait — {progress}% done
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      );
+    }
+
+    if (generationFailedNow) {
+      return (
+        <>
+          {/* Compact View */}
+          <div className="flex justify-between items-center mt-2">
+            <div className="flex items-center gap-1.5 text-small text-red-600 dark:text-red-400 font-medium">
+              <AlertCircle size={12} />
+              <span>Generation failed</span>
+            </div>
+            <div className="flex gap-1.5">
+              <div
+                className={`p-1 rounded-full ${hasCV ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+                title={hasCV ? "CV Generated" : "No CV"}
+              >
+                <FileText size={12} />
+              </div>
+              <div
+                className={`p-1 rounded-full ${hasCoverLetter ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+                title={hasCoverLetter ? "Cover Letter Generated" : "No Cover Letter"}
+              >
+                <FileText size={12} />
+              </div>
+            </div>
+          </div>
+
+          {renderExpiryIndicator()}
+
+          {/* Hover View */}
+          <AnimatePresence>
+            {isHovered && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    The tailored documents could not be created. Retry, or check the job
+                    description is available.
+                  </p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // A retry is a fresh request, so clear the local deadline
+                      // first — otherwise `pollTimedOut` would immediately mark
+                      // the new attempt as failed too.
+                      setPollTimedOut(false);
+                      onAction?.("generate_docs", job, e);
+                    }}
+                    className="w-full py-1.5 bg-[#013f2e] text-white text-small font-bold rounded-lg hover:bg-[#025c43] transition-colors shadow-sm flex items-center justify-center gap-1.5"
+                  >
+                    <Zap size={11} />
+                    Retry generation
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -390,7 +561,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
           <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-            <span>Documents ready</span>
+            <span>{documentsReady ? "Documents ready" : "Partially generated"}</span>
           </div>
           <div className="flex gap-1.5">
             <div
@@ -400,8 +571,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
               <FileText size={12} />
             </div>
             <div
-              className={`p-1 rounded-full ${hasCL ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
-              title={hasCL ? "Cover Letter Generated" : "No Cover Letter"}
+              className={`p-1 rounded-full ${hasCoverLetter ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+              title={hasCoverLetter ? "Cover Letter Generated" : "No Cover Letter"}
             >
               <FileText size={12} />
             </div>
@@ -448,6 +619,21 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     Download
                   </button>
                 </div>
+                {/* A missing half is the difference between a submittable
+                    application and an incomplete one — offer the repair. */}
+                {!documentsReady && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPollTimedOut(false);
+                      onAction?.("generate_docs", job, e);
+                    }}
+                    className="w-full py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Zap size={11} />
+                    Generate missing document
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
@@ -666,7 +852,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   const nudge = getFollowUpNudge(job as any);
   const successProb = calculateSuccessProbability(job as any);
 
-  const jobId = String(job.id || job._id || '');
+  // `jobId` is declared once near the top of the component — it is needed by the
+  // journey poll, which runs before this point in the render body.
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
   const { clearStatus } = useJobLiveStatusStore();
   const cardColorClass = getJobCardColorClass(colorIndex, jobId);

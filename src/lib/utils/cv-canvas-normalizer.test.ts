@@ -181,6 +181,46 @@ describe('full document renders what the canvas renders', () => {
     expect(normalized.projects[0].description).toContain('<li');
   });
 
+  /*
+    Regression guard for "education is missing the bullet points" in generated
+    CVs. Education entries carry structured coursework in `courses`, and the
+    normalizer used to join score + description with a literal '\n' — which
+    dropped `courses` entirely and produced a string the canvas collapses onto
+    one line. It now uses the same rich-text builder as work/projects.
+  */
+  it('renders education coursework as real bullets', () => {
+    const withCourses = {
+      ...fullCvData,
+      education: [
+        {
+          institution: 'Nirma University',
+          studyType: 'B.Tech',
+          area: 'Computer Science',
+          startDate: '2012',
+          endDate: '2016',
+          score: '8.4 CGPA',
+          description: 'Graduated with distinction.',
+          courses: ['Distributed Systems', 'Compiler Design'],
+        },
+      ],
+    };
+    const normalized = normalizeCvDataForCanvas(withCourses as any) as any;
+    const description = normalized.education[0].description;
+
+    expect(description).toContain('<li');
+    expect(description).toContain('Distributed Systems');
+    expect(description).toContain('Compiler Design');
+    expect(description).toContain('Score: 8.4 CGPA');
+    expect(description).toContain('Graduated with distinction.');
+    expect(description).not.toContain('\\n');
+  });
+
+  it('leaves an education entry with no coursework free of an empty list', () => {
+    const normalized = normalizeCvDataForCanvas(fullCvData as any) as any;
+
+    expect(normalized.education[0].description).not.toContain('<ul>');
+  });
+
   it('the full document is strictly richer than the summary payload', () => {
     const full = normalizeCvDataForCanvas(fullCvData as any) as any;
     const summary = normalizeCvDataForCanvas(applySummaryProjection(fullCvData) as any) as any;

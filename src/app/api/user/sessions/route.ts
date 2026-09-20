@@ -59,9 +59,9 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const currentJti = await getCurrentJti();
 
-    if (body.revokeAll && currentJti) {
-      // Revoke all sessions except current
-      const count = await SessionService.revokeAllOtherSessions(session.user.id, currentJti);
+    if (body.revokeAll) {
+      // Revoke all sessions except current (if we can identify it)
+      const count = await SessionService.revokeAllOtherSessions(session.user.id, currentJti || '');
       return NextResponse.json({
         success: true,
         message: `Revoked ${count} session(s)`,

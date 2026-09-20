@@ -234,7 +234,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   }, [isOpen, currentUserPlan, basePricingPlans, hookResult.plans]);
 
   // Use enhanced pricing plans (includes current plan if it was filtered out)
-  const pricingPlans = enhancedPricingPlans;
+  // Deduplicate by key to prevent React key collisions
+  const pricingPlans = useMemo(() => {
+    const seen = new Set<string>();
+    return enhancedPricingPlans.filter(plan => {
+      if (seen.has(plan.key)) return false;
+      seen.add(plan.key);
+      return true;
+    });
+  }, [enhancedPricingPlans]);
 
   // Debug logging to help diagnose issues
   useEffect(() => {

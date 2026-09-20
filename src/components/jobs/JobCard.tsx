@@ -25,7 +25,26 @@ import {
   AlertCircle,
   FileCheck2,
   Target,
+  ShieldCheck,
+  Eye,
 } from 'lucide-react';
+
+/**
+ * Tracker snapshot for a job the user has already saved.
+ *
+ * Supplied by the caller (which resolves it from the dashboard data context),
+ * NOT fetched here — the Explore grid renders hundreds of these cards and must
+ * stay a pure renderer.
+ */
+export interface JobCardTrackerInfo {
+  /** JobApplication.status — saved | draft | created | applied | screening | interview | offer | accepted | rejected | withdrawn */
+  status: string;
+  applicationDate?: string;
+  /** ATS score of the tailored document, when one exists. */
+  atsScore?: number;
+  hasCV: boolean;
+  hasCoverLetter: boolean;
+}
 
 export interface JobCardProps {
   job: JobListing;
@@ -38,6 +57,99 @@ export interface JobCardProps {
   onApply: () => void;
   onPass?: () => void;
   colorIndex?: number;
+  /** Present only for jobs that exist in the user's tracker. */
+  tracker?: JobCardTrackerInfo | null;
+  /** True while an apply/generate task is in flight for THIS job. */
+  applying?: boolean;
+  /** 0-100, drives the inline progress readout on the disabled CTA. */
+  progressPercent?: number;
+  /** Short sentence explaining what is running, shown under the CTAs. */
+  progressLabel?: string;
+  /** Jump to the application tracker for this job. */
+  onOpenTracker?: () => void;
+  /** Jump to the documents view for this job. */
+  onOpenDocuments?: () => void;
+}
+
+/**
+ * Pipeline stage → chip styling.
+ *
+ * `saved`/`draft` collapse to one label because the user never sees the
+ * distinction; `rejected`/`withdrawn` both read as "Closed" for the same
+ * reason. `created` is surfaced as "Staging" to match the kanban column name.
+ */
+const TRACKER_STAGE_META: Record<string, { label: string; dot: string; chip: string }> = {
+  saved: {
+    label: 'Saved',
+    dot: 'bg-amber-500',
+    chip: 'text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+  },
+  draft: {
+    label: 'Saved',
+    dot: 'bg-amber-500',
+    chip: 'text-amber-800 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+  },
+  created: {
+    label: 'Staging',
+    dot: 'bg-violet-500',
+    chip: 'text-violet-800 dark:text-violet-300 bg-violet-500/15 border-violet-500/30',
+  },
+  applied: {
+    label: 'Applied',
+    dot: 'bg-sky-500',
+    chip: 'text-sky-800 dark:text-sky-300 bg-sky-500/15 border-sky-500/30',
+  },
+  screening: {
+    label: 'Screening',
+    dot: 'bg-cyan-500',
+    chip: 'text-cyan-800 dark:text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+  },
+  interview: {
+    label: 'Interview',
+    dot: 'bg-orange-500',
+    chip: 'text-orange-800 dark:text-orange-300 bg-orange-500/15 border-orange-500/30',
+  },
+  offer: {
+    label: 'Offer',
+    dot: 'bg-emerald-500',
+    chip: 'text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+  },
+  accepted: {
+    label: 'Accepted',
+    dot: 'bg-emerald-600',
+    chip: 'text-emerald-800 dark:text-emerald-300 bg-emerald-600/15 border-emerald-600/30',
+  },
+  rejected: {
+    label: 'Closed',
+    dot: 'bg-rose-500',
+    chip: 'text-rose-800 dark:text-rose-300 bg-rose-500/15 border-rose-500/30',
+  },
+  withdrawn: {
+    label: 'Withdrawn',
+    dot: 'bg-gray-500',
+    chip: 'text-gray-700 dark:text-gray-300 bg-gray-500/15 border-gray-500/25',
+  },
+};
+
+function trackerStageMeta(status?: string) {
+  return TRACKER_STAGE_META[status || ''] || TRACKER_STAGE_META.saved;
+}
+
+/**
+ * Compact age string for the pipeline strip. Must stay short — it shares one
+ * line with the stage chip and the ATS chip.
+ */
+function shortAge(dateStr?: string): string | null {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(dateStr).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
 }
 
 const formatSalary = (job: JobListing): string => {
@@ -93,6 +205,12 @@ export function JobCard({
   onApply,
   onPass,
   colorIndex,
+  tracker = null,
+  applying = false,
+  progressPercent,
+  progressLabel,
+  onOpenTracker,
+  onOpenDocuments,
 }: JobCardProps) {
   const jobId = String(job._id || job.id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
@@ -237,17 +355,50 @@ export function JobCard({
           </div>
         ) : (
           <>
-            {/* Skills tags */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {skills.map((skill, idx) => (
+            {/*
+              Tracked jobs trade the skills-tag row for a pipeline strip.
+              The card's footprint must not grow, so this is a swap rather than
+              an addition: one row out, one row in. `truncate` keeps it to a
+              single line even with a long stage label and a date.
+            */}
+            {tracker ? (
+              <div className="flex items-center gap-1.5 pt-1 min-w-0">
                 <span
-                  key={idx}
-                  className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-300 border border-black/5 dark:border-white/5 shadow-2xs backdrop-blur-xs"
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border shrink-0 ${trackerStageMeta(tracker.status).chip}`}
                 >
-                  {skill}
+                  <span className={`w-1.5 h-1.5 rounded-full ${trackerStageMeta(tracker.status).dot}`} />
+                  {trackerStageMeta(tracker.status).label}
                 </span>
-              ))}
-            </div>
+
+                {typeof tracker.atsScore === 'number' && tracker.atsScore > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/70 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-black/5 dark:border-white/10 shrink-0"
+                    title="ATS score of the tailored document for this job"
+                  >
+                    <ShieldCheck className="w-3 h-3" />
+                    ATS {tracker.atsScore}%
+                  </span>
+                )}
+
+                {shortAge(tracker.applicationDate) && (
+                  <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium truncate">
+                    · {shortAge(tracker.applicationDate)}
+                  </span>
+                )}
+              </div>
+            ) : (
+              /* Skills tags */
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {skills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-300 border border-black/5 dark:border-white/5 shadow-2xs backdrop-blur-xs"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Freshness timestamp */}
             <div className="text-[11px] text-gray-600 dark:text-gray-400 pt-0.5">
@@ -261,7 +412,7 @@ export function JobCard({
                 {isSaved ? (
                   <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    Saved in Staging
+                    {tracker ? 'In your tracker' : 'Saved in Staging'}
                   </span>
                 ) : isAutoApplyCapable ? (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
@@ -275,8 +426,29 @@ export function JobCard({
                   </span>
                 )}
 
+                {/* Document readiness — only meaningful for tracked jobs */}
+                {tracker && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-600 dark:text-gray-400"
+                    title={
+                      tracker.hasCV && tracker.hasCoverLetter
+                        ? 'Tailored CV and cover letter ready'
+                        : tracker.hasCV || tracker.hasCoverLetter
+                          ? 'One document ready'
+                          : 'No tailored documents yet'
+                    }
+                  >
+                    <FileText
+                      className={`w-3 h-3 ${tracker.hasCV ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
+                    />
+                    <FileText
+                      className={`w-3 h-3 ${tracker.hasCoverLetter ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
+                    />
+                  </span>
+                )}
+
                 {/* Freshness indicator for recently posted jobs */}
-                {job.postedDate && (() => {
+                {!tracker && job.postedDate && (() => {
                   const ageMs = Date.now() - new Date(job.postedDate).getTime();
                   const ageHours = ageMs / (1000 * 60 * 60);
                   if (ageHours < 24) {
@@ -292,72 +464,159 @@ export function JobCard({
               </div>
 
               {/* Primary Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                {isApplied ? (
+              {isApplied ? (
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     disabled
-                    className="col-span-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm flex justify-center items-center gap-1.5 cursor-default"
+                    className="px-3 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm flex justify-center items-center gap-1.5 cursor-default"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Applied</span>
                   </button>
-                ) : isSaved ? (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      (onOpenTracker || onOpen)();
+                    }}
+                    className="px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View</span>
+                  </button>
+                </div>
+              ) : isSaved && tracker ? (
+                /*
+                  A tracked job gets more to do than an untracked one, at the
+                  same height: the single full-width button becomes a 2-up row.
+                */
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (applying) return;
                       onApply();
                     }}
-                    disabled={applicationMode === 'find_only'}
-                    className={`col-span-2 px-4 py-2.5 rounded-xl text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
-                      applicationMode === 'find_only'
-                        ? 'bg-gray-400 cursor-not-allowed'
+                    disabled={applying || applicationMode === 'find_only'}
+                    title={applying ? 'A task is already running for this job' : undefined}
+                    className={`px-3 py-2.5 rounded-xl text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
+                      applying || applicationMode === 'find_only'
+                        ? 'bg-gray-400 dark:bg-gray-500 cursor-not-allowed'
                         : 'bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400'
                     }`}
                   >
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Prepare Application'}</span>
+                    {applying ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{progressPercent ? `${progressPercent}%` : 'Working…'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>
+                          {tracker.status === 'saved' || tracker.status === 'draft'
+                            ? applicationMode === 'automatic'
+                              ? 'Auto Apply'
+                              : 'Prepare'
+                            : 'Tracker'}
+                        </span>
+                      </>
+                    )}
                   </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSave();
-                      }}
-                      disabled={saving}
-                      className="px-3.5 py-2 rounded-xl border border-black/10 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 shadow-2xs"
-                    >
-                      {saving ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
-                      ) : (
-                        <>
-                          <Bookmark className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
-                          <span>Save</span>
-                        </>
-                      )}
-                    </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      (onOpenDocuments || onOpenTracker || onOpen)();
+                    }}
+                    className="px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>{tracker.hasCV || tracker.hasCoverLetter ? 'Documents' : 'Open'}</span>
+                  </button>
+                </div>
+              ) : isSaved ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (applying) return;
+                    onApply();
+                  }}
+                  disabled={applying || applicationMode === 'find_only'}
+                  className={`col-span-2 w-full px-4 py-2.5 rounded-xl text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
+                    applying || applicationMode === 'find_only'
+                      ? 'bg-gray-400 dark:bg-gray-500 cursor-not-allowed'
+                      : 'bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400'
+                  }`}
+                >
+                  {applying ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>{progressPercent ? `${progressPercent}%` : 'Working…'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase className="w-3.5 h-3.5" />
+                      <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Prepare Application'}</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSave();
+                    }}
+                    disabled={saving}
+                    className="px-3.5 py-2 rounded-xl border border-black/10 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-500 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 shadow-2xs"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-500" />
+                    ) : (
+                      <>
+                        <Bookmark className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+                        <span>Save</span>
+                      </>
+                    )}
+                  </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onApply();
-                      }}
-                      disabled={applicationMode === 'find_only'}
-                      className={`px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1 ${
-                        applicationMode === 'find_only'
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95'
-                      }`}
-                    >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (applying) return;
+                      onApply();
+                    }}
+                    disabled={applying || applicationMode === 'find_only'}
+                    className={`px-3.5 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1 ${
+                      applying || applicationMode === 'find_only'
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95'
+                    }`}
+                  >
+                    {applying ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{progressPercent ? `${progressPercent}%` : 'Working…'}</span>
+                      </>
+                    ) : (
                       <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Apply'}</span>
-                    </button>
-                  </>
-                )}
-              </div>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* In-flight explanation — a disabled button with no reason reads as a bug */}
+              {applying && progressLabel && (
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center leading-snug">
+                  {progressLabel}
+                </p>
+              )}
             </div>
           </>
         )}

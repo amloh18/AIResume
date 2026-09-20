@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
-  Sparkles,
   X,
   ArrowRight,
   FileText,
@@ -220,53 +219,59 @@ export default function OnboardingChecklistWidget() {
       </div>
 
       <div className="relative z-10 p-4 sm:p-5 sm:pr-[160px] md:pr-[220px] lg:pr-[280px] xl:pr-[330px]">
-        {/* Top bar: Badge, Progress & Dismiss */}
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 rounded-full bg-white/80 dark:bg-white/10 border border-white/80 dark:border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-300 shadow-2xs">
-              <Sparkles className="w-3 h-3 text-sky-600 dark:text-sky-300" />
-              <span>
-                {completed} of {steps.length} complete
-              </span>
-            </div>
+        {/* Dismiss — absolute top-right */}
+        <button
+          onClick={handleManualDismiss}
+          disabled={dismissing}
+          aria-label="Dismiss onboarding checklist"
+          title="Dismiss"
+          className="absolute top-3 right-3 z-20 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white/60 dark:bg-white/10 text-sky-900/80 dark:text-white/70 hover:text-sky-950 dark:hover:text-white hover:bg-white dark:hover:bg-white/20 transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          {dismissing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+        </button>
 
-            {/* Inline Mini Progress bar */}
+        {/* Boost score — absolute bottom-right */}
+        {!scoreReached && (
+          <button
+            onClick={() => router.push(masterCv ? `/editor?mode=edit-master&cvId=${cvId(masterCv)}&improve=true` : '/editor?mode=create&master=true')}
+            className="absolute bottom-3 right-3 z-20 inline-flex items-center gap-2 rounded-xl bg-[#1b66c9] hover:bg-[#1556ad] text-white text-sm font-bold px-5 py-2.5 shadow-md transition-all active:scale-[0.98] cursor-pointer"
+          >
+            Boost score
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Title + Profile Score inline */}
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h3 className="text-base sm:text-lg font-bold tracking-tight text-[#0b2c4a] dark:text-white">
+            Welcome to AIResume.
+          </h3>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 rounded-full bg-white/80 dark:bg-white/10 border border-white/80 dark:border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-300 shadow-2xs">
+              <Target className="w-3 h-3 text-sky-600 dark:text-sky-300" />
+              <span>Profile Score</span>
+            </div>
             <div className="flex items-center gap-2 w-28 sm:w-36">
               <div className="flex-1 h-1.5 bg-white/80 dark:bg-white/10 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-sky-500 dark:bg-sky-400 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.round((completed / steps.length) * 100)}%` }}
+                  style={{ width: `${score}%` }}
                 />
               </div>
               <span className="text-[10px] font-bold text-sky-800/80 dark:text-sky-300 tabular-nums">
-                {Math.round((completed / steps.length) * 100)}%
+                {score}%
               </span>
             </div>
           </div>
-
-          <button
-            onClick={handleManualDismiss}
-            disabled={dismissing}
-            aria-label="Dismiss onboarding checklist"
-            title="Dismiss"
-            className="shrink-0 w-6 h-6 inline-flex items-center justify-center rounded-full bg-white/60 dark:bg-white/10 text-sky-800/70 dark:text-slate-300 hover:text-sky-950 dark:hover:text-white hover:bg-white dark:hover:bg-white/20 transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {dismissing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
-          </button>
         </div>
 
-        {/* Title + Subtitle + Action CTA */}
+        {/* Subtitle + CTA */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-          <div className="max-w-xl">
-            <h3 className="text-base sm:text-lg font-bold tracking-tight text-[#0b2c4a] dark:text-white">
-              Welcome to BuildAIResume!
-            </h3>
-            <p className="text-xs text-[#1d4a72] dark:text-sky-200/90 leading-snug mt-0.5">
-              Set up your Master CV to unlock AI job matching, tailored resumes, and automated applications.
-            </p>
-          </div>
+          <p className="text-xs text-[#1d4a72] dark:text-sky-200/90 leading-snug">
+            Set up your Profile to unlock AI job matching, tailored resumes, and automated applications.
+          </p>
 
-          {nextStep?.cta && (
+          {nextStep?.cta && nextStep.key !== 'score' && (
             <button
               onClick={() => router.push(nextStep.cta!.url)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-[#1b66c9] hover:bg-[#1556ad] text-white text-xs font-bold px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.98] cursor-pointer shrink-0 self-start sm:self-auto"
@@ -279,7 +284,7 @@ export default function OnboardingChecklistWidget() {
 
         {/* Compact Steps Grid — 1 col on mobile, 2 cols on tablet, 3 cols on desktop/large screens */}
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-          {steps.map((step) => {
+          {steps.filter(s => s.key !== 'score').map((step) => {
             const StepIcon = step.Icon;
             return (
               <li

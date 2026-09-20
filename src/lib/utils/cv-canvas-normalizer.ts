@@ -105,13 +105,30 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
         degree = e.studyType ? `${e.studyType} in ${e.area || ''}`.trim() : (e.area || '');
       }
 
+      /*
+        Education carries structured coursework in `courses`, and the canvas
+        renders `description` as HTML (CoreUI assigns it to innerHTML, same as
+        work/projects). The previous implementation joined score+description
+        with a literal '\n', which both dropped `courses` entirely and produced
+        a string the renderer collapses onto one line — the "education is
+        missing the bullet points" symptom. Reuse the shared rich-text builder
+        so coursework becomes real <li> bullets.
+      */
+      const descriptionHtml =
+        e.description && String(e.description).includes('<')
+          ? String(e.description)
+          : buildRichTextDescription(e.description, e.courses);
+
       return {
         id: e.id || `edu-${index}`,
         degree,
         institution: e.institution || '',
         startDate: e.startDate || '',
         endDate: e.endDate || '',
-        description: [e.score ? `Score: ${e.score}` : '', e.description || ''].filter(Boolean).join('\n'),
+        description: [
+          e.score ? `<p>Score: ${e.score}</p>` : '',
+          descriptionHtml,
+        ].filter(Boolean).join(''),
       };
     });
   }
