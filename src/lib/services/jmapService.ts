@@ -255,6 +255,19 @@ export async function getMailboxByRole(role: string): Promise<JmapMailbox | null
 // Email Operations
 // ============================================================================
 
+/** A single JMAP body-part descriptor (RFC 8621 §4.1.1). */
+export interface EmailBodyPart {
+  partId: string;
+  blobId?: string;
+  size?: number;
+  type?: string;
+  name?: string;
+  charset?: string;
+  disposition?: string;
+  cid?: string;
+  subParts?: EmailBodyPart[];
+}
+
 export interface JmapEmail {
   id: string;
   threadId: string;
@@ -266,12 +279,36 @@ export interface JmapEmail {
   bcc?: Array<{ name?: string; email: string }>;
   subject: string;
   receivedAt: string;
-  textBody?: string;
-  htmlBody?: string;
+  /** RFC 8621 §4.1.1 — an array of body-part descriptors. Union with string to tolerate non-conforming servers. */
+  textBody?: EmailBodyPart[] | string;
+  /** RFC 8621 §4.1.1 — an array of body-part descriptors. Union with string to tolerate non-conforming servers. */
+  htmlBody?: EmailBodyPart[] | string;
+  /** RFC 8621 §4.1.4 — the actual text content, keyed by partId. Populated via fetchTextBodyValues / fetchHTMLBodyValues. */
   bodyValues?: Record<string, { value: string; isTruncated: boolean }>;
   headers?: Array<{ name: string; value: string }>;
   size?: number;
   preview?: string;
+}
+
+/**
+ * Resolve a JMAP body property to plain text.
+ *
+ * Handles all four cases:
+ *   - EmailBodyPart[] + populated bodyValues → joined text
+ *   - EmailBodyPart[] + missing bodyValues entry → '' (no throw)
+ *   - plain string (non-conforming server) → returned as-is
+ *   - undefined / null → ''
+ */
+export function resolveBodyText(
+  body: EmailBodyPart[] | string | undefined | null,
+  bodyValues: JmapEmail['bodyValues']
+): string {
+  if (!body) return '';
+  if (typeof body === 'string') return body;
+  return body
+    .map((part) => bodyValues?.[part.partId]?.value ?? '')
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -340,7 +377,7 @@ export async function getEmails(params: {
   const emailProperties = properties || [
     'id', 'threadId', 'mailboxIds', 'keywords', 'from', 'to', 'cc',
     'subject', 'receivedAt', 'textBody', 'htmlBody', 'size', 'preview',
-    'headers',
+    'headers', 'bodyValues',
   ];
 
   const emails = await jmapCall('Email/get', {
@@ -356,6 +393,8 @@ export async function getEmails(params: {
     state,
   };
 }
+
+
 
 /**
  * Get a single email by ID

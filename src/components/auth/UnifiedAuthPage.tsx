@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
 import UnifiedAuthLayout from './UnifiedAuthLayout';
 import UnifiedAuthForm, { emailValidation, passwordValidation, nameValidation, confirmPasswordValidation } from './UnifiedAuthForm';
+import { DEV_BYPASS_CLIENT_ENABLED } from '@/lib/auth/dev-bypass';
 import SocialAuthButtons from './SocialAuthButtons';
 import CodeVerificationScreen from './CodeVerificationScreen';
 
@@ -1347,8 +1348,10 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             </motion.div>
           )}
 
-          {/* Dev Bypass Buttons */}
-          {process.env.NODE_ENV !== 'production' && mode === 'signin' && (
+          {/* Dev Bypass Buttons — local dev only. The route re-checks the env
+              flag AND that the request came from localhost, so this render hint
+              is cosmetic, not the security boundary. */}
+          {DEV_BYPASS_CLIENT_ENABLED && mode === 'signin' && (
             <div className="mt-6 pt-6 border-t border-dashed border-gray-200 dark:border-white/10 text-center">
               <div className="text-xs font-bold tracking-widest text-gray-400 dark:text-white/40 uppercase mb-3 flex items-center justify-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] animate-ping" />

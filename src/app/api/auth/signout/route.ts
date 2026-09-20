@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
 import { UnifiedAuthService } from '@/lib/auth/unified-auth-service';
 import { SessionService } from '@/lib/services/session-service';
+import { isSecureSessionCookie } from '@/lib/auth/session-cookie';
 
 /**
  * Custom signout endpoint that handles empty request bodies gracefully
@@ -118,9 +119,7 @@ export async function POST(request: NextRequest) {
     // Deleting a non-existent cookie is a harmless no-op, so we clear every
     // variant, including chunked session tokens (.0, .1, ...) which NextAuth
     // uses when the JWT exceeds the per-cookie size limit.
-    const useSecureCookies =
-      process.env.NODE_ENV === 'production' &&
-      (process.env.NEXTAUTH_URL || '').startsWith('https://');
+    const useSecureCookies = isSecureSessionCookie();
     const securePrefix = '__Secure-';
     const baseNames = [
       'next-auth.session-token',

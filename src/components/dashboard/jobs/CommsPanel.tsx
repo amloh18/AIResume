@@ -1240,17 +1240,15 @@ function EmailDetail({
 
       {/* Email Body */}
       <div className="flex-1 overflow-y-auto px-5 py-4 bg-white dark:bg-[#121811]">
-        {comm.htmlBody ? (
-          <div
-            className="prose prose-slate dark:prose-invert max-w-none text-xs leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: comm.htmlBody }}
-          />
-        ) : (
-          <div className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-sans">
-            {comm.textBody || comm.bodySnippet}
-          </div>
-        )}
+        {/* TODO: Re-enable HTML rendering once isomorphic-dompurify is added.
+            htmlBody comes from arbitrary external senders and must be sanitized
+            before use with dangerouslySetInnerHTML to prevent stored XSS.
+            Until then, fall through to the plain-text branch for all messages. */}
+        <div className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-sans">
+          {comm.textBody || comm.htmlBody || comm.bodySnippet}
+        </div>
       </div>
+
 
       {/* Linked Job Tracker Card */}
       {comm.jobId && (

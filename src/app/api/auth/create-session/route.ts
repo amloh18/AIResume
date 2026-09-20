@@ -4,6 +4,11 @@ import User from '@/models/User';
 import { encode } from 'next-auth/jwt';
 import crypto from 'crypto';
 import { SessionService } from '@/lib/services/session-service';
+import {
+  getSessionCookieName,
+  getSessionCookieOptions,
+  warnIfAuthUrlUnusable,
+} from '@/lib/auth/session-cookie';
 
 /**
  * Create NextAuth session server-side
@@ -99,18 +104,17 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Set NextAuth session cookie
-    const cookieName = process.env.NODE_ENV === 'production'
-      ? '__Secure-next-auth.session-token'
-      : 'next-auth.session-token';
+    // Set NextAuth session cookie.
+    //
+    // The name MUST match what `getToken()` / `getServerSession()` look for, or
+    // the cookie is set and never read — the user is bounced to /sign-in even
+    // though this route returned success and the LoginSession row was written.
+    // Deriving it here from NODE_ENV alone was exactly that bug; the shared
+    // helper mirrors next-auth's own condition. See @/lib/auth/session-cookie.
+    warnIfAuthUrlUnusable();
+    const cookieName = getSessionCookieName();
 
-    response.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    response.cookies.set(cookieName, token, getSessionCookieOptions(7 * 24 * 60 * 60));
 
     console.log('✅ Session created server-side for user:', (userDoc._id as any).toString());
 

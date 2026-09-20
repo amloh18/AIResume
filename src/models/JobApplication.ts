@@ -197,7 +197,7 @@ export interface IJobApplication extends Document {
     internalStatus: string;
     changedAt: Date;
     reason?: string;
-    source: 'user' | 'automation' | 'email_intelligence' | 'admin' | 'system';
+    source: 'user' | 'automation' | 'automation_worker' | 'email_intelligence' | 'admin' | 'system';
   }>;
   evidence?: {
     confirmationId?: string;
@@ -529,7 +529,10 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     reason: { type: String },
     source: {
       type: String,
-      enum: ['user', 'automation', 'email_intelligence', 'admin', 'system'],
+      // `automation_worker` is what the application worker and the state machine
+      // actually send (see processApplication.ts / stateMachine.ts). `automation`
+      // is kept for backward compatibility with existing documents.
+      enum: ['user', 'automation', 'automation_worker', 'email_intelligence', 'admin', 'system'],
       default: 'user',
     },
   }],

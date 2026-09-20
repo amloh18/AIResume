@@ -16,6 +16,15 @@ import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
 import { getAppleClientSecret } from './apple-provider-secret';
 import { SessionService } from '@/lib/services/session-service';
+// Explicit import: this file is `@ts-nocheck`, so the previous reliance on a global
+// `crypto` was never checked. It happens to exist in Node 20+, but a missing global
+// here throws *before* the surrounding try/catch and would break every sign-in flow.
+import crypto from 'crypto';
+import {
+  getSessionCookieName,
+  getSessionCookieOptions,
+  isSecureSessionCookie,
+} from './session-cookie';
 
 /**
  * Unified Authentication Service
@@ -47,7 +56,10 @@ export class UnifiedAuthService {
     if (!NEXTAUTH_SECRET && !isBuildPhase) {
       throw new Error('NEXTAUTH_SECRET environment variable is required');
     }
-    const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // NOTE: `NEXTAUTH_URL` is deliberately not read here any more. Whether the
+    // deployment is on HTTPS — which decides the session-cookie name and its
+    // `Secure` flag — is resolved once in @/lib/auth/session-cookie, so that this
+    // config and the routes that also set that cookie cannot disagree.
     const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
     const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 
@@ -58,20 +70,14 @@ export class UnifiedAuthService {
         updateAge: 24 * 60 * 60, // 24 hours
       },
 
-      useSecureCookies: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
+      // Cookie name + `Secure` flag come from a single shared helper so they can
+      // never drift from the routes that also set this cookie
+      // (create-session, dev-bypass) — see @/lib/auth/session-cookie.
+      useSecureCookies: isSecureSessionCookie(),
       cookies: {
         sessionToken: {
-          name:
-            (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://'))
-              ? '__Secure-next-auth.session-token'
-              : 'next-auth.session-token',
-          options: {
-            httpOnly: true,
-            sameSite: 'lax',
-            path: '/',
-            secure: (process.env.NODE_ENV === 'production' && NEXTAUTH_URL.startsWith('https://')),
-            maxAge: 7 * 24 * 60 * 60, // 7 days
-          },
+          name: getSessionCookieName(),
+          options: getSessionCookieOptions(7 * 24 * 60 * 60), // 7 days
         },
       },
 
@@ -544,8 +550,20 @@ export class UnifiedAuthService {
                 provider: (user as any).authProvider || 'credentials',
                 location,
               });
-            } catch (error) {
-              console.error('Failed to record login session:', error);
+            } catch (error: any) {
+              // Do NOT swallow this silently — it is the most likely cause of a session
+              // that can never validate. Log the name/message explicitly (an Error object
+              // serialises poorly in some log pipelines) and include the id we tried to
+              // cast, since a non-ObjectId userId is the usual reason this throws.
+              console.error(
+                '❌ Failed to record login session — the token will have no LoginSession row.',
+                {
+                  name: error?.name,
+                  message: error?.message,
+                  userId: String(user.id),
+                  jti: token.jti,
+                }
+              );
             }
 
             // Only store essential identifiers - fetch full data in session callback
@@ -631,18 +649,47 @@ export class UnifiedAuthService {
           // Old JWTs without jti get a grace period (they'll expire naturally in 7 days)
           if (token.jti && typeof token.jti === 'string') {
             try {
-              const isValid = await SessionService.validateSession(token.jti);
-              if (!isValid) {
-                // Session was revoked or expired — return empty session to force re-auth
-                console.warn(`⚠️ Session jti ${token.jti} is invalid/revoked — forcing re-auth`);
+              const state = await SessionService.getSessionState(token.jti);
+
+              if (state === 'revoked' || state === 'expired') {
+                // An explicit decision (admin revocation, or genuine expiry). Fail closed.
+                console.warn(`⚠️ Session jti ${token.jti} is ${state} — forcing re-auth`);
                 return { user: null, expires: '' } as any;
               }
+
+              if (state === 'missing') {
+                // No LoginSession row for a jti that is in a validly-signed token.
+                //
+                // This must NOT sign the user out. Session recording is best-effort and
+                // its failure is swallowed by a catch that only logs (see the jwt
+                // callback), so treating "no row" as "revoked" turned any write failure
+                // into a total auth outage — 2FA, credentials and OAuth all bounced
+                // straight back to /sign-in.
+                //
+                // Revocation sets `revokedAt` rather than deleting the row, and
+                // cleanupSessions only deletes already-expired rows, so allowing
+                // `missing` here does not weaken revocation. Warn loudly so the
+                // underlying write failure stays visible, and re-record below so the
+                // session becomes revocable again.
+                console.warn(
+                  `⚠️ Session jti ${token.jti} has no LoginSession row — allowing (signed token) and re-recording`
+                );
+              }
+
               // Touch session to update lastActiveAt (throttled to once per 5 min)
               const lastTouch = (token as any)._lastTouch as number | undefined;
               const now = Date.now();
               if (!lastTouch || now - lastTouch > 5 * 60 * 1000) {
                 (token as any)._lastTouch = now;
-                SessionService.touchSession(token.jti).catch(() => {});
+                if (state === 'missing') {
+                  SessionService.createSession({
+                    userId: String(token.id),
+                    jti: token.jti,
+                    provider: 'recovered',
+                  }).catch((e) => console.error('Failed to re-record session:', e));
+                } else {
+                  SessionService.touchSession(token.jti).catch(() => {});
+                }
               }
             } catch (error) {
               // Don't fail the session if validation errors — but log it

@@ -89,7 +89,11 @@ export class ApplicationStateMachine {
       internalStatus: req.targetStatus,
       changedAt: new Date(),
       reason: req.reason,
-      source: req.source as any,
+      // No `as any` here on purpose: this cast previously masked a real drift
+      // between this type union and the Mongoose enums on JobApplication /
+      // ApplicationEvent, so every worker transition failed validation at
+      // runtime with no type error. Keep the types honest instead.
+      source: req.source,
     });
 
     await app.save();

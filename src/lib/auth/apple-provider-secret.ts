@@ -42,10 +42,21 @@ let hasWarnedNotConfigured = false;
 /** Normalize .p8 contents pasted into an environment variable. */
 function normalizeKeyContent(raw: string): string {
   let key = raw.trim();
-  // Support literal "\n" escapes and base64-encoded key bodies pasted into env vars.
-  if (!key.includes('-----BEGIN')) {
+
+  // 1) Un-escape literal "\n" sequences (env vars / Dokploy often deliver the PEM
+  //    as one line with backslash-n escapes instead of real newlines).
+  //
+  //    Detect this by the ABSENCE OF A REAL NEWLINE, not by the absence of the
+  //    "-----BEGIN" marker. The original guard was `!key.includes('-----BEGIN')`,
+  //    which is false for a single-line PEM — it still contains the BEGIN marker
+  //    text — so the un-escaping was skipped in exactly the case it was written
+  //    for. The key then reached jwt.sign() as one line with literal "\n", and
+  //    ES256 failed with "secretOrPrivateKey must be an asymmetric key".
+  if (!key.includes('\n') && key.includes('\\n')) {
     key = key.replace(/\\n/g, '\n');
   }
+
+  // 2) Base64-encoded PEM body.
   if (!key.includes('-----BEGIN')) {
     try {
       const decoded = Buffer.from(key, 'base64').toString('utf8');
@@ -54,6 +65,16 @@ function normalizeKeyContent(raw: string): string {
       // not base64 — leave as-is; signing will fail with a clear error
     }
   }
+
+  // 3) Fully collapsed PEM: markers present but no line break anywhere
+  //    ("-----BEGIN PRIVATE KEY-----MIGT...-----END PRIVATE KEY-----").
+  //    Re-introduce the delimiters; OpenSSL accepts an unwrapped base64 body.
+  if (key.includes('-----BEGIN') && !key.includes('\n')) {
+    key = key
+      .replace(/(-----BEGIN [A-Z0-9 ]+-----)/, '$1\n')
+      .replace(/(-----END [A-Z0-9 ]+-----)/, '\n$1');
+  }
+
   return key;
 }
 
