@@ -99,3 +99,9 @@ venv/
 
 # ── Miscellaneous ───────────────────────────────────────────────────────
 /public/images/image_asset
+
+# ── Test harness scratch ────────────────────────────────────────────────
+# scripts/tests/engine-gateway.e2e.mjs bundles engine.ts here and removes both on exit. Ignored so a
+# crashed run does not leave them staged.
+.e2e-entry.ts
+.e2e-bundle.mjs

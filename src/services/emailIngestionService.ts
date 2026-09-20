@@ -24,6 +24,14 @@ const INGESTION_CONFIG = {
   MAX_CONCURRENT: 1,
   RETRY_DELAY_MS: 5000,
   MAX_RETRIES: 3,
+  /**
+   * Ceiling for the failure backoff. The poll loop used to be a fixed `setInterval(30s)` that logged a
+   * full stack trace on every tick, so an unreachable JMAP host produced an unbounded stream of
+   * identical errors and hammered a dead endpoint forever. Backoff replaces that.
+   */
+  MAX_BACKOFF_MS: 300_000, // 5 minutes
+  /** Delay before the first poll after boot, so MongoDB has a chance to connect. */
+  STARTUP_DELAY_MS: 5000,
 };
 
 // ============================================================================
@@ -388,9 +396,30 @@ async function processInboundEmail(
 
 let isIngesting = false;
 let pollTimer: NodeJS.Timeout | null = null;
+let workerStopped = false;
+let consecutiveFailures = 0;
+let lastError: { message: string; code?: string; at: string } | null = null;
+let nextPollAt: number | null = null;
 
-async function pollInbox(): Promise<void> {
-  if (isIngesting) return;
+/**
+ * Flatten a fetch failure into something readable.
+ *
+ * `fetch` wraps the real problem: the top-level message is a useless "fetch failed" and the useful
+ * detail lives on `cause` (`UND_ERR_CONNECT_TIMEOUT`, `ENOTFOUND`, …). Surfacing the code is what makes
+ * an unreachable host distinguishable from a bad response.
+ */
+function describeError(error: unknown): { message: string; code?: string } {
+  const err = error as { message?: string; code?: string; cause?: { message?: string; code?: string } };
+  const cause = err?.cause;
+  const code = cause?.code || err?.code;
+  const message = err?.message || String(error);
+  const detail = cause?.message && cause.message !== message ? ` — ${cause.message}` : '';
+  return { message: `${message}${detail}`, code };
+}
+
+/** @returns true if the poll completed, false if it failed and should back off. */
+async function pollInbox(): Promise<boolean> {
+  if (isIngesting) return true;
   isIngesting = true;
 
   try {
@@ -420,28 +449,81 @@ async function pollInbox(): Promise<void> {
     if (processed > 0) {
       console.log(`📧 Ingested ${processed} new emails`);
     }
+    return true;
   } catch (error) {
-    console.error('Ingestion poll error:', error);
+    const { message, code } = describeError(error);
+    consecutiveFailures++;
+
+    // Log the full error only on the first failure of a streak. Repeating an identical stack trace on
+    // every tick buries the signal; one line is enough to show it is still failing.
+    if (consecutiveFailures === 1) {
+      console.error('Ingestion poll failed:', error);
+    } else {
+      console.warn(
+        `[EmailIngestion] Still failing (${consecutiveFailures}x): ${message}${code ? ` [${code}]` : ''}`
+      );
+    }
+
+    lastError = { message, code, at: new Date().toISOString() };
+    return false;
   } finally {
     isIngesting = false;
   }
 }
 
+function scheduleNextPoll(delayMs: number): void {
+  if (workerStopped) return;
+  nextPollAt = Date.now() + delayMs;
+  pollTimer = setTimeout(() => {
+    void runPollCycle();
+  }, delayMs);
+}
+
+async function runPollCycle(): Promise<void> {
+  if (workerStopped) return;
+
+  const ok = await pollInbox();
+
+  if (ok) {
+    if (consecutiveFailures > 0) {
+      console.log(
+        `[EmailIngestion] Recovered after ${consecutiveFailures} failed poll(s); ` +
+          `resuming ${INGESTION_CONFIG.POLL_INTERVAL_MS / 1000}s interval`
+      );
+    }
+    consecutiveFailures = 0;
+    lastError = null;
+    scheduleNextPoll(INGESTION_CONFIG.POLL_INTERVAL_MS);
+    return;
+  }
+
+  // Exponential backoff: 30s → 60s → 120s → 240s, capped at 5 min.
+  const backoff = Math.min(
+    INGESTION_CONFIG.POLL_INTERVAL_MS * 2 ** (consecutiveFailures - 1),
+    INGESTION_CONFIG.MAX_BACKOFF_MS
+  );
+  console.warn(`[EmailIngestion] Next poll in ${Math.round(backoff / 1000)}s`);
+  scheduleNextPoll(backoff);
+}
+
 export function startIngestionWorker(): void {
   if (pollTimer) return;
 
-  console.log('🚀 Starting email ingestion worker...');
-  pollTimer = setInterval(pollInbox, INGESTION_CONFIG.POLL_INTERVAL_MS);
+  workerStopped = false;
+  consecutiveFailures = 0;
+  lastError = null;
 
-  // Initial poll after 5 seconds
-  setTimeout(pollInbox, 5000);
+  console.log('🚀 Starting email ingestion worker...');
+  scheduleNextPoll(INGESTION_CONFIG.STARTUP_DELAY_MS);
 }
 
 export function stopIngestionWorker(): void {
+  workerStopped = true;
   if (pollTimer) {
-    clearInterval(pollTimer);
+    clearTimeout(pollTimer);
     pollTimer = null;
   }
+  nextPollAt = null;
   console.log('🛑 Email ingestion worker stopped');
 }
 
@@ -449,6 +531,12 @@ export function getIngestionStatus() {
   return {
     isRunning: !!pollTimer,
     isIngesting,
+    /** Non-zero means the last poll(s) failed and the loop is backing off. */
+    consecutiveFailures,
+    lastError,
+    nextPollAt: nextPollAt ? new Date(nextPollAt).toISOString() : null,
+    pollIntervalMs: INGESTION_CONFIG.POLL_INTERVAL_MS,
+    maxBackoffMs: INGESTION_CONFIG.MAX_BACKOFF_MS,
   };
 }
 

@@ -80,6 +80,191 @@ function resolvePython(): string {
   }
 }
 
+// ── Remote Worker Gateway ───────────────────────────────────────────────
+//
+// `scripts/worker-gateway.py` exposes the one-shot Python workers over HTTP so they can run as VPS
+// services instead of inside the application image. Setting `INGESTION_WORKER_URL` switches both
+// fetchers to the remote path; leaving it unset keeps the local `spawn()` path, unchanged.
+//
+// That asymmetry is the whole point: the migration is reversible with an env var, not a redeploy, and
+// the two paths share the same result-mapping functions below so they cannot silently drift apart.
+
+interface WorkerGatewayConfig {
+  baseUrl: string;
+  token: string;
+}
+
+function getWorkerGatewayConfig(): WorkerGatewayConfig | null {
+  const baseUrl = process.env.INGESTION_WORKER_URL;
+  if (!baseUrl) return null;
+  return { baseUrl: baseUrl.replace(/\/+$/, ''), token: process.env.INGESTION_WORKER_TOKEN || '' };
+}
+
+/** True when job discovery is delegated to the VPS worker gateway rather than spawned locally. */
+export function isWorkerGatewayEnabled(): boolean {
+  return getWorkerGatewayConfig() !== null;
+}
+
+interface WorkerResult {
+  success?: boolean;
+  jobs?: unknown[];
+  stats?: Record<string, unknown>;
+  error?: string;
+  logs?: string;
+  durationMs?: number;
+}
+
+/**
+ * Run a worker through the gateway. Returns null on any transport-level failure so callers can treat it
+ * exactly like "the worker produced nothing" — the same contract the local path uses.
+ */
+async function callWorkerGateway(
+  worker: 'jobspy' | 'linkedin',
+  payload: Record<string, unknown>,
+  env: Record<string, string>,
+  timeoutMs: number,
+  signal?: AbortSignal
+): Promise<WorkerResult | null> {
+  const config = getWorkerGatewayConfig();
+  if (!config) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const onAbort = () => controller.abort();
+  signal?.addEventListener('abort', onAbort);
+
+  try {
+    const response = await fetch(`${config.baseUrl}/scrape`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(config.token ? { Authorization: `Bearer ${config.token}` } : {}),
+      },
+      body: JSON.stringify({ worker, payload, env }),
+      signal: controller.signal,
+    });
+
+    const body = (await response.json().catch(() => null)) as WorkerResult | null;
+
+    if (!body) {
+      log('ERROR', `${worker}: gateway returned non-JSON (HTTP ${response.status})`);
+      return null;
+    }
+
+    // The worker's stderr is the only diagnostic available once it runs on another host, so forward it
+    // into the ingestion log rather than discarding it.
+    if (body.logs) {
+      for (const line of String(body.logs).split('\n')) {
+        if (line.trim()) log(`${worker.toUpperCase()}-WORKER`, line.trim());
+      }
+    }
+
+    if (!body.success) {
+      log(
+        'FETCH',
+        `${worker}: gateway reported failure — ${body.error || `HTTP ${response.status}`}`
+      );
+    }
+    return body;
+  } catch (error) {
+    const aborted = controller.signal.aborted;
+    log(
+      'ERROR',
+      `${worker}: gateway request ${aborted ? 'timed out or was cancelled' : 'failed'} — ${(error as Error).message}`
+    );
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', onAbort);
+  }
+}
+
+/**
+ * Map a JobSpy worker's job array to `RawJob[]`.
+ * Shared by the local-spawn and remote-gateway paths — keep it the single source of truth, or the same
+ * posting will normalise differently depending on which transport fetched it.
+ */
+function mapJobSpyJobs(rawJobs: unknown[]): RawJob[] {
+  return rawJobs.map((job: any) => {
+    const jobUrl = job.job_url || job.url || '';
+    return {
+      source: 'jobspy',
+      sourceSecondary: job.site || undefined,
+      sourceJobId: job.id || jobUrl || `jobspy-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      url: jobUrl,
+      title: job.title || 'Untitled',
+      companyName: job.company || 'Unknown',
+      companyUrl: job.company_url || undefined,
+      rawHtmlDescription: job.description || '',
+      locationString: job.location || '',
+      city: job.city || undefined,
+      state: job.state || undefined,
+      country: job.country || undefined,
+      countryCode: job.country || undefined,
+      isRemote: job.is_remote || job.location?.toLowerCase().includes('remote') || false,
+      postedDate: job.date_posted ? new Date(job.date_posted) : new Date(),
+      applicationUrl: jobUrl,
+      jobType: job.job_type || undefined,
+      experienceLevel: job.job_level || undefined,
+      salaryMin: job.min_amount ?? undefined,
+      salaryMax: job.max_amount ?? undefined,
+      salaryCurrency: job.currency || undefined,
+      salaryInterval: job.interval || undefined,
+      skills: Array.isArray(job.skills) ? job.skills : undefined,
+      sourceMetadata: {
+        site: job.site,
+        companyIndustry: job.company_industry || undefined,
+        salarySource: job.salary_source || undefined,
+      },
+    };
+  });
+}
+
+/** Map a LinkedIn worker's job array to `RawJob[]`. Shared by both transports — see above. */
+function mapLinkedInJobs(rawJobs: unknown[]): RawJob[] {
+  return rawJobs.map((job: any) => ({
+    source: 'linkedin',
+    sourceJobId: job.id || job.job_id || `linkedin-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    url: job.url || job.linkedin_url || '',
+    title: job.title || 'Untitled',
+    companyName: job.company || 'Unknown',
+    rawHtmlDescription: job.description || job.snippet || '',
+    locationString: job.location || '',
+    isRemote: job.location?.toLowerCase().includes('remote') || job.remote || false,
+    postedDate: job.posted_date || job.date_posted ? new Date(job.posted_date || job.date_posted) : new Date(),
+    applicationUrl: job.apply_url || job.url || '',
+    sourceMetadata: {
+      source: 'linkedin',
+      searchKeyword: job.search_keyword,
+      linkedinJobId: job.linkedin_job_id,
+    },
+  }));
+}
+
+/**
+ * Build the LinkedIn worker's environment from DB settings.
+ *
+ * The local path merges this into `process.env` for the child; the remote path ships it to the gateway,
+ * which applies it to the subprocess there. Hoisted so both paths derive it identically — notably
+ * `LINKEDIN_BROWSER_PROFILE_DIR`, which defaults to a VPS path that only exists on the host.
+ */
+function buildLinkedInWorkerEnv(li: Record<string, any>): Record<string, string> {
+  return {
+    LINKEDIN_ENABLED: li.enabled !== undefined ? String(li.enabled) : (process.env.LINKEDIN_ENABLED || 'false'),
+    LINKEDIN_BROWSER_PROFILE_DIR: li.browserProfileDir || process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
+    LINKEDIN_MAX_SEARCHES_PER_RUN: String(li.maxSearchesPerRun || process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5'),
+    LINKEDIN_MAX_PAGES_PER_SEARCH: String(li.maxPagesPerSearch || process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2'),
+    LINKEDIN_MAX_JOBS_PER_SEARCH: String(li.maxJobsPerSearch || process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100'),
+    LINKEDIN_MAX_RUNTIME_SECONDS: String(li.maxRuntimeSeconds || process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600'),
+    LINKEDIN_DRY_RUN: li.dryRun !== undefined ? String(li.dryRun) : (process.env.LINKEDIN_DRY_RUN || 'false'),
+    LINKEDIN_DEBUG: li.debug !== undefined ? String(li.debug) : (process.env.LINKEDIN_DEBUG || 'false'),
+    LINKEDIN_REGION_STRATEGY: li.regionStrategy || process.env.LINKEDIN_REGION_STRATEGY || 'rotation',
+    LINKEDIN_REGIONS: (li.regions || []).join(',') || process.env.LINKEDIN_REGIONS || '',
+    LINKEDIN_MAX_REGIONS_PER_RUN: String(li.maxRegionsPerRun || process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3'),
+    LINKEDIN_DEFAULT_KEYWORD: li.defaultKeyword || process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
+  };
+}
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 export interface RawJob {
@@ -350,11 +535,15 @@ export function checkSourceConfig(source: string): ConfigCheck {
   }
 
   if (source === 'jobspy') {
-    try {
-      const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
-      require('fs').accessSync(workerPath);
-    } catch {
-      return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
+    // With the gateway in use the script lives on the VPS, not in this container — checking the local
+    // path would report "not found" for a source that is perfectly healthy.
+    if (!isWorkerGatewayEnabled()) {
+      try {
+        const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
+        require('fs').accessSync(workerPath);
+      } catch {
+        return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
+      }
     }
   }
 
@@ -362,15 +551,87 @@ export function checkSourceConfig(source: string): ConfigCheck {
     if (!getLinkedInEnabled()) {
       return { ready: false, reason: 'LinkedIn worker disabled (enable in Admin > Worker Settings)' };
     }
-    try {
-      const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
-      require('fs').accessSync(workerPath);
-    } catch {
-      return { ready: false, reason: 'scripts/linkedin-worker/worker.py not found' };
+    if (!isWorkerGatewayEnabled()) {
+      try {
+        const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
+        require('fs').accessSync(workerPath);
+      } catch {
+        return { ready: false, reason: 'scripts/linkedin-worker/worker.py not found' };
+      }
     }
   }
 
   return { ready: true };
+}
+
+/**
+ * How job discovery is currently executed. Surfaced so the admin UI can say plainly whether ingestion
+ * runs in-process or on the VPS, instead of implying the scripts are present locally.
+ */
+export function getWorkerExecutionMode(): {
+  mode: 'remote-gateway' | 'local-spawn';
+  gatewayUrl: string | null;
+} {
+  const config = getWorkerGatewayConfig();
+  return {
+    mode: config ? 'remote-gateway' : 'local-spawn',
+    gatewayUrl: config ? config.baseUrl : null,
+  };
+}
+
+/**
+ * Probe the configured worker gateway's `/health`.
+ *
+ * Lets the admin UI and ops checks answer "is the VPS worker reachable?" without kicking off a
+ * discovery run. It deliberately shares `getWorkerGatewayConfig()` with `callWorkerGateway`, so a green
+ * probe means the URL and token the fetchers actually use are correct.
+ */
+export async function probeWorkerGateway(timeoutMs = 5000): Promise<{
+  configured: boolean;
+  reachable: boolean;
+  url: string | null;
+  status?: number;
+  body?: Record<string, unknown>;
+  error?: string;
+}> {
+  const config = getWorkerGatewayConfig();
+  if (!config) {
+    return {
+      configured: false,
+      reachable: false,
+      url: null,
+      error: 'INGESTION_WORKER_URL is not set',
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${config.baseUrl}/health`, {
+      headers: config.token ? { Authorization: `Bearer ${config.token}` } : {},
+      signal: controller.signal,
+    });
+    const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    return {
+      configured: true,
+      reachable: response.ok,
+      url: config.baseUrl,
+      status: response.status,
+      body: body ?? undefined,
+      error: response.ok ? undefined : `gateway returned HTTP ${response.status}`,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      reachable: false,
+      url: config.baseUrl,
+      error: controller.signal.aborted
+        ? `gateway did not respond within ${timeoutMs}ms`
+        : (error as Error).message,
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 // ── Source Fetchers ─────────────────────────────────────────────────────
@@ -956,6 +1217,31 @@ async function fetchAdzuna(signal?: AbortSignal): Promise<RawJob[]> {
 const activeJobSpyProcesses = new Map<string, ChildProcess>();
 
 async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
+  // Settings are read before the transport branch so both paths send an identical payload.
+  const settings = getCachedSettings();
+  const js = settings?.jobspy || {};
+  const input = {
+    sites: js.sites || ['indeed', 'linkedin', 'zip_recruiter'],
+    searchTerm: js.searchTerm || 'software engineer',
+    location: js.location || 'United States',
+    resultsWanted: js.resultsWanted || 20,
+    hoursOld: js.hoursOld || 72,
+  };
+
+  // ── Remote path: the worker runs as a VPS service ───────────────────────
+  if (isWorkerGatewayEnabled()) {
+    log('FETCH', 'JobSpy: delegating to the VPS worker gateway');
+    const result = await callWorkerGateway('jobspy', input, {}, 300_000, signal);
+    if (!result?.success || !Array.isArray(result.jobs)) {
+      log('FETCH', `JobSpy: no jobs returned (success=${result?.success})`);
+      return [];
+    }
+    const jobs = mapJobSpyJobs(result.jobs);
+    log('FETCH', `JobSpy: ${jobs.length} jobs fetched`);
+    return jobs;
+  }
+
+  // ── Local path: unchanged in-process spawn ──────────────────────────────
   const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
   log('FETCH', `JobSpy: spawning python worker at ${workerPath}`);
 
@@ -973,16 +1259,7 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
     activeJobSpyProcesses.set(processId, child);
 
     // Send input via stdin — use DB settings
-    const settings = getCachedSettings();
-    const js = settings?.jobspy || {};
-    const input = JSON.stringify({
-      sites: js.sites || ['indeed', 'linkedin', 'zip_recruiter'],
-      searchTerm: js.searchTerm || 'software engineer',
-      location: js.location || 'United States',
-      resultsWanted: js.resultsWanted || 20,
-      hoursOld: js.hoursOld || 72,
-    });
-    child.stdin.write(input);
+    child.stdin.write(JSON.stringify(input));
     child.stdin.end();
 
     let stdout = '';
@@ -1035,39 +1312,7 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
           return;
         }
 
-        const jobs: RawJob[] = result.jobs.map((job: any) => {
-          const jobUrl = job.job_url || job.url || '';
-          return {
-            source: 'jobspy',
-            sourceSecondary: job.site || undefined,
-            sourceJobId: job.id || jobUrl || `jobspy-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            url: jobUrl,
-            title: job.title || 'Untitled',
-            companyName: job.company || 'Unknown',
-            companyUrl: job.company_url || undefined,
-            rawHtmlDescription: job.description || '',
-            locationString: job.location || '',
-            city: job.city || undefined,
-            state: job.state || undefined,
-            country: job.country || undefined,
-            countryCode: job.country || undefined,
-            isRemote: job.is_remote || job.location?.toLowerCase().includes('remote') || false,
-            postedDate: job.date_posted ? new Date(job.date_posted) : new Date(),
-            applicationUrl: jobUrl,
-            jobType: job.job_type || undefined,
-            experienceLevel: job.job_level || undefined,
-            salaryMin: job.min_amount ?? undefined,
-            salaryMax: job.max_amount ?? undefined,
-            salaryCurrency: job.currency || undefined,
-            salaryInterval: job.interval || undefined,
-            skills: Array.isArray(job.skills) ? job.skills : undefined,
-            sourceMetadata: {
-              site: job.site,
-              companyIndustry: job.company_industry || undefined,
-              salarySource: job.salary_source || undefined,
-            },
-          };
-        });
+        const jobs = mapJobSpyJobs(result.jobs);
 
         log('FETCH', `JobSpy: ${jobs.length} jobs fetched`);
         resolve(jobs);
@@ -1101,6 +1346,52 @@ export interface LinkedInFetchOptions {
 }
 
 async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOptions): Promise<RawJob[]> {
+  // The payload and the worker environment are both derived before the transport branch so the local
+  // and remote paths cannot diverge.
+  const settings = getCachedSettings();
+  const li = settings?.linkedin || {};
+
+  // Build stdin input — supports both demand-driven tasks and region rotation
+  const inputPayload: Record<string, any> = {};
+
+  if (options?.regions && options.regions.length > 0) {
+    // Scheduler provided specific regions — worker auto-generates tasks
+    inputPayload.regions = options.regions;
+    inputPayload.runIndex = options.runIndex || 0;
+    if (options.keyword) inputPayload.keyword = options.keyword;
+  } else if (options?.keyword) {
+    // Just a keyword override — let worker handle region rotation
+    inputPayload.keyword = options.keyword;
+    inputPayload.runIndex = options.runIndex || 0;
+  } else {
+    // No options — worker uses its own region rotation strategy
+    inputPayload.runIndex = options?.runIndex || 0;
+  }
+
+  if (options?.regions && options.regions.length > 0) {
+    log('FETCH', `LinkedIn: sending regions to worker: ${options.regions.join(', ')}`);
+  }
+
+  // ── Remote path: the worker runs as a VPS service ───────────────────────
+  if (isWorkerGatewayEnabled()) {
+    log('FETCH', 'LinkedIn: delegating to the VPS worker gateway');
+    const result = await callWorkerGateway(
+      'linkedin',
+      inputPayload,
+      buildLinkedInWorkerEnv(li),
+      900_000,
+      signal
+    );
+    if (!result?.success || !Array.isArray(result.jobs)) {
+      log('FETCH', `LinkedIn: worker reported failure — ${result?.error || 'no jobs array'}`);
+      return [];
+    }
+    const jobs = mapLinkedInJobs(result.jobs);
+    log('FETCH', `LinkedIn: ${jobs.length} jobs fetched`);
+    return jobs;
+  }
+
+  // ── Local path: unchanged in-process spawn ──────────────────────────────
   const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
   log('FETCH', `LinkedIn: spawning worker at ${workerPath}`);
 
@@ -1109,47 +1400,13 @@ async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOption
 
     const pythonBin = resolvePython();
     log('FETCH', `LinkedIn: using python at ${pythonBin}`);
-    const settings = getCachedSettings();
-    const li = settings?.linkedin || {};
     const child = spawn(pythonBin, [workerPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        LINKEDIN_ENABLED: li.enabled !== undefined ? String(li.enabled) : (process.env.LINKEDIN_ENABLED || 'false'),
-        LINKEDIN_BROWSER_PROFILE_DIR: li.browserProfileDir || process.env.LINKEDIN_BROWSER_PROFILE_DIR || '/var/lib/buildairesume/browser-profiles/linkedin',
-        LINKEDIN_MAX_SEARCHES_PER_RUN: String(li.maxSearchesPerRun || process.env.LINKEDIN_MAX_SEARCHES_PER_RUN || '5'),
-        LINKEDIN_MAX_PAGES_PER_SEARCH: String(li.maxPagesPerSearch || process.env.LINKEDIN_MAX_PAGES_PER_SEARCH || '2'),
-        LINKEDIN_MAX_JOBS_PER_SEARCH: String(li.maxJobsPerSearch || process.env.LINKEDIN_MAX_JOBS_PER_SEARCH || '100'),
-        LINKEDIN_MAX_RUNTIME_SECONDS: String(li.maxRuntimeSeconds || process.env.LINKEDIN_MAX_RUNTIME_SECONDS || '600'),
-        LINKEDIN_DRY_RUN: li.dryRun !== undefined ? String(li.dryRun) : (process.env.LINKEDIN_DRY_RUN || 'false'),
-        LINKEDIN_DEBUG: li.debug !== undefined ? String(li.debug) : (process.env.LINKEDIN_DEBUG || 'false'),
-        LINKEDIN_REGION_STRATEGY: li.regionStrategy || process.env.LINKEDIN_REGION_STRATEGY || 'rotation',
-        LINKEDIN_REGIONS: (li.regions || []).join(',') || process.env.LINKEDIN_REGIONS || '',
-        LINKEDIN_MAX_REGIONS_PER_RUN: String(li.maxRegionsPerRun || process.env.LINKEDIN_MAX_REGIONS_PER_RUN || '3'),
-        LINKEDIN_DEFAULT_KEYWORD: li.defaultKeyword || process.env.LINKEDIN_DEFAULT_KEYWORD || 'software engineer',
-      },
+      env: { ...process.env, ...buildLinkedInWorkerEnv(li) },
       timeout: 900_000, // 15 min max
     });
 
     activeLinkedInProcesses.set(processId, child);
-
-    // Build stdin input — supports both demand-driven tasks and region rotation
-    const inputPayload: Record<string, any> = {};
-
-    if (options?.regions && options.regions.length > 0) {
-      // Scheduler provided specific regions — worker auto-generates tasks
-      inputPayload.regions = options.regions;
-      inputPayload.runIndex = options.runIndex || 0;
-      if (options.keyword) inputPayload.keyword = options.keyword;
-      log('FETCH', `LinkedIn: sending regions to worker: ${options.regions.join(', ')}`);
-    } else if (options?.keyword) {
-      // Just a keyword override — let worker handle region rotation
-      inputPayload.keyword = options.keyword;
-      inputPayload.runIndex = options.runIndex || 0;
-    } else {
-      // No options — worker uses its own region rotation strategy
-      inputPayload.runIndex = options?.runIndex || 0;
-    }
 
     child.stdin.write(JSON.stringify(inputPayload));
     child.stdin.end();
@@ -1221,23 +1478,7 @@ async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOption
           return;
         }
 
-        const jobs: RawJob[] = result.jobs.map((job: any) => ({
-          source: 'linkedin',
-          sourceJobId: job.id || job.job_id || `linkedin-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          url: job.url || job.linkedin_url || '',
-          title: job.title || 'Untitled',
-          companyName: job.company || 'Unknown',
-          rawHtmlDescription: job.description || job.snippet || '',
-          locationString: job.location || '',
-          isRemote: job.location?.toLowerCase().includes('remote') || job.remote || false,
-          postedDate: job.posted_date || job.date_posted ? new Date(job.posted_date || job.date_posted) : new Date(),
-          applicationUrl: job.apply_url || job.url || '',
-          sourceMetadata: {
-            source: 'linkedin',
-            searchKeyword: job.search_keyword,
-            linkedinJobId: job.linkedin_job_id,
-          },
-        }));
+        const jobs = mapLinkedInJobs(result.jobs);
 
         log('FETCH', `LinkedIn: ${jobs.length} jobs fetched`);
         resolve(jobs);

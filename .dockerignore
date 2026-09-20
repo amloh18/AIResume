@@ -55,6 +55,20 @@ logs/
 tmp/
 temp/
 
+# Python — these are build/host artefacts, never image content. A stale `.venv` copied into the image
+# would also shadow the interpreter the worker actually needs.
+**/__pycache__/
+**/*.pyc
+**/.venv/
+scripts/.vps-status.json
+scripts/tests/
+
+# Agent / project memory — not application content
+.workbuddy-ai/
+
+# Local Playwright browser cache (the image gets its own from the `browsers` stage)
+.playwright/
+
 # Sensitive files
 firebase-key.json
 *.pem
