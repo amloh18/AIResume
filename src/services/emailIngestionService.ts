@@ -11,8 +11,9 @@
  */
 
 import mongoose from 'mongoose';
-import { getEmails, searchEmails, markAsRead, type JmapEmail } from '@/lib/services/jmapService';
+import { getEmails, searchEmails, markAsRead, resolveBodyText, type JmapEmail } from '@/lib/services/jmapService';
 import { Communication, type CommunicationClassification, type MatchConfidence } from '@/models/Communication';
+
 
 // ============================================================================
 // Configuration
@@ -239,7 +240,16 @@ async function processInboundEmail(
     const senderName = email.from?.[0]?.name || '';
     const senderDomain = senderEmail.split('@')[1] || '';
     const subject = email.subject || '(No Subject)';
-    const bodySnippet = email.preview || email.textBody?.substring(0, 500) || '';
+
+    // Resolve JMAP EmailBodyPart[] descriptors → plain text.
+    // Must happen before bodySnippet and before the Communication constructor —
+    // passing an EmailBodyPart[] directly causes a Mongoose CastError on String fields.
+    const textBody = resolveBodyText(email.textBody, email.bodyValues);
+    const htmlBody = resolveBodyText(email.htmlBody, email.bodyValues);
+
+    // Non-empty fallback required: bodySnippet is { required: true } and Mongoose
+    // treats '' the same as undefined for required Strings (fails validation).
+    const bodySnippet = email.preview || textBody.substring(0, 500) || '(no text body)';
 
     // 1. Check idempotency
     const existing = await Communication.findOne({
@@ -284,8 +294,8 @@ async function processInboundEmail(
       status: 'unread',
       subject,
       bodySnippet,
-      textBody: email.textBody,
-      htmlBody: email.htmlBody,
+      textBody,
+      htmlBody,
       senderEmail,
       senderName,
       recipients: (email.to || []).map(r => ({ email: r.email, name: r.name, type: 'to' as const })),
@@ -306,6 +316,7 @@ async function processInboundEmail(
     });
 
     await communication.save();
+
 
     // ── Phase 7: Trigger state transition on matched application ──────
     if (match.applicationId && classification.confidence >= 0.85) {

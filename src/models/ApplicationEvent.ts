@@ -13,7 +13,14 @@ export type ApplicationEventType =
   | 'REJECTION_DETECTED'
   | (string & {});
 
-export type ApplicationEventSource = 'user' | 'automation' | 'email_intelligence' | 'admin' | (string & {});
+export type ApplicationEventSource =
+  | 'user'
+  | 'automation'
+  | 'automation_worker'
+  | 'email_intelligence'
+  | 'admin'
+  | 'system'
+  | (string & {});
 
 export interface IApplicationEventDocument extends Document {
   applicationId: mongoose.Types.ObjectId;
@@ -65,7 +72,10 @@ const ApplicationEventSchema = new Schema<IApplicationEventDocument>(
     newStatus: { type: String },
     source: {
       type: String,
-      enum: ['user', 'automation', 'email_intelligence', 'admin'],
+      // Must stay in sync with JobApplication.stageHistory[].source and with the
+      // `source` values the state machine is called with — `automation_worker`
+      // (application worker) and `system` (reconciliation watchdog).
+      enum: ['user', 'automation', 'automation_worker', 'email_intelligence', 'admin', 'system'],
       required: true,
     },
     runId: { type: String },

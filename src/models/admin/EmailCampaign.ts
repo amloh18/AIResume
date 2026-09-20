@@ -75,6 +75,8 @@ export interface IEmailCampaign extends Document {
     spamReports: number;
     goalCompletions: number;
     revenue?: number;
+    /** Set for system-generated containers (e.g. 'verification_code'); used as a dedup key. */
+    systemType?: string;
   };
 
   // Verification Status
@@ -273,6 +275,12 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
       spamReports: { type: Number, default: 0 },
       goalCompletions: { type: Number, default: 0 },
       revenue: Number,
+      // Must be declared: SystemEmailTracker writes it and then uses
+      // 'performance.systemType' as a find-or-create dedup key. Undeclared, Mongoose
+      // strict mode silently dropped it on write while the (unstripped) query filter
+      // still required it — so findOne never matched and every system email created a
+      // brand-new container document instead of incrementing today's.
+      systemType: { type: String, index: true },
     },
     verification: {
       hasUnsubscribeLink: Boolean,

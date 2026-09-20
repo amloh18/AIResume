@@ -78,7 +78,11 @@ const loginSessionSchema = new Schema<ILoginSession>(
 );
 
 loginSessionSchema.index({ userId: 1, expiresAt: 1 });
-loginSessionSchema.index({ jti: 1 });
+// NOTE: no explicit `index({ jti: 1 })` here — `jti` already declares `unique: true`
+// above, which creates that index. Declaring both makes Mongoose warn about a
+// duplicate index, and if the non-unique one is created first MongoDB will NOT
+// upgrade it to unique (same key pattern => IndexOptionsConflict, silently logged),
+// leaving `jti` uniqueness unenforced.
 loginSessionSchema.index({ userId: 1, revokedAt: 1, expiresAt: 1 });
 
 export default mongoose.models.LoginSession ||

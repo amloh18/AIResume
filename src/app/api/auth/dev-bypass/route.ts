@@ -2,18 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { encode } from 'next-auth/jwt';
+import { isDevBypassRequestAllowed } from '@/lib/auth/dev-bypass';
+import { getSessionCookieName, getSessionCookieOptions } from '@/lib/auth/session-cookie';
 
 /**
  * Dev Bypass Login API Route Handler
- * 
+ *
  * Allows logging in instantly as a User or Admin during local development.
- * This route is strictly disabled in production environments.
+ * Strictly local-only — see `@/lib/auth/dev-bypass` for the two gates.
  */
 export async function POST(request: NextRequest) {
-  // 1. Check if the environment is NOT production
-  if (process.env.NODE_ENV === 'production') {
+  // 1. Local-dev-only gate: env flag AND the request must come from localhost.
+  const host = request.headers.get('host') || request.nextUrl.hostname;
+  if (!isDevBypassRequestAllowed(host)) {
     return NextResponse.json(
-      { success: false, error: 'Not allowed in production' },
+      { success: false, error: 'Dev bypass is not available' },
       { status: 403 }
     );
   }
@@ -139,16 +142,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Set NextAuth session cookie
-    const cookieName = 'next-auth.session-token';
+    // Set NextAuth session cookie.
+    //
+    // Same rule as create-session: the name and the `Secure` flag must match
+    // what getToken()/getServerSession() read, which depends on the deployment
+    // being on HTTPS — not on NODE_ENV alone. A hardcoded insecure name silently
+    // breaks the bypass under `next start` (NODE_ENV=production, http://localhost).
+    const cookieName = getSessionCookieName();
 
-    response.cookies.set(cookieName, token, {
-      httpOnly: true,
-      secure: false, // Since this is dev-only bypass
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-    });
+    response.cookies.set(cookieName, token, getSessionCookieOptions(7 * 24 * 60 * 60));
 
     console.log('✅ Dev bypass session created for user:', (userDoc._id as any).toString());
 

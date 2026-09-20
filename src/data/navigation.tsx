@@ -92,7 +92,7 @@ export const navLinks: NavLink[] = [
       title: 'Interview Prep',
       description: 'Master your next interview with our real-time AI coach that analyzes your responses and provides instant feedback.',
       href: '/interview-coach',
-      image: '/images/interviewcoach_dashbaord.png',
+      image: '/images/interviewcoach_dashbaord.webp',
       badge: 'New Feature',
       actionText: 'Try AI Coach'
     }
@@ -128,7 +128,7 @@ export const navLinks: NavLink[] = [
       title: 'LinkedIn Optimizer',
       description: 'Transform your LinkedIn profile into a recruiter magnet with our browser-integrated enhancer.',
       href: '#chrome-extension',
-      image: '/images/linkedin_enhancer_dashbaord.png',
+      image: '/images/linkedin_enhancer_dashbaord.webp',
       badge: 'Popular',
       actionText: 'Get Extension'
     }
@@ -171,7 +171,7 @@ export const navLinks: NavLink[] = [
       title: 'The ATS Mastery Guide',
       description: 'Download our comprehensive 2026 guide on beating modern Applicant Tracking Systems.',
       href: '/blog/ats-optimization/ats-tips',
-      image: '/images/ats_optimization.png',
+      image: '/images/ats_optimization.webp',
       badge: 'Free Guide',
       actionText: 'Read Article'
     }

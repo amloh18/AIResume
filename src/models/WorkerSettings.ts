@@ -76,9 +76,11 @@ const WorkerSettingsSchema = new Schema<IWorkerSettings>({
   namespace: {
     type: String,
     required: true,
+    // `unique: true` already creates the index. Adding `index: true` here (and a
+    // separate schema.index() below) declared the same key three times, which made
+    // Mongoose emit "Duplicate schema index on {namespace:1}" on every boot.
     unique: true,
     default: 'ingestion',
-    index: true,
   },
   settings: {
     type: Schema.Types.Mixed,
@@ -95,8 +97,10 @@ const WorkerSettingsSchema = new Schema<IWorkerSettings>({
   timestamps: true,
 });
 
-// Ensure only one document per namespace
-WorkerSettingsSchema.index({ namespace: 1 }, { unique: true });
+// NOTE: no separate `index({ namespace: 1 }, { unique: true })` — the field above
+// already declares `unique: true`, which creates exactly that index. Declaring both
+// is what produced the duplicate-index warning (and can leave uniqueness unenforced
+// if the non-unique variant wins the race to be created first).
 
 export const WorkerSettings = (mongoose.models.WorkerSettings as mongoose.Model<IWorkerSettings>) ||
   mongoose.model<IWorkerSettings>('WorkerSettings', WorkerSettingsSchema);

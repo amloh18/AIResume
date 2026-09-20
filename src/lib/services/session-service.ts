@@ -77,6 +77,38 @@ export class SessionService {
   }
 
   /**
+   * Like validateSession, but distinguishes *why* a session is not usable.
+   *
+   * This matters because "no row at all" and "row exists but was revoked" are not
+   * the same signal:
+   *
+   *   - `revoked` / `expired` — an explicit administrative or temporal decision.
+   *     The row is still there and carries the intent. MUST fail closed.
+   *   - `missing` — the row was never written, or was purged. Session recording is
+   *     best-effort telemetry wrapped in a `catch` that only logs, so a failed write
+   *     must not be able to brick authentication: the token is still a validly
+   *     signed JWT. Callers may choose to tolerate this.
+   *
+   * Revocation is implemented by setting `revokedAt` (see revokeSession), never by
+   * deleting the row — and cleanupSessions only deletes already-expired rows. So
+   * tolerating `missing` does not weaken revocation.
+   */
+  static async getSessionState(
+    jti: string
+  ): Promise<'ok' | 'missing' | 'revoked' | 'expired'> {
+    await mongoose.connection.asPromise();
+
+    const session = await LoginSession.findOne({ jti })
+      .select('revokedAt expiresAt')
+      .lean<{ revokedAt?: Date; expiresAt?: Date } | null>();
+
+    if (!session) return 'missing';
+    if (session.revokedAt) return 'revoked';
+    if (session.expiresAt && session.expiresAt.getTime() <= Date.now()) return 'expired';
+    return 'ok';
+  }
+
+  /**
    * Touch a session to update lastActiveAt.
    */
   static async touchSession(jti: string): Promise<void> {
