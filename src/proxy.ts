@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { log } from '@/lib/edge-logger';
+import { isAuthorizedCronRequest } from '@/lib/auth/cronAuth';
 
 const protectedRoutes = [
   '/dashboard',
@@ -49,6 +50,15 @@ const isPublicRoute = (req: NextRequest) => {
     return pathname.startsWith(route);
   });
 };
+
+// ── Cron authentication ────────────────────────────────────────────────────
+//
+// `/api/cron/*` is machine-to-machine and carries no session cookie, so the normal `!isAuth` branch
+// rejected every trigger with 401 *before* the route handler's own CRON_SECRET check could run. The
+// request is authenticated instead of the user; route handlers keep their own check as defence in depth.
+// See `src/lib/auth/cronAuth.ts`. If no secret is configured the request is still rejected, which is
+// exactly the previous behaviour — the only change is that a correct token now gets through.
+const cronApiRoutes = ['/api/cron'];
 
 export default async function proxy(req: NextRequest) {
   const startTime = Date.now();
@@ -134,6 +144,23 @@ export default async function proxy(req: NextRequest) {
     if (publicApiRoutes.some((route) => pathname.startsWith(route))) {
       log.debug('Public API route accessed', { pathname, method });
       return NextResponse.next();
+    }
+
+    if (cronApiRoutes.some((route) => pathname.startsWith(route))) {
+      if (isAuthorizedCronRequest(req.headers)) {
+        log.debug('Authorised cron API access', { pathname, method });
+        return NextResponse.next();
+      }
+
+      log.warn('Rejected cron API request with invalid credentials', {
+        pathname,
+        method,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+      });
+      return NextResponse.json(
+        { error: 'UNAUTHORIZED', message: 'Invalid or missing cron credentials' },
+        { status: 401 }
+      );
     }
 
     if (pathname.startsWith('/api/admin/')) {

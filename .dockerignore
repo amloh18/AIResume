@@ -55,19 +55,22 @@ logs/
 tmp/
 temp/
 
-# Python — these are build/host artefacts, never image content. A stale `.venv` copied into the image
-# would also shadow the interpreter the worker actually needs.
+# Python / host tooling — build and host artefacts, never image content. The web image ships no
+# `scripts/`: the JobSpy and LinkedIn workers run behind the VPS worker gateway, so nothing in `src/`
+# imports them and `tsconfig.json` excludes the directory. Keeping them out of the build context also
+# keeps a stale virtualenv or browser profile from being uploaded to the daemon on every deploy.
 **/__pycache__/
 **/*.pyc
 **/.venv/
-scripts/.vps-status.json
-scripts/tests/
+scripts/
 
 # Agent / project memory — not application content
 .workbuddy-ai/
 
-# Local Playwright browser cache (the image gets its own from the `browsers` stage)
+# Local browser caches — the app attaches to the VPS-hosted Chrome over CDP and ships no browser.
 .playwright/
+# TypeScript incremental build state from a local `tsc` run
+*.tsbuildinfo
 
 # Sensitive files
 firebase-key.json

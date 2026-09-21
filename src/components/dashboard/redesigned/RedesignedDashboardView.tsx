@@ -603,9 +603,16 @@ function MyCvsPanel() {
           </button>
           <GhostButton onClick={() => router.push('/editor')}>
             <span>View all</span>
-            {cvs.length > 0 && (
+            {/*
+              `sorted`, not `cvs`. The badge counts what the table lists, so
+              using the raw context array made it claim 5 CVs above a table of
+              3 — it was still counting the journey CVs the table deliberately
+              excludes. The cover-letter panel below has always used the
+              filtered list here; this matches it.
+            */}
+            {sorted.length > 0 && (
               <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
-                {cvs.length}
+                {sorted.length}
               </span>
             )}
             <ArrowUpRight size={13} />
