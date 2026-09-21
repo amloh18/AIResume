@@ -286,6 +286,9 @@ export async function POST(req: NextRequest) {
       if (!fs.existsSync(setupScript)) {
         return NextResponse.json({
           error: `VPS setup script not found at ${setupScript}`,
+          // The web image is intentionally slim: it no longer ships `scripts/`, Python or a browser.
+          // Host tooling is now installed from a checkout on the VPS itself.
+          hint: 'The application image no longer contains scripts/. Run this on the VPS host: cd /opt/buildairesume && sudo bash scripts/vps-setup.sh',
         }, { status: 404 });
       }
 

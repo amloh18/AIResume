@@ -105,6 +105,29 @@ export function isWorkerGatewayEnabled(): boolean {
   return getWorkerGatewayConfig() !== null;
 }
 
+/**
+ * True when this process must refuse to spawn the Python workers itself.
+ *
+ * The production image no longer ships Python, the virtualenvs or `scripts/`. Spawning there cannot
+ * succeed — it fails with ENOENT (or, worse, silently succeeds on a host that happens to have a system
+ * python but not JobSpy) *per ingestion run*, so the failure surfaces as an empty result rather than a
+ * configuration error. Refusing up front turns a silent empty discovery run into one clear log line.
+ *
+ * Two things opt out, deliberately:
+ *   - anything that is not `NODE_ENV=production` (local dev, tests, CI keep the spawn path);
+ *   - `ALLOW_LOCAL_INGESTION_WORKERS=true`, the documented escape hatch for a host that runs the app
+ *     directly next to the virtualenvs instead of in the slim container.
+ */
+export function mustRefuseLocalWorkerSpawn(): boolean {
+  if (isWorkerGatewayEnabled()) return false;
+  if (process.env.ALLOW_LOCAL_INGESTION_WORKERS === 'true') return false;
+  return process.env.NODE_ENV === 'production';
+}
+
+/** The message used by every path that has to give up on local spawning. */
+const LOCAL_WORKER_REFUSED_REASON =
+  'INGESTION_WORKER_URL is not set and local Python workers are disabled in production';
+
 interface WorkerResult {
   success?: boolean;
   jobs?: unknown[];
@@ -536,7 +559,11 @@ export function checkSourceConfig(source: string): ConfigCheck {
 
   if (source === 'jobspy') {
     // With the gateway in use the script lives on the VPS, not in this container — checking the local
-    // path would report "not found" for a source that is perfectly healthy.
+    // path would report "not found" for a source that is perfectly healthy. In production without a
+    // gateway there is nothing to check either, so say so plainly instead of blaming a missing file.
+    if (mustRefuseLocalWorkerSpawn()) {
+      return { ready: false, reason: LOCAL_WORKER_REFUSED_REASON };
+    }
     if (!isWorkerGatewayEnabled()) {
       try {
         const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
@@ -550,6 +577,9 @@ export function checkSourceConfig(source: string): ConfigCheck {
   if (source === 'linkedin') {
     if (!getLinkedInEnabled()) {
       return { ready: false, reason: 'LinkedIn worker disabled (enable in Admin > Worker Settings)' };
+    }
+    if (mustRefuseLocalWorkerSpawn()) {
+      return { ready: false, reason: LOCAL_WORKER_REFUSED_REASON };
     }
     if (!isWorkerGatewayEnabled()) {
       try {
@@ -569,14 +599,17 @@ export function checkSourceConfig(source: string): ConfigCheck {
  * runs in-process or on the VPS, instead of implying the scripts are present locally.
  */
 export function getWorkerExecutionMode(): {
-  mode: 'remote-gateway' | 'local-spawn';
+  mode: 'remote-gateway' | 'local-spawn' | 'disabled';
   gatewayUrl: string | null;
 } {
   const config = getWorkerGatewayConfig();
-  return {
-    mode: config ? 'remote-gateway' : 'local-spawn',
-    gatewayUrl: config ? config.baseUrl : null,
-  };
+  if (config) {
+    return { mode: 'remote-gateway', gatewayUrl: config.baseUrl };
+  }
+  if (mustRefuseLocalWorkerSpawn()) {
+    return { mode: 'disabled', gatewayUrl: null };
+  }
+  return { mode: 'local-spawn', gatewayUrl: null };
 }
 
 /**
@@ -1242,6 +1275,14 @@ async function fetchJobSpy(signal?: AbortSignal): Promise<RawJob[]> {
   }
 
   // ── Local path: unchanged in-process spawn ──────────────────────────────
+  if (mustRefuseLocalWorkerSpawn()) {
+    log(
+      'WARN',
+      'JobSpy: skipping discovery — INGESTION_WORKER_URL is not configured and this container has no Python workers.'
+    );
+    return [];
+  }
+
   const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
   log('FETCH', `JobSpy: spawning python worker at ${workerPath}`);
 
@@ -1392,6 +1433,14 @@ async function fetchLinkedIn(signal?: AbortSignal, options?: LinkedInFetchOption
   }
 
   // ── Local path: unchanged in-process spawn ──────────────────────────────
+  if (mustRefuseLocalWorkerSpawn()) {
+    log(
+      'WARN',
+      'LinkedIn: skipping discovery — INGESTION_WORKER_URL is not configured and this container has no Python workers.'
+    );
+    return [];
+  }
+
   const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
   log('FETCH', `LinkedIn: spawning worker at ${workerPath}`);
 

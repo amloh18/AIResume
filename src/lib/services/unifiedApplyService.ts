@@ -7,6 +7,7 @@ import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
+import { acquirePlaywrightBrowser } from '@/lib/services/browserService';
 import { decryptToken } from '@/lib/auth/token-encryption';
 import type { ApplicationStep, ATSType } from '@/types/automation-schema';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
@@ -517,16 +518,15 @@ export class UnifiedApplyService {
     // Attempt Playwright automation for Greenhouse
     try {
       const { detectGreenhouseFields, fillGreenhouseFields, submitGreenhouseForm, detectCAPTCHA } = await import('./atsPlaywrightService');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const playwright = require('playwright');
 
       let browser: any = null;
       let context: any = null;
       let page: any = null;
 
       try {
-        // Browser isolation: new context per application
-        browser = await playwright.chromium.launch({ headless: true });
+        // Browser isolation: one context per application, whether the browser is remote (VPS CDP) or
+        // local. `acquirePlaywrightBrowser()` never launches a browser inside a production container.
+        browser = (await acquirePlaywrightBrowser()).browser;
         context = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         });
@@ -619,17 +619,8 @@ export class UnifiedApplyService {
         if (browser) await browser.close().catch(() => {});
       }
     } catch (playwrightError: any) {
-      // Playwright not available or crashed — fallback to manual
-      console.warn('[Greenhouse] Playwright automation unavailable:', playwrightError.message);
-      return {
-        success: true,
-        atsType: 'greenhouse',
-        applicationId: jobApp._id.toString(),
-        status: 'action_required',
-        message: `Tailored documents ready for ${context.company}. Automated submission unavailable. Please submit manually.`,
-        screeningAnswers,
-        nextStep: `Open ${context.jobUrl} and submit your tailored resume`,
-      };
+      // No browser configured, or the automation crashed — fall back to manual submission.
+      return this.automationUnavailable('greenhouse', context, jobApp, screeningAnswers, playwrightError);
     }
   }
 
@@ -644,15 +635,13 @@ export class UnifiedApplyService {
   ): Promise<ApplyResult> {
     try {
       const { detectLeverFields, fillLeverFields, submitLeverForm, detectCAPTCHA } = await import('./atsPlaywrightService');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const playwright = require('playwright');
 
       let browser: any = null;
       let ctx: any = null;
       let page: any = null;
 
       try {
-        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        browser = (await acquirePlaywrightBrowser()).browser;
         ctx = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         });
@@ -738,14 +727,7 @@ export class UnifiedApplyService {
         if (browser) try { await browser.close(); } catch { /* ignore */ }
       }
     } catch (error: any) {
-      return {
-        success: false,
-        atsType: 'lever',
-        applicationId: jobApp._id.toString(),
-        status: 'failed',
-        message: `Lever automation failed: ${error.message}`,
-        screeningAnswers,
-      };
+      return this.automationUnavailable('lever', context, jobApp, screeningAnswers, error);
     }
   }
 
@@ -760,15 +742,13 @@ export class UnifiedApplyService {
   ): Promise<ApplyResult> {
     try {
       const { detectAshbyFields, fillAshbyFields, submitAshbyForm, detectCAPTCHA } = await import('./atsPlaywrightService');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const playwright = require('playwright');
 
       let browser: any = null;
       let ctx: any = null;
       let page: any = null;
 
       try {
-        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        browser = (await acquirePlaywrightBrowser()).browser;
         ctx = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         });
@@ -854,14 +834,7 @@ export class UnifiedApplyService {
         if (browser) try { await browser.close(); } catch { /* ignore */ }
       }
     } catch (error: any) {
-      return {
-        success: false,
-        atsType: 'ashby',
-        applicationId: jobApp._id.toString(),
-        status: 'failed',
-        message: `Ashby automation failed: ${error.message}`,
-        screeningAnswers,
-      };
+      return this.automationUnavailable('ashby', context, jobApp, screeningAnswers, error);
     }
   }
 
@@ -876,15 +849,13 @@ export class UnifiedApplyService {
   ): Promise<ApplyResult> {
     try {
       const { detectWorkableFields, fillWorkableFields, submitWorkableForm, detectCAPTCHA } = await import('./atsPlaywrightService');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const playwright = require('playwright');
 
       let browser: any = null;
       let ctx: any = null;
       let page: any = null;
 
       try {
-        browser = await playwright.chromium.launch({ headless: true, args: ['--no-sandbox'] });
+        browser = (await acquirePlaywrightBrowser()).browser;
         ctx = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         });
@@ -969,14 +940,7 @@ export class UnifiedApplyService {
         if (browser) try { await browser.close(); } catch { /* ignore */ }
       }
     } catch (error: any) {
-      return {
-        success: false,
-        atsType: 'workable',
-        applicationId: jobApp._id.toString(),
-        status: 'failed',
-        message: `Workable automation failed: ${error.message}`,
-        screeningAnswers,
-      };
+      return this.automationUnavailable('workable', context, jobApp, screeningAnswers, error);
     }
   }
 
@@ -1114,6 +1078,41 @@ export class UnifiedApplyService {
       status: 'action_required',
       message: `Application documents staged for ${context.company}. Review and submit on employer website.`,
       screeningAnswers,
+    };
+  }
+
+  /**
+   * Result used when Playwright automation could not run at all: no browser is configured, or the
+   * browser crashed / was unreachable.
+   *
+   * This is `action_required`, not `failed`, and deliberately so. The tailored CV and cover letter were
+   * generated successfully — only the *submission mechanism* is missing — so the application belongs in
+   * the user's staging queue with a clear reason, exactly like a CAPTCHA (AGENTS.md §16, §22, §27). The
+   * previous `failed` results for Lever/Ashby/Workable also disagreed with the caller: UnifiedApplyService
+   * already routes a non-`applied` outcome into staging, so the reported status was misleading.
+   */
+  private static automationUnavailable(
+    atsType: ATSType,
+    context: ApplyJobContext,
+    jobApp: any,
+    screeningAnswers: ApplyResult['screeningAnswers'],
+    error: any
+  ): ApplyResult {
+    const noBrowser = error?.name === 'BrowserUnavailableError';
+    const detail = noBrowser
+      ? error.message
+      : `Automation error: ${error?.message || 'unknown'}`;
+
+    console.warn(`[${atsType}] Playwright automation unavailable: ${detail}`);
+
+    return {
+      success: true,
+      atsType,
+      applicationId: jobApp._id.toString(),
+      status: 'action_required',
+      message: `Tailored documents ready for ${context.company}. Automated submission unavailable (${detail}). Please submit manually.`,
+      screeningAnswers,
+      nextStep: `Open ${context.jobUrl} and submit your tailored resume`,
     };
   }
 

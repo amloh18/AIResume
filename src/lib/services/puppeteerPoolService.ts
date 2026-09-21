@@ -9,12 +9,21 @@
 import { BaseService } from './baseService';
 import { configService } from './configService';
 import { rendererHealthService } from './rendererHealthService';
+import { getPuppeteerConnectOptions, getBrowserRuntime } from './browserService';
 
 interface BrowserPoolEntry {
   browser: any;
   lastUsed: number;
   inUse: boolean;
   pageCount: number;
+  /**
+   * True when this browser is a CDP connection to the VPS-hosted Chrome rather than a process we own.
+   *
+   * The distinction is not cosmetic: Puppeteer's `close()` sends `Browser.close` over the wire, which
+   * would shut down the *shared* remote browser for every other in-flight request. Remote entries must
+   * be detached with `disconnect()`, which only drops our connection.
+   */
+  remote: boolean;
 }
 
 export class PuppeteerPoolService extends BaseService {
@@ -44,7 +53,9 @@ export class PuppeteerPoolService extends BaseService {
    */
   async getBrowser(): Promise<any> {
     return this.timeOperation('getBrowser', async () => {
-      // Try to find an available browser
+      // Try to find an available browser. Remote connections are pooled exactly like local ones:
+      // `poolSize` (default 3) is the concurrency limit for the shared VPS Chrome, and each render gets
+      // its own page, so reusing the connection is both cheaper and the existing contract.
       let entry = this.pool.find(e => !e.inUse && e.browser && e.browser.isConnected());
 
       if (!entry) {
@@ -88,16 +99,37 @@ export class PuppeteerPoolService extends BaseService {
     
     try {
       const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.launch({
-        headless: config.headless,
-        args: config.args
-      });
+
+      // Prefer the VPS-hosted browser. `browserService` decides which endpoint applies and, in
+      // production with nothing configured, tells us so instead of letting `launch()` fail on a
+      // missing Chromium binary — the slim image has no browser to find.
+      const connectOptions = await getPuppeteerConnectOptions();
+      const runtime = getBrowserRuntime();
+
+      let browser: any;
+      let remote: boolean;
+
+      if (connectOptions) {
+        console.log(`[PuppeteerPool] connecting to the remote Chrome over CDP (${runtime.endpoint})`);
+        browser = await puppeteer.connect(connectOptions);
+        remote = true;
+      } else if (runtime.mode === 'unavailable') {
+        throw new Error(runtime.reason);
+      } else {
+        console.log('[PuppeteerPool] launching a local Chromium (development fallback)');
+        browser = await puppeteer.launch({
+          headless: config.headless,
+          args: config.args
+        });
+        remote = false;
+      }
 
       const entry: BrowserPoolEntry = {
         browser,
         lastUsed: Date.now(),
         inUse: false,
-        pageCount: 0
+        pageCount: 0,
+        remote
       };
 
       this.pool.push(entry);
@@ -136,8 +168,14 @@ export class PuppeteerPoolService extends BaseService {
   private async removeBrowser(browser: any): Promise<void> {
     const index = this.pool.findIndex(e => e.browser === browser);
     if (index !== -1) {
+      const entry = this.pool[index];
       try {
-        await this.pool[index].browser.close();
+        // `close()` on a CDP connection kills the shared remote browser; detach instead.
+        if (entry.remote && typeof entry.browser.disconnect === 'function') {
+          await entry.browser.disconnect();
+        } else {
+          await entry.browser.close();
+        }
       } catch (error) {
         // Browser might already be closed
       }
@@ -239,7 +277,10 @@ export class PuppeteerPoolService extends BaseService {
 
     const closePromises = this.pool.map(entry => {
       if (entry.browser && entry.browser.isConnected()) {
-        return entry.browser.close().catch(() => {
+        const teardown = entry.remote && typeof entry.browser.disconnect === 'function'
+          ? entry.browser.disconnect()
+          : entry.browser.close();
+        return Promise.resolve(teardown).catch(() => {
           // Ignore errors during shutdown
         });
       }

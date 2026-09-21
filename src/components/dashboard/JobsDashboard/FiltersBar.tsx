@@ -193,9 +193,29 @@ export default function FiltersBar({
 
   return (
     <div ref={dropdownRef} className="w-full">
-      {/* Integrated Command Surface Container — clean card background matching dashboard */}
+      {/*
+        ⚠️ Do NOT add `overflow-hidden` to this container.
+
+        Every dropdown in this bar (the country selector in ROW 1, the experience
+        and CV-type menus in ROW 2) is an `absolute` panel rendered INLINE by its
+        child component — CountrySelector uses no portal — and each one is taller
+        than the container. `overflow-hidden` here therefore clips them to the
+        container's padding box.
+
+        Measured with the project's own compiled Tailwind, hit-testing every 2px
+        of the panel's height at 1280 / 768 / 390px:
+
+            overflow: visible  ->  99% of the panel painted at every width
+            overflow: hidden   ->  18% / 31% / 42% painted
+
+        i.e. the menu is cut down to its search box and roughly one row. Nothing
+        fails loudly: tsc, ESLint, the build and every unit test stay green,
+        because the clipped pixels are a paint-time fact. `rounded-2xl` already
+        clips the gradient background to the border radius, so nothing here
+        needs `overflow-hidden`.
+      */}
       <div
-        className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-3.5 sm:p-5 shadow-xs space-y-3 transition-colors overflow-hidden"
+        className="job-search-gradient relative rounded-2xl sm:rounded-3xl border border-[var(--border-primary)] p-3.5 sm:p-5 shadow-xs space-y-3 transition-colors"
       >
         {/* Frosted layer — softens the gradient behind translucent controls. */}
         <div
