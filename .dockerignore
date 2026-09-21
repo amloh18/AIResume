@@ -55,14 +55,20 @@ logs/
 tmp/
 temp/
 
-# Python / host tooling — build and host artefacts, never image content. The web image ships no
-# `scripts/`: the JobSpy and LinkedIn workers run behind the VPS worker gateway, so nothing in `src/`
-# imports them and `tsconfig.json` excludes the directory. Keeping them out of the build context also
-# keeps a stale virtualenv or browser profile from being uploaded to the daemon on every deploy.
+# Python / host tooling — host artefacts, never image content. The web image ships no `scripts/` as
+# files (the runner copies only `public/`, `.next/`, `node_modules/` and `package.json`): the JobSpy and
+# LinkedIn workers run behind the VPS worker gateway.
+#
+# `scripts/` itself stays in the build context: the worker stage (`--target worker`) runs
+# `npm run build:worker`, which needs `scripts/build-worker.mjs` and the shims beside it. The directory
+# is a few hundred KB of sources — the bulk to keep out is the virtualenv and browser state that the
+# host tooling creates in place, not the scripts themselves.
 **/__pycache__/
 **/*.pyc
 **/.venv/
-scripts/
+**/.playwright/
+**/browser-profile/
+**/chrome-profile/
 
 # Agent / project memory — not application content
 .workbuddy-ai/

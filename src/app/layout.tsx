@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import React from 'react'
+import Script from 'next/script'
 import ClientProviders from '@/components/providers/ClientProviders'
 import ResourceHints from '@/components/ResourceHints'
 import DeferredAnalytics from '@/components/DeferredAnalytics'
@@ -149,48 +150,27 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="impact-site-verification" {...{ value: "044e0d11-071e-4480-aa4e-7fae5e6da834" }} />
+        {/*
+          Both scripts are loaded through `next/script`, not rendered as inline <script> elements.
+          A component-rendered script tag is not managed by React: on the client React has to create it
+          detached (logging "Encountered a script tag while rendering React component"), and any
+          server/client difference in that subtree breaks hydration. `next/script` hands execution to
+          Next's bootstrap, which runs beforeInteractive scripts before hydration, in document order.
+        */}
+
         {/* Suppress third-party Chrome Extension wallet injection errors (e.g. Rabby Wallet evmAsk.js) */}
-        <script
+        <Script
           id="suppress-wallet-errors"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            window.addEventListener('error', function(e) {
-              if (e.message && (e.message.indexOf('ethereum') !== -1 || e.message.indexOf('evmAsk') !== -1 || (e.filename && e.filename.indexOf('evmAsk') !== -1))) {
-                e.stopImmediatePropagation();
-              }
-            }, true);
-            window.addEventListener('unhandledrejection', function(e) {
-              if (e.reason && (e.reason.message && e.reason.message.indexOf('ethereum') !== -1 || (e.reason.stack && e.reason.stack.indexOf('evmAsk') !== -1))) {
-                e.preventDefault();
-              }
-            }, true);
-          })();
-        `}} />
+          src="/wallet-error-suppressor.js"
+          strategy="beforeInteractive"
+        />
+
         {/* Theme initialization: Default to system theme with manual override */}
-        <script
+        <Script
           id="theme-initializer"
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            try {
-              var saved = localStorage.getItem('theme');
-              var isDark = false;
-              if (saved === 'dark') {
-                isDark = true;
-              } else if (saved === 'light') {
-                isDark = false;
-              } else {
-                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-              }
-              if (isDark) {
-                document.documentElement.classList.add('dark');
-              } else {
-                document.documentElement.classList.remove('dark');
-              }
-            } catch (e) {}
-          })();
-        `}} />
+          src="/theme-init.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className={`${geistFont.variable} geist-ui font-sans`}>
         <ViewportMeta />

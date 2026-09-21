@@ -1,4 +1,10 @@
-# BuildAIResume — production image (web tier only)
+# BuildAIResume — production image (two build targets)
+#
+#   docker build --target runner .        the Next.js web tier              (serves HTTP, runs no loops)
+#   docker build --target worker .        the background-worker tier        (no HTTP, runs the loops)
+#
+# They share the dependency and build stages, so the expensive part is built once. `runner` is the
+# Dockerfile default, so an existing build configuration that does not pass `--target` is unaffected.
 #
 # The web tier runs the Next.js application and nothing else. Everything that needs a browser or Python
 # lives on the VPS host as a systemd service, reached over HTTP / CDP:
@@ -48,6 +54,44 @@ ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=true
 RUN npm run build
+
+# ── worker bundle ──────────────────────────────────────────────────────────────
+# esbuild bundles src/workers/entry.ts into dist/worker.mjs. The build script verifies that every
+# external specifier in the output resolves under plain Node, so an unresolvable import fails the
+# image build instead of the deploy.
+FROM builder AS worker-bundle
+RUN npm run build:worker
+
+# ── worker ─────────────────────────────────────────────────────────────────────
+# The background loops: email delivery, inbound mail ingestion, the application queue and the
+# reconciliation watchdog. Separate container so redeploying the web tier cannot interrupt them.
+#
+# No `public/` and no `.next/`: nothing in the worker reads them (templates and copy live in the bundle).
+FROM base AS worker
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV WORKER_ROLE=worker
+ENV WORKER_HEALTH_PORT=8791
+
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=worker-bundle --chown=nextjs:nodejs /app/dist ./dist
+
+USER nextjs
+# Internal health port only. Do not publish it; the web service reaches it on the Docker network.
+EXPOSE 8791
+
+# Node's global fetch is available in 22.x, so this needs no curl in the image.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD node -e "fetch('http://127.0.0.1:'+(process.env.WORKER_HEALTH_PORT||8791)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# SIGTERM reaches the entrypoint, which stops each loop, waits out WORKER_SHUTDOWN_GRACE_MS and closes
+# MongoDB. Give Docker more than that before SIGKILL: `--stop-timeout 30` (Dokploy: Stop grace period).
+CMD ["node", "dist/worker.mjs"]
 
 # ── runner ─────────────────────────────────────────────────────────────────────
 FROM base AS runner

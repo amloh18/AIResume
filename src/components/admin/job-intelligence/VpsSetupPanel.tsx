@@ -5,8 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Server, CheckCircle2, XCircle, AlertTriangle, RefreshCw,
   Terminal, Play, Square, RotateCcw, Download, Settings,
-  ChevronDown, ChevronUp, Loader2,
+  ChevronDown, ChevronUp, Loader2, Wifi, WifiOff, Globe, Cpu, Inbox,
 } from 'lucide-react';
+
+interface IngestionServiceSource {
+  name: string;
+  displayName: string;
+  health: string;
+  lastSuccessAt: string | null;
+}
+
+interface IngestionServiceStatus {
+  configured: boolean;
+  url: string | null;
+  reachable: boolean;
+  schedulerRunning: boolean | null;
+  status: string | null;
+  sources: IngestionServiceSource[];
+  error?: string;
+}
 
 interface VpsStatus {
   setupScript: { exists: boolean; path: string };
@@ -21,7 +38,30 @@ interface VpsStatus {
   };
   docker?: { installed: boolean; version?: string; running?: boolean };
   stalwart?: { running: boolean; status?: string; containerName?: string };
-  _diagnostics?: { projectRoot: string; markerFound: boolean; markerPath: string };
+  workerGateway?: {
+    configured: boolean;
+    online: boolean;
+    url: string | null;
+    mode: 'remote-gateway' | 'local-spawn' | 'disabled';
+    version?: string | null;
+    workers?: Record<string, unknown> | null;
+    error?: string;
+  };
+  ingestionService?: IngestionServiceStatus;
+  workerLoop?: {
+    configured: boolean;
+    role: string | null;
+    uptimeSeconds: number | null;
+    memoryRssMb: number | null;
+    loops: Record<string, unknown> | null;
+  };
+  _diagnostics?: {
+    projectRoot: string;
+    markerFound: boolean;
+    markerPath: string;
+    architecture?: string;
+    checksProbedRemotely?: boolean;
+  };
 }
 
 interface DeployAction {
@@ -157,6 +197,13 @@ export default function VpsSetupPanel() {
     </div>
   );
 
+  const uptimeLabel = (seconds: number | null | undefined) => {
+    if (seconds == null) return '—';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+    return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
+  };
+
   if (loading && !status) {
     return (
       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
@@ -252,11 +299,14 @@ export default function VpsSetupPanel() {
           {status._diagnostics && (
             <div className="mt-4 pt-3 border-t border-white/5">
               <div className="text-[10px] text-white/30 font-mono space-y-1">
+                {status._diagnostics.architecture && (
+                  <div className="text-emerald-400/60">Architecture: <span className="text-white/50">{status._diagnostics.architecture}</span></div>
+                )}
                 <div>Project root: <span className="text-white/50">{status._diagnostics.projectRoot}</span></div>
                 <div>Marker file: <span className={status._diagnostics.markerFound ? 'text-emerald-400/70' : 'text-red-400/70'}>
                   {status._diagnostics.markerFound ? 'Found' : 'Not found'} — {status._diagnostics.markerPath}
                 </span></div>
-                {!status._diagnostics.markerFound && (
+                {!status._diagnostics.markerFound && !status._diagnostics.checksProbedRemotely && (
                   <div className="text-yellow-400/60 mt-2">
                     Installations not detected. Run on VPS: <code className="text-emerald-400/70">sudo bash scripts/vps-setup.sh</code>
                   </div>
@@ -264,6 +314,156 @@ export default function VpsSetupPanel() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Decoupled VPS services — the web container ships none of this by design */}
+      {status && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Worker gateway (JobSpy + LinkedIn) */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Wifi className="w-4 h-4 text-emerald-400" />
+                Worker Gateway
+              </h3>
+              {status.workerGateway?.configured ? (
+                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono ${
+                  status.workerGateway.online
+                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${status.workerGateway.online ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                  {status.workerGateway.online ? 'Online' : 'Offline'}
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                  Not configured
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-white/50 font-mono space-y-1">
+              <div>URL: <span className="text-white/70">{status.workerGateway?.url || 'INGESTION_WORKER_URL not set'}</span></div>
+              <div>Runs: <span className="text-white/70">JobSpy · LinkedIn browser worker</span></div>
+              {status.workerGateway?.error && (
+                <div className="text-red-400/70">{status.workerGateway.error}</div>
+              )}
+            </div>
+          </div>
+
+          {/* Ingestion microservice (public ATS sources) */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-400" />
+                Ingestion Microservice
+              </h3>
+              {status.ingestionService?.configured ? (
+                <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono ${
+                  status.ingestionService.reachable
+                    ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${status.ingestionService.reachable ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                  {status.ingestionService.reachable ? 'Online' : 'Offline'}
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                  Not configured
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-white/50 font-mono space-y-1">
+              <div>URL: <span className="text-white/70">{status.ingestionService?.url || 'INGESTION_SERVICE_URL not set'}</span></div>
+              <div>
+                Scheduler: <span className={status.ingestionService?.schedulerRunning ? 'text-emerald-400/80' : 'text-white/40'}>
+                  {status.ingestionService?.schedulerRunning == null ? 'unknown' : status.ingestionService.schedulerRunning ? 'running' : 'stopped'}
+                </span>
+                {status.ingestionService?.status && (
+                  <> · Overall: <span className="text-white/70">{status.ingestionService.status}</span></>
+                )}
+              </div>
+              {status.ingestionService?.error && (
+                <div className="text-red-400/70">{status.ingestionService.error}</div>
+              )}
+            </div>
+            {status.ingestionService?.reachable && status.ingestionService.sources.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <div className="text-[10px] uppercase tracking-wider text-white/30 mb-2">Sources on this service</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {status.ingestionService.sources.map((s) => (
+                    <span
+                      key={s.name}
+                      title={`${s.displayName} — health: ${s.health}`}
+                      className={`px-2 py-1 rounded-md text-[10px] font-mono border ${
+                        s.health === 'healthy'
+                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                          : s.health === 'degraded'
+                            ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                            : 'bg-red-500/10 border-red-500/20 text-red-400'
+                      }`}
+                    >
+                      {s.displayName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Background worker loop container */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-emerald-400" />
+                Background Worker
+              </h3>
+              {status.workerLoop?.configured ? (
+                <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Running
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                  Not configured
+                </span>
+              )}
+            </div>
+            {status.workerLoop?.configured ? (
+              <div className="text-xs text-white/50 font-mono space-y-1">
+                <div>Role: <span className="text-white/70">{status.workerLoop.role}</span></div>
+                <div>Uptime: <span className="text-white/70">{uptimeLabel(status.workerLoop.uptimeSeconds)}</span></div>
+                <div>Memory: <span className="text-white/70">{status.workerLoop.memoryRssMb ?? '—'} MB RSS</span></div>
+                <div className="text-white/40 pt-1">Runs email delivery, inbox ingestion, the application queue and reconciliation — redeploys of the web tier do not interrupt them.</div>
+              </div>
+            ) : (
+              <div className="text-xs text-white/40 font-mono">
+                Set <code className="text-emerald-400/70">WORKER_HEALTH_URL</code> to surface the worker container here. Its loops run independently of web redeploys.
+              </div>
+            )}
+          </div>
+
+          {/* Mail server */}
+          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-emerald-400" />
+                Stalwart Mail Server
+              </h3>
+              <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono ${
+                status.stalwart?.running
+                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+                  : 'bg-red-500/10 border border-red-500/20 text-red-400'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${status.stalwart?.running ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                {status.stalwart?.running ? 'Running' : 'Not running'}
+              </span>
+            </div>
+            <div className="text-xs text-white/50 font-mono space-y-1">
+              <div>Container: <span className="text-white/70">{status.stalwart?.containerName || 'stalwart-mail'}</span></div>
+              {status.stalwart?.status && <div className="text-white/40">{status.stalwart.status}</div>}
+            </div>
+          </div>
         </div>
       )}
 
