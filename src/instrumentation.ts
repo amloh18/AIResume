@@ -25,46 +25,80 @@ export async function register() {
       console.error('[Startup] Failed to connect to MongoDB on startup:', err);
     }
 
+    // Background loops (email delivery, inbound mail ingestion, application queue, reconciliation).
+    //
+    // These run in the web container only when the role says so. In production they belong to the
+    // dedicated worker service (`docker build --target worker`, `npm run worker`), because a redeploy
+    // of the site would otherwise kills them mid-flight. See src/workers/entry.ts.
+    const { describeWorkerPlan, getWorkerPlan, isWorkerProcess, resolveWorkerRole } = await import(
+      './workers/roles'
+    );
+    const { role, warning } = resolveWorkerRole();
+    const plan = getWorkerPlan(role);
+
+    if (warning) {
+      console.warn(`[Startup] ${warning}`);
+    }
+
+    if (!isWorkerProcess(plan)) {
+      console.log(
+        `[Startup] Background loops disabled in this process (WORKER_ROLE=${role}); they run in the worker service.`
+      );
+    } else {
+      console.log(
+        `[Startup] WORKER_ROLE=${role} — loops run in this web process and are interrupted by redeploys: [${describeWorkerPlan(plan)}]. ` +
+          'Set WORKER_ROLE=web here and run the worker service to decouple them.'
+      );
+    }
+
     // Start email worker for application email delivery
-    try {
-      const { startEmailWorker } = await import('./workers/emailWorker');
-      startEmailWorker();
-    } catch (err) {
-      console.warn('[Startup] Email worker failed to start:', err);
+    if (plan.email) {
+      try {
+        const { startEmailWorker } = await import('./workers/emailWorker');
+        startEmailWorker();
+      } catch (err) {
+        console.warn('[Startup] Email worker failed to start:', err);
+      }
     }
 
     // Start email ingestion worker for inbound email polling
-    try {
-      const { startIngestionWorker } = await import('./services/emailIngestionService');
-      startIngestionWorker();
-    } catch (err) {
-      console.warn('[Startup] Email ingestion worker failed to start:', err);
+    if (plan.emailIngestion) {
+      try {
+        const { startIngestionWorker } = await import('./services/emailIngestionService');
+        startIngestionWorker();
+      } catch (err) {
+        console.warn('[Startup] Email ingestion worker failed to start:', err);
+      }
     }
 
     // Start application worker for auto-apply queue processing
-    try {
-      const { startApplicationWorker } = await import('./workers/applicationWorker');
-      startApplicationWorker();
-    } catch (err) {
-      console.warn('[Startup] Application worker failed to start:', err);
+    if (plan.applicationQueue) {
+      try {
+        const { startApplicationWorker } = await import('./workers/applicationWorker');
+        startApplicationWorker();
+      } catch (err) {
+        console.warn('[Startup] Application worker failed to start:', err);
+      }
     }
 
     // Start reconciliation worker for stuck application recovery
-    try {
-      const { applicationReconciliationWorker } = await import('./lib/reconciliation/reconciliationWorker');
-      const mongoose = await import('mongoose');
-      // Delay to allow MongoDB connection
-      setTimeout(async () => {
-        if (mongoose.default.connection.readyState === 1) {
-          const db = (mongoose.default.connection as any).db;
-          if (db) {
-            applicationReconciliationWorker.start(db, 60_000); // every 60s
-            console.log('[Startup] Reconciliation worker started');
+    if (plan.reconciliation) {
+      try {
+        const { applicationReconciliationWorker } = await import('./lib/reconciliation/reconciliationWorker');
+        const mongoose = await import('mongoose');
+        // Delay to allow MongoDB connection
+        setTimeout(async () => {
+          if (mongoose.default.connection.readyState === 1) {
+            const db = (mongoose.default.connection as any).db;
+            if (db) {
+              applicationReconciliationWorker.start(db, 60_000); // every 60s
+              console.log('[Startup] Reconciliation worker started');
+            }
           }
-        }
-      }, 10_000);
-    } catch (err) {
-      console.warn('[Startup] Reconciliation worker failed to start:', err);
+        }, 10_000);
+      } catch (err) {
+        console.warn('[Startup] Reconciliation worker failed to start:', err);
+      }
     }
 
     // Pre-load ingestion worker settings from DB into sync cache (delayed to allow MongoDB connection)

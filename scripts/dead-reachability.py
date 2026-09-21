@@ -8,6 +8,7 @@ A file is DEAD if it is not reachable from any root, where roots are:
     sitemap/robots/manifest, Sentry configs)
   * test files (vitest runs them directly)
   * anything referenced from next.config.ts
+  * the standalone worker entry point (bundled by scripts/build-worker.mjs)
 
 This is stricter (and more useful) than "has zero importers": it also catches
 files that are only imported by other dead files.
@@ -157,6 +158,14 @@ def main(root, list_dead=False, no_tests=False):
             # test shows up as production-dead.
             if not no_tests:
                 roots.add(f)
+
+    # The standalone worker process has no importer: it is the esbuild entry point in
+    # scripts/build-worker.mjs and the CMD of the Dockerfile's `worker` stage. Nothing in `src/`
+    # imports it, so without this it would be reported dead and deleted by a future cleanup pass.
+    # normpath so this matches how `fileset` is built (os.walk yields "./src/..." when run from the root).
+    worker_entry = os.path.normpath(os.path.join(root, "src", "workers", "entry.ts"))
+    if worker_entry in fileset:
+        roots.add(worker_entry)
 
     # next.config.ts may reference files by path string.
     ncfg = os.path.join(root, "next.config.ts")

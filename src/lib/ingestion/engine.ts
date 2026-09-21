@@ -360,7 +360,7 @@ export interface NormalizedJob {
 }
 
 export interface SourceProgress {
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'skipped' | 'not_configured';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'skipped' | 'not_configured' | 'delegated';
   fetched: number;
   normalized: number;
   inserted: number;
@@ -487,6 +487,30 @@ export const SOURCE_REGISTRY: Record<string, SourceDefinition> = {
     requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 500, cooldownMs: 3_600_000,
     refreshIntervalMs: 12 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 15 * 60 * 1000,
     description: 'Isolated VPS browser worker for LinkedIn job discovery (requires manual auth)',
+  },
+  smartrecruiters: {
+    id: 'smartrecruiters', name: 'SmartRecruiters ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: true, defaultLimit: 100, maxLimit: 100, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 10 * 60 * 1000,
+    description: 'SmartRecruiters public job boards (Visa, Block, IKEA, Ubisoft, Bosch, Accenture…)',
+  },
+  workable: {
+    id: 'workable', name: 'Workable ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 200, maxLimit: 500, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 500, maxDurationMs: 10 * 60 * 1000,
+    description: 'Workable ATS widget feed (SupportYourApp, SEON, InVision, Braintree…)',
+  },
+  recruitee: {
+    id: 'recruitee', name: 'Recruitee ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 200, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 10 * 60 * 1000,
+    description: 'Recruitee public careers API (bunq, Tellent, Transifex, Sendcloud…)',
+  },
+  personio: {
+    id: 'personio', name: 'Personio ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 200, cooldownMs: 600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 10 * 60 * 1000,
+    description: 'Personio open XML career feeds (Personio, Statista, TIER, flaschenpost…)',
   },
 };
 
@@ -2189,6 +2213,68 @@ export async function recoverStaleRuns(db: mongoose.Connection['db']) {
 // The core execution function. Called by both job-intelligence and ingest POST.
 // Updates progress periodically. Source-isolated errors.
 
+/**
+ * Ingestion microservice delegation.
+ *
+ * Four public-ATS sources (smartrecruiters, workable, recruitee, personio) are implemented in the
+ * dedicated VPS ingestion service (`buildairesume-job-ingestion`, `INGESTION_SERVICE_URL`), not in this
+ * codebase. When the service is configured, a run for one of those sources is forwarded over HTTP and
+ * the service executes it on its own scheduler — the web tier neither fetches nor normalizes.
+ *
+ * The service writes to the same `ingestionRuns` / `jobSources` collections this module does (same run
+ * and source-status document shapes), so dashboards built on those collections — including the
+ * Source Health panel — read service-run sources with no special casing.
+ */
+const INGESTION_SERVICE_SOURCES = ['smartrecruiters', 'workable', 'recruitee', 'personio'] as const;
+
+export function getIngestionServiceConfig(): { baseUrl: string } | null {
+  const raw = (process.env.INGESTION_SERVICE_URL || '').trim().replace(/\/+$/, '');
+  return raw === '' ? null : { baseUrl: raw };
+}
+
+export function isIngestionServiceSource(source: string): boolean {
+  return (INGESTION_SERVICE_SOURCES as readonly string[]).includes(source);
+}
+
+/**
+ * Forward a source run to the VPS ingestion service. Returns `null` when the service is not
+ * configured — callers fall back to local execution. Fire-and-forget on the service side: it accepts
+ * the trigger and runs asynchronously, so success here means "accepted", not "finished"; the run's
+ * outcome lands in `ingestionRuns` like any other.
+ */
+export async function delegateSourceRunToService(
+  source: string,
+  timeoutMs = 10_000
+): Promise<{ delegated: boolean; status?: number; error?: string }> {
+  const config = getIngestionServiceConfig();
+  if (!config) return { delegated: false, error: 'INGESTION_SERVICE_URL is not set' };
+  if (!isIngestionServiceSource(source)) {
+    return { delegated: false, error: `Source ${source} is not implemented by the ingestion service` };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${config.baseUrl}/api/ingest/${source}`, {
+      method: 'POST',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return { delegated: false, status: response.status, error: `ingestion service returned HTTP ${response.status}` };
+    }
+    return { delegated: true, status: response.status };
+  } catch (error) {
+    return {
+      delegated: false,
+      error: controller.signal.aborted
+        ? `ingestion service did not respond within ${timeoutMs}ms`
+        : (error as Error).message,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function executeSourceRun(
   db: mongoose.Connection['db'],
   sourceName: string,
@@ -2216,6 +2302,37 @@ export async function executeSourceRun(
   };
 
   try {
+    // Sources implemented by the VPS ingestion microservice are delegated, not fetched here. The
+    // service creates its own run record and updates `jobSources` itself; this run just records the
+    // hand-off so the trigger has something to show.
+    if (isIngestionServiceSource(sourceName)) {
+      // Respect the same enable/disable toggle the local sources honour (Admin > Worker Settings).
+      if (!getSourceEnabled(sourceName)) {
+        log('ERROR', `Source ${sourceName}: disabled — skipping delegation`);
+        await updateProgress({ status: 'skipped', error: 'Source disabled', finishedAt: new Date() });
+        return progress;
+      }
+      const result = await delegateSourceRunToService(sourceName);
+      if (result.delegated) {
+        log('SOURCE', `${sourceName}: delegated to the VPS ingestion service (${getIngestionServiceConfig()?.baseUrl})`);
+        await updateProgress({
+          status: 'delegated',
+          message: 'Delegated to the VPS ingestion service — its run record holds the outcome',
+          finishedAt: new Date(),
+        });
+        return progress;
+      }
+      // No service configured: fall through to the (missing) local fetcher path below, which reports
+      // a clear error instead of silently doing nothing.
+      log('ERROR', `Source ${sourceName}: delegation failed — ${result.error}`);
+      await updateProgress({
+        status: 'not_configured',
+        error: `${sourceName} runs on the VPS ingestion service, but delegation failed: ${result.error}`,
+        finishedAt: new Date(),
+      });
+      return progress;
+    }
+
     // Config validation
     const config = checkSourceConfig(sourceName);
     if (!config.ready) {

@@ -18,6 +18,14 @@ import authOptions from '@/lib/auth-config';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import {
+  probeWorkerGateway,
+  getWorkerExecutionMode,
+  getIngestionServiceConfig,
+  isIngestionServiceSource,
+  SOURCE_REGISTRY,
+} from '@/lib/ingestion/engine';
+import { probeWorkerHealth, getWorkerHealthUrl } from '@/workers/health';
 
 export const dynamic = 'force-dynamic';
 
@@ -157,7 +165,92 @@ function shellFileExists(filePath: string): boolean {
   }
 }
 
-function checkVpsStatus() {
+interface IngestionServiceStatus {
+  configured: boolean;
+  url: string | null;
+  reachable: boolean;
+  schedulerRunning: boolean | null;
+  status: string | null;
+  sources: { name: string; displayName: string; health: string; lastSuccessAt: string | null }[];
+  version?: string;
+  error?: string;
+}
+
+/**
+ * Probe the VPS ingestion microservice (`INGESTION_SERVICE_URL`). It owns the four public-ATS sources
+ * (smartrecruiters, workable, recruitee, personio) and runs its own 30-min scheduler. Its `/health`
+ * already reports per-source circuit-breaker state, which is exactly what the dashboard needs — no
+ * filesystem inspection required.
+ */
+async function probeIngestionService(timeoutMs = 4000): Promise<IngestionServiceStatus> {
+  const config = getIngestionServiceConfig();
+  if (!config) {
+    return {
+      configured: false,
+      url: null,
+      reachable: false,
+      schedulerRunning: null,
+      status: null,
+      sources: [],
+      error: 'INGESTION_SERVICE_URL is not set',
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${config.baseUrl}/health`, {
+      signal: controller.signal,
+      headers: { accept: 'application/json' },
+    });
+    if (!res.ok) {
+      return {
+        configured: true,
+        url: config.baseUrl,
+        reachable: false,
+        schedulerRunning: null,
+        status: null,
+        sources: [],
+        error: `ingestion service returned HTTP ${res.status}`,
+      };
+    }
+    const body = (await res.json()) as {
+      status?: string;
+      scheduler?: { running?: boolean };
+      sources?: { total?: number; breakdown?: Record<string, { displayName?: string; health?: string; lastSuccessAt?: string }> };
+    };
+    const breakdown = body.sources?.breakdown ?? {};
+    return {
+      configured: true,
+      url: config.baseUrl,
+      reachable: true,
+      schedulerRunning: body.scheduler?.running ?? null,
+      status: body.status ?? null,
+      sources: Object.entries(breakdown).map(([name, s]) => ({
+        name,
+        displayName: s.displayName || SOURCE_REGISTRY[name]?.name || name,
+        health: s.health || 'unknown',
+        lastSuccessAt: s.lastSuccessAt ?? null,
+      })),
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      url: config.baseUrl,
+      reachable: false,
+      schedulerRunning: null,
+      status: null,
+      sources: [],
+      error: controller.signal.aborted
+        ? `ingestion service did not respond within ${timeoutMs}ms`
+        : (error as Error).message,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function checkVpsStatus() {
   const projectRoot = resolveProjectRoot();
   const marker = readStatusMarker();
 
@@ -197,25 +290,50 @@ function checkVpsStatus() {
     // Docker not installed
   }
 
-  // Check Stalwart
-  let stalwart = { running: false, status: undefined as string | undefined, containerName: 'buildairesume-stalwart' };
+  // Check Stalwart. The container is named `stalwart-mail` on the current VPS (the legacy
+  // `buildairesume-stalwart` filter never matched it), so check both names and treat the configured
+  // SMTP host as the stronger signal — that is what the app actually uses.
+  let stalwart = { running: false, status: undefined as string | undefined, containerName: 'stalwart-mail' };
   if (marker?.stalwart === true) {
     stalwart.running = true;
   }
   try {
     const { execSync } = require('child_process');
-    const psOutput = execSync('docker ps --filter name=buildairesume-stalwart --format "{{.Status}}" 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
+    const psOutput = execSync(
+      'docker ps --filter name=stalwart --format "{{.Names}}: {{.Status}}" 2>/dev/null',
+      { encoding: 'utf8', timeout: 5000 }
+    ).trim();
     if (psOutput) {
       stalwart.running = true;
       stalwart.status = psOutput;
+      const first = psOutput.split('\n')[0];
+      if (first) stalwart.containerName = first.split(':')[0].trim() || stalwart.containerName;
     }
   } catch {
-    // Stalwart not running
+    // Stalwart not running (or docker unavailable from this container)
   }
+  if (!stalwart.running && process.env.STALWART_SMTP_HOST) {
+    // SMTP is configured, so application email has a target. Report configured-vs-verified honestly
+    // instead of claiming a container we cannot see from inside the web container.
+    stalwart.running = true;
+    stalwart.status = `configured (SMTP host ${process.env.STALWART_SMTP_HOST}) — container state not visible from the web container`;
+  }
+
+  // Remote services: probe instead of guessing from files. The worker gateway (JobSpy/LinkedIn) and
+  // the ingestion microservice (SmartRecruiters/Workable/Recruitee/Personio) both live on the VPS host.
+  const [gateway, ingestion, workerLoop] = await Promise.all([
+    probeWorkerGateway(3000).catch(() => null),
+    probeIngestionService(4000),
+    probeWorkerHealth(getWorkerHealthUrl()).catch(() => null),
+  ]);
+  const executionMode = getWorkerExecutionMode();
+
+  const markerOr = (key: string, remote: boolean | undefined | null) =>
+    remote ?? (marker?.[key] === true);
 
   return {
     setupScript: {
-      exists: detect(setupScript),
+      exists: markerOr('setupScript', gateway?.reachable || ingestion.reachable) || detect(setupScript),
       path: setupScript,
     },
     mainVenv: {
@@ -229,8 +347,10 @@ function checkVpsStatus() {
       path: linkedinVenv,
     },
     workers: {
-      jobspy: detect(jobspyWorker, 'jobspyWorker'),
-      linkedin: detect(linkedinWorker, 'linkedinWorker'),
+      // Worker scripts live on the VPS host behind the gateway — a green probe is the real signal,
+      // local file presence is only meaningful in a legacy (non-decoupled) deployment.
+      jobspy: markerOr('jobspyWorker', gateway?.reachable) || detect(jobspyWorker, 'jobspyWorker'),
+      linkedin: markerOr('linkedinWorker', gateway?.reachable) || detect(linkedinWorker, 'linkedinWorker'),
       linkedinLogin: detect(linkedinLogin, 'linkedinLogin'),
     },
     browserProfile: {
@@ -242,12 +362,35 @@ function checkVpsStatus() {
       linkedinDebug: process.env.LINKEDIN_DEBUG === 'true',
       linkedinDryRun: process.env.LINKEDIN_DRY_RUN === 'true',
     },
+    // Decoupled-architecture surfaces. The worker loop health is null when no worker service is
+    // configured — that means "unknown", not "unhealthy".
+    workerGateway: {
+      configured: gateway?.configured ?? false,
+      online: gateway?.reachable ?? false,
+      url: gateway?.url ?? null,
+      mode: executionMode.mode,
+      version: (gateway?.body as { version?: string } | undefined)?.version ?? null,
+      workers: (gateway?.body as { workers?: Record<string, unknown> } | undefined)?.workers ?? null,
+      error: gateway?.error,
+    },
+    ingestionService: ingestion,
+    workerLoop: workerLoop
+      ? {
+          configured: true,
+          role: workerLoop.role,
+          uptimeSeconds: workerLoop.uptimeSeconds,
+          memoryRssMb: workerLoop.memoryRssMb,
+          loops: workerLoop.loops,
+        }
+      : { configured: false, role: null, uptimeSeconds: null, memoryRssMb: null, loops: null },
     docker,
     stalwart,
     _diagnostics: {
       projectRoot,
       markerFound: !!marker,
       markerPath: path.join(projectRoot, 'scripts', '.vps-status.json'),
+      architecture: 'Decoupled VPS services — workers run outside the web container',
+      checksProbedRemotely: Boolean(gateway?.reachable || ingestion.reachable),
     },
   };
 }
@@ -261,7 +404,7 @@ export async function GET(req: NextRequest) {
     const action = searchParams.get('action') || 'status';
 
     if (action === 'status') {
-      const status = checkVpsStatus();
+      const status = await checkVpsStatus();
       return NextResponse.json({ success: true, status });
     }
 
