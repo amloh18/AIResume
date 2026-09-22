@@ -1,56 +1,64 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
+import { CHIP_BASE, BADGE_SIZES, CHIP_TONES, type ChipTone } from "./chip-styles"
 
-const badgeVariants = cva(
-  "inline-flex items-center justify-center font-medium select-none transition-all duration-150 ease-out whitespace-nowrap [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200/60 dark:border-white/5",
-        secondary:
-          "bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200/60 dark:border-white/5",
-        primary:
-          "bg-[#013f2e]/10 dark:bg-lime-500/20 text-[#013f2e] dark:text-lime-400 border border-[#013f2e]/20 dark:border-lime-500/30 font-semibold",
-        success:
-          "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40 font-semibold",
-        warning:
-          "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 font-semibold",
-        danger:
-          "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40 font-semibold",
-        destructive:
-          "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40 font-semibold",
-        info:
-          "bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/40 font-semibold",
-        outline:
-          "bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300",
-        active:
-          "bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black font-semibold border-transparent shadow-2xs",
-        beta:
-          "bg-lime-500/20 text-lime-700 dark:text-lime-300 border border-lime-500/30 font-bold",
-      },
-      size: {
-        sm: "h-5 px-2 text-[10px] rounded-full gap-1 [&_svg]:size-3",
-        md: "h-6 px-2.5 text-xs rounded-full gap-1.5 [&_svg]:size-3.5",
-        lg: "h-7 px-3 text-xs rounded-full gap-1.5 [&_svg]:size-4",
-      },
-      interactive: {
-        true: "cursor-pointer hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50",
-      },
+/**
+ * Static (non-interactive) chip.
+ *
+ * Same capsule geometry as `Pill`, but no hover/press affordance and no
+ * selected state — it reports a fact. Semantic hues are preserved on purpose:
+ * a green "Rejected" chip would read as success. Only the *recipe* is unified
+ * (tinted background + matching border + readable text in both themes).
+ *
+ * For anything clickable use `Pill`, not this.
+ */
+const badgeVariants = cva(CHIP_BASE, {
+  variants: {
+    variant: {
+      default: CHIP_TONES.neutral,
+      secondary: CHIP_TONES.neutral,
+      outline: CHIP_TONES.neutral,
+      primary: CHIP_TONES.green,
+      active: CHIP_TONES.green,
+      beta: CHIP_TONES.green,
+      success: CHIP_TONES.emerald,
+      warning: CHIP_TONES.amber,
+      danger: CHIP_TONES.rose,
+      destructive: CHIP_TONES.rose,
+      info: CHIP_TONES.sky,
+      /** Escape hatch for one-off hues (admin themes, score tones). */
+      custom: "",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
+    size: {
+      sm: BADGE_SIZES.sm,
+      md: BADGE_SIZES.md,
+      lg: BADGE_SIZES.lg,
     },
-  }
-)
+    interactive: {
+      true: "cursor-pointer hover:brightness-110 active:brightness-95",
+      false: "",
+    },
+    disabled: {
+      true: "opacity-60 cursor-not-allowed",
+      false: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "md",
+  },
+})
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  /** Applies the inert treatment. Prefer `Pill` when it is a real control. */
+  disabled?: boolean
+  /** Direct tone override, bypassing `variant`. */
+  tone?: ChipTone
 }
 
 function Badge({
@@ -58,6 +66,8 @@ function Badge({
   variant,
   size,
   interactive,
+  disabled,
+  tone,
   leftIcon,
   rightIcon,
   children,
@@ -65,7 +75,17 @@ function Badge({
 }: BadgeProps) {
   return (
     <div
-      className={cn(badgeVariants({ variant, size, interactive, className }))}
+      aria-disabled={disabled || undefined}
+      className={cn(
+        badgeVariants({
+          variant: tone ? "custom" : variant,
+          size,
+          interactive: interactive && !disabled,
+          disabled,
+          className,
+        }),
+        tone && CHIP_TONES[tone]
+      )}
       {...props}
     >
       {leftIcon && <span className="inline-flex shrink-0">{leftIcon}</span>}

@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IWebhookLog extends Document {
   provider: 'stripe' | 'razorpay' | 'polar';
   eventType: string;
+  externalId: string; // Provider's event ID (e.g. Stripe event ID) for deduplication
   payload: Record<string, any>; // Raw webhook payload
   status: 'processed' | 'failed' | 'error' | 'pending' | 'failed_permanently';
   errorMessage?: string;
@@ -23,6 +24,11 @@ const webhookLogSchema = new Schema<IWebhookLog>({
     type: String,
     required: [true, 'Event type is required'],
     trim: true
+  },
+  externalId: {
+    type: String,
+    required: [true, 'External event ID is required for deduplication'],
+    trim: true,
   },
   payload: {
     type: Schema.Types.Mixed,
@@ -55,6 +61,7 @@ const webhookLogSchema = new Schema<IWebhookLog>({
 });
 
 // Indexes for better query performance
+webhookLogSchema.index({ provider: 1, externalId: 1 }, { unique: true }); // Atomic dedup
 webhookLogSchema.index({ provider: 1, eventType: 1 });
 webhookLogSchema.index({ status: 1 });
 webhookLogSchema.index({ createdAt: -1 });

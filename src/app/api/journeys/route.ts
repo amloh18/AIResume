@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 // Extend global type for cache
 declare global {
@@ -39,9 +40,30 @@ export async function GET(request: NextRequest) {
   try {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
     const jobId = searchParams.get('jobId'); // Filter by specific job ID
+    const limitParam = searchParams.get('limit');
+
+    /*
+      Resolve the user from the session first, and fall back to `?userId=`.
+
+      Every in-app caller (`ApplicationsPanel`, `DashboardDataContext`) calls
+      `/api/journeys?limit=all` with NO userId — `authenticatedFetch` adds auth
+      headers, not query params. This route used to reject that with a 400, so
+      the journey list silently stayed empty and every consumer of
+      `getJobJourneys()` rendered "no documents": the kanban card showed
+      "Partially generated" beside two red icons for applications whose
+      documents existed, while `JobSidebar` (which self-fetches
+      `/api/application-journey?jobId=…`) showed them correctly.
+
+      The query param is kept for the Chrome extension and any existing deep
+      link; the session is the default because it cannot drift from the caller.
+    */
+    let userId = searchParams.get('userId');
+    if (!userId) {
+      const authResult = await getAuthenticatedUser();
+      userId = authResult?.userId ?? null;
+    }
 
     if (!userId) {
       return NextResponse.json(
@@ -69,7 +91,7 @@ export async function GET(request: NextRequest) {
     await getConnection();
 
     // Build optimized query for CV Journeys
-    let journeyQuery: any = { userId };
+    const journeyQuery: any = { userId };
 
     // Add jobId filter if provided
     if (jobId) {
@@ -81,11 +103,28 @@ export async function GET(request: NextRequest) {
       journeyQuery.status = status;
     }
 
-    // Optimized query with projection and sorting
-    const cvJourneys = await ApplicationJourney.find(journeyQuery)
+    // Optimized query with projection and sorting.
+    //
+    // `limit=all` is what every in-app caller sends, so it must not be silently
+    // ignored: the old unconditional `.limit(50)` truncated the list for anyone
+    // past 50 journeys, and a dropped journey is indistinguishable from a
+    // journey that was never created (the card renders "no documents").
+    const MAX_LIMIT = 500;
+    let journeyQueryBuilder = ApplicationJourney.find(journeyQuery)
       .select('_id jobId jobTitle company status currentStep totalSteps createdAt updatedAt atsScore cvId coverLetterId')
-      .sort({ updatedAt: -1 })
-      .limit(50) // Limit results to prevent large data sets
+      .sort({ updatedAt: -1 });
+
+    if (limitParam && limitParam !== 'all') {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!Number.isNaN(parsedLimit) && parsedLimit > 0) {
+        journeyQueryBuilder = journeyQueryBuilder.limit(Math.min(parsedLimit, MAX_LIMIT));
+      }
+    } else if (!limitParam) {
+      // No explicit limit — keep the old default so this stays a bounded query.
+      journeyQueryBuilder = journeyQueryBuilder.limit(50);
+    }
+
+    const cvJourneys = await journeyQueryBuilder
       .lean()
       .exec(); // Explicitly execute query for better performance monitoring
 
@@ -153,7 +192,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if journey already exists for this job
-    let journey = await ApplicationJourney.findOne({ userId, jobId });
+    // `const`: the document is only ever mutated in place, never rebound.
+    const journey = await ApplicationJourney.findOne({ userId, jobId });
 
     if (journey) {
       // Update existing journey

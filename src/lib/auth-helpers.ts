@@ -134,7 +134,8 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
 
   } catch (error: any) {
     if (error?.digest === 'DYNAMIC_SERVER_USAGE' || error?.message?.includes('Dynamic server usage')) {
-      throw error;
+      console.warn('Auth skipped during dynamic server usage');
+      return null;
     }
     console.error('❌ Auth - Error during authentication:', error);
     if (error instanceof Error) {

@@ -20,6 +20,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useSession } from 'next-auth/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
@@ -73,6 +74,7 @@ export default function TopJobMatchesSection() {
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
   const { statuses, clearStatus } = useJobLiveStatusStore();
+  const queryClient = useQueryClient();
 
   const [jobs, setJobs] = useState<TopMatchJob[]>(() => {
     // 1. Check memory cache first (instant 0ms on tab switches)
@@ -437,15 +439,18 @@ export default function TopJobMatchesSection() {
     e?.stopPropagation?.();
     const targetJob = 'rawJob' in job ? job.rawJob : job;
     const jobId = targetJob._id || targetJob.id || '';
-    const appId = `apply-${jobId}`;
 
-    // Start progress
+    // Start progress — saving stage
     applyProgress.startApplyProgress(targetJob.title, targetJob.company, jobId);
-    updateProgress(appId, 15, `Matching CV for ${targetJob.title}...`, 'progress');
 
     try {
-      applyProgress.updateToTailoring(targetJob.title, targetJob.company, jobId);
-      updateProgress(appId, 45, `Tailoring application for ${targetJob.company}...`, 'progress');
+      // Tailoring CV stage
+      applyProgress.updateToTailoringCV(targetJob.title, targetJob.company, jobId);
+
+      // Tailoring cover letter stage (brief, then move to applying)
+      setTimeout(() => {
+        applyProgress.updateToTailoringCoverLetter(targetJob.title, targetJob.company, jobId);
+      }, 600);
 
       const res = await fetch('/api/jobs/auto-apply', {
         method: 'POST',
@@ -505,13 +510,15 @@ export default function TopJobMatchesSection() {
       // Skipped by decision engine
       if (resData.status === 'skipped') {
         applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message || 'This job was skipped based on your preferences.', jobId, 'skipped');
-        updateProgress(appId, 100, `Skipped: ${resData.message || 'Not a match'}`, 'progress');
         return;
       }
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || jobId;
         setAppliedIds((prev) => new Set(prev).add(jobId));
+
+        // Immediately invalidate entitlements so usage counters update
+        queryClient.invalidateQueries({ queryKey: ['entitlements'] });
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
@@ -531,21 +538,17 @@ export default function TopJobMatchesSection() {
             jobId,
             'queued'
           );
-          updateProgress(appId, 100, `Already in progress — ${targetJob.title} is queued`, 'progress');
           return;
         }
 
         // Show queued or applied feedback based on actual status
         if (resData.status === 'queued') {
-          applyProgress.updateToQueued(targetJob.company, resData.mode || 'auto', jobId);
-          updateProgress(appId, 90, `Queued for ${resData.mode || 'auto'} processing`, 'progress');
+          applyProgress.updateToApplying(targetJob.company, jobId);
           setTimeout(() => {
             applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, jobId, 'queued');
-            updateProgress(appId, 100, `Application queued for ${resData.mode || 'auto'} processing`, 'progress');
           }, 1500);
         } else {
           applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, resData.status);
-          updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${targetJob.title}!` : `Documents ready for ${targetJob.title}`, 'progress');
         }
       } else {
         // Genuine submission failure
@@ -758,13 +761,13 @@ export default function TopJobMatchesSection() {
                   <div className="flex items-center justify-between gap-2 mb-2.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-tight ${
+                        className={metricTone(
                           job.matchScore >= 90
-                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30'
+                            ? 'emerald'
                             : job.matchScore >= 80
-                            ? 'bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30'
-                            : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/30'
-                        }`}
+                            ? 'green'
+                            : 'blue'
+                        )}
                       >
                         <Sparkles className="w-2.5 h-2.5" />
                         <span>{job.matchScore}% Match</span>

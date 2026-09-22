@@ -26,40 +26,123 @@ function parseUserAgent(ua: string): { device: string; browser: string; os: stri
   return { device, browser, os };
 }
 
+/**
+ * `jti` carries a unique index, so two writers racing on the same jti make the loser fail
+ * with E11000 rather than merely updating. That is expected under concurrency, not an error.
+ */
+export function isDuplicateKeyError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const { code, message } = error as { code?: number; message?: string };
+  // 11000 is MongoDB's duplicate-key code. Fall back to the message because a driver or
+  // proxy layer can surface the error without preserving `code`.
+  return code === 11000 || (typeof message === 'string' && message.includes('E11000'));
+}
+
+export interface SessionRecordParams {
+  userId: string;
+  jti: string;
+  ip?: string;
+  userAgent?: string;
+  provider?: string;
+  location?: string;
+}
+
+/**
+ * The slice of a Mongoose model this module writes through. Narrowing it to the two calls
+ * actually used is what makes the concurrency behaviour below testable without a live
+ * database — `session-service.test.ts` drives it with a fake that rejects the way MongoDB
+ * does when two writers collide.
+ */
+export interface LoginSessionWriteModel {
+  findOneAndUpdate(
+    filter: Record<string, unknown>,
+    update: Record<string, unknown>,
+    options: Record<string, unknown>
+  ): Promise<ILoginSession | null>;
+  findOne(filter: Record<string, unknown>): Promise<ILoginSession | null>;
+}
+
+/**
+ * Record a login session for `jti` — **idempotent**, and safe to call concurrently.
+ *
+ * Callers are not always a single well-ordered sign-in. The `jwt` callback re-records a
+ * session whenever a validly-signed token has no matching `LoginSession` row, and a browser
+ * fires its requests in parallel: every one of them reads `missing` before any of them has
+ * written, so several then try to insert the *same* jti.
+ *
+ * A plain `LoginSession.create()` makes all but one of those fail with
+ * `E11000 duplicate key error … index: jti_1`, which is pure noise — the row the caller
+ * wanted exists. Worse, it surfaces through a `catch` whose whole purpose is to make a write
+ * failure visible, so a benign race looks exactly like a broken database.
+ *
+ * Upserting instead makes the operation converge on one row no matter how many callers race,
+ * and `$setOnInsert` keeps the *first* writer's metadata (ip, userAgent, provider) rather than
+ * letting a later request replace a real device with the `recovered` placeholder.
+ *
+ * The retry is load-bearing: MongoDB upserts are **not** atomic against concurrent upserts on
+ * the same key, so the loser of the insert still gets E11000 even with `upsert: true`. Reading
+ * the winner's row is the correct response to that, not an error.
+ */
+export async function upsertLoginSession(
+  model: LoginSessionWriteModel,
+  params: SessionRecordParams
+): Promise<ILoginSession | null> {
+  const { device, browser, os } = parseUserAgent(params.userAgent || '');
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + SESSION_MAX_AGE_DAYS);
+  const now = new Date();
+
+  const insert = {
+    userId: new mongoose.Types.ObjectId(params.userId),
+    jti: params.jti,
+    ip: params.ip || 'unknown',
+    userAgent: params.userAgent || '',
+    device,
+    browser,
+    os,
+    location: params.location,
+    provider: params.provider || 'credentials',
+    createdAt: now,
+    lastActiveAt: now,
+    expiresAt,
+  };
+
+  try {
+    return await model.findOneAndUpdate(
+      { jti: params.jti },
+      { $setOnInsert: insert },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      // Another request inserted the same jti between our read and our write.
+      return model.findOne({ jti: params.jti });
+    }
+    throw error;
+  }
+}
+
 export class SessionService {
   /**
-   * Create a new login session record.
+   * Record a login session, or return the one that already exists for this `jti`.
+   * Throws only if the row cannot be written *and* cannot be read back.
    */
-  static async createSession(params: {
-    userId: string;
-    jti: string;
-    ip?: string;
-    userAgent?: string;
-    provider?: string;
-    location?: string;
-  }): Promise<ILoginSession> {
-    await mongoose.connection.asPromise();
-
-    const { device, browser, os } = parseUserAgent(params.userAgent || '');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + SESSION_MAX_AGE_DAYS);
-
-    const session = await LoginSession.create({
-      userId: new mongoose.Types.ObjectId(params.userId),
-      jti: params.jti,
-      ip: params.ip || 'unknown',
-      userAgent: params.userAgent || '',
-      device,
-      browser,
-      os,
-      location: params.location,
-      provider: params.provider || 'credentials',
-      createdAt: new Date(),
-      lastActiveAt: new Date(),
-      expiresAt,
-    });
-
+  static async createSession(params: SessionRecordParams): Promise<ILoginSession> {
+    const session = await SessionService.ensureSession(params);
+    if (!session) {
+      throw new Error(`Failed to record login session for jti ${params.jti}`);
+    }
     return session;
+  }
+
+  /**
+   * Like `createSession`, but returns `null` instead of throwing when the row cannot be read
+   * back after a lost insert race. Used by best-effort recovery paths, where a failure to
+   * record telemetry must never be allowed to affect authentication.
+   */
+  static async ensureSession(params: SessionRecordParams): Promise<ILoginSession | null> {
+    await mongoose.connection.asPromise();
+    return upsertLoginSession(LoginSession as unknown as LoginSessionWriteModel, params);
   }
 
   /**

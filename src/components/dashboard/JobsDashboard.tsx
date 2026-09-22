@@ -16,6 +16,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
@@ -23,7 +24,12 @@ import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
 import { JobCard } from '@/components/jobs/JobCard';
 import type { JobCardTrackerInfo } from '@/components/jobs/JobCard';
+import {
+  buildJourneyIndex,
+  getJourneyDocumentsForJob,
+} from '@/lib/utils/journey-documents';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
+import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { detectUserCountry } from '@/components/jobs/CountrySelector';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
@@ -260,15 +266,10 @@ function buildSavedIndex(items: SavedIndexRecord[]): { idSet: Set<string>; idMap
 
 /*
  * `DashboardDataContext` types `jobs` and `journeys` as `any[]`, so the fields
- * these two lookups actually read are declared here. Document readiness lives on
- * the JOURNEY (journeys carry `cvId` / `coverLetterId`), which is why both exist.
+ * the tracker lookup actually reads are declared here. Document readiness lives
+ * on the JOURNEY (journeys carry `cvId` / `coverLetterId`) and is derived by
+ * `@/lib/utils/journey-documents`, never inline.
  */
-type JourneyDocLite = {
-  jobId?: string;
-  cvId?: string;
-  coverLetterId?: string;
-};
-
 type ApplicationDocLite = {
   _id?: string;
   id?: string;
@@ -297,6 +298,7 @@ export default function JobsDashboard() {
   }, [firstName]);
   const { toast } = useToast();
   const { updateProgress } = useNotifications();
+  const queryClient = useQueryClient();
   const applyProgress = useApplyProgress();
   const { plan } = useEntitlements();
   const isPaidUser = plan !== 'free';
@@ -406,8 +408,11 @@ export default function JobsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTrackerJob, setSelectedTrackerJob] = useState<any | null>(null);
+  const [trackerSidebarOpen, setTrackerSidebarOpen] = useState(false);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [savedViaApplyIds, setSavedViaApplyIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
   /** See `applyingRef` — same batched-state race, same fix. */
   const savingRef = useRef<string | null>(null);
@@ -556,6 +561,7 @@ export default function JobsDashboard() {
 
   // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
   const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
+  const [savedCount, setSavedCount] = useState(0);
 
   // Fetch saved job IDs on mount and userId change
   useEffect(() => {
@@ -569,6 +575,15 @@ export default function JobsDashboard() {
             const { idSet, idMap } = buildSavedIndex(items);
             setSavedIds(idSet);
             setSavedJobIdMap(idMap);
+          }
+        }
+        // Fetch saved-count separately (only saved status)
+        const savedRes = await fetch('/api/jobs?limit=200&lite=true&status=saved');
+        if (savedRes.ok) {
+          const savedData = await savedRes.json();
+          const savedItems = savedData.jobs || savedData.data || [];
+          if (Array.isArray(savedItems)) {
+            setSavedCount(savedItems.length);
           }
         }
       } catch (err) {
@@ -626,24 +641,22 @@ export default function JobsDashboard() {
     const jobs = dashboardData?.jobs || [];
     const journeys = dashboardData?.journeys || [];
 
-    const docsByJobId = new Map<string, { hasCV: boolean; hasCoverLetter: boolean }>();
-    for (const journey of journeys as JourneyDocLite[]) {
-      const key = String(journey?.jobId || '');
-      if (!key) continue;
-      const prev = docsByJobId.get(key) || { hasCV: false, hasCoverLetter: false };
-      docsByJobId.set(key, {
-        hasCV: prev.hasCV || Boolean(journey?.cvId),
-        hasCoverLetter: prev.hasCoverLetter || Boolean(journey?.coverLetterId),
-      });
-    }
+    /*
+      Keyed by the **JobApplication** id, which is what `journey.jobId` holds.
+
+      The previous version keyed this map by `journey.jobId` but looked it up
+      with `app.jobId` — a different field entirely (`JobApplication.jobId` is the
+      *external source* id, e.g. the Workable posting id). The lookup therefore
+      never matched, so every discover card reported "no documents" no matter
+      what had been generated. `buildJourneyIndex` keeps one key space and is
+      shared with the tracker, so the two pages cannot drift.
+    */
+    const journeyIndex = buildJourneyIndex(journeys as any, jobs as any);
 
     for (const app of jobs as ApplicationDocLite[]) {
       const id = String(app?._id || app?.id || '');
       if (!id) continue;
-      const docs = docsByJobId.get(String(app?.jobId || '')) || {
-        hasCV: false,
-        hasCoverLetter: false,
-      };
+      const docs = getJourneyDocumentsForJob(journeyIndex.get(id));
       map.set(id, {
         status: String(app?.status || 'saved'),
         applicationDate:
@@ -705,6 +718,15 @@ export default function JobsDashboard() {
               const { idSet, idMap } = buildSavedIndex(items);
               setSavedIds(idSet);
               setSavedJobIdMap(idMap);
+            }
+          }
+          // Also refresh saved count
+          const savedRes = await fetch('/api/jobs?limit=200&lite=true&status=saved');
+          if (savedRes.ok) {
+            const savedData = await savedRes.json();
+            const savedItems = savedData.jobs || savedData.data || [];
+            if (Array.isArray(savedItems)) {
+              setSavedCount(savedItems.length);
             }
           }
         } catch (err) {
@@ -769,6 +791,7 @@ export default function JobsDashboard() {
             next.delete(dbJobId);
             return next;
           });
+          setSavedCount((prev) => Math.max(0, prev - 1));
           toast({ title: 'Removed from saved jobs', company: job.company, logoUrl: job.companyLogo });
         } else {
           const errData = await res.json().catch(() => ({}));
@@ -817,6 +840,7 @@ export default function JobsDashboard() {
             if (createdDbId) next.add(createdDbId);
             return next;
           });
+          setSavedCount((prev) => prev + 1);
 
           setSavedJobIdMap((prev) => {
             const next = new Map(prev);
@@ -982,6 +1006,13 @@ export default function JobsDashboard() {
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || job._id;
         setAppliedIds((prev) => new Set(prev).add(job._id));
+        // Auto-apply saves the job on the backend — mark it as saved-via-apply
+        // so the card hides the explicit Save button.
+        setSavedIds((prev) => new Set(prev).add(job._id));
+        setSavedCount((prev) => prev + 1);
+        setSavedViaApplyIds((prev) => new Set(prev).add(job._id));
+        // Immediately invalidate entitlements so usage counters update in the UI
+        queryClient.invalidateQueries({ queryKey: ['entitlements'] });
 
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
@@ -1009,7 +1040,7 @@ export default function JobsDashboard() {
 
         // Show queued or applied feedback based on actual status
         if (resData.status === 'queued') {
-          applyProgress.updateToQueued(job.company, resData.mode || 'auto', job._id);
+          applyProgress.updateToApplying(job.company, job._id);
           updateProgress(appId, 90, `Queued for ${resData.mode || 'auto'} processing`, 'progress');
           setTimeout(() => {
             applyProgress.completeApply(job.title, job.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, job._id, 'queued');
@@ -1442,7 +1473,7 @@ export default function JobsDashboard() {
               countries={countries}
               onCountriesChange={handleCountriesChange}
               userId={userId}
-              savedCount={savedIds.size}
+              savedCount={savedCount}
               cvTailoringMode={cvTailoringMode}
               onCvTailoringModeChange={handleCvTailoringModeChange}
               userPreferences={userPreferences}
@@ -1553,6 +1584,7 @@ export default function JobsDashboard() {
                         tracker={tracker}
                         applying={applying}
                         progressPercent={progressPercent}
+                        savedViaApply={savedViaApplyIds.has(job._id)}
                         progressLabel={
                           applying
                             ? `Please wait — ${progressPercent ? `${progressPercent}% done` : 'a task is already running for this job'}.`
@@ -1574,8 +1606,23 @@ export default function JobsDashboard() {
                         }}
                         onOpenDocuments={() => router.push('/dashboard/jobs?tab=docs')}
                         onOpen={() => {
-                          setSelectedJob(job);
-                          setModalOpen(true);
+                          if (saved && tracker) {
+                            // Saved jobs: open the full journey sidebar
+                            const appId = resolveApplicationId(job);
+                            setSelectedTrackerJob({
+                              ...job,
+                              _id: appId || job._id,
+                              id: appId || job._id,
+                              status: tracker.status || 'saved',
+                              matchScore: job.matchScore,
+                              atsScore: tracker.atsScore,
+                            });
+                            setTrackerSidebarOpen(true);
+                          } else {
+                            // Unsaved jobs: open the detail modal
+                            setSelectedJob(job);
+                            setModalOpen(true);
+                          }
                         }}
                         onSave={() => handleSaveJob(job)}
                         /*
@@ -1611,28 +1658,6 @@ export default function JobsDashboard() {
                       />
                       );
                     })}
-
-                  {/* Naukri Featured Card — only when account not connected & not in savedOnly mode */}
-                  {!naukriConnected && !filters.savedOnly && (
-                    <NaukriConnectCard
-                      onConnected={() => {
-                        setNaukriConnected(true);
-                        fetchPortalConnections();
-                        fetchJobs();
-                      }}
-                    />
-                  )}
-
-                  {/* Indeed Featured Card — only when account not connected & not in savedOnly mode */}
-                  {!indeedConnected && !filters.savedOnly && (
-                    <IndeedConnectCard
-                      onConnected={() => {
-                        setIndeedConnected(true);
-                        fetchPortalConnections();
-                        fetchJobs();
-                      }}
-                    />
-                  )}
 
                   {/* Extension card styled as a job card at the end of the loaded batch */}
                   {!filters.savedOnly && (
@@ -1739,6 +1764,29 @@ export default function JobsDashboard() {
               onSave={() => selectedJob && handleSaveJob(selectedJob)}
               onApply={() => selectedJob && handleApplyJob(selectedJob)}
             />
+
+            {/* Journey Sidebar — opens for saved/in-tracker jobs */}
+            {trackerSidebarOpen && selectedTrackerJob && (() => {
+              const fullJob = (dashboardData?.jobs || []).find(
+                (j: any) => (j._id || j.id) === (selectedTrackerJob._id || selectedTrackerJob.id)
+              ) || selectedTrackerJob;
+              const jobJourneys = (dashboardData?.journeys || []).filter(
+                (j: any) => j.jobId === fullJob._id || j.jobId === fullJob.id
+              );
+              return (
+                <JobSidebar
+                  job={fullJob}
+                  journeys={jobJourneys}
+                  onClose={() => {
+                    setTrackerSidebarOpen(false);
+                    setSelectedTrackerJob(null);
+                  }}
+                  onRefresh={() => {
+                    fetchJobs(true);
+                  }}
+                />
+              );
+            })()}
 
             {/* Portal Connect Modal */}
             {connectModalOpen && (

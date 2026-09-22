@@ -1,13 +1,15 @@
 'use client';
 
 import { useCallback, useRef } from 'react';
-import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { useJobLiveStatusStore, type JobLiveStep } from '@/lib/stores/jobLiveStatusStore';
 import { toast } from '@/hooks/use-toast';
 
 /**
  * Hook for managing real-time progress during the job apply flow.
- * Shows both inline status cards (JobLiveStatusCard) and toast notifications
- * at key pipeline milestones for maximum visibility.
+ * Uses inline progress bar in the job card (no overlay).
+ *
+ * Pipeline stages:
+ *   saving → tailoring_cv → tailoring_cover_letter → applying → applied
  */
 export function useApplyProgress() {
   const { setStatus, updateStep, clearStatus } = useJobLiveStatusStore();
@@ -19,19 +21,12 @@ export function useApplyProgress() {
       activeJobIdRef.current = jobId;
 
       setStatus(jobId, {
-        step: 'matching',
-        title: 'Matching CV',
-        description: `Finding best CV match for ${jobTitle}...`,
-        progress: 25,
+        step: 'saving',
+        title: 'Saving Job',
+        description: `Saving ${jobTitle} to your tracker...`,
+        progress: 10,
         company,
         jobTitle,
-      });
-
-      toast({
-        title: 'Application started',
-        description: `Matching CV for ${company || jobTitle}...`,
-        company,
-        duration: 3000,
       });
 
       return jobId;
@@ -43,66 +38,45 @@ export function useApplyProgress() {
     activeJobIdRef.current = id;
   }, []);
 
-  const updateToTailoring = useCallback(
+  const updateToTailoringCV = useCallback(
     (jobTitle: string, company: string, directJobId?: string) => {
       const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
       updateStep(jobId, {
-        step: 'tailoring',
-        title: 'Tailoring Documents',
-        description: `Generating tailored CV & cover letter for ${company}...`,
+        step: 'tailoring_cv',
+        title: 'Tailoring CV',
+        description: `Generating tailored CV for ${company}...`,
+        progress: 35,
+        company,
+        jobTitle,
+      });
+    },
+    [updateStep]
+  );
+
+  const updateToTailoringCoverLetter = useCallback(
+    (jobTitle: string, company: string, directJobId?: string) => {
+      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
+      updateStep(jobId, {
+        step: 'tailoring_cover_letter',
+        title: 'Cover Letter',
+        description: `Generating tailored cover letter for ${company}...`,
         progress: 60,
         company,
         jobTitle,
       });
-
-      toast({
-        title: 'Documents tailoring',
-        description: `Generating tailored CV & cover letter for ${company}...`,
-        company,
-        duration: 4000,
-      });
     },
     [updateStep]
   );
 
-  const updateToQueued = useCallback(
-    (company: string, mode: string, directJobId?: string) => {
-      const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
-      const modeLabel = mode === 'auto' ? 'auto-submit' : mode === 'review' ? 'review' : 'manual';
-      updateStep(jobId, {
-        step: 'queued',
-        title: 'Queued for Processing',
-        description: `Application queued for ${modeLabel} processing at ${company}...`,
-        progress: 80,
-        company,
-      });
-
-      toast({
-        title: 'Application queued',
-        description: `Queued for ${modeLabel} processing at ${company}.`,
-        company,
-        duration: 4000,
-      });
-    },
-    [updateStep]
-  );
-
-  const updateToSubmitting = useCallback(
+  const updateToApplying = useCallback(
     (company: string, directJobId?: string) => {
       const jobId = directJobId || activeJobIdRef.current || 'active_apply_job';
       updateStep(jobId, {
-        step: 'submitting',
-        title: 'Submitting Application',
-        description: `Sending application to ${company}...`,
+        step: 'applying',
+        title: 'Submitting',
+        description: `Submitting application to ${company}...`,
         progress: 85,
         company,
-      });
-
-      toast({
-        title: 'Submitting application',
-        description: `Sending application to ${company}...`,
-        company,
-        duration: 3000,
       });
     },
     [updateStep]
@@ -117,94 +91,68 @@ export function useApplyProgress() {
       const succeeded = success && !isTechnical;
 
       if (succeeded) {
-        let title: string;
         let description: string;
-        let toastTitle: string;
-        let toastDescription: string;
 
         if (appStatus === 'applied') {
-          title = 'Application Submitted';
           description = message || `Application submitted to ${company} successfully.`;
-          toastTitle = 'Application submitted';
-          toastDescription = message || `Application submitted to ${company}.`;
         } else if (appStatus === 'queued') {
-          title = 'Application Queued';
-          description = message || `Application queued for automated processing at ${company}. The worker will submit it shortly.`;
-          toastTitle = 'Application queued';
-          toastDescription = message || `Queued for processing at ${company}.`;
+          description = message || `Application queued for automated processing at ${company}.`;
         } else if (appStatus === 'action_required') {
-          title = 'Review Required';
           description = message || `Documents prepared for ${company}. Please review and submit manually.`;
-          toastTitle = 'Review required';
-          toastDescription = message || `Documents ready for ${company}. Review and submit.`;
         } else if (appStatus === 'skipped') {
-          title = 'Application Skipped';
           description = message || `This job was skipped based on your preferences.`;
-          toastTitle = 'Skipped';
-          toastDescription = message || `Job skipped per your preferences.`;
         } else {
-          title = 'Documents Ready';
-          description = message || `Tailored documents prepared for ${company}. Review or submit.`;
-          toastTitle = 'Documents ready';
-          toastDescription = message || `Tailored documents prepared for ${company}.`;
+          description = message || `Tailored documents prepared for ${company}.`;
         }
 
+        /*
+          The card's pipeline must not claim a stage the request did not reach.
+
+          Every outcome used to be written as `step: 'applied'`, so a job that was
+          only *queued for review* rendered the discover card with the "Applied"
+          node ticked and a full emerald bar, directly above the message
+          "Application queued for review processing". `JobCardProgressBar` maps
+          `queued` to the "Applying" node — which is where a queued application
+          actually is — so the step has to carry that distinction.
+        */
+        const stepByOutcome: Record<string, JobLiveStep> = {
+          applied: 'applied',
+          queued: 'queued',
+          action_required: 'queued',
+          skipped: 'queued',
+          saved: 'queued',
+        };
+
+        const titleByOutcome: Record<string, string> = {
+          applied: 'Applied',
+          queued: 'Queued for review',
+          action_required: 'Ready to submit',
+          skipped: 'Skipped',
+          saved: 'Saved',
+        };
+
         updateStep(jobId, {
-          step: 'submitted',
-          title,
+          step: stepByOutcome[appStatus ?? ''] ?? 'queued',
+          title: titleByOutcome[appStatus ?? ''] ?? 'Complete',
           description,
           progress: 100,
           success: true,
           company,
           jobTitle,
-          autoCloseSeconds: 10,
-          actions: [
-            {
-              label: 'Check tracker',
-              href: '/dashboard/jobs?tab=applications',
-            },
-            {
-              label: 'Prep for the interview',
-              href: '/dashboard/interview',
-            },
-          ],
-        });
-
-        toast({
-          title: toastTitle,
-          description: toastDescription,
-          variant: 'success',
-          company,
-          duration: 6000,
+          autoCloseSeconds: 8,
         });
       } else {
         updateStep(jobId, {
           step: 'failed',
-          title: 'Application Failed',
+          title: 'Failed',
           description: isTechnical
-            ? `Could not save this ${jobTitle} application. Please try again.`
-            : message || `Failed to apply to ${jobTitle}. Please try again.`,
+            ? `Could not save this application. Please try again.`
+            : message || `Failed to apply. Please try again.`,
           progress: 100,
           success: false,
           company,
           jobTitle,
-          autoCloseSeconds: 10,
-          actions: [
-            {
-              label: 'Check tracker',
-              href: '/dashboard/jobs?tab=applications',
-            },
-          ],
-        });
-
-        toast({
-          title: 'Application failed',
-          description: isTechnical
-            ? `Could not save this application. Please try again.`
-            : message || `Failed to apply to ${jobTitle}. Please try again.`,
-          variant: 'destructive',
-          company,
-          duration: 6000,
+          autoCloseSeconds: 8,
         });
       }
     },
@@ -217,13 +165,22 @@ export function useApplyProgress() {
     activeJobIdRef.current = null;
   }, [clearStatus]);
 
+  // Legacy compatibility aliases
+  const updateToTailoring = updateToTailoringCV;
+  const updateToQueued = updateToApplying;
+  const updateToSubmitting = updateToApplying;
+
   return {
     startApplyProgress,
     setActiveJobId,
+    updateToTailoringCV,
+    updateToTailoringCoverLetter,
+    updateToApplying,
+    completeApply,
+    cancelProgress,
+    // Legacy aliases
     updateToTailoring,
     updateToQueued,
     updateToSubmitting,
-    completeApply,
-    cancelProgress,
   };
 }

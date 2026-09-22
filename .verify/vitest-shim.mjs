@@ -55,9 +55,10 @@ function show(value) {
  */
 const GLOBAL_KEY = '__vitestShimState__';
 if (!globalThis[GLOBAL_KEY]) {
-  globalThis[GLOBAL_KEY] = { passed: 0, failed: 0, failures: [] };
+  globalThis[GLOBAL_KEY] = { passed: 0, failed: 0, failures: [], pending: [] };
 }
 export const state = globalThis[GLOBAL_KEY];
+if (!state.pending) state.pending = [];
 
 function recordFailure(message) {
   state.failed += 1;
@@ -174,10 +175,23 @@ export function describe(name, fn) {
 }
 
 export function it(name, fn) {
+  const pass = () => console.log(`  ✓ ${name}`);
+  const fail = (err) => recordFailure(`${name} — threw: ${err?.message || err}`);
+
+  let result;
   try {
-    fn();
-    console.log(`  ✓ ${name}`);
+    result = fn();
   } catch (err) {
-    recordFailure(`${name} — threw: ${err?.message || err}`);
+    fail(err);
+    return;
   }
+
+  // An `async` body resolves after `it` has returned, so its assertions would land *after*
+  // the runner printed its tally. Hand the promise to the runner instead of dropping it.
+  if (result && typeof result.then === 'function') {
+    state.pending.push(result.then(pass, fail));
+    return;
+  }
+
+  pass();
 }

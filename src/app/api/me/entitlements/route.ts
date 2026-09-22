@@ -140,23 +140,14 @@ async function fetchUsageData(userId: string): Promise<{
     const monthlyStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
 
+    // Use AutoApplyQuotaService for reservation-based auto-apply counts
+    // This is the authoritative source for Auto-Apply usage
+    const { AutoApplyQuotaService } = await import('@/lib/services/autoApplyQuotaService');
+    const autoApplyUsage = await AutoApplyQuotaService.getUsage(userId);
+
     const appsCollection = db.collection('jobapplications');
 
-    // Daily auto-apply count
-    const autoApplyDaily = await appsCollection.countDocuments({
-      $or: [{ userId: userObjectId }, { userId }],
-      appliedAt: { $gte: dailyStart },
-      applicationMethod: 'auto',
-    });
-
-    // Monthly auto-apply count
-    const autoApplyMonthly = await appsCollection.countDocuments({
-      $or: [{ userId: userObjectId }, { userId }],
-      appliedAt: { $gte: monthlyStart },
-      applicationMethod: 'auto',
-    });
-
-    // Monthly applications count
+    // Monthly applications count (manual + auto, excluding saved/draft)
     const applicationsMonthly = await appsCollection.countDocuments({
       $or: [{ userId: userObjectId }, { userId }],
       createdAt: { $gte: monthlyStart },
@@ -186,8 +177,9 @@ async function fetchUsageData(userId: string): Promise<{
       limits: {
         active_jobs: activeJobs,
         journey_cvs: journeyCvs,
-        auto_apply_daily: autoApplyDaily,
-        auto_apply_monthly: autoApplyMonthly,
+        // Reservation-based counts: consumed + reserved = total in-progress
+        auto_apply_daily: autoApplyUsage.dailyUsed,
+        auto_apply_monthly: autoApplyUsage.total,
         applications_monthly: applicationsMonthly,
         ai_surgeon_runs_monthly: surgeonRuns,
       },

@@ -9,9 +9,6 @@ export interface IPricingPlan extends Document {
   billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
   // Credit-based system (replaces maxCVs, maxJobs, maxJourneys, maxExports, maxCoverLetters)
   credits: {
-    cvCredits: number; // -1 for unlimited
-    exportCredits: number; // -1 for unlimited
-    atsCheckCredits: number; // -1 for unlimited
     jobCredits: number; // -1 for unlimited
     resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
   };
@@ -123,24 +120,6 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   },
   // Credit-based system (primary)
   credits: {
-    cvCredits: {
-      type: Number,
-      required: [true, 'CV credits are required'],
-      min: [-1, 'CV credits cannot be less than -1 (unlimited)'],
-      default: 1
-    },
-    exportCredits: {
-      type: Number,
-      required: [true, 'Export credits are required'],
-      min: [-1, 'Export credits cannot be less than -1 (unlimited)'],
-      default: 1
-    },
-    atsCheckCredits: {
-      type: Number,
-      required: [true, 'ATS check credits are required'],
-      min: [-1, 'ATS check credits cannot be less than -1 (unlimited)'],
-      default: 0
-    },
     jobCredits: {
       type: Number,
       required: [true, 'Job credits are required'],

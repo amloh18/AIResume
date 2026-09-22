@@ -265,33 +265,8 @@ export async function POST(
 
     await cv.save();
 
-    // Fire-and-forget: Save CV to S3 as backup (non-critical, don't block response)
-    const s3BackupUrl = (async () => {
-      try {
-        const { CVS3Service } = await import('@/lib/services/cvS3Service');
-        const s3Url = await CVS3Service.saveCVToS3(
-          cv._id.toString(),
-          userId,
-          cv.cvData,
-          cv.templateData || template
-        );
-        
-        if (s3Url) {
-          if (!cv.metadata) {
-            cv.metadata = {} as any;
-          }
-          (cv.metadata as any).s3BackupUrl = s3Url;
-          (cv.metadata as any).s3BackupSavedAt = new Date();
-          await cv.save();
-        }
-      } catch {
-        // Non-critical
-      }
-    })();
-    // Don't block response on S3 backup
-    s3BackupUrl.catch(() => {});
-
-    // Note: Thumbnail generation moved to studio exit for better performance
+    // No thumbnail generation or S3 backup here — CV previews render client-side and the S3
+    // thumbnail/backup pipeline was removed 2026-09-21.
 
     const cvResponse = cv.toJSON();
 

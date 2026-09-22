@@ -736,7 +736,7 @@ class SubscriptionService {
   getEffectivePlan(user: any): { currentPlanKey: string; subscription: any; isExpired: boolean } {
     if (!user || !user.subscription) {
       return {
-        currentPlanKey: 'starter_monthly',
+        currentPlanKey: 'free',
         subscription: null,
         isExpired: false
       };

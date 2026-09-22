@@ -42,6 +42,10 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { isJourneyCv, isJourneyCoverLetter } from '@/lib/utils/document-kind';
 import {
+  buildJourneyIndex,
+  getJobJourneysFromIndex,
+} from '@/lib/utils/journey-documents';
+import {
   type TrackerCreatedStagePreview,
 } from '@/lib/utils/tracker-created-stage-modal';
 
@@ -103,7 +107,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const searchParams = useSearchParams();
   const { user } = useUnifiedAuth();
   const { userData } = useUserData();
-  const { plan } = useEntitlements();
+  const { plan, getLimit } = useEntitlements();
   const { openPaymentModal } = usePaymentModal();
   const { preferences, savePreferences } = useJobsPersistence();
   const { isFocusMode } = useFocusMode();
@@ -415,9 +419,31 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     return grouped;
   }, [filteredJobs]);
 
+  /*
+    ONE journey index for the kanban, the list and the sidebar.
+
+    All three used to call `getJobJourneys()` over a list fetched from
+    `/api/journeys?limit=all` — a request that carried no `userId` and was
+    rejected with a 400, so the list was always empty and every card read
+    "Partially generated" / "no documents". The sidebar looked correct only
+    because it happens to self-fetch `/api/application-journey?jobId=…`.
+
+    The route now resolves the user from the session, and this index additionally
+    falls back to the journey `/api/jobs` embeds on each application, so a list
+    that is slow, cached-stale or failing degrades to slightly less detail
+    instead of to "no documents at all".
+  */
+  const journeyIndex = useMemo(
+    () => buildJourneyIndex(journeys, jobs as any),
+    [journeys, jobs],
+  );
+
   const getJobJourneys = useCallback((jobId: string): CVJourney[] => {
-    return journeys.filter(j => j.jobId === jobId || (j as any).targetJobId === jobId);
-  }, [journeys]);
+    const fromIndex = getJobJourneysFromIndex(journeyIndex, jobId);
+    if (fromIndex.length > 0) return fromIndex;
+    // Legacy rows keyed by `targetJobId` rather than the application id.
+    return journeys.filter(j => (j as any).targetJobId === jobId);
+  }, [journeyIndex, journeys]);
 
   const getJourneyProgress = useCallback((journey: CVJourney): number => {
     if (!journey) return 0;
@@ -672,24 +698,27 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   };
 
-  const isFreePlan = plan === 'free';
-  const limit = isFreePlan ? 3 : 10;
-  const remaining = Math.max(0, limit - stats.aiJourneyUsage);
+  // Use the authoritative auto_apply_monthly limit from the entitlement engine
+  const autoApplyLimit = getLimit('auto_apply_monthly');
+  const isUnlimited = autoApplyLimit?.remaining === null;
+  const limit = isUnlimited ? Infinity : (autoApplyLimit?.limit ?? (plan === 'free' ? 10 : 25));
+  const used = autoApplyLimit?.used ?? stats.aiJourneyUsage;
+  const remaining = isUnlimited ? null : Math.max(0, limit - used);
 
-  const usageMetric = isFreePlan
+  const usageMetric = isUnlimited
     ? {
         label: 'Usage',
-        value: `${stats.aiJourneyUsage} / ${limit}`,
+        value: `${used} used`,
         icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${remaining} left`,
-        trendUp: stats.aiJourneyUsage < limit,
+        trend: 'Unlimited',
+        trendUp: true,
       }
     : {
         label: 'Usage',
-        value: 'Unlimited',
+        value: `${used} / ${limit}`,
         icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${stats.aiJourneyUsage} generated`,
-        trendUp: true,
+        trend: `${remaining} left`,
+        trendUp: used < limit,
       };
 
   const kpiMetrics = [

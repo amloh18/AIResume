@@ -6,8 +6,9 @@ import type { JobListing } from '@/types/automation-schema';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { timeAgo } from '@/lib/utils/format-utils';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
-import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
+import { JobCardProgressBar } from '@/components/jobs/JobCardProgressBar';
 import { getCurrencySymbol, getJobCardColorClass } from '@/lib/config/job-constants';
+import { CHIP_INLINE, CHIP_TONES, metricTone, type ChipTone } from '@/components/ui/chip-styles';
 import {
   MapPin,
   CheckCircle2,
@@ -69,6 +70,8 @@ export interface JobCardProps {
   onOpenTracker?: () => void;
   /** Jump to the documents view for this job. */
   onOpenDocuments?: () => void;
+  /** If true, job was auto-saved during apply — hide the explicit save button. */
+  savedViaApply?: boolean;
 }
 
 /**
@@ -211,6 +214,7 @@ export function JobCard({
   progressLabel,
   onOpenTracker,
   onOpenDocuments,
+  savedViaApply = false,
 }: JobCardProps) {
   const jobId = String(job._id || job.id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
@@ -223,35 +227,37 @@ export function JobCard({
   const salaryStr = formatSalary(job);
   const cardColorClass = getJobCardColorClass(colorIndex, jobId);
 
-  // Categorize match score into human-friendly confidence bands
-  let matchTier = {
+  // Categorize match score into human-friendly confidence bands.
+  // `tone` feeds the bare metric treatment (no bg, no border); `dotClass`
+  // keeps the leading indicator, which is a separate element.
+  let matchTier: { label: string; tone: ChipTone; dotClass: string } = {
     label: 'Match',
-    badgeClass: 'text-gray-700 dark:text-gray-300 bg-white/80 dark:bg-white/5 border-black/10 dark:border-white/10 shadow-2xs',
+    tone: 'slate',
     dotClass: 'bg-gray-400',
   };
 
   if (score >= 90) {
     matchTier = {
       label: 'Excellent match',
-      badgeClass: 'text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+      tone: 'emerald',
       dotClass: 'bg-emerald-500',
     };
   } else if (score >= 80) {
     matchTier = {
       label: 'Strong match',
-      badgeClass: 'text-[#013f2e] dark:text-[#36D39B] bg-lime-500/20 border-lime-500/30',
+      tone: 'green',
       dotClass: 'bg-lime-500',
     };
   } else if (score >= 70) {
     matchTier = {
       label: 'Good match',
-      badgeClass: 'text-sky-800 dark:text-sky-300 bg-sky-500/15 border-sky-500/30',
+      tone: 'sky',
       dotClass: 'bg-sky-500',
     };
   } else if (score >= 60) {
     matchTier = {
       label: 'Possible match',
-      badgeClass: 'text-gray-800 dark:text-gray-300 bg-gray-500/15 border-gray-500/25',
+      tone: 'slate',
       dotClass: 'bg-gray-400',
     };
   }
@@ -289,12 +295,11 @@ export function JobCard({
 
       {/* Live status pulse */}
       {liveStatus && (
-        <div className="absolute top-3 left-3 flex items-center gap-1.5">
+        <div className="absolute top-3 left-3">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500" />
           </span>
-          <span className="text-[10px] font-bold text-lime-600 dark:text-lime-400 uppercase tracking-wide">Live</span>
         </div>
       )}
 
@@ -314,7 +319,7 @@ export function JobCard({
           </div>
 
           {score > 0 && (
-            <div className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center gap-1.5 shrink-0 ${matchTier.badgeClass}`}>
+            <div className={metricTone(matchTier.tone)}>
               <span className={`w-1.5 h-1.5 rounded-full ${matchTier.dotClass}`} />
               <span>{score}% · {matchTier.label}</span>
             </div>
@@ -344,13 +349,16 @@ export function JobCard({
           </div>
         </div>
 
-        {/* Live Status OR Normal Skills/Actions */}
+        {/* Live Status: Inline Progress Bar */}
         {liveStatus ? (
-          <div className="mt-1 flex-1 flex flex-col justify-between">
-            <JobLiveStatusCard
-              status={liveStatus}
-              onClose={() => clearStatus(jobId)}
-              inline={true}
+          <div className="mt-auto pt-3 border-t border-black/8 dark:border-white/5">
+            <JobCardProgressBar
+              currentStep={liveStatus.step}
+              progress={liveStatus.progress}
+              success={liveStatus.success}
+              description={liveStatus.description}
+              jobTitle={liveStatus.jobTitle}
+              company={liveStatus.company}
             />
           </div>
         ) : (
@@ -372,7 +380,7 @@ export function JobCard({
 
                 {typeof tracker.atsScore === 'number' && tracker.atsScore > 0 && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/70 dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-black/5 dark:border-white/10 shrink-0"
+                    className={metricTone('neutral')}
                     title="ATS score of the tailored document for this job"
                   >
                     <ShieldCheck className="w-3 h-3" />
@@ -392,7 +400,7 @@ export function JobCard({
                 {skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-2.5 py-0.5 rounded-lg text-[11px] font-medium bg-white/70 dark:bg-white/5 text-gray-800 dark:text-gray-300 border border-black/5 dark:border-white/5 shadow-2xs backdrop-blur-xs"
+                    className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-medium`}
                   >
                     {skill}
                   </span>
@@ -487,10 +495,6 @@ export function JobCard({
                   </button>
                 </div>
               ) : isSaved && tracker ? (
-                /*
-                  A tracked job gets more to do than an untracked one, at the
-                  same height: the single full-width button becomes a 2-up row.
-                */
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -537,7 +541,48 @@ export function JobCard({
                     <span>{tracker.hasCV || tracker.hasCoverLetter ? 'Documents' : 'Open'}</span>
                   </button>
                 </div>
+              ) : isSaved && !savedViaApply ? (
+                /*
+                  Saved via the Save button — show a filled "Saved" pill + Apply.
+                  The user explicitly saved this job, so keep the bookmark visible.
+                */
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="px-3 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 cursor-default">
+                    <Bookmark className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                    <span>Saved</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (applying) return;
+                      onApply();
+                    }}
+                    disabled={applying || applicationMode === 'find_only'}
+                    className={`px-3 py-2.5 rounded-xl text-white dark:text-black text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
+                      applying || applicationMode === 'find_only'
+                        ? 'bg-gray-400 dark:bg-gray-500 cursor-not-allowed'
+                        : 'bg-[#013f2e] hover:bg-[#02523c] dark:bg-lime-500 dark:hover:bg-lime-400'
+                    }`}
+                  >
+                    {applying ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>{progressPercent ? `${progressPercent}%` : 'Working…'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Briefcase className="w-3.5 h-3.5" />
+                        <span>{applicationMode === 'automatic' ? 'Auto Apply' : 'Apply'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               ) : isSaved ? (
+                /*
+                  Saved via Apply (or unknown origin) — full-width Apply only,
+                  no save button cluttering the card.
+                */
                 <button
                   type="button"
                   onClick={(e) => {

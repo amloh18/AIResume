@@ -65,10 +65,6 @@ import ModeValidationBanner from '@/components/resume-enhancer/components/ModeVa
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
 import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
 import { invalidateStep1Cache } from './steps/Step1Dashboard';
-import {
-  queueCvThumbnailSnapshotUpload,
-  saveCvThumbnailSnapshot,
-} from '@/lib/utils/cv-thumbnail-snapshot';
 import { extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
 import ZoomGuard from '@/components/editor/ZoomGuard';
 import OnScreenKeyboard from '@/components/editor/OnScreenKeyboard';
@@ -619,23 +615,7 @@ export default function ResumeEnhancerContainer({
     setIsUserMenuExpanded(false);
   };
 
-  const queueCurrentThumbnailSnapshot = useCallback((targetCvId?: string | null) => {
-    const snapshotCvId = targetCvId || state.cvId || cvId || null;
-    const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
-    if (isGuestMode || !snapshotCvId || !state.cvData || !currentTemplate) {
-      return;
-    }
-
-    queueCvThumbnailSnapshotUpload({
-      cvId: snapshotCvId,
-      cvData: state.cvData,
-      template: currentTemplate,
-      forceRegenerate: true,
-    });
-  }, [cvId, isGuestMode, state.cvData, state.cvId, state.selectedTemplate]);
-
   const openEditorDashboard = useCallback(() => {
-    queueCurrentThumbnailSnapshot();
     resetState();
     goToStep(1);
 
@@ -647,7 +627,7 @@ export default function ResumeEnhancerContainer({
     currentParams.delete('mode');
     currentParams.set('step', '1');
     router.replace(`${pathname}?${currentParams.toString()}`);
-  }, [goToStep, pathname, queueCurrentThumbnailSnapshot, resetState, router, searchParams]);
+  }, [goToStep, pathname, resetState, router, searchParams]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -661,10 +641,8 @@ export default function ResumeEnhancerContainer({
   const confirmNavigation = async (saveBeforeLeaving: boolean) => {
     if (saveBeforeLeaving) {
       await handleSmartSave();
-    } else {
-      queueCurrentThumbnailSnapshot();
     }
-    
+
     if (pendingNavigation) {
       if (pendingNavigation.type === 'step') {
         goToStepSafely(pendingNavigation.target as 1 | 2 | 3 | 4 | 5);
@@ -2884,21 +2862,6 @@ export default function ResumeEnhancerContainer({
               console.error("Failed to save cover letter:", clErr);
               toast.error('Cover letter could not be saved, but your CV was saved.');
           }
-      }
-      
-      const thumbnailCvId = savedCvId || effectiveCvId;
-      const currentTemplate = state.selectedTemplate || state.cvData?.metadata?.canvasTemplate;
-      if (thumbnailCvId && currentTemplate) {
-        try {
-          await saveCvThumbnailSnapshot({
-            cvId: thumbnailCvId,
-            cvData: state.cvData,
-            template: currentTemplate,
-            forceRegenerate: true,
-          });
-        } catch (thumbnailError) {
-          console.warn('Failed to save CV thumbnail snapshot after explicit save', thumbnailError);
-        }
       }
 
       // Invalidate step 1 cache so it re-fetches when navigating back to step 1

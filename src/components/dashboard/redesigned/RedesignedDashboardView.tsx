@@ -56,6 +56,10 @@ import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewS
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import {
+  buildJourneyIndex,
+  getJobJourneysFromIndex,
+} from '@/lib/utils/journey-documents';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import {
   isJourneyCv,
@@ -428,28 +432,31 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
 
 function KpiStrip() {
   const { cvs, coverLetters, jobs, goals, criticalLoading, secondaryLoading } = useDashboardData();
-  const { plan, loading: membershipLoading } = useEntitlements();
+  const { plan, getLimit, loading: membershipLoading } = useEntitlements();
   const stats = computeKpiStats(cvs, jobs, goals, coverLetters);
   const kpisLoading = criticalLoading || membershipLoading || secondaryLoading.streak || secondaryLoading.goals || secondaryLoading.cvs || secondaryLoading.jobs;
 
-  const isFreePlan = plan === 'free';
-  const limit = isFreePlan ? 3 : 10;
-  const remaining = Math.max(0, limit - stats.aiJourneyUsage);
+  // Use the authoritative auto_apply_monthly limit from the entitlement engine
+  const autoApplyLimit = getLimit('auto_apply_monthly');
+  const isUnlimited = autoApplyLimit?.remaining === null;
+  const limit = isUnlimited ? Infinity : (autoApplyLimit?.limit ?? (plan === 'free' ? 10 : 25));
+  const used = autoApplyLimit?.used ?? stats.aiJourneyUsage;
+  const remaining = isUnlimited ? null : Math.max(0, limit - used);
 
-  const usageMetric = isFreePlan
+  const usageMetric = isUnlimited
     ? {
         label: 'Usage',
-        value: `${stats.aiJourneyUsage} / ${limit}`,
+        value: `${used} used`,
         icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${remaining} left`,
-        trendUp: stats.aiJourneyUsage < limit,
+        trend: 'Unlimited',
+        trendUp: true,
       }
     : {
         label: 'Usage',
-        value: 'Unlimited',
+        value: `${used} / ${limit}`,
         icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${stats.aiJourneyUsage} generated`,
-        trendUp: true,
+        trend: `${remaining} left`,
+        trendUp: used < limit,
       };
 
   const metrics: Array<{
@@ -979,20 +986,20 @@ function RecentJobsPanel() {
     [effectiveJobs]
   );
 
-  const getJobJourneys = useCallback(
-    (jobId: string): CVJourney[] => {
-      const foundInContext = contextJourneys.filter(
-        (j) => j.jobId === jobId || (j as any).targetJobId === jobId
-      );
-      if (foundInContext.length > 0) return foundInContext;
-
-      const job = effectiveJobs.find((j: any) => (j._id?.toString() || j.id?.toString()) === jobId);
-      if (job?.journey) {
-        return [job.journey as any];
-      }
-      return [];
-    },
+  /**
+   * Same index the tracker builds (`buildJourneyIndex`), so the dashboard and
+   * the kanban cannot disagree about which documents belong to a job. The
+   * embedded `job.journey` is a fallback for a missing/stale journey list, not a
+   * second source: both are normalised to one shape inside the helper.
+   */
+  const journeyIndex = useMemo(
+    () => buildJourneyIndex(contextJourneys as any, effectiveJobs as any),
     [contextJourneys, effectiveJobs]
+  );
+
+  const getJobJourneys = useCallback(
+    (jobId: string): CVJourney[] => getJobJourneysFromIndex(journeyIndex, jobId),
+    [journeyIndex]
   );
 
   const getJourneyProgress = useCallback((journey: CVJourney): number => {
@@ -1234,11 +1241,7 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
             Added {timeAgo(job.createdAt || job.updatedAt)}
           </span>
           {atsScore > 0 && (
-            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-              atsScore >= 80 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
-              atsScore >= 60 ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
-              'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'
-            }`}>
+            <span className={metricTone(atsScore >= 80 ? 'emerald' : atsScore >= 60 ? 'amber' : 'slate')}>
               {atsScore}% match
             </span>
           )}
@@ -1313,9 +1316,9 @@ function ContinuePanel() {
     );
   }, [jobs]);
 
-  const totalPairs = Math.ceil(sortedJobs.length / 2);
-  const safePage = Math.max(0, Math.min(pageIndex, Math.max(0, totalPairs - 1)));
-  const currentPair = sortedJobs.slice(safePage * 2, safePage * 2 + 2);
+  const totalCards = sortedJobs.length;
+  const safePage = Math.max(0, Math.min(pageIndex, Math.max(0, totalCards - 1)));
+  const currentCards = sortedJobs.slice(safePage, safePage + 1);
 
   if (sortedJobs.length === 0 && secondaryLoading.jobs) {
     return (
@@ -1343,10 +1346,10 @@ function ContinuePanel() {
       <Panel
         title="Continue where you left off"
         actions={
-          totalPairs > 1 ? (
+          totalCards > 1 ? (
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-semibold text-[var(--text-tertiary)] tabular-nums mr-1">
-                {safePage + 1}/{totalPairs}
+                {safePage + 1}/{totalCards}
               </span>
               <button
                 type="button"
@@ -1358,8 +1361,8 @@ function ContinuePanel() {
               </button>
               <button
                 type="button"
-                onClick={() => setPageIndex((prev) => Math.min(totalPairs - 1, prev + 1))}
-                disabled={safePage >= totalPairs - 1}
+                onClick={() => setPageIndex((prev) => Math.min(totalCards - 1, prev + 1))}
+                disabled={safePage >= totalCards - 1}
                 className="w-5 h-5 rounded flex items-center justify-center text-xs border border-[var(--border-primary)] text-[var(--text-secondary)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--bg-tertiary)]"
               >
                 ›
@@ -1368,8 +1371,8 @@ function ContinuePanel() {
           ) : undefined
         }
       >
-        <div className={`grid gap-3.5 ${currentPair.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
-          {currentPair.map((job) => (
+        <div className="grid grid-cols-1 gap-3.5">
+          {currentCards.map((job) => (
             <ContinueJobCard
               key={job.id || job._id}
               job={job}

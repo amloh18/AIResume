@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
+import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import type { ATSType } from '@/types/automation-schema';
 
 /**
@@ -9,8 +10,8 @@ import type { ATSType } from '@/types/automation-schema';
  * ENQUEUE-ONLY endpoint. Creates/updates JobApplication + ApplicationQueue item.
  * The applicationWorker processes items in the background.
  *
- * Previously this endpoint called UnifiedApplyService.apply() inline,
- * causing 10-30s response times. Now it returns immediately.
+ * Uses the unified AutoApplyQuotaService for atomic quota reservation.
+ * Each request creates a reservation with a unique operationId for idempotency.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -46,27 +47,36 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
-    // Check centralized canonical entitlements
-    const { EntitlementService } = await import('@/lib/services/entitlement-service');
-    const entitlementCheck = await EntitlementService.checkAndConsume(auth.userId, 'auto_apply');
+    // Generate operationId for idempotency (deterministic from request data)
+    const operationId = `aa_${auth.userId}_${jobId || title}_${Date.now()}`;
 
-    if (!entitlementCheck.allowed) {
-      const isNotIncluded = !entitlementCheck.entitlements.autoApply.enabled;
-      const code = isNotIncluded ? 'AUTO_APPLY_NOT_INCLUDED' : 'AUTO_APPLY_LIMIT_REACHED';
-      const message =
-        entitlementCheck.errorReason ||
-        (isNotIncluded
-          ? "Auto-Apply isn't included in your Starter plan. Automatic submission is available on Focused."
-          : `Today's Auto-Apply limit is reached (${entitlementCheck.entitlements.autoApply.limit}/${entitlementCheck.entitlements.autoApply.limit}). Your limit resets tomorrow.`);
+    // Atomic quota reservation using the unified AutoApplyQuotaService
+    const reservation = await AutoApplyQuotaService.reserve(auth.userId, operationId, {
+      jobId,
+    });
+
+    if (!reservation.success) {
+      const quota = await AutoApplyQuotaService.checkQuota(auth.userId);
+      const isLifetimeReached = quota.plan === 'free' && (quota.lifetimeUsed ?? 0) >= (quota.lifetimeLimit ?? 10);
+      const code = isLifetimeReached ? 'AUTO_APPLY_LIFETIME_REACHED' : 'AUTO_APPLY_LIMIT_REACHED';
+      const message = reservation.error || quota.reason || 'Auto-Apply quota exhausted';
 
       return NextResponse.json(
         {
           code,
           error: message,
           message,
-          plan: entitlementCheck.entitlements.plan,
-          entitlements: entitlementCheck.entitlements,
-          recommendation: entitlementCheck.recommendation,
+          plan: quota.plan,
+          usage: {
+            used: quota.used,
+            reserved: quota.reserved,
+            limit: quota.limit,
+            remaining: quota.remaining,
+          },
+          resetAt: quota.resetAt,
+          lifetimeUsed: quota.lifetimeUsed,
+          lifetimeLimit: quota.lifetimeLimit,
+          recommendation: null,
           fallbackUrl: jobUrl || '',
         },
         { status: 403 }
@@ -225,6 +235,14 @@ export async function POST(request: NextRequest) {
         priority: decision.mode === 'auto' ? 90 : decision.mode === 'review' ? 60 : 30,
         scheduledAt: new Date(),
         idempotencyKey,
+        // Link reservation to queue item
+        reservationId: reservation.reservationId,
+      } as any);
+
+      // Link reservation to queue item
+      await AutoApplyQuotaService.consumeReservation(reservation.reservationId!, {
+        applicationId: jobApp._id.toString(),
+        queueItemId: queueItem._id.toString(),
       });
     } catch (queueErr: any) {
       // Duplicate key ⇒ a concurrent request won the race and already
@@ -250,11 +268,14 @@ export async function POST(request: NextRequest) {
       status: 'queued',
       applicationId: jobApp._id.toString(),
       queueItemId: queueItem._id.toString(),
+      operationId,
+      reservationId: reservation.reservationId,
       mode: decision.mode,
       matchScore: decision.matchScore,
       riskLevel: decision.risk?.riskLevel,
       message: `Application queued for ${decision.mode} processing`,
       warnings: decision.warnings,
+      usage: reservation.usage,
     }, { status: 200 });
 
   } catch (error: any) {

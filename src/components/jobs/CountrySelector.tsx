@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Search, Check, Globe } from 'lucide-react';
 import { COUNTRIES_LIST, type CountryOption } from '@/lib/config/job-constants';
+import { chipState } from '@/components/ui/chip-styles';
 
 export type { CountryOption };
 export { COUNTRIES_LIST };
@@ -118,11 +119,10 @@ export function CountrySelector({ value, onChange, disabled, align = 'right', va
         onClick={() => setIsOpen(!isOpen)}
         className={
           isPill
-            ? `rounded-full px-3.5 py-1.5 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none ${
-                isOpen || isNonDefault
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                  : 'border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`
+            ? `${chipState(
+                disabled ? 'disabled' : isNonDefault ? 'active' : 'idle',
+                'md'
+              )} ${disabled ? '' : 'cursor-pointer'}`
             : `flex items-center gap-2 h-10 px-3.5 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ease-out border shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 shadow-2xs ${
                 isOpen
                   ? 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white border-[#013f2e] dark:border-lime-500 ring-2 ring-lime-500/20'

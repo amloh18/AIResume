@@ -35,9 +35,6 @@ const DEFAULT_PLANS = [
       'Unlimited Auto Applications',
     ],
     credits: {
-      cvCredits: 10,
-      exportCredits: 10,
-      atsCheckCredits: 10,
       jobCredits: 10,
       resetSchedule: 'monthly',
     },
@@ -70,9 +67,6 @@ const DEFAULT_PLANS = [
       'Unlimited Auto Applications',
     ],
     credits: {
-      cvCredits: 50,
-      exportCredits: 50,
-      atsCheckCredits: 50,
       jobCredits: 50,
       resetSchedule: 'yearly',
     },
@@ -102,9 +96,6 @@ const DEFAULT_PLANS = [
     ],
     notIncludedFeatures: [],
     credits: {
-      cvCredits: -1,
-      exportCredits: -1,
-      atsCheckCredits: -1,
       jobCredits: -1,
       resetSchedule: 'monthly',
     },
@@ -134,9 +125,6 @@ const DEFAULT_PLANS = [
     ],
     notIncludedFeatures: [],
     credits: {
-      cvCredits: -1,
-      exportCredits: -1,
-      atsCheckCredits: -1,
       jobCredits: -1,
       resetSchedule: 'yearly',
     },

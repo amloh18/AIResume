@@ -848,46 +848,6 @@ export async function PUT(
         .catch(() => {}) // Non-critical
     );
 
-    // Save CV to S3 as backup (fire-and-forget)
-    fireAndForgetOps.push(
-      (async () => {
-        try {
-          let templateData = cv.templateData || null;
-          if (!templateData && cv.templateId) {
-            const { getTemplateById } = await import('@/lib/templates/template-utils');
-            const hardcodedTemplate = getTemplateById(cv.templateId?.toString());
-            if (hardcodedTemplate) {
-              templateData = hardcodedTemplate;
-            } else if (mongoose.Types.ObjectId.isValid(cv.templateId?.toString())) {
-              const template = await Template.findById(cv.templateId);
-              if (template) {
-                templateData = template.toJSON();
-              }
-            }
-          }
-
-          const { CVS3Service } = await import('@/lib/services/cvS3Service');
-          const s3Url = await CVS3Service.saveCVToS3(
-            cv._id.toString(),
-            userId,
-            cv.cvData,
-            templateData
-          );
-
-          if (s3Url) {
-            if (!cv.metadata) {
-              cv.metadata = {} as any;
-            }
-            (cv.metadata as any).s3BackupUrl = s3Url;
-            (cv.metadata as any).s3BackupSavedAt = new Date();
-            await cv.save();
-          }
-        } catch {
-          // Non-critical: S3 backup failure should not block response
-        }
-      })()
-    );
-
     // Don't await fire-and-forget ops — they run in background
     Promise.allSettled(fireAndForgetOps).catch(() => {});
 

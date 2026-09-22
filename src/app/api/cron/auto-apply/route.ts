@@ -12,9 +12,11 @@
 // set of state transitions. It is safe to run alongside the in-process loop: claiming is an atomic
 // `findOneAndUpdate`, so two workers can never process the same application.
 //
-// NOT `AutoApplyQueue`. That legacy collection is only written by `/api/applications/process` (the demo
-// path) and has no submission-evidence gate; draining it would have been a no-op in production. The
-// live queue is `ApplicationQueue`, and this endpoint drains that one.
+// NOT `AutoApplyQueue`. That legacy collection had exactly one writer — the demo route
+// `/api/applications/process`, which fabricated a `demo-user-<timestamp>` id and had no
+// submission-evidence gate. The route had no callers and was removed; draining that collection
+// would have been a no-op in production. The live queue is `ApplicationQueue`, and this
+// endpoint drains that one.
 //
 // Security: `Authorization: Bearer <CRON_SECRET>`. The proxy also authenticates this route (see
 // `src/proxy.ts`), so this check is defence in depth rather than the only gate.
