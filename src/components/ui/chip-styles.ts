@@ -46,6 +46,7 @@ export type ChipTone =
   | "green"
   | "emerald"
   | "teal"
+  | "cyan"
   | "sky"
   | "blue"
   | "indigo"
@@ -147,6 +148,7 @@ export const METRIC_TONES: Record<ChipTone, string> = {
   green: "text-lime-700 dark:text-lime-400",
   emerald: "text-emerald-600 dark:text-emerald-400",
   teal: "text-teal-600 dark:text-teal-400",
+  cyan: "text-cyan-600 dark:text-cyan-400",
   sky: "text-sky-600 dark:text-sky-400",
   blue: "text-blue-600 dark:text-blue-400",
   indigo: "text-indigo-600 dark:text-indigo-400",
