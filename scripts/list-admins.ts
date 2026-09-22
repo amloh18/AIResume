@@ -5,6 +5,7 @@
 import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || '';
+const DB_NAME = process.env.MONGODB_DB || 'airesume';
 
 async function main() {
   if (!MONGODB_URI) {
@@ -12,8 +13,10 @@ async function main() {
     process.exit(1);
   }
 
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI, { dbName: DB_NAME });
   const db = mongoose.connection.db!;
+
+  console.log(`Connected to database: "${db.databaseName}"`);
 
   console.log('\n=== AdminAuth collection (adminauths) ===');
   const adminAuths = await db.collection('adminauths').find({}).project({ email: 1, role: 1, lastLogin: 1, createdAt: 1 }).toArray();
@@ -27,12 +30,13 @@ async function main() {
   console.log(`  Total: ${adminAuths.length}`);
 
   console.log('\n=== User collection (users) with admin/superadmin role ===');
-  const adminUsers = await db.collection('users').find({ role: { $in: ['admin', 'superadmin'] } }).project({ email: 1, name: 1, role: 1, createdAt: 1 }).toArray();
+  const adminUsers = await db.collection('users').find({ role: { $in: ['admin', 'superadmin'] } }).project({ email: 1, firstName: 1, lastName: 1, role: 1, createdAt: 1 }).toArray();
   if (adminUsers.length === 0) {
     console.log('  (none)');
   } else {
     for (const u of adminUsers) {
-      console.log(`  ${u.email}  name=${u.name || ''}  role=${u.role}  created=${u.createdAt}`);
+      const name = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+      console.log(`  ${u.email}  name=${name || '(none)'}  role=${u.role}  created=${u.createdAt}`);
     }
   }
   console.log(`  Total: ${adminUsers.length}`);

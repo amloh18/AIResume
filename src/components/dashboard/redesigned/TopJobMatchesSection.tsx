@@ -26,6 +26,7 @@ import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { EntitlementNotice, EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
 import CompanyLogo from '@/components/ui/CompanyLogo';
+import { metricTone } from '@/components/ui/chip-styles';
 import type { JobListing } from '@/types/automation-schema';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';

@@ -45,6 +45,7 @@ import {
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -2242,10 +2243,7 @@ ${userName}`
 
               {/* Sponsorship Tag */}
               {job.sponsorship && job.sponsorship !== 'unknown' && (
-                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-small font-medium ml-0 sm:ml-2 ${job.sponsorship === 'yes'
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                  }`}>
+                <div className={`${CHIP_INLINE} font-medium ml-0 sm:ml-2 ${CHIP_TONES[job.sponsorship === 'yes' ? 'emerald' : 'rose']}`}>
                   {job.sponsorship === 'yes' ? (
                     <>
                       <CheckCircle size={12} />
@@ -2262,7 +2260,7 @@ ${userName}`
 
               {/* Portal / ATS Type Badge */}
               {(job as any).atsType && (job as any).atsType !== 'unknown' && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 ml-0 sm:ml-1">
+                <div className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-bold uppercase tracking-wider ml-0 sm:ml-1`}>
                   <Building2 size={11} />
                   <span>{(job as any).atsType}</span>
                 </div>
@@ -2270,7 +2268,7 @@ ${userName}`
 
               {/* Manual Application Required Badge */}
               {(job as any).atsType && (job as any).atsType === 'unknown' && job.status === 'draft' && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ml-0 sm:ml-1">
+                <div className={`${CHIP_INLINE} ${CHIP_TONES.amber} font-bold uppercase tracking-wider ml-0 sm:ml-1`}>
                   <AlertCircle size={11} />
                   <span>Manual Apply Required</span>
                 </div>
@@ -2338,7 +2336,7 @@ ${userName}`
                   <div className="px-1 py-0.5">
                     {terminalStageLabel && (
                       <div className="mb-4">
-                        <span className="rounded-full bg-red-100 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 px-2.5 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-300">
+                        <span className={`${CHIP_INLINE} ${CHIP_TONES.rose} font-bold`}>
                           {terminalStageLabel}
                         </span>
                       </div>
@@ -2413,12 +2411,12 @@ ${userName}`
                                   {stage.label}
                                 </p>
                                 {status === 'current' && (
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-[#013f2e] dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full">
+                                  <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-black uppercase tracking-wider`}>
                                     Current
                                   </span>
                                 )}
                                 {status === 'processing' && (
-                                  <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">
+                                  <span className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-black uppercase tracking-wider`}>
                                     Processing
                                   </span>
                                 )}

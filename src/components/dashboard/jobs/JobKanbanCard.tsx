@@ -40,7 +40,7 @@ import {
 import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
 import { getJobCardColorClass } from "@/lib/config/job-constants";
-import { metricTone } from "@/components/ui/chip-styles";
+import { metricTone, CHIP_TONES, chipTone } from "@/components/ui/chip-styles";
 
 interface JobApplication {
   id: string;
@@ -348,14 +348,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
     if (isExpired || diffDays < 0) {
       return (
-        <div className="flex items-center gap-1.5 mt-2 text-small text-red-600 dark:text-red-400 font-medium bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">
+        <div className={`${chipTone('rose', 'md')} mt-2 w-fit font-medium`}>
           <AlertCircle size={12} />
           <span>Expired on {formatDate(targetDate)}</span>
         </div>
       );
     } else if (diffDays <= 3) {
       return (
-        <div className="flex items-center gap-1.5 mt-2 text-small text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+        <div className={`${chipTone('orange', 'md')} mt-2 w-fit font-medium`}>
           <AlertCircle size={12} />
           <span>
             Expires in {diffDays} {diffDays === 1 ? "day" : "days"}
@@ -481,13 +481,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             </div>
             <div className="flex gap-1.5">
               <div
-                className="p-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse"
+                className={`p-1 rounded-full border ${CHIP_TONES.neutral} animate-pulse`}
                 title="CV in progress"
               >
                 <FileText size={12} />
               </div>
               <div
-                className="p-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse"
+                className={`p-1 rounded-full border ${CHIP_TONES.neutral} animate-pulse`}
                 title="Cover Letter in progress"
               >
                 <FileText size={12} />
@@ -537,13 +537,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             </div>
             <div className="flex gap-1.5">
               <div
-                className={`p-1 rounded-full ${hasCV ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+                className={`p-1 rounded-full border ${CHIP_TONES[hasCV ? "emerald" : "rose"]}`}
                 title={hasCV ? "CV Generated" : "No CV"}
               >
                 <FileText size={12} />
               </div>
               <div
-                className={`p-1 rounded-full ${hasCoverLetter ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+                className={`p-1 rounded-full border ${CHIP_TONES[hasCoverLetter ? "emerald" : "rose"]}`}
                 title={hasCoverLetter ? "Cover Letter Generated" : "No Cover Letter"}
               >
                 <FileText size={12} />
@@ -599,11 +599,9 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     */
     const hasNoJourney = documentState === 'none';
     const docIconClass = (present: boolean) =>
-      present
-        ? "bg-green-100 text-green-600"
-        : hasNoJourney
-          ? "bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500"
-          : "bg-red-100 text-red-500";
+      `p-1 rounded-full border ${
+        CHIP_TONES[present ? 'emerald' : hasNoJourney ? 'neutral' : 'rose']
+      }`;
 
     return (
       <>
@@ -620,13 +618,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
           </div>
           <div className="flex gap-1.5">
             <div
-              className={`p-1 rounded-full ${docIconClass(hasCV)}`}
+              className={docIconClass(hasCV)}
               title={hasCV ? "CV Generated" : "No CV"}
             >
               <FileText size={12} />
             </div>
             <div
-              className={`p-1 rounded-full ${docIconClass(hasCoverLetter)}`}
+              className={docIconClass(hasCoverLetter)}
               title={hasCoverLetter ? "Cover Letter Generated" : "No Cover Letter"}
             >
               <FileText size={12} />
@@ -722,7 +720,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             className="overflow-hidden"
           >
             <div className="pt-3 mt-2 border-t border-gray-100 dark:border-white/10 space-y-2">
-              <div className="flex items-center gap-2 text-small text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded">
+              <div className={`${chipTone('orange', 'md')} w-fit font-medium`}>
                 <AlertCircle size={12} />
                 <span>Follow up in 3 days</span>
               </div>
@@ -768,10 +766,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
           <div
-            className={`flex items-center gap-1.5 text-small px-2 py-1 rounded-md ${
-              !nextInterview
-                ? "bg-gray-100 text-gray-500"
-                : "bg-amber-100 text-amber-700 font-medium"
+            className={`${chipTone(!nextInterview ? 'neutral' : 'amber', 'md')} ${
+              !nextInterview ? '' : 'font-medium'
             }`}
           >
             <Calendar size={12} />

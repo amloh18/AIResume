@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, Eye, CheckCircle, Calendar, MapPin } from 'lucide-react';
 import { DuplicateCheckResult } from '@/lib/services/duplicateJobService';
 import CompanyIcon from '@/components/ui/CompanyIcon';
+import { metricTone } from '@/components/ui/chip-styles';
 
 interface DuplicateJobWarningModalProps {
     isOpen: boolean;
@@ -174,12 +175,7 @@ const DuplicateJobWarningModal: React.FC<DuplicateJobWarningModalProps> = ({
                                                                 )}
                                                             </div>
                                                             <div className="flex flex-col items-end gap-1">
-                                                                <div className={`text-small font-semibold px-2 py-0.5 rounded-full ${job.similarity >= 0.95
-                                                                        ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                                                                        : job.similarity >= 0.85
-                                                                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
-                                                                            : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                                                    }`}>
+                                                                <div className={metricTone(job.similarity >= 0.95 ? 'rose' : job.similarity >= 0.85 ? 'orange' : 'amber')}>
                                                                     {Math.round(job.similarity * 100)}% match
                                                                 </div>
                                                                 <div className="flex items-center gap-1 text-small text-gray-500 dark:text-gray-500">

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar, Loader2 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
+import { metricTone } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -156,10 +157,7 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
 
                   {/* Match Score */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${matchScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                      matchScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
+                    <span className={metricTone(matchScore >= 80 ? 'emerald' : matchScore >= 60 ? 'amber' : 'rose')}>
                       {matchScore > 0 ? `${matchScore}%` : '—'}
                     </span>
                   </td>

@@ -6,6 +6,7 @@ import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, M
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import toast from '@/lib/hot-toast';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -193,10 +194,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                   {/* Deadline */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {job.deadline ? (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-small font-medium ${daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                        daysUntilDeadline !== null && daysUntilDeadline <= 3 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
+                      <span className={`${CHIP_INLINE} font-medium ${CHIP_TONES[daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'rose' : daysUntilDeadline !== null && daysUntilDeadline <= 3 ? 'orange' : 'neutral']}`}>
                         {daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'Expired' : `${daysUntilDeadline}d left`}
                       </span>
                     ) : (
@@ -206,7 +204,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
 
                   {/* Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
+                    <span className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-medium capitalize`}>
                       {job.status}
                     </span>
                   </td>

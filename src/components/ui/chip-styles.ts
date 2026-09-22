@@ -115,6 +115,7 @@ export const CHIP_TONES: Record<ChipTone, string> = {
   emerald:
     "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
   teal: "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+  cyan: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
   sky: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
   blue: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
   indigo:
