@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe, MapPin, Bell, TrendingUp } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -178,10 +179,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Elapsed Time */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                      daysSinceApplication > 7 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                      }`}>
+                    <span className={`${CHIP_INLINE} font-medium ${CHIP_TONES[daysSinceApplication > 14 ? 'rose' : daysSinceApplication > 7 ? 'amber' : 'neutral']}`}>
                       {daysSinceApplication} days ago
                     </span>
                   </td>

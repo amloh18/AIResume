@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/components/ui/chip-styles.ts",
+    "src/components/ui/Pill.tsx",
+    "src/components/ui/badge.tsx",
+    "src/app/design-system/page.tsx",
+    "src/components/dashboard/JobsDashboard/FiltersBar.tsx",
+    "src/components/jobs/JobCard.tsx",
+    "src/components/jobs/MatchScoreBadge.tsx",
+    "src/components/jobs/CountrySelector.tsx",
+    "src/components/jobs/JobDetailModal.tsx",
+    "src/components/dashboard/jobs/JobKanbanCard.tsx",
+    "src/components/dashboard/jobs/DuplicateJobWarningModal.tsx",
+    "src/components/dashboard/jobs/stages/DraftStageView.tsx",
+    "src/components/dashboard/redesigned/RedesignedDashboardView.tsx",
+    "src/components/dashboard/redesigned/TopJobMatchesSection.tsx",
+    "src/components/resume-enhancer/panels/LetterGuidePanel.tsx"
+  ],
+  "exclude": ["node_modules", "scripts", "scratch"]
+}

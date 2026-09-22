@@ -52,6 +52,7 @@ import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import ProfileAnalyticsSidebar from '@/components/dashboard/redesigned/ProfileAnalyticsSidebar';
 import CompanyLogo from '@/components/ui/CompanyLogo';
+import { metricTone } from '@/components/ui/chip-styles';
 import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewSidebar';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';

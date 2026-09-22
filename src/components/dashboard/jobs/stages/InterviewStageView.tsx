@@ -6,6 +6,7 @@ import { Calendar, Clock, AlertCircle, Building, GraduationCap, MapPin, Link as 
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -186,7 +187,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                   {/* Round Type */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     {nextInterview ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-small font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 capitalize">
+                      <span className={`${CHIP_INLINE} ${CHIP_TONES.purple} font-medium capitalize`}>
                         {(nextInterview.type || 'Unknown').replace('-', ' ')}
                       </span>
                     ) : (

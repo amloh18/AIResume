@@ -27,7 +27,9 @@
     "db:indexes": "npx tsx scripts/create-job-indexes.ts",
     "backfill:cv-tailoring-mode": "npx tsx scripts/backfill-cv-tailoring-mode.ts",
     "build:worker": "node scripts/build-worker.mjs",
-    "worker": "node scripts/build-worker.mjs && node dist/worker.mjs"
+    "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",
+    "admin:list": "npx tsx scripts/list-admins.ts",
+    "admin:setup": "npx tsx scripts/setup-production-admin.ts"
   },
   "keywords": [
     "cv",

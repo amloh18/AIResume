@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
+import { metricTone } from '@/components/ui/chip-styles';
 
 interface CoverLetterDesignProps {
   fontSize: number;

@@ -17,10 +17,12 @@ import {
   Trash2,
   Loader2
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
+import { CHIP_INLINE, CHIP_TONES, chipTone, type ChipTone } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -77,144 +79,83 @@ interface JobsListViewProps {
   hideActions?: boolean;
 }
 
+/**
+ * Job-source chips. One row per source; `key` is matched with `includes` against
+ * the lowercased source string, so order only matters if two keys could both
+ * match (they can't here).
+ *
+ * The hues are the source's own brand-ish colour, which is why they are a tone
+ * table rather than a single neutral — but the *shape* is the shared capsule.
+ */
+const SOURCE_CHIPS: Array<{ key: string; label: string; tone: ChipTone }> = [
+  { key: 'naukri', label: 'Naukri', tone: 'blue' },
+  { key: 'indeed', label: 'Indeed', tone: 'indigo' },
+  { key: 'greenhouse', label: 'Greenhouse', tone: 'emerald' },
+  { key: 'lever', label: 'Lever', tone: 'teal' },
+  { key: 'adzuna', label: 'Adzuna', tone: 'cyan' },
+  { key: 'linkedin', label: 'LinkedIn', tone: 'sky' },
+  { key: 'ashby', label: 'Ashby', tone: 'violet' },
+  { key: 'workday', label: 'Workday', tone: 'orange' },
+  { key: 'workable', label: 'Workable', tone: 'orange' },
+  { key: 'extension', label: 'Extension', tone: 'purple' },
+  { key: 'discover', label: 'Discover', tone: 'green' },
+]
+
 function getSourceBadge(source?: string) {
   if (!source) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+      <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-medium`}>
         Direct ATS
       </span>
     );
   }
   const s = source.toLowerCase();
-  if (s.includes('naukri')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-        Naukri
-      </span>
-    );
-  }
-  if (s.includes('indeed')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-        Indeed
-      </span>
-    );
-  }
-  if (s.includes('greenhouse')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-        Greenhouse
-      </span>
-    );
-  }
-  if (s.includes('lever')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-        Lever
-      </span>
-    );
-  }
-  if (s.includes('adzuna')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-cyan-50 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
-        Adzuna
-      </span>
-    );
-  }
-  if (s.includes('linkedin')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-        LinkedIn
-      </span>
-    );
-  }
-  if (s.includes('ashby')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
-        Ashby
-      </span>
-    );
-  }
-  if (s.includes('workable') || s.includes('workday')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-        {s.includes('workday') ? 'Workday' : 'Workable'}
-      </span>
-    );
-  }
-  if (s.includes('extension')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-        Extension
-      </span>
-    );
-  }
-  if (s.includes('discover')) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-lime-50 text-lime-800 dark:bg-lime-900/30 dark:text-lime-300 border border-lime-200 dark:border-lime-800">
-        Discover
-      </span>
-    );
-  }
+  const hit = SOURCE_CHIPS.find((c) => s.includes(c.key));
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10 capitalize">
-      {source.replace(/-/g, ' ')}
+    <span
+      className={`${CHIP_INLINE} ${CHIP_TONES[hit ? hit.tone : 'neutral']} font-medium ${hit ? '' : 'capitalize'}`}
+    >
+      {hit ? hit.label : source.replace(/-/g, ' ')}
     </span>
   );
 }
 
+/**
+ * Status chips. Several raw statuses collapse onto one display group
+ * (`screening`/`assessment`/`phone_screen`… all render as "Interview"), so this
+ * stays a list-of-groups lookup rather than a flat record.
+ */
+const STATUS_GROUPS: Array<{
+  statuses: string[];
+  label: string;
+  tone: ChipTone;
+  icon?: LucideIcon;
+}> = [
+  { statuses: ['applied'], label: 'Applied', tone: 'blue', icon: Clock },
+  {
+    statuses: ['interview', 'screening', 'assessment', 'phone_screen', 'technical_test'],
+    label: 'Interview',
+    tone: 'purple',
+    icon: Sparkles,
+  },
+  { statuses: ['offer', 'accepted'], label: 'Offer', tone: 'emerald', icon: CheckCircle },
+  { statuses: ['rejected'], label: 'Rejected', tone: 'rose', icon: XCircle },
+  { statuses: ['created', 'staging'], label: 'Submitting', tone: 'amber', icon: Clock },
+  { statuses: ['draft'], label: 'Draft', tone: 'neutral' },
+]
+
 function getStatusBadge(status?: string) {
   const st = (status || 'draft').toLowerCase();
-  switch (st) {
-    case 'applied':
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-          <Clock className="w-3 h-3" />
-          Applied
-        </span>
-      );
-    case 'interview':
-    case 'screening':
-    case 'assessment':
-    case 'phone_screen':
-    case 'technical_test':
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-          <Sparkles className="w-3 h-3" />
-          Interview
-        </span>
-      );
-    case 'offer':
-    case 'accepted':
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-          <CheckCircle className="w-3 h-3" />
-          Offer
-        </span>
-      );
-    case 'rejected':
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-200 dark:border-rose-800">
-          <XCircle className="w-3 h-3" />
-          Rejected
-        </span>
-      );
-    case 'created':
-    case 'staging':
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-          <Clock className="w-3 h-3" />
-          Submitting
-        </span>
-      );
-    case 'draft':
-    default:
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">
-          Draft
-        </span>
-      );
-  }
+  const group = STATUS_GROUPS.find((g) => g.statuses.includes(st));
+  const label = group?.label ?? 'Draft';
+  const tone = group?.tone ?? 'neutral';
+  const Icon = group?.icon;
+  return (
+    <span className={`${chipTone(tone, 'md')} font-semibold`}>
+      {Icon && <Icon className="w-3 h-3" />}
+      {label}
+    </span>
+  );
 }
 
 function formatSalary(salary?: any): string {
@@ -451,11 +392,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                         if (liveStatus) {
                           const isSuccess = liveStatus.step === 'submitted' || liveStatus.success;
                           return (
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                              isSuccess
-                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 animate-pulse'
-                                : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 animate-pulse'
-                            }`}>
+                            <span className={`${chipTone(isSuccess ? 'emerald' : 'blue', 'md')} font-bold animate-pulse`}>
                               {isSuccess ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Loader2 className="w-3 h-3 animate-spin text-blue-500" />}
                               <span>{liveStatus.title}</span>
                             </span>

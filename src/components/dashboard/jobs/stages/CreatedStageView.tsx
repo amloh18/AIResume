@@ -7,6 +7,7 @@ import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { getCurrencySymbol } from '@/lib/config/job-constants';
 import { getJourneyAtsScore } from '@/lib/utils/cv-scoring';
+import { chipState } from '@/components/ui/chip-styles';
 
 interface JobApplication {
   id: string;
@@ -85,10 +86,8 @@ const CreatedStageView: React.FC<CreatedStageViewProps> = ({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
         <button
           onClick={() => setShowReadyOnly(!showReadyOnly)}
-          className={`flex items-center gap-2 text-small font-medium px-3 py-1.5 rounded-lg transition-colors ${showReadyOnly
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
-            }`}
+          aria-pressed={showReadyOnly}
+          className={`${chipState(showReadyOnly ? 'active' : 'idle', 'md')} font-medium`}
         >
           <CheckCircle size={14} />
           <span>Ready to Apply (ATS &gt; 80)</span>
