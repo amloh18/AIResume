@@ -512,6 +512,18 @@ export const SOURCE_REGISTRY: Record<string, SourceDefinition> = {
     refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 10 * 60 * 1000,
     description: 'Personio open XML career feeds (Personio, Statista, TIER, flaschenpost…)',
   },
+  bamboohr: {
+    id: 'bamboohr', name: 'BambooHR ATS', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 100, maxLimit: 200, cooldownMs: 600_000,
+    refreshIntervalMs: 2 * 60 * 60 * 1000, maxResults: 300, maxDurationMs: 10 * 60 * 1000,
+    description: 'BambooHR public careers API (10:10 Games, 100 Percent Group, Postman, Zapier…)',
+  },
+  feashliaa: {
+    id: 'feashliaa', name: 'Feashliaa Cloud Sync', type: 'public_api', enabled: true,
+    requiresApiKey: false, supportsPagination: false, defaultLimit: 2000, maxLimit: 5000, cooldownMs: 3_600_000,
+    refreshIntervalMs: 6 * 60 * 60 * 1000, maxResults: 5000, maxDurationMs: 15 * 60 * 1000,
+    description: 'Pre-aggregated multi-ATS cloud sync from GitHub CDN (Workday, Greenhouse, Ashby, Lever…)',
+  },
 };
 
 export const VALID_SOURCES = Object.keys(SOURCE_REGISTRY);
@@ -2225,7 +2237,7 @@ export async function recoverStaleRuns(db: mongoose.Connection['db']) {
  * and source-status document shapes), so dashboards built on those collections — including the
  * Source Health panel — read service-run sources with no special casing.
  */
-const INGESTION_SERVICE_SOURCES = ['smartrecruiters', 'workable', 'recruitee', 'personio'] as const;
+const INGESTION_SERVICE_SOURCES = ['smartrecruiters', 'workable', 'recruitee', 'personio', 'bamboohr', 'feashliaa'] as const;
 
 export function getIngestionServiceConfig(): { baseUrl: string } | null {
   const raw = (process.env.INGESTION_SERVICE_URL || '').trim().replace(/\/+$/, '');
