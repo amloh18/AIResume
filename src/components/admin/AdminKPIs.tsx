@@ -8,6 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
 import { motion } from 'framer-motion';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface KPIData {
   totalUsers?: number;
@@ -189,7 +190,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
               <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
                 <Users className="w-6 h-6 text-emerald-500" />
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black tracking-widest uppercase">
+              <div className={`${CHIP_INLINE} font-black tracking-widest uppercase ${CHIP_TONES_DARK.emerald}`}>
                 <ArrowUp className="w-3 h-3" />
                 {kpiData?.growthRate !== undefined ? `${kpiData.growthRate > 0 ? '+' : ''}${kpiData.growthRate}%` : '0%'}
               </div>

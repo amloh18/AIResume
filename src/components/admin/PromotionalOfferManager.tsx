@@ -21,6 +21,7 @@ import {
   Gift,
   Star
 } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES, type ChipTone } from '@/components/ui/chip-styles';
 
 interface PromotionalOffer {
   _id: string;
@@ -284,15 +285,15 @@ const PromotionalOfferManager: React.FC = () => {
     const validUntil = new Date(offer.validUntil);
 
     if (!offer.isActive) {
-      return { text: 'Inactive', color: 'bg-gray-100 text-gray-800' };
+      return { text: 'Inactive', tone: 'neutral' as ChipTone };
     }
     if (now < validFrom) {
-      return { text: 'Scheduled', color: 'bg-blue-100 text-blue-800' };
+      return { text: 'Scheduled', tone: 'blue' as ChipTone };
     }
     if (now > validUntil) {
-      return { text: 'Expired', color: 'bg-red-100 text-red-800' };
+      return { text: 'Expired', tone: 'rose' as ChipTone };
     }
-    return { text: 'Active', color: 'bg-green-100 text-green-800' };
+    return { text: 'Active', tone: 'emerald' as ChipTone };
   };
 
   const getTargetAudienceText = (offer: PromotionalOffer) => {
@@ -345,7 +346,7 @@ const PromotionalOfferManager: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">{offer.title}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                        <span className={`${CHIP_INLINE} font-medium ${CHIP_TONES[status.tone]}`}>
                           {status.text}
                         </span>
                         <span className="text-sm text-gray-500">

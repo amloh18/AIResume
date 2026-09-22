@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Puzzle, ArrowRight, ExternalLink } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 const CHROME_WEB_STORE_URL =
   'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=discover-banner';
@@ -25,7 +26,7 @@ export const LimitedOptionsBanner: React.FC<LimitedOptionsBannerProps> = ({ onAd
             </span>
           </div>
 
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30">
+          <span className={`${CHIP_INLINE} ${CHIP_TONES.green} font-bold`}>
             Import from anywhere
           </span>
         </div>

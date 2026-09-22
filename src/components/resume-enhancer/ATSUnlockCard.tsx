@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, ArrowRight, X, Sparkles } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface ATSUnlockCardProps {
   onUnlockClick: () => void;
@@ -57,7 +58,7 @@ export default function ATSUnlockCard({ onUnlockClick, onDismiss, isDismissed }:
 
             {/* Content */}
             <div className="flex-1 text-center md:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lime-500/10 border border-lime-500/20 text-lime-700 dark:text-lime-400 text-[10px] font-bold uppercase tracking-wider mb-3">
+              <div className={`${CHIP_INLINE} ${CHIP_TONES.green} font-bold uppercase tracking-wider mb-3`}>
                 <Sparkles className="w-3 h-3" />
                 Unlock Focused Features
               </div>

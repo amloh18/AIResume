@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface AdminNavigationProps {
   activeTab: string;
@@ -131,7 +132,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest"
+          className={`${CHIP_INLINE} font-bold uppercase tracking-widest ${CHIP_TONES_DARK.emerald}`}
         >
           <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
           Status: Online

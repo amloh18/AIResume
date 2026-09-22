@@ -28,6 +28,7 @@ import PaymentPastDueBanner from './PaymentPastDueBanner';
 import SubscriptionExpiryBanner from './SubscriptionExpiryBanner';
 import { useUsageLimits } from '@/lib/hooks/useUsageLimits';
 import SegmentedToggle from '@/components/ui/SegmentedToggle';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
@@ -826,10 +827,7 @@ export const ApplicationCalendarWidget: React.FC<{
                         <p className="text-small text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
-                        <span className={`text-small px-2 py-0.5 rounded-full ${job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
-                          job.status === 'offer' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                            'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
-                          }`}>
+                        <span className={`${CHIP_INLINE} font-medium ${CHIP_TONES[job.status === 'interview' ? 'purple' : job.status === 'offer' ? 'emerald' : 'neutral']}`}>
                           {job.status || 'Applied'}
                         </span>
                         <ChevronRight className="w-4 h-4 text-gray-400" />

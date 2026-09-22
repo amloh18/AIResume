@@ -70,7 +70,12 @@ async function main() {
         password: passwordHash,
         role: 'superadmin',
         isEmailVerified: true,
+        'onboarding.activation_status': 'completed',
+        userLifecycleState: 'ACTIVE',
         updatedAt: new Date(),
+      },
+      $unset: {
+        'onboarding.activation_route': '',
       },
       $setOnInsert: {
         firstName: 'Amar',

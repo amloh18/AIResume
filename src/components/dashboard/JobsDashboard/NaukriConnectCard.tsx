@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Globe, Zap, CheckCircle2, ArrowRight, Shield } from 'lucide-react';
 import PortalConnectModal from '../settings/PortalConnectModal';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface NaukriConnectCardProps {
   onConnected?: () => void;
@@ -29,7 +30,7 @@ export const NaukriConnectCard: React.FC<NaukriConnectCardProps> = ({ onConnecte
                   <span className="font-bold text-gray-900 dark:text-white text-base">
                     Naukri.com
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500 text-white tracking-wide uppercase">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-extrabold tracking-wide uppercase`}>
                     Featured
                   </span>
                 </div>

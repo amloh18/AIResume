@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star, Crown } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES, type ChipTone } from '@/components/ui/chip-styles';
 
 interface MasterCVBadgeProps {
   variant?: 'default' | 'compact' | 'large';
@@ -22,7 +23,7 @@ const MasterCVBadge: React.FC<MasterCVBadgeProps> = ({
       text: 'Master CV'
     },
     compact: {
-      container: 'bg-lime-400/20 text-lime-400 border border-lime-400/30 px-2 py-1 rounded-md text-small font-medium',
+      container: `${CHIP_INLINE} ${CHIP_TONES.green} font-medium`,
       icon: 'h-3 w-3',
       text: 'Master'
     },

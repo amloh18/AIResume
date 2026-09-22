@@ -6,6 +6,7 @@ import { Check, Shield, Search } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES } from '@/components/cv-builder-pro/registry';
 import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
 import { initialData } from '@/lib/templates/canvas-initial-data';
+import { chipState } from '@/components/ui/chip-styles';
 
 interface TemplateSelectorProps {
     selectedTemplate: any;
@@ -91,11 +92,8 @@ export default function TemplateSelector({
                                 <button
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                                        selectedCategory === cat 
-                                            ? 'bg-purple-600 text-white' 
-                                            : 'bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-700'
-                                    }`}
+                                    aria-pressed={selectedCategory === cat}
+                                    className={`${chipState(selectedCategory === cat ? 'active' : 'idle', 'lg')} font-bold`}
                                 >
                                     {label}
                                 </button>

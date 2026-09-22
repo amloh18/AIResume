@@ -8,6 +8,7 @@ import TableOfContentsClient from '@/components/blog/TableOfContentsClient';
 import { MotionDiv, MotionH1 } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 import { Metadata } from 'next';
+import { CHIP_INLINE } from '@/components/ui/chip-styles';
 
 export async function generateStaticParams() {
   const slugs = getAllSlugs();
@@ -281,7 +282,7 @@ export default async function BlogPostPage(props: {
             </MotionDiv>
 
             <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }} className="flex flex-wrap items-center gap-3 mb-5">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-small font-medium border ${categoryColor}`}>
+              <span className={`${CHIP_INLINE} font-medium ${categoryColor}`}>
                 <Tag className="w-3 h-3" />
                 {article.category}
               </span>

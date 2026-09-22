@@ -17,6 +17,7 @@ import LiveKeywordValidator from '@/components/resume-enhancer/LiveKeywordValida
 import { suppressFix, getSuppressedFixes } from '@/lib/services/fix-suppression-service';
 import { useATS } from '@/contexts/ATSContext';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { CHIP_INLINE } from '@/components/ui/chip-styles';
 
 interface SurgeonReportModalProps {
   isOpen: boolean;
@@ -609,13 +610,13 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                 )}
               </div>
               <div className="mt-1 flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80`}>
                   {catLabel}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80`}>
                   {location}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80 tabular-nums">
+                <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80 tabular-nums`}>
                   +{fix.impactScoreDelta || 0}
                 </span>
               </div>
@@ -663,7 +664,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         >
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-900 dark:text-white">{title}</span>
-            <span className={['text-[10px] px-2 py-0.5 rounded-full font-semibold', badgeClassName].join(' ')}>
+            <span className={[`${CHIP_INLINE} border-white/10 font-semibold`, badgeClassName].join(' ')}>
               {count}
             </span>
           </div>
@@ -979,16 +980,16 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                       <>
                         <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white break-words">{selectedFix.issue}</div>
                         <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                          <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80`}>
                             {CATEGORY_LABELS[selectedFix.category] || selectedFix.category}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                          <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80`}>
                             {selectedFix.severity === 'high' ? 'Critical' : 'Improvement'}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80 tabular-nums">
+                          <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80 tabular-nums`}>
                             +{selectedFix.impactScoreDelta || 0}
                           </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                          <span className={`${CHIP_INLINE} border-white/10 bg-white/5 text-white/80`}>
                             {getFieldPathLabel(selectedFix.fieldPath)}
                           </span>
                         </div>

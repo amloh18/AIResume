@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, CheckCircle2, ArrowRight, MoreHorizontal, X } from 'lucide-react';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface UpgradeCardProps {
   userId: string;
@@ -147,7 +148,7 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
                 {/* Plan Info Card */}
                 <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-500/30">
                   <div className="text-center mb-3">
-                    <div className="inline-block bg-red-500 text-white text-small font-bold px-3 py-1 rounded-full mb-2">
+                    <div className={`${CHIP_INLINE} ${CHIP_TONES.rose} font-bold mb-2`}>
                       Recommended
                     </div>
                     <h4 className="text-h3 font-bold text-gray-900 dark:text-white mb-1">

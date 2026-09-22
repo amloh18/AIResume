@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import ReadinessChart from './ReadinessChart';
 import ModuleList from './ModuleList';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface InterviewHubProps {
   session: any;
@@ -96,12 +97,12 @@ export default function InterviewHub({
                   {targetRole}
                 </h1>
                 {company && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-semibold`}>
                     <Building2 className="w-3.5 h-3.5" />
                     {company}
                   </span>
                 )}
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold border border-emerald-200 dark:border-emerald-800/40">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-semibold`}>
                   <Sparkles className="w-3 h-3 text-emerald-600 dark:text-lime-400" />
                   {isPreparing ? 'Preparing your plan…' : `${modules.length} Modules Active`}
                 </span>
@@ -148,7 +149,7 @@ export default function InterviewHub({
                     <Trophy className="w-4 h-4 text-emerald-700 dark:text-lime-400" />
                     Target Readiness
                   </h3>
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border border-[var(--border-primary)]">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-bold uppercase`}>
                     Live Score
                   </span>
                 </div>
@@ -277,7 +278,7 @@ export default function InterviewHub({
               {nextQuestion && (
                 <div className="bg-[var(--bg-secondary)] border border-emerald-600/30 dark:border-lime-500/30 rounded-2xl p-5 sm:p-6 shadow-xs relative overflow-hidden">
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-lime-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                    <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold uppercase tracking-wider`}>
                       <Sparkles className="w-3 h-3" />
                       Next Best Question
                     </span>
@@ -290,13 +291,7 @@ export default function InterviewHub({
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase border ${
-                            (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'hard'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
-                              : (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'medium'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
-                          }`}
+                          className={`${CHIP_INLINE} font-bold uppercase ${CHIP_TONES[(nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'hard' ? 'rose' : (nextQuestion.difficulty || nextQuestion.content?.difficulty || '').toLowerCase() === 'medium' ? 'amber' : 'emerald']}`}
                         >
                           {nextQuestion.difficulty || nextQuestion.content?.difficulty || 'Medium'}
                         </span>

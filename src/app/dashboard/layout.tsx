@@ -22,12 +22,19 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   await getConnection();
   const user = await userRepository.findById(session.user.id);
   
-  if (user?.onboarding) {
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  if (!isAdmin && user?.onboarding) {
     const activationStatus = user.onboarding.activation_status;
     const activationRoute = user.onboarding.activation_route;
     
-    // If onboarding is incomplete, redirect immediately to prevent Flash of Un-onboarded Content
-    if (activationStatus === 'pending' && activationRoute) {
+    // Never redirect to /editor from dashboard layout (prevents trapping users from Home/Dashboard)
+    // Only redirect truly pending, un-onboarded NEW users to legitimate onboarding routes
+    if (
+      activationStatus === 'pending' &&
+      activationRoute &&
+      !activationRoute.startsWith('/editor') &&
+      user.userLifecycleState === 'NEW'
+    ) {
       redirect(activationRoute);
     }
   }

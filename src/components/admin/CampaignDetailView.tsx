@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import CampaignPerformancePanel from './CampaignPerformancePanel';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
 
 interface RecipientPayload {
     id: string;
@@ -53,12 +54,17 @@ function formatDateSafe(dateString?: string | null) {
     }
 }
 
-function planColor(plan?: string | null) {
+/**
+ * Returns a tone, not a class string. This table renders inside
+ * `ADMIN_THEME.background.primary` (`#0a0a0a`), so the old `bg-purple-100
+ * text-purple-700` pills were light chips on a near-black row.
+ */
+function planTone(plan?: string | null): ChipTone {
     const normalized = (plan || 'free').toLowerCase();
-    if (normalized === 'premium') return 'bg-purple-100 text-purple-700';
-    if (normalized === 'enterprise') return 'bg-blue-100 text-blue-700';
-    if (normalized === 'basic') return 'bg-emerald-100 text-emerald-700';
-    return 'bg-gray-100 text-gray-700';
+    if (normalized === 'premium') return 'purple';
+    if (normalized === 'enterprise') return 'blue';
+    if (normalized === 'basic') return 'emerald';
+    return 'neutral';
 }
 
 interface CampaignDetailViewProps {
@@ -391,7 +397,7 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                                                             {user.email}
                                                         </td>
                                                         <td className="px-4 py-3">
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${planColor(user.currentPlanKey)}`}>
+                                                            <span className={`${CHIP_INLINE} font-medium ${CHIP_TONES_DARK[planTone(user.currentPlanKey)]}`}>
                                                                 <UserCheck className="w-3 h-3" />
                                                                 {user.currentPlanKey || 'free'}
                                                             </span>

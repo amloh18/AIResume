@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Database, Search, Filter, ExternalLink, MapPin, Building, DollarSign, X, CheckCircle, RefreshCw } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 export default function LiveJobsBrowser() {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -134,10 +135,8 @@ export default function LiveJobsBrowser() {
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          job.status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        className={`${CHIP_INLINE} font-bold uppercase ${
+                          job.status === 'active' ? CHIP_TONES_DARK.emerald : CHIP_TONES_DARK.amber
                         }`}
                       >
                         {job.status}
@@ -172,7 +171,7 @@ export default function LiveJobsBrowser() {
               <div>
                 <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-widest ${CHIP_TONES_DARK.emerald}`}>
                       {selectedJob.source?.primary?.toUpperCase()}
                     </span>
                     <h3 className="text-xl font-bold text-white mt-2">

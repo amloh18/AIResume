@@ -52,7 +52,7 @@ import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import ProfileAnalyticsSidebar from '@/components/dashboard/redesigned/ProfileAnalyticsSidebar';
 import CompanyLogo from '@/components/ui/CompanyLogo';
-import { metricTone } from '@/components/ui/chip-styles';
+import { metricTone, CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewSidebar';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -276,7 +276,7 @@ function Panel({
           <div className="flex items-center gap-2">
             <h2 className="dashboard-panel-title text-[var(--text-primary)]">{title}</h2>
             {typeof count === 'number' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+              <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-semibold tabular-nums`}>
                 {count}
               </span>
             )}
@@ -695,7 +695,7 @@ function MyCvsPanel() {
                     </td>
                     <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-xs">
                       {linked > 0 ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        <span className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-medium`}>
                           {linked} {linked === 1 ? 'Job' : 'Jobs'}
                         </span>
                       ) : (
@@ -1501,7 +1501,7 @@ function ProfileAnalyticsPanel() {
       <Panel
         title="Profile Analytics"
         actions={
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#36D39B]/15 text-[#013f2e] dark:text-[#36D39B] border border-[#36D39B]/30">
+          <span className={`${CHIP_INLINE} ${CHIP_TONES.green} font-black uppercase tracking-wider`}>
             Master Profile
           </span>
         }
@@ -1548,11 +1548,11 @@ function ProfileAnalyticsPanel() {
               </div>
               {/* Only claim verification when a real score has actually been measured. */}
               {hasMeasuredScore ? (
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200/60 dark:border-emerald-800/60">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold`}>
                   {breakdownIsReview ? 'AI Reviewed' : 'ATS Measured'}
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-0.5 rounded-md border border-[var(--border-primary)]">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-bold`}>
                   Not measured
                 </span>
               )}

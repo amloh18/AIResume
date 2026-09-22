@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { ArrowRight, AlertTriangle, CheckCircle, XCircle, BookOpen, Sparkles, Briefcase, Chrome, Globe, LayoutDashboard, FileText } from 'lucide-react';
 import { MotionDiv } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
+import { CHIP_INLINE } from '@/components/ui/chip-styles';
 
 export const metadata: Metadata = {
   title: 'Resume Mistakes to Avoid in 2026 | AIResume',
@@ -125,7 +126,7 @@ export default function ResumeMistakesPage() {
 
         <article className="max-w-4xl mx-auto px-4 pt-32 pb-16">
           <header className="mb-12 text-center">
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-red-500/20 text-red-400 rounded-full text-small font-medium mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${CHIP_INLINE} border-red-500/30 bg-red-500/20 text-red-400 font-medium mb-6`}>
               Avoid These Mistakes
             </MotionDiv>
             <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-display md:text-display font-bold text-white mb-6">
@@ -147,7 +148,7 @@ export default function ResumeMistakesPage() {
                       <h3 className="text-h3 font-semibold text-white mb-2">{mistake.title}</h3>
                       <p className="text-gray-400">{mistake.desc}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-small font-medium shrink-0 ${mistake.impact === 'High' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                    <span className={`${CHIP_INLINE} font-medium shrink-0 ${mistake.impact === 'High' ? 'border-red-500/30 bg-red-500/20 text-red-400' : 'border-yellow-500/30 bg-yellow-500/20 text-yellow-400'}`}>
                       {mistake.impact} Impact
                     </span>
                   </div>

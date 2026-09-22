@@ -26,7 +26,7 @@ import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { EntitlementNotice, EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
 import CompanyLogo from '@/components/ui/CompanyLogo';
-import { metricTone } from '@/components/ui/chip-styles';
+import { metricTone, CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 import type { JobListing } from '@/types/automation-schema';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
@@ -777,13 +777,7 @@ export default function TopJobMatchesSection() {
                       {/* Freshness badge */}
                       {job.isFresh && job.freshness && (
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight border ${
-                            job.freshness.score >= 90
-                              ? 'bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30'
-                              : job.freshness.score >= 70
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                              : 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30'
-                          }`}
+                          className={`${CHIP_INLINE} ${CHIP_TONES[job.freshness.score >= 90 ? 'orange' : 'amber']} font-bold tracking-tight`}
                         >
                           <Flame className="w-2.5 h-2.5" />
                           <span>{job.freshness.ageHours < 1 ? 'Just posted' : `${Math.round(job.freshness.ageHours)}h ago`}</span>

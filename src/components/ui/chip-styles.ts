@@ -109,6 +109,84 @@ export const CHIP_STATES: Record<ChipState, string> = {
   ].join(" "),
 }
 
+/**
+ * Interactive states for surfaces that are dark **unconditionally**.
+ *
+ * ⚠️ Why this exists instead of reusing `CHIP_STATES`. `active` above is
+ * `var(--color-primary)`, which is correct only where the surface is
+ * theme-driven. The `/blog` tree and the admin panels are dark by a hardcoded
+ * background (`bg-[#0d1209]`), **not** via the `dark` class — so
+ * `var(--color-primary)` there resolves to the `:root` value, forest `#013f2e`,
+ * and a forest-green border + text on near-black is invisible.
+ *
+ * On a fixed surface there is nothing for a theme token to switch on, so the
+ * green is named explicitly. **This is the one place a literal green is
+ * correct** — do not copy it onto a theme-aware surface.
+ */
+export const CHIP_STATES_DARK: Record<ChipState, string> = {
+  idle: [
+    "border-white/15 bg-transparent text-white/70",
+    "hover:border-white/30 hover:text-white",
+  ].join(" "),
+
+  active: [
+    "border-lime-400 bg-transparent text-lime-400 font-semibold",
+    "hover:bg-lime-400/10",
+  ].join(" "),
+
+  disabled: [
+    "border-white/10 bg-transparent text-white/35",
+    "opacity-60 cursor-not-allowed",
+  ].join(" "),
+}
+
+/** Interactive chip on a fixed-dark surface. */
+export function chipStateDark(
+  state: ChipState = "idle",
+  size: ChipSize = "md"
+): string {
+  return `${chipBase(size)} ${CHIP_STATES_DARK[state]}`
+}
+
+/**
+ * Static status chips on a fixed-dark surface — the counterpart to
+ * `CHIP_STATES_DARK`.
+ *
+ * ⚠️ Same trap, different symptom. `CHIP_TONES` carries
+ * `text-emerald-700 dark:text-emerald-300`; on the admin tree the `dark` class
+ * is **removed** by `AdminThemeEnforcer`, so the `dark:` half never activates
+ * and the chip paints `text-emerald-700` on `#111111`. Nothing errors — the
+ * chip just looks muddy and off-theme.
+ *
+ * The recipe is `border-<hue>-500/20 bg-<hue>-500/10 text-<hue>-400`, which is
+ * the shape the admin panels had already converged on by hand in ~15 places.
+ * It is named here so it stops being retyped and cannot drift.
+ */
+export const CHIP_TONES_DARK: Record<ChipTone, string> = {
+  neutral: "border-white/10 bg-white/5 text-white/60",
+  green: "border-lime-500/20 bg-lime-500/10 text-lime-400",
+  emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
+  teal: "border-teal-500/20 bg-teal-500/10 text-teal-400",
+  cyan: "border-cyan-500/20 bg-cyan-500/10 text-cyan-400",
+  sky: "border-sky-500/20 bg-sky-500/10 text-sky-400",
+  blue: "border-blue-500/20 bg-blue-500/10 text-blue-400",
+  indigo: "border-indigo-500/20 bg-indigo-500/10 text-indigo-400",
+  violet: "border-violet-500/20 bg-violet-500/10 text-violet-400",
+  purple: "border-purple-500/20 bg-purple-500/10 text-purple-400",
+  rose: "border-rose-500/20 bg-rose-500/10 text-rose-400",
+  orange: "border-orange-500/20 bg-orange-500/10 text-orange-400",
+  amber: "border-amber-500/20 bg-amber-500/10 text-amber-400",
+  slate: "border-slate-500/20 bg-slate-500/10 text-slate-400",
+}
+
+/** Static status chip on a fixed-dark surface. */
+export function chipToneDark(
+  tone: ChipTone = "neutral",
+  size: ChipSize = "sm"
+): string {
+  return `${badgeBase(size)} ${CHIP_TONES_DARK[tone]}`
+}
+
 export const CHIP_TONES: Record<ChipTone, string> = {
   neutral:
     "border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]",

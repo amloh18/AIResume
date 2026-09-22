@@ -6,6 +6,7 @@ import { MotionDiv, MotionH1, MotionP } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
 import { navLinks } from '@/data/navigation';
+import { CHIP_INLINE, chipStateDark } from '@/components/ui/chip-styles';
 
 export const metadata: Metadata = {
   title: 'Blog — Career Advice, CV Tips & ATS Optimization | AIResume',
@@ -102,11 +103,7 @@ export default async function BlogPage(props: {
             >
               <Link
                 href="/blog"
-                className={`px-5 py-2 rounded-full text-small font-semibold transition-all duration-200 ${
-                  !category
-                    ? 'bg-[#013f2e] text-white shadow-lg'
-                    : 'bg-[#1a1f1a] text-gray-300 border border-white/5 hover:border-[#013f2e]/30 hover:text-white'
-                }`}
+                className={`${chipStateDark(!category ? 'active' : 'idle', 'lg')} font-semibold`}
               >
                 All Posts
               </Link>
@@ -116,11 +113,7 @@ export default async function BlogPage(props: {
                   <Link
                     key={cat}
                     href={`/blog?category=${encodeURIComponent(cat)}`}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-full text-small font-semibold transition-all duration-200 ${
-                      isActive
-                        ? 'bg-[#013f2e] text-white shadow-lg'
-                        : 'bg-[#1a1f1a] text-gray-300 border border-white/5 hover:border-[#013f2e]/30 hover:text-white'
-                    }`}
+                    className={`${chipStateDark(isActive ? 'active' : 'idle', 'lg')} font-semibold`}
                   >
                     {cat}
                   </Link>
@@ -155,11 +148,11 @@ export default async function BlogPage(props: {
                     {/* Content */}
                     <div className="p-8 md:p-10 flex flex-col justify-center">
                       <div className="flex items-center gap-2 mb-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-small font-semibold border ${categoryColors[featured.category]?.badge || 'bg-gray-800 text-gray-300 border-gray-700'}`}>
+                        <span className={`${CHIP_INLINE} font-semibold ${categoryColors[featured.category]?.badge || 'border-gray-700 bg-gray-800 text-gray-300'}`}>
                           <Tag className="w-3 h-3" />
                           {featured.category}
                         </span>
-                        <span className="px-3 py-1 bg-[#013f2e]/10 border border-[#013f2e]/20 text-[#013f2e] rounded-full text-small font-semibold">Featured</span>
+                        <span className={`${CHIP_INLINE} border-lime-400/30 bg-lime-400/10 text-lime-400 font-semibold`}>Featured</span>
                       </div>
 
                       <h2 className="text-h2 md:text-h1 font-bold text-white mb-3 group-hover:text-[#013f2e] transition-colors duration-300 leading-tight">
@@ -221,7 +214,7 @@ export default async function BlogPage(props: {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-600"
                           />
                           <div className="absolute top-3 left-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-small font-semibold border backdrop-blur-sm ${colors.badge}`}>
+                            <span className={`${CHIP_INLINE} font-semibold backdrop-blur-sm ${colors.badge}`}>
                               <Tag className="w-3 h-3" />
                               {article.category}
                             </span>

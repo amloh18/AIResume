@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, Briefcase, Award, X, Download, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface SmartJDModalProps {
   isOpen: boolean;
@@ -109,7 +110,7 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
                       <FileText className="w-4 h-4" />
                       Job Description
                     </span>
-                    <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                    <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral}`}>
                       Optional but Recommended
                     </span>
                   </label>

@@ -114,7 +114,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (onboardingData.activation_status) updateFields['onboarding.activation_status'] = onboardingData.activation_status;
-    if (onboardingData.activation_route) updateFields['onboarding.activation_route'] = onboardingData.activation_route;
+    if (onboardingData.activation_route) {
+      if (!onboardingData.activation_route.startsWith('/editor')) {
+        updateFields['onboarding.activation_route'] = onboardingData.activation_route;
+      }
+    }
     if (onboardingData.dashboard_layout_type) updateFields['onboarding.dashboard_layout_type'] = onboardingData.dashboard_layout_type;
 
     // Career Preferences & Profiling
