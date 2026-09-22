@@ -27,6 +27,7 @@ import { Button } from '@/components/ui';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { MatchScoreBadge } from './MatchScoreBadge';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 import { MatchBreakdownBars } from './MatchBreakdownBars';
 import { renderRichText, timeAgo } from '@/lib/utils/format-utils';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
@@ -303,7 +304,9 @@ export function JobDetailModal({
                   </span>
                 )}
                 {job.remote && (
-                  <span className="inline-flex items-center rounded-full bg-[#013f2e]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-lime-600 dark:text-lime-400 ring-1 ring-lime-500/20">
+                  <span
+                    className={`${CHIP_INLINE} ${CHIP_TONES.green} font-bold uppercase tracking-wider`}
+                  >
                     Remote
                   </span>
                 )}
@@ -387,7 +390,7 @@ export function JobDetailModal({
                       {jobTags.map((tag, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                          className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-bold`}
                         >
                           {tag}
                         </span>
@@ -442,7 +445,7 @@ export function JobDetailModal({
                         key={idx}
                         type="button"
                         onClick={() => setJobNotes((prev) => (prev ? prev + prompt.text : prompt.text.trim()))}
-                        className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-[11px] font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                        className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-semibold cursor-pointer hover:border-[var(--border-secondary)] hover:text-[var(--text-primary)]`}
                       >
                         {prompt.label}
                       </button>

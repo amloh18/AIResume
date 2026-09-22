@@ -102,37 +102,18 @@ async function calculateJobInsights(job: any) {
 
 /**
  * Calculate keyword match score based on job description
+ * 
+ * Uses the canonical ATS score from the database instead of hardcoded keywords.
+ * Falls back to 0 if no ATS score has been computed yet.
  */
 function calculateKeywordMatchScore(job: any): number {
   try {
-    if (!job.jobDescription) return 0;
-    
-    // Define common keywords for different job types
-    const keywordCategories = {
-      technical: ['javascript', 'python', 'react', 'node.js', 'api', 'database', 'git'],
-      design: ['figma', 'sketch', 'adobe', 'ux', 'ui', 'prototype', 'wireframe'],
-      marketing: ['seo', 'analytics', 'campaign', 'social media', 'content', 'brand'],
-      sales: ['crm', 'leads', 'revenue', 'client', 'negotiation', 'prospecting'],
-      management: ['leadership', 'team', 'strategy', 'budget', 'project', 'stakeholder']
-    };
-    
-    const description = job.jobDescription.toLowerCase();
-    let totalMatches = 0;
-    let totalKeywords = 0;
-    
-    // Count matches for each category
-    Object.values(keywordCategories).forEach(keywords => {
-      totalKeywords += keywords.length;
-      keywords.forEach(keyword => {
-        if (description.includes(keyword)) {
-          totalMatches++;
-        }
-      });
-    });
-    
-    // Calculate percentage
-    const score = totalKeywords > 0 ? Math.round((totalMatches / totalKeywords) * 100) : 0;
-    return Math.min(score, 100); // Cap at 100%
+    // Use the canonical ATS score stored on the job application
+    if (typeof job.atsScore === 'number' && job.atsScore > 0) {
+      return job.atsScore;
+    }
+    // Fall back to 0 — no match score computed yet
+    return 0;
   } catch (error) {
     console.error('Error calculating keyword match score:', error);
     return 0;

@@ -217,7 +217,7 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
                   <Target className="w-3.5 h-3.5 text-[#013f2e]" />
                   Target Context
                 </h4>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#013f2e]/10 border border-[#013f2e]/20 text-[9px] font-black text-[#013f2e] uppercase italic">
+                <div className={`${metricTone('green')} uppercase italic`}>
                   {score}% Match
                 </div>
               </div>

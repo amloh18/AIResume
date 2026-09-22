@@ -17,6 +17,8 @@ export interface IApplicationQueue extends Document {
   completedAt?: Date;
   lastError?: string;
   idempotencyKey: string;
+  /** Link to AutoApplyReservation for quota tracking */
+  reservationId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +44,7 @@ const ApplicationQueueSchema = new Schema<IApplicationQueue>(
     completedAt: { type: Date },
     lastError: { type: String },
     idempotencyKey: { type: String, required: true, unique: true },
+    reservationId: { type: String },
   },
   { timestamps: true }
 );

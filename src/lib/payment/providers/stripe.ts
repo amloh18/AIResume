@@ -442,14 +442,38 @@ export class StripeProvider implements IPaymentProvider {
   private async handleInvoicePaid(invoice: any): Promise<WebhookResult> {
     if (invoice.subscription) {
       const User = (await import('@/models/User')).default;
+      const stripeInstance = getStripeInstance();
+
+      // Fetch the latest subscription state from Stripe to get updated billing period
+      let periodUpdate: Record<string, any> = { 'subscription.status': 'active' };
+      if (stripeInstance) {
+        try {
+          const subscription = await stripeInstance.subscriptions.retrieve(invoice.subscription);
+          const subData = subscription as any;
+          if (subData.current_period_start && subData.current_period_end) {
+            periodUpdate['subscription.currentPeriodStart'] = new Date(subData.current_period_start * 1000);
+            periodUpdate['subscription.currentPeriodEnd'] = new Date(subData.current_period_end * 1000);
+          }
+        } catch (err: any) {
+          console.error('[Stripe] Failed to fetch subscription for period update:', err?.message);
+        }
+      }
+
       await User.findOneAndUpdate(
         { 'subscription.providerSubscriptionId': invoice.subscription },
-        {
-          $set: {
-            'subscription.status': 'active',
-          },
-        }
+        { $set: periodUpdate }
       );
+
+      // Reset credits for the new billing period
+      const user = await User.findOne({ 'subscription.providerSubscriptionId': invoice.subscription });
+      if (user) {
+        try {
+          const creditResetService = (await import('@/lib/services/creditResetService')).default;
+          await creditResetService.resetUserCredits(String(user._id));
+        } catch (err: any) {
+          console.error('[Stripe] Failed to reset credits on renewal:', err?.message);
+        }
+      }
     }
 
     return {

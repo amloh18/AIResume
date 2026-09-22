@@ -219,6 +219,196 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ── Saved-Only: dedicated path bypasses role-based retrieval ────────────
+    // When savedOnly=true, query jobapplications directly instead of searching
+    // by role — role-based retrieval cannot find saved jobs that don't match
+    // the current target roles.
+    if (savedOnlyFilter && userId) {
+      const userObjId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+      const trackerQuery = userObjId
+        ? { $or: [{ userId: userObjId }, { userId: String(userId) }] }
+        : { userId: String(userId) };
+
+      // Fetch saved-status jobapplications + saved_jobs collection entries
+      const [trackerDocs, savedCollectionDocs] = await Promise.allSettled([
+        db.collection('jobapplications')
+          .find({ ...trackerQuery, status: 'saved' })
+          .project({ _id: 1, jobId: 1, externalId: 1, jobUrl: 1, company: 1, jobTitle: 1, matchScore: 1, atsScore: 1 })
+          .toArray(),
+        db.collection('saved_jobs')
+          .find({ userId: new ObjectId(userId) })
+          .toArray(),
+      ]);
+
+      // Build unified saved job lookup keys
+      const savedEntries: Array<{ _id: string; jobId?: string; externalId?: string; jobUrl?: string; company?: string; jobTitle?: string; matchScore?: number; atsScore?: number; source: 'tracker' | 'saved_jobs' }> = [];
+
+      if (trackerDocs.status === 'fulfilled') {
+        for (const doc of trackerDocs.value) {
+          savedEntries.push({
+            _id: doc._id?.toString() || '',
+            jobId: doc.jobId?.toString() || undefined,
+            externalId: doc.externalId || undefined,
+            jobUrl: doc.jobUrl || undefined,
+            company: doc.company || undefined,
+            jobTitle: doc.jobTitle || undefined,
+            matchScore: typeof doc.matchScore === 'number' ? doc.matchScore : undefined,
+            atsScore: typeof doc.atsScore === 'number' ? doc.atsScore : undefined,
+            source: 'tracker',
+          });
+        }
+      }
+      if (savedCollectionDocs.status === 'fulfilled') {
+        for (const doc of savedCollectionDocs.value) {
+          const key = doc.externalId || doc.jobId?.toString() || doc._id?.toString();
+          // Deduplicate with tracker entries
+          if (savedEntries.some(e => e.jobId === key || e.externalId === key || e._id === key)) continue;
+          savedEntries.push({
+            _id: doc._id?.toString() || '',
+            jobId: doc.jobId?.toString() || undefined,
+            externalId: doc.externalId || undefined,
+            jobUrl: doc.jobUrl || undefined,
+            company: doc.company || undefined,
+            jobTitle: doc.jobTitle || doc.title || undefined,
+            matchScore: typeof doc.matchScore === 'number' ? doc.matchScore : undefined,
+            atsScore: typeof doc.atsScore === 'number' ? doc.atsScore : undefined,
+            source: 'saved_jobs',
+          });
+        }
+      }
+
+      // Enrich saved entries with job data from the jobs collection
+      const jobIdsToLookup = new Set<string>();
+      for (const entry of savedEntries) {
+        if (entry.jobId && ObjectId.isValid(entry.jobId)) jobIdsToLookup.add(entry.jobId);
+        if (entry.externalId && ObjectId.isValid(entry.externalId)) jobIdsToLookup.add(entry.externalId);
+      }
+
+      let jobsMap = new Map<string, any>();
+      if (jobIdsToLookup.size > 0) {
+        const objectIds = Array.from(jobIdsToLookup).map(id => new ObjectId(id));
+        const jobsDocs = await db.collection('jobs')
+          .find({ _id: { $in: objectIds } })
+          .toArray();
+        for (const job of jobsDocs) {
+          jobsMap.set(job._id.toString(), job);
+        }
+      }
+
+      // Build final listings from saved entries + enriched job data
+      let savedListings: (JobListing & { matchTier: string })[] = [];
+
+      for (const entry of savedEntries) {
+        const enrichedJob = (entry.jobId && jobsMap.get(entry.jobId)) ||
+                           (entry.externalId && jobsMap.get(entry.externalId));
+
+        if (enrichedJob) {
+          // Compute match score if we have a candidate profile
+          let matchScore = entry.matchScore || 45;
+          if (candidateProfile) {
+            try {
+              const scoreResult = scoreJobForCandidate(
+                {
+                  title: enrichedJob.title,
+                  normalizedTitle: enrichedJob.normalizedTitle,
+                  skills: enrichedJob.keywords || enrichedJob.skills,
+                  location: { city: enrichedJob.location, country: enrichedJob.country, remote: enrichedJob.remote },
+                  salary: { min: enrichedJob.salaryMin, max: enrichedJob.salaryMax, currency: enrichedJob.salaryCurrency },
+                  experience: { level: enrichedJob.seniority },
+                  roleFamily: enrichedJob.roleFamily,
+                  seniority: enrichedJob.seniority,
+                  description: enrichedJob.description,
+                },
+                candidateProfile
+              );
+              matchScore = Math.min(98, Math.max(5, scoreResult.score));
+            } catch { /* keep existing matchScore */ }
+          }
+
+          savedListings.push({
+            _id: enrichedJob._id?.toString() || entry._id,
+            title: enrichedJob.title || entry.jobTitle || 'Untitled',
+            company: enrichedJob.company || entry.company || 'Unknown',
+            companyLogo: enrichedJob.companyLogo,
+            location: enrichedJob.location || 'Remote',
+            remote: enrichedJob.remote,
+            salaryMin: enrichedJob.salaryMin,
+            salaryMax: enrichedJob.salaryMax,
+            salaryCurrency: enrichedJob.salaryCurrency,
+            matchScore,
+            atsScore: entry.atsScore,
+            source: enrichedJob.source as any,
+            atsType: enrichedJob.atsType as any,
+            applyUrl: enrichedJob.applyUrl || entry.jobUrl,
+            postedDate: enrichedJob.postedDate,
+            userId,
+            country: enrichedJob.country,
+            description: enrichedJob.description,
+            keywords: enrichedJob.keywords,
+            matchTier: matchScore >= 80 ? 'STRONG' : matchScore >= 60 ? 'GOOD' : matchScore >= 40 ? 'MODERATE' : 'WEAK',
+          } as JobListing & { matchTier: string });
+        } else {
+          // Fallback: construct listing from saved entry data only
+          savedListings.push({
+            _id: entry._id,
+            title: entry.jobTitle || 'Untitled',
+            company: entry.company || 'Unknown',
+            location: 'Not specified',
+            matchScore: entry.matchScore || 50,
+            atsScore: entry.atsScore,
+            applyUrl: entry.jobUrl,
+            userId,
+            matchTier: 'MODERATE',
+            remote: false,
+            source: 'manual' as any,
+            atsType: 'unknown' as any,
+          } as JobListing & { matchTier: string });
+        }
+      }
+
+      // Apply post-retrieval filters (company, location, etc.)
+      if (companyFilter.length > 0) {
+        savedListings = savedListings.filter((job) =>
+          companyFilter.some((c) => (job.company || '').toLowerCase().includes(c.toLowerCase()))
+        );
+      }
+      if (locationFilter.length > 0) {
+        savedListings = savedListings.filter((job) =>
+          locationFilter.some((loc) => (job.location || '').toLowerCase().includes(loc.toLowerCase()))
+        );
+      }
+      if (matchScoreMin > 0 || matchScoreMax < 100) {
+        savedListings = savedListings.filter((job) =>
+          (job.matchScore || 0) >= matchScoreMin && (job.matchScore || 0) <= matchScoreMax
+        );
+      }
+
+      // Sort
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      savedListings.sort((a, b) => {
+        if (sortBy === 'postedDate') {
+          const tA = a.postedDate ? new Date(a.postedDate).getTime() : 0;
+          const tB = b.postedDate ? new Date(b.postedDate).getTime() : 0;
+          return (tB - tA) * (sortOrder === 'asc' ? -1 : 1);
+        }
+        return ((b.matchScore || 0) - (a.matchScore || 0)) * dir;
+      });
+
+      const total = savedListings.length;
+      const start = (page - 1) * limit;
+      const paginated = savedListings.slice(start, start + limit);
+
+      return NextResponse.json({
+        jobs: paginated,
+        total,
+        page,
+        pageSize: limit,
+        hasMore: page * limit < total,
+        profileUsed: !!candidateProfile,
+        suggestedSearches: [],
+      } as DiscoverResponse);
+    }
+
     // ── Determine Mode: All (Catalog Mode) vs Recommended (Personalized Tiered Mode) ──
     const isAllMode = unpersonalized || (!hasSearchQuery && (!userProfile || !userProfile.targetRoles?.length));
 

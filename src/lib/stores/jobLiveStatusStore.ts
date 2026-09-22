@@ -1,6 +1,21 @@
 import { create } from 'zustand';
 
-export type JobLiveStep = 'matching' | 'tailoring' | 'queued' | 'submitting' | 'submitted' | 'failed' | 'idle';
+export type JobLiveStep =
+  | 'saving'
+  | 'tailoring_cv'
+  | 'tailoring_cover_letter'
+  | 'applying'
+  | 'applied'
+  | 'interview'
+  | 'accepted'
+  | 'failed'
+  | 'idle'
+  // Legacy steps (mapped from old flow)
+  | 'matching'
+  | 'tailoring'
+  | 'queued'
+  | 'submitting'
+  | 'submitted';
 
 export interface JobLiveStatusAction {
   label: string;

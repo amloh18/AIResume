@@ -682,7 +682,10 @@ export class UnifiedAuthService {
               if (!lastTouch || now - lastTouch > 5 * 60 * 1000) {
                 (token as any)._lastTouch = now;
                 if (state === 'missing') {
-                  SessionService.createSession({
+                  // `ensureSession` is idempotent: parallel requests that all observed
+                  // `missing` before any of them wrote converge on one row instead of
+                  // losing a race on the `jti_1` unique index. See SessionService.
+                  SessionService.ensureSession({
                     userId: String(token.id),
                     jti: token.jti,
                     provider: 'recovered',

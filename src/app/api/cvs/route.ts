@@ -181,32 +181,6 @@ export async function GET(request: NextRequest) {
     }
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
 
-    // Trigger async thumbnail generation for CVs missing thumbnails
-    // Use service function instead of HTTP call to avoid authentication issues
-    cvs.forEach(async (cv) => {
-      const thumbnailAge = cv.metadata?.thumbnailGeneratedAt
-        ? Date.now() - new Date(cv.metadata.thumbnailGeneratedAt).getTime()
-        : Infinity;
-
-      const needsThumbnail = !cv.metadata?.thumbnailUrl || thumbnailAge > 7 * 24 * 60 * 60 * 1000; // 7 days
-
-      if (needsThumbnail) {
-        // Use service function for server-side thumbnail generation (no auth needed)
-        setImmediate(async () => {
-          try {
-            const { CVThumbnailService } = await import('@/lib/services/cvThumbnailService');
-            await CVThumbnailService.generateAndSaveThumbnail(
-              cv._id.toString(),
-              userId,
-              false // Don't force regenerate if recent
-            );
-          } catch (error) {
-            console.error(`Failed to generate thumbnail for CV ${cv._id}:`, error);
-          }
-        });
-      }
-    });
-
     // Debug: Show all found CVs
     cvs.forEach((cv, index) => {
       console.log(`🔍 CV API - CV ${index + 1}:`, {
@@ -861,47 +835,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save CV with template to S3 as backup
-    try {
-      // Get template data if available
-      let templateData = null;
-      if (finalTemplateId) {
-        const { getTemplateById } = await import('@/lib/templates/template-utils');
-        const hardcodedTemplate = getTemplateById(finalTemplateId);
-        if (hardcodedTemplate) {
-          templateData = hardcodedTemplate;
-        } else {
-          const template = await Template.findById(finalTemplateId);
-          if (template) {
-            templateData = template.toJSON();
-          }
-        }
-      }
-
-      const { CVS3Service } = await import('@/lib/services/cvS3Service');
-      const s3Url = await CVS3Service.saveCVToS3(
-        newCV._id.toString(),
-        userId,
-        newCV.cvData,
-        templateData
-      );
-
-      if (s3Url) {
-        // Store S3 URL in metadata
-        if (!newCV.metadata) {
-          newCV.metadata = {} as any;
-        }
-        (newCV.metadata as any).s3BackupUrl = s3Url;
-        (newCV.metadata as any).s3BackupSavedAt = new Date();
-        await newCV.save();
-        console.log('✅ CV POST API - CV saved to S3:', s3Url);
-      }
-    } catch (s3Error) {
-      console.warn('⚠️ CV POST API - Failed to save CV to S3 (non-critical):', s3Error);
-      // Continue - S3 backup is non-critical
-    }
-
-    // Note: Thumbnail generation moved to studio exit for better performance
+    // No server-side thumbnail generation and no S3 backup on this path: CV previews are rendered
+    // client-side (CVPreviewThumbnail → CVSnapshotDocument), and the S3 backup was removed 2026-09-21.
 
     console.log('✅ CV POST API - CV saved successfully:', {
       id: newCV._id,

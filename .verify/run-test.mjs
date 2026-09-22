@@ -42,6 +42,9 @@ const mod = await import(pathToFileURL(outFile).href);
 // the runner's own copy of the module.
 const shimState = globalThis.__vitestShimState__ || { passed: 0, failed: 0, failures: [] };
 
+// `it` bodies may be async; their assertions settle only once these resolve.
+await Promise.all(shimState.pending || []);
+
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`assertions passed: ${shimState.passed}`);
 console.log(`assertions failed: ${shimState.failed}`);

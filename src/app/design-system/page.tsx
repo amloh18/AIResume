@@ -273,6 +273,81 @@ export default function DesignSystemTestbench() {
                     Saved Only
                   </Pill>
                 </div>
+
+                {/*
+                  Canonical chip spec — see `src/components/ui/chip-styles.ts`.
+                  Every chip in the app is built from that one module.
+                */}
+                <SectionHeader title="Chip States (the one design)" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill selected={false}>Idle</Pill>
+                  <Pill selected>Active</Pill>
+                  <Pill selected={false} disabled>
+                    Disabled
+                  </Pill>
+                  <Pill selected disabled>
+                    Active + Disabled
+                  </Pill>
+                  <Pill selected onClear={() => {}} showCheckmark>
+                    Removable
+                  </Pill>
+                  <Pill selected badgeCount={12}>
+                    With count
+                  </Pill>
+                </div>
+
+                <SectionHeader title="Sizes" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill size="sm" selected={false}>
+                    sm
+                  </Pill>
+                  <Pill size="sm" selected>
+                    sm active
+                  </Pill>
+                  <Pill size="md" selected={false}>
+                    md
+                  </Pill>
+                  <Pill size="md" selected>
+                    md active
+                  </Pill>
+                  <Pill size="lg" selected={false}>
+                    lg
+                  </Pill>
+                  <Pill size="lg" selected>
+                    lg active
+                  </Pill>
+                </div>
+
+                <SectionHeader title="Status Tones (hue kept, shape unified)" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">Draft</Badge>
+                  <Badge tone="green">Queued</Badge>
+                  <Badge tone="emerald">Offer</Badge>
+                  <Badge tone="sky">Applied</Badge>
+                  <Badge tone="violet">Interview</Badge>
+                  <Badge tone="amber">Screening</Badge>
+                  <Badge tone="rose">Rejected</Badge>
+                  <Badge tone="slate">Withdrawn</Badge>
+                </div>
+
+                <SectionHeader title="Status Tones — Sizes" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge size="sm" tone="emerald">
+                    sm
+                  </Badge>
+                  <Badge size="md" tone="emerald">
+                    md
+                  </Badge>
+                  <Badge size="lg" tone="emerald">
+                    lg
+                  </Badge>
+                  <Badge size="md" tone="emerald" disabled>
+                    disabled
+                  </Badge>
+                  <Badge size="md" tone="rose" interactive>
+                    interactive
+                  </Badge>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -246,18 +246,6 @@ export class CVRepository extends BaseRepository<ICV> {
   }
 
   /**
-   * Update thumbnail URL
-   */
-  async updateThumbnail(cvId: string, thumbnailUrl: string): Promise<ICV | null> {
-    return this.updateById(cvId, {
-      $set: {
-        'metadata.thumbnailUrl': thumbnailUrl,
-        'metadata.thumbnailGeneratedAt': new Date(),
-      },
-    } as any);
-  }
-
-  /**
    * Add tag to CV
    */
   async addTag(cvId: string, tag: string): Promise<ICV | null> {

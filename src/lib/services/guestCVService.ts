@@ -210,6 +210,12 @@ class GuestCVService {
         })
       });
 
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        console.error('Transfer response is not JSON:', response.status, contentType);
+        return { success: false, error: `Server returned non-JSON response (${response.status})` };
+      }
+
       const result = await response.json();
 
       if (!response.ok || !result.success) {

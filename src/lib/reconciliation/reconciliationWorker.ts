@@ -1,6 +1,7 @@
 import { Db } from 'mongodb';
 import { applicationWatchdog } from './watchdog';
 import { applicationStateMachine } from '../application-state/stateMachine';
+import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 
 export class ApplicationReconciliationWorker {
   private timer: NodeJS.Timeout | null = null;
@@ -20,13 +21,24 @@ export class ApplicationReconciliationWorker {
     }
   }
 
-  async runReconciliationCycle(db: Db): Promise<{ scanned: number; resolved: number }> {
-    if (this.isRunning) return { scanned: 0, resolved: 0 };
+  async runReconciliationCycle(db: Db): Promise<{ scanned: number; resolved: number; releasedReservations: number }> {
+    if (this.isRunning) return { scanned: 0, resolved: 0, releasedReservations: 0 };
     this.isRunning = true;
 
     try {
+      // Recover abandoned Auto-Apply reservations (stuck in 'reserved' for >30 min)
+      let releasedReservations = 0;
+      try {
+        releasedReservations = await AutoApplyQuotaService.recoverAbandoned();
+        if (releasedReservations > 0) {
+          console.log(`[Reconciliation] Released ${releasedReservations} abandoned Auto-Apply reservations`);
+        }
+      } catch (err: any) {
+        console.error('[Reconciliation] Failed to recover abandoned reservations:', err?.message);
+      }
+
       const reports = await applicationWatchdog.scanForStuckApplications(db);
-      if (reports.length === 0) return { scanned: 0, resolved: 0 };
+      if (reports.length === 0) return { scanned: 0, resolved: 0, releasedReservations };
 
       const emailsColl = db.collection('emailEvents');
       let resolvedCount = 0;
@@ -70,7 +82,7 @@ export class ApplicationReconciliationWorker {
         }
       }
 
-      return { scanned: reports.length, resolved: resolvedCount };
+      return { scanned: reports.length, resolved: resolvedCount, releasedReservations };
     } finally {
       this.isRunning = false;
     }

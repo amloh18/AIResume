@@ -18,8 +18,9 @@ import {
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
-import type { UserEntitlements } from '@/lib/services/entitlement-service';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { Pill, SearchInput } from '@/components/ui';
+import { chipState } from '@/components/ui/chip-styles';
 
 interface FiltersBarProps {
   filters: JobsFilter;
@@ -36,7 +37,7 @@ interface FiltersBarProps {
   autoApplyEnabled?: boolean;
   onToggleAutoApply?: () => void;
   onOpenSettings?: () => void;
-  entitlements?: UserEntitlements | null;
+  entitlements?: any;
   isPaidUser?: boolean;
   portalConnections?: any[];
 }
@@ -172,8 +173,19 @@ export default function FiltersBar({
     });
   };
 
-  // Auto-Apply quota computation
+  // Auto-Apply quota computation using the unified entitlement engine
+  const { getLimit, plan: hookPlan } = useEntitlements();
   const autoApplyQuota = useMemo(() => {
+    const autoApplyLimit = getLimit('auto_apply_monthly');
+    if (autoApplyLimit) {
+      const isUnlimited = autoApplyLimit.remaining === null;
+      return {
+        used: autoApplyLimit.used,
+        limit: isUnlimited ? Infinity : autoApplyLimit.limit,
+        enabled: autoApplyEnabled,
+      };
+    }
+    // Fallback to legacy entitlements if hook not ready
     const isStarter = entitlements?.plan === 'starter' || !isPaidUser;
     if (isStarter) {
       const limit = entitlements?.application?.limit ?? 10;
@@ -185,7 +197,7 @@ export default function FiltersBar({
     const remaining = entitlements?.autoApply?.remaining ?? 50;
     const used = Math.max(0, limit - remaining);
     return { used, limit, enabled: autoApplyEnabled };
-  }, [entitlements, isPaidUser, autoApplyEnabled]);
+  }, [getLimit, entitlements, isPaidUser, autoApplyEnabled]);
 
   const handleAutoApplyClick = () => {
     onToggleAutoApply?.();
@@ -409,11 +421,8 @@ export default function FiltersBar({
                     key={wp.id}
                     type="button"
                     onClick={() => handleToggleWorkplace(wp.id)}
-                    className={`h-8 px-3 rounded-full border text-xs font-semibold transition-all cursor-pointer ${
-                      active
-                        ? 'bg-[#013f2e] dark:bg-[#36D39B] text-white dark:text-black border-transparent font-bold shadow-2xs'
-                        : 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 hover:bg-gray-50 dark:hover:bg-white/5'
-                    }`}
+                    aria-pressed={active}
+                    className={chipState(active ? 'active' : 'idle', 'md')}
                   >
                     {wp.label}
                   </button>
@@ -439,20 +448,20 @@ export default function FiltersBar({
                   e.stopPropagation();
                   toggleDropdown('exp');
                 }}
-                className={`h-8 rounded-full px-3 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer duration-150 active:scale-[0.985] hover:scale-[1.015] ${
-                  filters.experienceLevel?.length || activeDropdown === 'exp'
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                    : 'border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[0.06] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
-                }`}
+                aria-expanded={activeDropdown === 'exp'}
+                className={chipState(
+                  Boolean(filters.experienceLevel?.length) ? 'active' : 'idle',
+                  'md'
+                )}
               >
                 <Briefcase className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>Experience</span>
                 {Boolean(filters.experienceLevel?.length) && (
                   <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0 tabular-nums ${
-                      filters.experienceLevel?.length || activeDropdown === 'exp'
-                        ? 'bg-white/20 dark:bg-black/20 text-current'
-                        : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums ${
+                      filters.experienceLevel?.length
+                        ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
+                        : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
                     }`}
                   >
                     {filters.experienceLevel?.length}
@@ -499,11 +508,13 @@ export default function FiltersBar({
                   e.stopPropagation();
                   toggleDropdown('date');
                 }}
-                className={`h-8 rounded-full px-3 border text-xs transition-all flex items-center gap-1.5 shrink-0 focus:outline-none cursor-pointer duration-150 active:scale-[0.985] hover:scale-[1.015] ${
-                  (filters.datePosted && filters.datePosted !== 'all') || activeDropdown === 'date'
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-black border-transparent font-bold shadow-xs'
-                    : 'border-gray-200 dark:border-white/10 bg-white/90 dark:bg-white/[0.06] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 font-medium'
-                }`}
+                aria-expanded={activeDropdown === 'date'}
+                className={chipState(
+                  filters.datePosted && filters.datePosted !== 'all'
+                    ? 'active'
+                    : 'idle',
+                  'md'
+                )}
               >
                 <Clock className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>

@@ -47,17 +47,17 @@ export const LIMITS: LimitDefinition[] = [
   {
     key: 'auto_apply_daily',
     period: 'daily',
-    defaults: { free: 0, starter: 10, focused: 50 },
+    defaults: { free: 10, starter: 25, focused: 50 },
   },
   {
     key: 'auto_apply_monthly',
     period: 'monthly',
-    defaults: { free: 0, starter: 10, focused: -1 },
+    defaults: { free: 10, starter: 25, focused: 50 },
   },
   {
     key: 'applications_monthly',
     period: 'monthly',
-    defaults: { free: 0, starter: 10, focused: -1 },
+    defaults: { free: 0, starter: 25, focused: 50 },
   },
   {
     key: 'ai_surgeon_runs_monthly',

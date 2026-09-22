@@ -28,10 +28,19 @@ import {
 import CompanyLogo from "@/components/ui/CompanyLogo";
 import { CVJourney } from "@/types/cv";
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability } from "@/lib/utils/jobIntelligence";
+import { resolveJobScores } from '@/lib/utils/scoreResolver';
 import { getJourneyAtsScore } from "@/lib/utils/cv-scoring";
+import {
+  getJourneyDocumentsForJob,
+  getJourneyDocumentStateForJob,
+  isJourneyFailed,
+  isJourneyProcessing,
+  type JourneyDocumentState,
+} from "@/lib/utils/journey-documents";
 import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
 import { getJobCardColorClass } from "@/lib/config/job-constants";
+import { metricTone } from "@/components/ui/chip-styles";
 
 interface JobApplication {
   id: string;
@@ -144,10 +153,21 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   const jobId = String(job.id || job._id || '');
   const journeyStatus = primaryJourney?.status;
-  const hasCV = Boolean(primaryJourney?.cvId);
-  const hasCoverLetter = Boolean(primaryJourney?.coverLetterId);
-  const documentsReady = hasCV && hasCoverLetter;
-  const generationFailed = journeyStatus === 'creation_failed';
+  /*
+    Readiness is derived in ONE place (`@/lib/utils/journey-documents`) so this
+    card, the list view and the sidebar cannot answer "do the documents exist?"
+    differently. Locally recomputing `Boolean(cvId) && Boolean(coverLetterId)`
+    here is how the card ended up disagreeing with the sidebar.
+
+    Readiness is the union across the job's journeys: a retry can leave a CV on
+    one row and a cover letter on another, and that is still a complete
+    application.
+  */
+  const documents = getJourneyDocumentsForJob(jobJourneys);
+  const hasCV = documents.hasCV;
+  const hasCoverLetter = documents.hasCoverLetter;
+  const documentsReady = documents.ready;
+  const generationFailed = isJourneyFailed(journeyStatus);
 
   /**
    * A journey can stop "processing" *before* its document links are written —
@@ -161,9 +181,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
    * promises are not linked yet — unless the journey failed, which is terminal.
    */
   const journeyStillProcessing =
-    journeyStatus === 'processing_documents' ||
-    journeyStatus === 'in-progress' ||
-    journeyStatus === 'paused';
+    Boolean(jobJourneys?.length) &&
+    jobJourneys.some((journey) => isJourneyProcessing(journey.status));
 
   const shouldPoll =
     stage === 'created' &&
@@ -180,6 +199,19 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
    * icons) for the whole round-trip of the create request.
    */
   const isWorking = isGenerating || isJourneyPending;
+
+  /**
+   * The single label this card is allowed to show for document state.
+   * `none` is distinct from `partial` on purpose: two red icons under
+   * "Partially generated" reads as a broken half-generation, when the usual
+   * cause is simply that no journey has been started for this job.
+   */
+  const documentState: JourneyDocumentState = isWorking
+    ? 'generating'
+    : getJourneyDocumentStateForJob(jobJourneys, {
+        isPending: isJourneyPending,
+        timedOut: pollTimedOut,
+      });
 
   // Progress simulation timer
   React.useEffect(() => {
@@ -342,7 +374,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       {/* Compact View */}
       <div className="flex justify-between items-center mt-2">
         <div
-          className={`px-2 py-1 text-small font-bold rounded-full ${job.matchScore !== undefined ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400"}`}
+          className={metricTone(job.matchScore !== undefined ? 'emerald' : 'slate')}
         >
           {job.matchScore !== undefined
             ? `${job.matchScore}% Match`
@@ -421,9 +453,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       in `creation_failed` — or that settled without ever linking a document —
       therefore rendered "Documents ready" beside two red icons, with nothing to
       click. Success is now proven by the document links themselves, and the
-      three outcomes (working / failed / ready) are mutually exclusive.
+      four outcomes are mutually exclusive and come from ONE derivation
+      (`getJourneyDocumentState`), shared with the list view and the sidebar.
     */
-    const generationFailedNow = generationFailed || (!documentsReady && pollTimedOut);
+    const generationFailedNow = documentState === 'failed';
 
     if (isWorking) {
       return (
@@ -556,22 +589,44 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
       );
     }
 
+    /*
+      Settled states: `ready` (both links), `partial` (a journey exists but a
+      document is missing) or `none` (no journey yet).
+
+      `none` must NOT reuse the red-icon treatment: two red document icons read
+      as "generation half-failed" and sent users hunting for a bug, when the
+      honest statement is "you haven't generated documents for this job yet".
+    */
+    const hasNoJourney = documentState === 'none';
+    const docIconClass = (present: boolean) =>
+      present
+        ? "bg-green-100 text-green-600"
+        : hasNoJourney
+          ? "bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-500"
+          : "bg-red-100 text-red-500";
+
     return (
       <>
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
           <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-            <span>{documentsReady ? "Documents ready" : "Partially generated"}</span>
+            <span>
+              {documentState === 'ready'
+                ? "Documents ready"
+                : documentState === 'partial'
+                  ? "Partially generated"
+                  : "Documents not generated"}
+            </span>
           </div>
           <div className="flex gap-1.5">
             <div
-              className={`p-1 rounded-full ${hasCV ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+              className={`p-1 rounded-full ${docIconClass(hasCV)}`}
               title={hasCV ? "CV Generated" : "No CV"}
             >
               <FileText size={12} />
             </div>
             <div
-              className={`p-1 rounded-full ${hasCoverLetter ? "bg-green-100 text-green-600" : "bg-red-100 text-red-500"}`}
+              className={`p-1 rounded-full ${docIconClass(hasCoverLetter)}`}
               title={hasCoverLetter ? "Cover Letter Generated" : "No Cover Letter"}
             >
               <FileText size={12} />
@@ -631,7 +686,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                     className="w-full py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-small font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors flex items-center justify-center gap-1.5"
                   >
                     <Zap size={11} />
-                    Generate missing document
+                    {hasNoJourney ? "Generate documents" : "Generate missing document"}
                   </button>
                 )}
               </div>
@@ -850,7 +905,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
   const isStale = isJobStale(job as any);
   const nudge = getFollowUpNudge(job as any);
-  const successProb = calculateSuccessProbability(job as any);
+  const scores = resolveJobScores(job as any);
+  const successProb = scores.winScore;
 
   // `jobId` is declared once near the top of the component — it is needed by the
   // journey poll, which runs before this point in the render body.
@@ -916,14 +972,6 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
               <h4 className="font-bold text-small text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 {job.jobTitle || job.title}
               </h4>
-              <div className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
-                 successProb >= 70 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                 successProb >= 40 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                 successProb >= 20 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-               }`}>
-                 {successProb}% Win
-              </div>
             </div>
             <p className="text-small text-gray-500 dark:text-gray-400 truncate">
               {job.company}
@@ -954,14 +1002,28 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
               </div>
             )}
 
-            {/* Inline ATS + Deadline Display for Staging (created), Applied, and Interview stages */}
+            {/* Inline ATS + Win % + Deadline Display for Staging (created), Applied, and Interview stages */}
             {["created", "applied", "interview"].includes(stage) && (
               <div className="flex items-center justify-between text-[11px] mt-2.5 pt-2.5 border-t border-gray-100 dark:border-white/5 gap-2">
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500 dark:text-gray-400 font-bold">ATS Score:</span>
-                  <span className={`font-black ${atsScore && atsScore >= 80 ? 'text-green-600 dark:text-green-400' : atsScore && atsScore > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
-                    {atsScore && atsScore > 0 ? `${atsScore}%` : 'N/A'}
-                  </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold">ATS:</span>
+                    <span className={`font-black ${atsScore && atsScore >= 80 ? 'text-green-600 dark:text-green-400' : atsScore && atsScore > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>
+                      {atsScore && atsScore > 0 ? `${atsScore}%` : 'N/A'}
+                    </span>
+                  </div>
+                  <span className="text-gray-300 dark:text-gray-600">|</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold">Win:</span>
+                    <span className={`font-black ${
+                      successProb >= 70 ? 'text-green-600 dark:text-green-400' :
+                      successProb >= 40 ? 'text-blue-600 dark:text-blue-400' :
+                      successProb >= 20 ? 'text-amber-600 dark:text-amber-400' :
+                      'text-gray-400'
+                    }`}>
+                      {successProb}%
+                    </span>
+                  </div>
                 </div>
                 {job.deadline && (
                   <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">

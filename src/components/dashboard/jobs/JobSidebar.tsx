@@ -30,6 +30,7 @@ import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '../UpgradeCard';
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability, getMarketSalaryComparison } from '@/lib/utils/jobIntelligence';
+import { resolveSidebarScores } from '@/lib/utils/scoreResolver';
 import TrackerCreatedStageModal from './TrackerCreatedStageModal';
 import {
   shouldSkipTrackerCreatedStageModalForToday,
@@ -42,6 +43,7 @@ import {
   type TrackerSidebarOpenContext,
 } from './trackerSidebarConfig';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 
 interface JobApplication {
@@ -273,7 +275,15 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const { insights, loading: insightsLoading } = useJobInsights(jobId);
   const fallbacks = useJobFallbacks();
 
-  const successProb = calculateSuccessProbability(job as any);
+  // Use unified score resolver for consistent scores across the app
+  // Note: primaryJourney is resolved later; use job-level scores for now
+  const scores = resolveSidebarScores({
+    job,
+    tracker: job,
+    insights,
+  });
+  const successProb = scores.winScore;
+  const keywordMatchScore = scores.atsScore;
   const nudge = getFollowUpNudge(job as any);
   
   // Use fallbacks defaultSalary for comparison if insights doesn't have marketAverageSalary
@@ -825,7 +835,12 @@ ${userName}`
   }, [journeys]);
 
   const generationState = primaryJourney?.generationState;
-  const keywordMatchScore = insights?.keywordMatchScore ?? job.atsScore ?? 0;
+  /**
+   * The journey's own document links — the single input for every readiness
+   * claim this sidebar makes (timeline sub-label, readiness rows, Next Action).
+   * Union across the job's journeys, matching the kanban card exactly.
+   */
+  const journeyDocuments = getJourneyDocumentsForJob(journeys);
   const followUpTimeline = useMemo(() => getFollowUpTimeline(job), [job]);
   const formatTimelineDate = useCallback((date?: string | Date | null) => {
     if (!date) return 'Not reached';
@@ -906,7 +921,19 @@ ${userName}`
       {
         key: 'created',
         label: 'Tailored',
-        subLabel: 'CV & cover letter tailored',
+        /*
+          Driven by the journey's document links, NOT by `job.status`.
+
+          A job reaches `created` the moment it is moved to Staging, whether or
+          not a journey exists — so a status-derived label promised
+          "CV & cover letter tailored" for applications with no documents at all,
+          directly contradicting the kanban card beside it.
+        */
+        subLabel: journeyDocuments.ready
+          ? 'CV & cover letter tailored'
+          : journeyDocuments.hasCV || journeyDocuments.hasCoverLetter
+            ? 'Documents partially generated'
+            : 'No documents generated yet',
         icon: Sparkles,
         activeColor: 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30',
         completedColor: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
@@ -996,7 +1023,16 @@ ${userName}`
         dateLabel,
       };
     });
-  }, [getStageTransitionDate, job.status, jobId]);
+  }, [
+    getStageTransitionDate,
+    job.status,
+    jobId,
+    // The 'Tailored' sub-label is document-driven, so it must recompute when
+    // the journey's links arrive (the sidebar fetches them after first paint).
+    journeyDocuments.ready,
+    journeyDocuments.hasCV,
+    journeyDocuments.hasCoverLetter,
+  ]);
   const terminalStageLabel = useMemo(() => {
     if (job.status === 'withdrawn') return 'Withdrawn';
     return null;
@@ -1866,8 +1902,26 @@ ${userName}`
 
   const atsType = ((job as any).atsType && (job as any).atsType !== 'unknown') ? (job as any).atsType : null;
   const isAtsSupported = Boolean(atsType);
-  const hasCvReady = Boolean(primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId);
-  const hasCoverLetterReady = Boolean(primaryJourney?.coverLetterId || (job as any).coverLetterId);
+  /*
+    Document readiness comes from the JOURNEY and nothing else.
+
+    This used to read `primaryJourney?.cvId || job.cvId || fallbackMasterCvId` —
+    but `JobApplication` declares neither `cvId` nor `coverLetterId`, and
+    `fallbackMasterCvId` is the user's **Master CV**. So a job with no journey at
+    all rendered "Tailored CV ✓ Tailored & Ready" and its Next Action said
+    "Your CV and cover letter are tailored and calibrated", while the kanban card
+    for the same job — which derived readiness from `journey.cvId` alone — read
+    "Partially generated". One application, two stories; the strict rule is the
+    true one, because `ApplicationJourney.cvId`/`.coverLetterId` is the only
+    record of which document was produced *for this job*.
+
+    `fallbackMasterCvId` is still used below for previews and downloads — it is
+    the right thing to *open* — it just cannot make a tailored document "ready".
+  */
+  const hasCvReady = journeyDocuments.hasCV;
+  const hasCoverLetterReady = journeyDocuments.hasCoverLetter;
+  /** A Master CV exists, but this application has no tailored CV yet. */
+  const hasMasterCvFallback = Boolean(fallbackMasterCvId) && !hasCvReady;
 
   interface GuidanceAction {
     label: string;
@@ -2648,70 +2702,7 @@ ${userName}`
                         const status = currentStage?.status || 'current';
                         return (
                           <>
-                            {/* Stage Header */}
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
-                                status === 'processing'
-                                  ? 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30 animate-pulse'
-                                  : currentStage
-                                  ? `${currentStage.activeColor} ring-2 ring-current/10`
-                                  : 'bg-gray-100 dark:bg-white/5 text-gray-400 border-gray-200 dark:border-white/10'
-                              }`}>
-                                {status === 'processing' ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Icon className="w-4 h-4" />
-                                )}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                    {currentStage?.label || job.status}
-                                  </span>
-                                  <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
-                                    status === 'processing'
-                                      ? 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30'
-                                      : 'text-[#013f2e] dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30'
-                                  }`}>
-                                    {status === 'processing' ? 'Processing' : 'Current'}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                                  {currentStage?.dateLabel || ''}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Stage Meta */}
-                            <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
-                              {isAtsSupported && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30">
-                                  <Sparkles className="w-2.5 h-2.5" />
-                                  Auto-Apply · {atsType?.toUpperCase()}
-                                </span>
-                              )}
-                              {!isAtsSupported && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30">
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                  Manual Apply
-                                </span>
-                              )}
-                              {job.location && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400 border border-gray-200 dark:border-white/10">
-                                  <MapPin className="w-2.5 h-2.5" />
-                                  {job.location}
-                                </span>
-                              )}
-                              {job.sponsorship && job.sponsorship !== 'unknown' && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                  job.sponsorship === 'yes'
-                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800/30'
-                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400 border-rose-100 dark:border-rose-800/30'
-                                }`}>
-                                  {job.sponsorship === 'yes' ? 'Sponsorship' : 'No Sponsorship'}
-                                </span>
-                              )}
-                            </div>
+                            {/* Stage-specific content */}
 
                             {/* Timeline: Application Date → Deadline */}
                             {(job.applicationDate || job.createdAt || job.deadline) && (() => {
@@ -3433,8 +3424,17 @@ ${userName}`
 
                 {/* Tab 4: Documents */}
                 {activeTab === 'documents' && (() => {
-                  const resolvedCvId = primaryJourney?.cvId || (job as any).cvId || fallbackMasterCvId;
-                  const resolvedCoverLetterId = primaryJourney?.coverLetterId || (job as any).coverLetterId;
+                  /*
+                    `fallbackMasterCvId` is a preview/download target, not
+                    evidence of a tailored document. Labelling it "Applied CV —
+                    Attached to Application" claimed a per-job document that was
+                    never produced, so the fallback now says what it is.
+                  */
+                  const tailoredCvId = primaryJourney?.cvId;
+                  const resolvedCvId = tailoredCvId || fallbackMasterCvId;
+                  const resolvedCoverLetterId = primaryJourney?.coverLetterId;
+                  const isMasterCvFallback = !tailoredCvId && Boolean(fallbackMasterCvId);
+                  /** Unchanged: gates the "Application Submission Evidence" panel. */
                   const isAdvancedStage = job.status !== 'draft';
                   const hasCv = Boolean(resolvedCvId);
                   const hasCoverLetter = Boolean(resolvedCoverLetterId);
@@ -3456,7 +3456,11 @@ ${userName}`
                             </div>
                             <div>
                               <h4 className="text-small font-bold text-gray-900 dark:text-white">
-                                {primaryJourney?.cvId ? 'Tailored CV' : isAdvancedStage ? 'Applied CV' : 'Resume / CV'}
+                                {tailoredCvId
+                                  ? 'Tailored CV'
+                                  : isMasterCvFallback
+                                    ? 'Master CV (no tailored version yet)'
+                                    : 'Resume / CV'}
                               </h4>
                               <p className="text-[11px] text-gray-500 dark:text-gray-400">
                                 {cvData?.title || `Customized for ${job.jobTitle} at ${job.company}`}
@@ -3466,7 +3470,11 @@ ${userName}`
                           {hasCv ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
                               <CheckCircle className="w-3.5 h-3.5" />
-                              {primaryJourney?.cvId ? 'Tailored & Ready' : isAdvancedStage ? 'Attached to Application' : 'Ready'}
+                              {tailoredCvId
+                                ? 'Tailored & Ready'
+                                : isMasterCvFallback
+                                  ? 'Master CV'
+                                  : 'Ready'}
                             </span>
                           ) : (
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
@@ -3534,7 +3542,7 @@ ${userName}`
                           {hasCoverLetter ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
                               <CheckCircle className="w-3.5 h-3.5" />
-                              {primaryJourney?.coverLetterId ? 'Generated' : 'Attached'}
+                              Generated
                             </span>
                           ) : (
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">

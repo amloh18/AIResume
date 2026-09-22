@@ -24,12 +24,10 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
 
-    // 2. Deduplicate by Stripe event ID
+    // 2. Deduplicate by Stripe event ID (unique compound index enforced)
     const existingLog = await WebhookLog.findOne({
       provider: 'stripe',
-      eventType: event.type,
       externalId: event.id,
-      status: 'processed',
     });
 
     if (existingLog) {
@@ -48,7 +46,7 @@ export async function POST(request: NextRequest) {
       externalId: event.id,
       status: result.handled ? 'processed' : 'failed',
       payload: event.data,
-      error: result.error,
+      errorMessage: result.error,
       processedAt: new Date(),
     });
 

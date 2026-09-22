@@ -16,27 +16,21 @@ export const PLAN_QUOTAS = {
     jobsFetchedMonthly: 50,
     applicationsPerDay: 10,
     applicationsPerHour: 5,
-    tailoredCVsMonthly: 5,
-    coverLettersMonthly: 3,
   },
   pro: {
     jobsFetchedMonthly: -1, // Unlimited
     applicationsPerDay: 50,
     applicationsPerHour: 20,
-    tailoredCVsMonthly: -1,
-    coverLettersMonthly: -1,
   },
   power: {
     jobsFetchedMonthly: -1,
     applicationsPerDay: 100,
     applicationsPerHour: 50,
-    tailoredCVsMonthly: -1,
-    coverLettersMonthly: -1,
   },
 };
 
 export type PlanType = keyof typeof PLAN_QUOTAS;
-export type QuotaType = 'applications' | 'jobsFetched' | 'tailoredCVs' | 'coverLetters';
+export type QuotaType = 'applications' | 'jobsFetched';
 
 export interface QuotaStatus {
   allowed: boolean;
@@ -69,14 +63,6 @@ export interface IApplicationQuota extends mongoose.Document {
     count: number;
     windowStart: Date;
   };
-  monthlyTailoredCVs: {
-    count: number;
-    windowStart: Date;
-  };
-  monthlyCoverLetters: {
-    count: number;
-    windowStart: Date;
-  };
   lastApplicationAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -98,14 +84,6 @@ const ApplicationQuotaSchema = new mongoose.Schema<IApplicationQuota>({
     windowStart: { type: Date, default: Date.now },
   },
   monthlyJobsFetched: {
-    count: { type: Number, default: 0 },
-    windowStart: { type: Date, default: Date.now },
-  },
-  monthlyTailoredCVs: {
-    count: { type: Number, default: 0 },
-    windowStart: { type: Date, default: Date.now },
-  },
-  monthlyCoverLetters: {
     count: { type: Number, default: 0 },
     windowStart: { type: Date, default: Date.now },
   },
@@ -226,8 +204,6 @@ export class QuotaService {
         hourlyApplications: { count: 1, windowStart: now },
         dailyApplications: { count: 1, windowStart: now },
         monthlyJobsFetched: { count: 0, windowStart: now },
-        monthlyTailoredCVs: { count: 0, windowStart: now },
-        monthlyCoverLetters: { count: 0, windowStart: now },
         lastApplicationAt: now,
       });
       return;
@@ -267,8 +243,6 @@ export class QuotaService {
         hourlyApplications: { count: 0, windowStart: now },
         dailyApplications: { count: 0, windowStart: now },
         monthlyJobsFetched: { count: 1, windowStart: now },
-        monthlyTailoredCVs: { count: 0, windowStart: now },
-        monthlyCoverLetters: { count: 0, windowStart: now },
       });
       return;
     }

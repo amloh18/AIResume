@@ -20,6 +20,7 @@ import {
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 
 interface JobApplication {
   id: string;
@@ -468,11 +469,12 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     {!hideActions && (
                       <td className="py-3.5 px-5 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* CV & CL indicators */}
+                          {/* CV & CL indicators — union across the job's
+                              journeys, via the shared derivation, so the list
+                              agrees with the kanban card and the sidebar. */}
                           {jobJourneys && jobJourneys.length > 0 && (() => {
-                            const primaryJourney = jobJourneys[0];
-                            const hasCV = Boolean(primaryJourney.cvId);
-                            const hasCoverLetter = Boolean(primaryJourney.coverLetterId);
+                            const { hasCV, hasCoverLetter } =
+                              getJourneyDocumentsForJob(jobJourneys);
                             return (
                               <div className="flex items-center gap-1.5 mr-1 text-[11px] font-semibold">
                                 <span className={`inline-flex items-center gap-0.5 ${hasCV ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCV ? 'CV Generated' : 'No CV'}>
