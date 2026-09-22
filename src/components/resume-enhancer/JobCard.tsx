@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Briefcase, Building2, MapPin, ExternalLink, ChevronRight } from 'lucide-react';
+import { Briefcase, Building2, MapPin, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface JobCardProps {
@@ -18,38 +18,10 @@ interface JobCardProps {
   onClick: () => void;
 }
 
-const statusLabels: Record<string, string> = {
-  draft: 'Draft',
-  created: 'Created',
-  applied: 'Applied',
-  screening: 'Screening',
-  interview: 'Interview',
-  offer: 'Offer',
-  rejected: 'Rejected',
-  accepted: 'Accepted',
-  withdrawn: 'Withdrawn'
-};
-
-const statusColors: Record<string, { bg: string; text: string }> = {
-  draft: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-400' },
-  created: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300' },
-  applied: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300' },
-  screening: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-300' },
-  interview: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300' },
-  offer: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300' },
-  rejected: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300' },
-  accepted: { bg: 'bg-lime-100 dark:bg-lime-900/30', text: 'text-lime-700 dark:text-lime-300' },
-  withdrawn: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-400' }
-};
-
 export default function JobCard({ job, onClick }: JobCardProps) {
-  const jobId = job.id || job._id || '';
   const jobTitle = job.jobTitle || job.title || 'Untitled Job';
   const company = job.company || 'Unknown Company';
   const location = job.location;
-  const status = job.status || 'created';
-  const statusLabel = statusLabels[status] || status;
-  const statusColor = statusColors[status] || statusColors.created;
 
   return (
     <motion.div

@@ -9,6 +9,7 @@ import {
 import { toast } from '@/lib/hot-toast';
 import guestCVService from '@/lib/services/guestCVService';
 import { SENIORITY_LEVELS, filterJobTitles, SeniorityLevel } from '@/lib/data/role-profiler-data';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface ATSMeterPanelProps {
   isUtilityPanelOpen?: boolean;
@@ -1014,19 +1015,19 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 
                 {/* Visual Status Pills below header */}
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-black uppercase tracking-wider`}>
                     {matchedKeywordsCount} matched
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.rose} font-black uppercase tracking-wider`}>
                     {gapKeywordsCount} gaps
                   </span>
                   {partialKeywordsCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    <span className={`${CHIP_INLINE} ${CHIP_TONES.amber} font-black uppercase tracking-wider`}>
                       {partialKeywordsCount} partial
                     </span>
                   )}
                   {recommendedTrack && (
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    <span className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-black uppercase tracking-wider`}>
                       {recommendedTrack.label || 'Early-mid track'}
                     </span>
                   )}
@@ -1056,9 +1057,9 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {/* Horizontal row of highest/lowest highlighted score pills */}
                 <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
                   {categoryScores.slice(0, 4).map((c: any, i: number) => {
-                    const status = c.score >= 70 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : c.score >= 40 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+                    const tone = c.score >= 70 ? 'emerald' : c.score >= 40 ? 'amber' : 'rose';
                     return (
-                      <span key={i} className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${status}`}>
+                      <span key={i} className={`${CHIP_INLINE} font-bold ${CHIP_TONES[tone]}`}>
                         {c.name} {c.score}%
                       </span>
                     );
@@ -1109,9 +1110,9 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {/* Horizontal row of highlighted keywords */}
                 <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
                   {keywordsList.slice(0, 5).map((k: any, i: number) => {
-                    const status = k.status === 'hit' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : k.status === 'partial' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+                    const tone = k.status === 'hit' ? 'emerald' : k.status === 'partial' ? 'amber' : 'rose';
                     return (
-                      <span key={i} className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${status}`}>
+                      <span key={i} className={`${CHIP_INLINE} font-bold ${CHIP_TONES[tone]}`}>
                         {k.label}
                       </span>
                     );
@@ -1122,12 +1123,9 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                   <div className="p-4 space-y-4">
                     <div className="flex flex-wrap gap-1.5">
                       {keywordsList.map((k: any, i: number) => {
-                        const statusColors =
-                          k.status === 'hit' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15' :
-                          k.status === 'partial' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/15' :
-                          'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/15';
+                        const tone = k.status === 'hit' ? 'emerald' : k.status === 'partial' ? 'amber' : 'rose';
                         return (
-                          <span key={i} className={`px-2.5 py-1 text-[10px] font-bold rounded-md ${statusColors}`}>
+                          <span key={i} className={`${CHIP_INLINE} font-bold ${CHIP_TONES[tone]}`}>
                             {k.label}
                           </span>
                         );
@@ -1172,7 +1170,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {/* Horizontal row of highlight pills */}
                 <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
                   {strengthsList.slice(0, 4).map((s: any, i: number) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span key={i} className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold`}>
                       {s.title}
                     </span>
                   ))}
@@ -1222,7 +1220,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {/* Horizontal row of gap highlight pills */}
                 <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
                   {gapsList.slice(0, 4).map((g: any, i: number) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                    <span key={i} className={`${CHIP_INLINE} ${CHIP_TONES.rose} font-bold`}>
                       {g.title}
                     </span>
                   ))}
@@ -1272,7 +1270,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 {/* Horizontal row of actions highlight pills */}
                 <div className="px-4 py-2 flex flex-wrap gap-1.5 border-b border-gray-100 dark:border-white/[0.02]">
                   {actionsList.slice(0, 4).map((a: any, i: number) => (
-                    <span key={i} className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <span key={i} className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-bold`}>
                       {a.title}
                     </span>
                   ))}

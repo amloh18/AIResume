@@ -7,6 +7,7 @@ import {
   AlertTriangle, RefreshCw, Activity, Zap,
   Key, Cpu, Timer, Eye, EyeOff
 } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 export interface PortalSourceData {
   source: string;
@@ -247,7 +248,7 @@ export default function PortalSettingsSidebar({
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-white tracking-tight">{displayName}</h2>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-white/50 border border-white/10">
+                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${CHIP_TONES_DARK.neutral}`}>
                       {sourceType}
                     </span>
                   </div>
@@ -510,7 +511,7 @@ export default function PortalSettingsSidebar({
                       </div>
                     </div>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className={`${CHIP_INLINE} font-bold uppercase ${CHIP_TONES_DARK.emerald}`}>
                     {source.isDue ? 'Due Now' : 'Scheduled'}
                   </span>
                 </div>

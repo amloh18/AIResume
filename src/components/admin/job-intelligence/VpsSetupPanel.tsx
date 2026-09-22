@@ -7,6 +7,7 @@ import {
   Terminal, Play, Square, RotateCcw, Download, Settings,
   ChevronDown, ChevronUp, Loader2, Wifi, WifiOff, Globe, Cpu, Inbox,
 } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface IngestionServiceSource {
   name: string;
@@ -337,7 +338,7 @@ export default function VpsSetupPanel() {
                   {status.workerGateway.online ? 'Online' : 'Offline'}
                 </span>
               ) : (
-                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES_DARK.neutral} uppercase tracking-wider`}>
                   Not configured
                 </span>
               )}
@@ -368,7 +369,7 @@ export default function VpsSetupPanel() {
                   {status.ingestionService.reachable ? 'Online' : 'Offline'}
                 </span>
               ) : (
-                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES_DARK.neutral} uppercase tracking-wider`}>
                   Not configured
                 </span>
               )}
@@ -424,7 +425,7 @@ export default function VpsSetupPanel() {
                   Running
                 </span>
               ) : (
-                <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-white/40">
+                <span className={`${CHIP_INLINE} ${CHIP_TONES_DARK.neutral} uppercase tracking-wider`}>
                   Not configured
                 </span>
               )}

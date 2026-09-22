@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Shield, AlertCircle, CheckCircle2, Server, Key, HelpCircle, ArrowRight, RefreshCw, Calendar } from 'lucide-react';
 import toast from '@/lib/hot-toast';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface EmailConnectModalProps {
   isOpen: boolean;
@@ -379,7 +380,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
                     <div>
                       <h4 className="text-small font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         Dedicated Application Email
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                        <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold`}>
                           Zero Setup
                         </span>
                       </h4>

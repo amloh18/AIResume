@@ -18,6 +18,7 @@ import {
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { CHIP_INLINE } from '@/components/ui/chip-styles';
 
 /* ------------------------------------------------------------------ */
 /* Plan ladder + suggestion content                                    */
@@ -435,7 +436,10 @@ export default function UpgradeSuggestionCard() {
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${config.chip}`}>
+                    {/* Shape comes from the shared chip module; the colours stay
+                        with the promo theme because this chip sits on a dark
+                        panel where the app-surface tones would be unreadable. */}
+                    <p className={`${CHIP_INLINE} ${config.chip} font-semibold uppercase tracking-wider`}>
                       <Sparkles size={11} />
                       {config.eyebrow(suggestion)}
                     </p>

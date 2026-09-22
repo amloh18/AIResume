@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Filter, X, Users, Globe, Clock, BarChart3, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import isEqual from 'lodash/isEqual';
+import { CHIP_INLINE, CHIP_STATES_DARK, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface FilterProps {
   filters: any;
@@ -24,34 +25,24 @@ function FilterChip({
   onRemove?: () => void;
   color?: 'emerald' | 'blue' | 'amber' | 'purple' | 'rose';
 }) {
-  const colorMap = {
-    emerald: {
-      active: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
-      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-emerald-400/50 hover:text-white',
-    },
-    blue: {
-      active: 'bg-blue-500/15 border-blue-500/40 text-blue-400',
-      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-blue-400/50 hover:text-white',
-    },
-    amber: {
-      active: 'bg-amber-500/15 border-amber-500/40 text-amber-400',
-      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-amber-400/50 hover:text-white',
-    },
-    purple: {
-      active: 'bg-purple-500/15 border-purple-500/40 text-purple-400',
-      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-purple-400/50 hover:text-white',
-    },
-    rose: {
-      active: 'bg-rose-500/15 border-rose-500/40 text-rose-400',
-      inactive: 'bg-white/5 border-white/10 text-white/50 hover:border-rose-400/50 hover:text-white',
-    },
+  // Only the *idle* treatment stays per-colour, so a row of filter chips keeps
+  // its category hue. The *active* state is the shared app green: "selected"
+  // used to mean one of five different tints depending on the category, which
+  // made a selected "Amber" and a selected "Rose" read as two different states.
+  const colorMap: Record<string, string> = {
+    emerald: 'bg-white/5 border-white/10 text-white/50 hover:border-emerald-400/50 hover:text-white',
+    blue: 'bg-white/5 border-white/10 text-white/50 hover:border-blue-400/50 hover:text-white',
+    amber: 'bg-white/5 border-white/10 text-white/50 hover:border-amber-400/50 hover:text-white',
+    purple: 'bg-white/5 border-white/10 text-white/50 hover:border-purple-400/50 hover:text-white',
+    rose: 'bg-white/5 border-white/10 text-white/50 hover:border-rose-400/50 hover:text-white',
   };
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-semibold transition-all duration-150 ${active ? colorMap[color].active : colorMap[color].inactive}`}
+      aria-pressed={active}
+      className={`${CHIP_INLINE} font-semibold ${active ? CHIP_STATES_DARK.active : colorMap[color]}`}
     >
       {active && <CheckCircle className="w-3 h-3 shrink-0" />}
       {label}
@@ -90,7 +81,7 @@ function FilterSection({
           {label}
         </span>
         {count !== undefined && count > 0 && (
-          <span className="ml-auto text-[9px] font-bold bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full">
+          <span className={`ml-auto ${CHIP_INLINE} font-bold ${CHIP_TONES_DARK.emerald}`}>
             {count} active
           </span>
         )}
@@ -114,7 +105,7 @@ function ActiveFiltersBar({ filters, onClear, onRemovePlan, onClearAge, onClearR
     chips.push(
       <span
         key={`plan-${plan}`}
-        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"
+        className={`${CHIP_INLINE} font-semibold ${CHIP_TONES_DARK.emerald}`}
       >
         {plan.charAt(0).toUpperCase() + plan.slice(1)}
         <button onClick={() => onRemovePlan(plan)} className="opacity-60 hover:opacity-100 transition-opacity">
@@ -129,7 +120,7 @@ function ActiveFiltersBar({ filters, onClear, onRemovePlan, onClearAge, onClearR
     chips.push(
       <span
         key="age"
-        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] font-semibold text-blue-700 dark:text-blue-300"
+        className={`${CHIP_INLINE} font-semibold ${CHIP_TONES_DARK.blue}`}
       >
         <Clock className="w-3 h-3" />
         {ageLabel}
@@ -144,7 +135,7 @@ function ActiveFiltersBar({ filters, onClear, onRemovePlan, onClearAge, onClearR
     chips.push(
       <span
         key="region"
-        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-[11px] font-semibold text-purple-700 dark:text-purple-300"
+        className={`${CHIP_INLINE} font-semibold ${CHIP_TONES_DARK.purple}`}
       >
         <Globe className="w-3 h-3" />
         {filters.region}

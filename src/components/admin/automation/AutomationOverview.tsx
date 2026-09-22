@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 import {
   Zap,
   ShieldAlert,
@@ -203,7 +204,7 @@ export default function AutomationOverview() {
       {/* Top Banner Control Room */}
       <div className="p-6 rounded-3xl bg-gradient-to-r from-red-500/10 via-amber-500/5 to-transparent border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-wider mb-2">
+          <div className={`${CHIP_INLINE} font-bold uppercase tracking-wider mb-2 ${CHIP_TONES_DARK.rose}`}>
             <ShieldAlert className="w-3.5 h-3.5" />
             Production Control Room & Safety Supervisor
           </div>

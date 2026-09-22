@@ -45,6 +45,7 @@ import {
   type CvTailoringMode,
 } from '@/lib/cv-tailoring/tailoringMode';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
+import { CHIP_INLINE, CHIP_TONES, chipState } from '@/components/ui/chip-styles';
 
 function greetingForHour(hour: number): string {
   if (hour < 5) return 'Good evening';
@@ -1404,7 +1405,7 @@ export default function JobsDashboard() {
               ) : activeTab === 'discover' ? (
                 <>
                   AI-powered job matching and automation
-                  <span className="ml-2 inline-flex items-center rounded-full bg-lime-500/20 px-2.5 py-0.5 text-small font-medium text-lime-600 dark:text-lime-400">
+                  <span className={`${CHIP_INLINE} ${CHIP_TONES.green} font-medium ml-2`}>
                     BETA
                   </span>
                 </>
@@ -1705,7 +1706,7 @@ export default function JobsDashboard() {
                           setFilters((prev) => ({ ...prev, searchText: suggestion }));
                           setPage(1);
                         }}
-                        className="px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-[#013f2e]/50 dark:hover:border-[#36D39B]/50 hover:text-[#013f2e] dark:hover:text-[#36D39B] transition-colors cursor-pointer"
+                        className={`${chipState('idle', 'lg')} font-medium cursor-pointer`}
                       >
                         {suggestion}
                       </button>

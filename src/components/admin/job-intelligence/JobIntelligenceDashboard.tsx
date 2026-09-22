@@ -10,6 +10,7 @@ import DemandQueueMonitor from './DemandQueueMonitor';
 import SourceHealthPanel from './SourceHealthPanel';
 import VpsSetupPanel from './VpsSetupPanel';
 import WorkerSettingsPanel from './WorkerSettingsPanel';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 // ── Error Boundary ──────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ export default function JobIntelligenceDashboard({
       {/* Top Header */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-6 border-b border-white/5">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+          <div className={`${CHIP_INLINE} font-bold uppercase tracking-wider mb-2 ${CHIP_TONES_DARK.emerald}`}>
             <Globe className="w-3.5 h-3.5" />
             Continuous Job Intelligence Engine
           </div>

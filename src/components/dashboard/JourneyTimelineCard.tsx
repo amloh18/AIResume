@@ -48,6 +48,7 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useATS } from '@/contexts/ATSContext';
 import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import DocumentPreviewSidebar from './jobs/DocumentPreviewSidebar';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 interface Journey {
   id: string;
@@ -2248,10 +2249,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="flex items-center gap-3">
               {/* ATS Score */}
               {atsScore !== null && atsScore !== -1 && atsScore !== undefined && journey.cvId ? (
-                <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${liveProgress.status === 'completed'
-                  ? 'bg-blue-200 dark:bg-white/10'
-                  : 'bg-lime-100 dark:bg-lime-500/10'
-                  }`}>
+                <div className={`${CHIP_INLINE} ${CHIP_TONES[liveProgress.status === 'completed' ? 'blue' : 'green']}`}>
                   <Target className={`h-3 w-3 ${liveProgress.status === 'completed'
                     ? 'text-blue-700 dark:text-white/60'
                     : 'text-lime-700 dark:text-lime-300'
@@ -2364,10 +2362,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             </div>
 
             {/* Next Step Info */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${liveProgress.status === 'completed'
-              ? 'bg-blue-100 dark:bg-blue-500/20'
-              : 'bg-lime-100 dark:bg-lime-500/20'
-              }`}>
+            <div className={`${CHIP_INLINE} ${CHIP_TONES[liveProgress.status === 'completed' ? 'blue' : 'green']}`}>
               {steps.find(s => s.id === liveProgress.currentStep + 1)?.icon &&
                 React.createElement(steps.find(s => s.id === liveProgress.currentStep + 1)!.icon, { className: "h-4 w-4" })
               }

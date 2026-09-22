@@ -10,6 +10,7 @@ import {
 import { CardSkeleton } from './ui-primitives';
 import RunsExplorer from './RunsExplorer';
 import PortalSettingsSidebar, { PortalSourceData } from './PortalSettingsSidebar';
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface SourceHealth {
   source: string;
@@ -381,15 +382,15 @@ export default function SourceHealthPanel() {
                   )}
                   {/* Health status badge */}
                   <div className="mt-1.5">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      src.healthStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                      src.healthStatus === 'degraded' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                      src.healthStatus === 'stale' ? 'bg-white/5 text-white/40 border border-white/10' :
-                      src.healthStatus === 'running' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                      src.healthStatus === 'config_error' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                      src.healthStatus === 'not_initialized' ? 'bg-white/5 text-white/40 border border-white/10' :
-                      src.healthStatus === 'disabled' ? 'bg-white/5 text-white/30 border border-white/10' :
-                      'bg-red-500/10 text-red-400 border border-red-500/20'
+                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${
+                      src.healthStatus === 'healthy' ? CHIP_TONES_DARK.emerald :
+                      src.healthStatus === 'degraded' ? CHIP_TONES_DARK.amber :
+                      src.healthStatus === 'stale' ? CHIP_TONES_DARK.neutral :
+                      src.healthStatus === 'running' ? CHIP_TONES_DARK.blue :
+                      src.healthStatus === 'config_error' ? CHIP_TONES_DARK.amber :
+                      src.healthStatus === 'not_initialized' ? CHIP_TONES_DARK.neutral :
+                      src.healthStatus === 'disabled' ? `${CHIP_TONES_DARK.neutral} opacity-60` :
+                      CHIP_TONES_DARK.rose
                     }`}>
                       {src.healthStatus === 'config_error' ? 'Config Required' :
                        src.healthStatus === 'not_initialized' ? 'Not Initialized' :
@@ -399,12 +400,12 @@ export default function SourceHealthPanel() {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   {isDue && src.enabled && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${CHIP_TONES_DARK.amber}`}>
                       <Timer className="w-2.5 h-2.5" /> Due
                     </span>
                   )}
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    src.enabled ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-white/5 text-white/40 border border-white/10'
+                  <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${
+                    src.enabled ? CHIP_TONES_DARK.emerald : CHIP_TONES_DARK.neutral
                   }`}>
                     {src.enabled ? 'Enabled' : 'Disabled'}
                   </span>

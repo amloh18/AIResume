@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, CheckCircle, XCircle, Clock, RefreshCw, ChevronLeft, ChevronRight, Square, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
 
 interface SourceProgress {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -177,15 +178,15 @@ export default function RunsExplorer() {
   const statusConfig = (status: string) => {
     switch (status) {
       case 'completed':
-        return { icon: CheckCircle, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+        return { icon: CheckCircle, tone: 'emerald' as ChipTone };
       case 'completed_with_errors':
-        return { icon: AlertTriangle, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+        return { icon: AlertTriangle, tone: 'amber' as ChipTone };
       case 'failed':
-        return { icon: XCircle, color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' };
+        return { icon: XCircle, tone: 'rose' as ChipTone };
       case 'cancelled':
-        return { icon: Square, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+        return { icon: Square, tone: 'amber' as ChipTone };
       default:
-        return { icon: Clock, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+        return { icon: Clock, tone: 'blue' as ChipTone };
     }
   };
 
@@ -241,7 +242,7 @@ export default function RunsExplorer() {
                 runs.map((run) => {
                   const isMultiSource = run.source.toLowerCase() === 'all' && run.sources && Object.keys(run.sources).length > 1;
                   const isExpanded = isMultiSource && expandedRun === run.runId;
-                  const { icon: StatusIcon, color: statusColor } = statusConfig(run.status);
+                  const { icon: StatusIcon, tone } = statusConfig(run.status);
                   const metrics = getLiveMetrics(run);
 
                   return (
@@ -273,7 +274,7 @@ export default function RunsExplorer() {
                         </td>
                         <td className="py-3.5 px-4 font-sans">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${statusColor}`}
+                            className={`${CHIP_INLINE} font-bold uppercase ${CHIP_TONES_DARK[tone]}`}
                           >
                             <StatusIcon className={`w-3 h-3 ${run.status === 'running' ? 'animate-spin' : ''}`} />
                             {run.status.replace('_', ' ')}

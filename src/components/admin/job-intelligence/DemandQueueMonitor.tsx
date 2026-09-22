@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, ArrowUpCircle, Search, X,
 } from 'lucide-react';
 import { EmptyState } from './ui-primitives';
+import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
 
 interface DemandSegment {
   _id: string;
@@ -28,11 +29,11 @@ interface DemandQueueData {
   totalSegments: number;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  idle: { bg: 'bg-white/5', text: 'text-white/60', border: 'border-white/10' },
-  queued: { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
-  fetching: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-  stale: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' },
+const STATUS_TONES: Record<string, ChipTone> = {
+  idle: 'neutral',
+  queued: 'amber',
+  fetching: 'blue',
+  stale: 'rose',
 };
 
 function timeAgo(dateStr: string | null): string {
@@ -198,7 +199,7 @@ export default function DemandQueueMonitor() {
         ) : (
           <div className="divide-y divide-white/5">
             {filteredSegments.map((seg) => {
-              const style = STATUS_COLORS[seg.status] || STATUS_COLORS.idle;
+              const tone = STATUS_TONES[seg.status] || 'neutral';
               const isExpanded = expandedId === seg._id;
               return (
                 <div key={seg._id} className="group">
@@ -208,7 +209,7 @@ export default function DemandQueueMonitor() {
                     onClick={() => setExpandedId(isExpanded ? null : seg._id)}
                   >
                     {/* Status badge */}
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${style.bg} ${style.text} ${style.border}`}>
+                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${CHIP_TONES_DARK[tone]}`}>
                       {seg.status}
                     </span>
 

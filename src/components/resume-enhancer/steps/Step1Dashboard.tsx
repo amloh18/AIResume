@@ -27,6 +27,7 @@ import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 import toast from '@/lib/hot-toast';
 import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
 import { Button, IconButton, TableActionGroup } from '@/components/ui';
+import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 
 // Global cache to prevent refetching when navigating between steps
 let cachedExistingCVs: ExistingCV[] | null = null;
@@ -2292,7 +2293,7 @@ export default function Step1Dashboard({
                           {draftCV && (filterType === 'all' || filterType === 'cv') && (
                             <tr className="bg-orange-50/20 dark:bg-orange-950/10 hover:bg-orange-50/40 transition-colors">
                               <td className="py-3 px-3.5">
-                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-orange-500 text-white">
+                                <span className={`${CHIP_INLINE} ${CHIP_TONES.orange} font-black uppercase tracking-wider`}>
                                   Unsaved Draft
                                 </span>
                               </td>
@@ -2365,8 +2366,8 @@ export default function Step1Dashboard({
                               <React.Fragment key={cv.id || cv._id}>
                                 <tr className="hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors">
                                   <td className="py-3 px-3.5">
-                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                      cv.cvType === 'master' ? 'bg-purple-600 text-white' : cv.cvType === 'journey' ? 'bg-lime-500 text-white dark:bg-[#013f2e]/10 dark:text-[#013f2e]' : 'bg-blue-600 text-white'
+                                    <span className={`${CHIP_INLINE} font-black uppercase tracking-wider ${
+                                      CHIP_TONES[cv.cvType === 'master' ? 'purple' : cv.cvType === 'journey' ? 'green' : 'blue']
                                     }`}>
                                       {cv.cvType === 'master' ? 'Primary' : cv.cvType === 'journey' ? 'Job Based' : 'Custom'}
                                     </span>
@@ -2390,7 +2391,7 @@ export default function Step1Dashboard({
                                   </td>
                                   <td className="py-3 px-3.5 text-center">
                                     {getScoreForCV(cv) !== undefined ? (
-                                      <span className="text-xs font-black text-lime-600 dark:text-[#013f2e] bg-lime-500/10 dark:bg-[#013f2e]/10 px-2 py-0.5 rounded-full">
+                                      <span className={`${CHIP_INLINE} ${CHIP_TONES.green} font-black`}>
                                         {getScoreForCV(cv)}%
                                       </span>
                                     ) : (

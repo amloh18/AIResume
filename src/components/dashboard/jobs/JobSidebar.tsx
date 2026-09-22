@@ -3374,7 +3374,7 @@ ${userName}`
                         {jobTags.map((tag, i) => (
                           <span
                             key={i}
-                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                            className={`${CHIP_INLINE} ${CHIP_TONES.blue} font-bold`}
                           >
                             {tag}
                             <button
@@ -3466,7 +3466,7 @@ ${userName}`
                             </div>
                           </div>
                           {hasCv ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold`}>
                               <CheckCircle className="w-3.5 h-3.5" />
                               {tailoredCvId
                                 ? 'Tailored & Ready'
@@ -3475,7 +3475,7 @@ ${userName}`
                                   : 'Ready'}
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                            <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-bold`}>
                               Not Generated
                             </span>
                           )}
@@ -3538,12 +3538,12 @@ ${userName}`
                             </div>
                           </div>
                           {hasCoverLetter ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <span className={`${CHIP_INLINE} ${CHIP_TONES.emerald} font-bold`}>
                               <CheckCircle className="w-3.5 h-3.5" />
                               Generated
                             </span>
                           ) : (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400">
+                            <span className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-bold`}>
                               Not Generated
                             </span>
                           )}
@@ -3912,13 +3912,7 @@ ${userName}`
                               <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Technical Skills</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
-                                  <span key={i} className={`px-2.5 py-1 text-small font-medium rounded-full ${
-                                    item.importance === 'critical' 
-                                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200/50' 
-                                      : item.importance === 'strong'
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                                        : 'bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300'
-                                  }`}>
+                                  <span key={i} className={`${CHIP_INLINE} font-medium ${CHIP_TONES[item.importance === 'critical' ? 'rose' : item.importance === 'strong' ? 'blue' : 'neutral']}`}>
                                     {item.skill}
                                   </span>
                                 ))}
@@ -3932,7 +3926,7 @@ ${userName}`
                               <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tools & Platforms</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.tools_and_platforms.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-lime-100 text-lime-800 dark:bg-[#013f2e]/10 dark:text-[#013f2e] rounded-full border border-lime-200/20">
+                                  <span key={i} className={`${CHIP_INLINE} ${CHIP_TONES.green} font-medium`}>
                                     {item.tool}
                                   </span>
                                 ))}
@@ -3946,7 +3940,7 @@ ${userName}`
                               <h5 className="text-small font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Soft Skills</h5>
                               <div className="flex flex-wrap gap-1.5">
                                 {job.extractedJd.skills.skills_soft.map((item: any, i: number) => (
-                                  <span key={i} className="px-2.5 py-1 text-small font-medium bg-gray-100 text-gray-800 dark:bg-white/10 dark:text-gray-300 rounded-full">
+                                  <span key={i} className={`${CHIP_INLINE} ${CHIP_TONES.neutral} font-medium`}>
                                     {item.skill}
                                   </span>
                                 ))}

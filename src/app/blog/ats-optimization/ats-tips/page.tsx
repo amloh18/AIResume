@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { ArrowRight, CheckCircle, FileText, Shield, Zap, BookOpen, Sparkles, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
 import { MotionDiv } from '@/components/ui/motion-wrapper';
 import CardNav from '@/components/landing/CardNav';
+import { CHIP_INLINE } from '@/components/ui/chip-styles';
 
 export const metadata: Metadata = {
   title: 'ATS Resume Tips: Pass Every Application Tracking System | AIResume',
@@ -116,7 +117,7 @@ export default function AtsTipsPage() {
 
         <article className="max-w-4xl mx-auto px-4 pt-32 pb-16">
           <header className="mb-12 text-center">
-            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-amber-500/20 text-amber-400 rounded-full text-small font-medium mb-6">
+            <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`${CHIP_INLINE} border-amber-500/30 bg-amber-500/20 text-amber-400 font-medium mb-6`}>
               ATS Optimization
             </MotionDiv>
             <MotionDiv initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-display md:text-display font-bold text-white mb-6">

@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
 
 interface Campaign {
   _id?: string;
@@ -653,7 +654,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                 {campaign ? "Edit" : "New"} <span className="text-emerald-500">Email</span>
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                <span className={`${CHIP_INLINE} font-black uppercase tracking-widest ${CHIP_TONES_DARK.emerald}`}>
                   {formData.campaignType}
                 </span>
               </div>
@@ -996,7 +997,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                             {previewedEmails.map((email, i) => (
                               <div key={i} className="flex items-center justify-between text-xs py-1.5 border-b border-white/5 last:border-b-0 px-2">
                                 <span className="text-white/70">{email}</span>
-                                <span className="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Dynamic Match</span>
+                                <span className={`${CHIP_INLINE} font-black uppercase tracking-wider ${CHIP_TONES_DARK.emerald}`}>Dynamic Match</span>
                               </div>
                             ))}
                           </div>
