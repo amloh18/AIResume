@@ -28,6 +28,7 @@ import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import toast from '@/lib/hot-toast';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
+import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
 import JobsListView from '@/components/dashboard/jobs/JobsListView';
 import JobsKanbanView from '@/components/dashboard/jobs/JobsKanbanView';
@@ -189,6 +190,10 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   }, [deepLinkNewJob]);
 
+  // Namespaced by user: the session cache is process-wide, so a constant key
+  // would hand one account's tracker to the next sign-in without a reload.
+  const trackerCacheKey = `tracker:${userId}`;
+
   const loadData = useCallback(async (silent = false, signal?: AbortSignal) => {
     try {
       if (!silent) setLoading(true);
@@ -199,31 +204,52 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
         fetch('/api/cover-letters', { cache: 'no-store', signal }),
       ]);
 
+      // Collect into locals first, publish once at the end. Writing the cache
+      // inside the individual `if (res.ok)` blocks would let a partially-failed
+      // load store a snapshot with empty collections, and the next mount would
+      // then hydrate "no data" and look like data loss.
+      let nextJobs: any[] | null = null;
+      let nextJourneys: any[] | null = null;
+      let nextCvs: any[] | null = null;
+      let nextCoverLetters: any[] | null = null;
+
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json();
         const rawJobs = jobsData?.data?.jobs || (Array.isArray(jobsData?.jobs) ? jobsData.jobs : []);
-        setJobs(rawJobs.map((j: any) => ({
+        nextJobs = rawJobs.map((j: any) => ({
           ...j,
           id: j.id || j._id,
           jobTitle: j.jobTitle || j.title || 'Untitled Role',
           company: j.company || 'Unknown Company',
-        })));
+        }));
+        setJobs(nextJobs);
       }
 
       if (journeysRes.ok) {
         const journeysData = await journeysRes.json();
-        const rawJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
-        setJourneys(rawJourneys);
+        nextJourneys = journeysData?.data?.journeys || (Array.isArray(journeysData?.journeys) ? journeysData.journeys : []);
+        setJourneys(nextJourneys);
       }
 
       if (cvsRes.ok) {
         const cvsData = await cvsRes.json();
-        setCvs(Array.isArray(cvsData) ? cvsData : cvsData?.data?.cvs || []);
+        nextCvs = Array.isArray(cvsData) ? cvsData : cvsData?.data?.cvs || [];
+        setCvs(nextCvs);
       }
 
       if (coverLettersRes.ok) {
         const clData = await coverLettersRes.json();
-        setCoverLetters(Array.isArray(clData) ? clData : clData?.data?.coverLetters || []);
+        nextCoverLetters = Array.isArray(clData) ? clData : clData?.data?.coverLetters || [];
+        setCoverLetters(nextCoverLetters);
+      }
+
+      if (nextJobs && nextJourneys && nextCvs && nextCoverLetters) {
+        writeSessionCache(trackerCacheKey, {
+          jobs: nextJobs,
+          journeys: nextJourneys,
+          cvs: nextCvs,
+          coverLetters: nextCoverLetters,
+        });
       }
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
@@ -232,13 +258,38 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [trackerCacheKey]);
 
   useEffect(() => {
+    // A snapshot already taken during this page load: render it straight away
+    // rather than refetching, so revisiting the tab is instant. A browser
+    // refresh starts with an empty store — that is what keeps the "refresh
+    // reloads" half of the contract intact. Explicit updates still refetch
+    // (see the `jobUpdated` listener below), which is the other half.
+    const cached = readSessionCache<any>(trackerCacheKey);
+    if (cached) {
+      setJobs(cached.jobs);
+      setJourneys(cached.journeys);
+      setCvs(cached.cvs);
+      setCoverLetters(cached.coverLetters);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     loadData(false, controller.signal);
     return () => controller.abort();
-  }, [loadData]);
+  }, [loadData, trackerCacheKey]);
+
+  // Mirror the live collection into the snapshot on every change — a load, an
+  // optimistic `jobUpdated` patch, a status change. Without this the cache would
+  // keep the pre-update rows and a later mount would silently show stale data.
+  // Only ever updates an entry that already exists, so it can never create a
+  // snapshot before the first successful load.
+  useEffect(() => {
+    const cached = readSessionCache<any>(trackerCacheKey);
+    if (cached) writeSessionCache(trackerCacheKey, { ...cached, jobs });
+  }, [jobs, trackerCacheKey]);
 
   useEffect(() => {
     const handleJobUpdate = (event: CustomEvent) => {
