@@ -5,6 +5,7 @@
  * It should be run periodically via a cron job to ensure data consistency.
  */
 
+import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import Invoice from '@/models/Invoice';
@@ -24,6 +25,17 @@ export interface StateIssue {
   fixable: boolean;
   fix?: () => Promise<void>;
 }
+
+/**
+ * Upper bound on journey documents this recovery run will create.
+ *
+ * The journey repair below had never once succeeded, so its first working run
+ * would otherwise create one journey per `created` job application in a single
+ * pass — unbounded work against a remote Atlas cluster from inside a web
+ * process. Capping keeps that first run predictable; the remainder is picked up
+ * by the next run of the same cron.
+ */
+const MAX_JOURNEY_REPAIRS_PER_RUN = 50;
 
 export interface RecoveryResult {
   checked: number;
@@ -175,44 +187,123 @@ class StateRecoveryService {
   }
 
   /**
-   * Check for jobs without journeys (if status is 'created')
+   * `userId` is stored inconsistently across models: `JobApplication.userId` is
+   * `Schema.Types.Mixed` (so both ObjectId and string forms exist in the wild),
+   * while `ApplicationJourney.userId` is declared `String`. Returning every form
+   * that could match stops a lookup from silently missing real documents — which
+   * is exactly how the check below used to report the same job forever.
+   */
+  private ownerIdCandidates(userId: unknown): (string | mongoose.Types.ObjectId)[] {
+    if (!userId) return [];
+    const asString = String(userId);
+    const candidates: (string | mongoose.Types.ObjectId)[] = [asString];
+    if (mongoose.Types.ObjectId.isValid(asString)) {
+      candidates.push(new mongoose.Types.ObjectId(asString));
+    }
+    return candidates;
+  }
+
+  /**
+   * Check for job applications sitting in the `created` state with no
+   * ApplicationJourney.
+   *
+   * Contract note — this check used to be written against a schema that does not
+   * exist, in five separate ways:
+   *
+   *  1. it filtered on `jobApplicationId`, which is not a path on
+   *     `ApplicationJourney`. `strictQuery` defaults to `false`, so the filter was
+   *     still forwarded to MongoDB and could never match anything — meaning every
+   *     `created` job looked journey-less on every single run;
+   *  2. it wrote `status: 'created'`, which is not in the journey status enum
+   *     (`in-progress | completed | paused | processing_documents |
+   *     creation_failed | ready`);
+   *  3. it wrote `currentStep: 'application_submitted'` against a `Number` path
+   *     bounded `min: 1, max: 5`;
+   *  4. its steps used a `step` key, but the subdocument requires `stepId`
+   *     (Number) and `name` (String), both `required`;
+   *  5. it omitted `jobTitle` and `company`, both `required`.
+   *
+   * The `create()` therefore threw on every run, so the repair never worked and
+   * the run was reported as "requires manual intervention" indefinitely. Fixing
+   * only (2)-(5) would have been worse: with the existence check still unable to
+   * match, the first successful create would have been followed by an unbounded
+   * stream of duplicates. The linkage below uses the same `{ userId, jobId }` key
+   * as the canonical creation path in `src/app/api/application-journey/route.ts`.
    */
   private async checkJobJourneys(): Promise<StateIssue[]> {
     const issues: StateIssue[] = [];
 
     try {
       const jobsWithoutJourneys = await JobApplication.find({
-        status: 'created'
-      }).select('_id userId');
+        status: 'created',
+        // A journey requires `jobId`; without one there is nothing to link to.
+        jobId: { $exists: true, $nin: [null, ''] },
+      }).select('_id userId jobId jobTitle company createdAt');
 
       for (const job of jobsWithoutJourneys) {
-        const journey = await ApplicationJourney.findOne({ jobApplicationId: job._id.toString() });
-        
-        if (!journey) {
-          issues.push({
-            type: 'job_without_journey',
-            severity: 'low',
-            description: `Job ${job._id} has status 'created' but no application journey`,
-            resourceId: job._id.toString(),
-            userId: job.userId?.toString(),
-            fixable: true,
-            fix: async () => {
-              // Create a journey for this job
-              await ApplicationJourney.create({
-                jobApplicationId: job._id.toString(),
-                userId: job.userId?.toString(),
-                status: 'created',
-                currentStep: 'application_submitted',
-                steps: [{
-                  step: 'application_submitted',
-                  status: 'completed',
-                  completedAt: job.createdAt || new Date(),
-                }],
-              });
-              console.log(`✅ Created journey for job ${job._id}`);
-            },
-          });
+        if (issues.length >= MAX_JOURNEY_REPAIRS_PER_RUN) {
+          console.warn(
+            `⚠️ State recovery: journey repair capped at ${MAX_JOURNEY_REPAIRS_PER_RUN} per run; ` +
+              `remaining 'created' jobs will be handled on a subsequent run.`
+          );
+          break;
         }
+
+        const ownerIds = this.ownerIdCandidates(job.userId);
+        if (ownerIds.length === 0) continue;
+
+        const journey = await ApplicationJourney.findOne({
+          jobId: job.jobId,
+          userId: { $in: ownerIds },
+        }).select('_id');
+
+        if (journey) continue;
+
+        issues.push({
+          type: 'job_without_journey',
+          severity: 'low',
+          description: `Job ${job._id} has status 'created' but no application journey`,
+          resourceId: job._id.toString(),
+          userId: job.userId?.toString(),
+          fixable: true,
+          fix: async () => {
+            // Re-check immediately before writing: the scan and the fix are not
+            // atomic, and two overlapping recovery runs would otherwise both
+            // create a journey for the same job.
+            const alreadyExists = await ApplicationJourney.exists({
+              jobId: job.jobId,
+              userId: { $in: ownerIds },
+            });
+            if (alreadyExists) return;
+
+            await ApplicationJourney.create({
+              journeyId: `journey_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+              userId: ownerIds[0],
+              jobId: job.jobId,
+              status: 'in-progress',
+              currentStep: 1,
+              totalSteps: 5,
+              jobTitle: job.jobTitle,
+              company: job.company,
+              journeyType: 'standard',
+              steps: [
+                { stepId: 1, name: 'Job Analysis', status: 'active', data: {} },
+                { stepId: 2, name: 'CV Tailoring', status: 'pending', data: {} },
+                { stepId: 3, name: 'Cover Letter', status: 'pending', data: {} },
+                { stepId: 4, name: 'ATS Check', status: 'pending', data: {} },
+                { stepId: 5, name: 'Application Ready', status: 'pending', data: {} },
+              ],
+              metadata: {
+                createdAt: job.createdAt || new Date(),
+                updatedAt: new Date(),
+                lastAccessedAt: new Date(),
+                tags: [],
+                notes: '',
+              },
+            });
+            console.log(`✅ Created journey for job ${job._id}`);
+          },
+        });
       }
     } catch (error: any) {
       console.error('Error checking job journeys:', error);
