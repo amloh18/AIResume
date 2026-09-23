@@ -92,122 +92,122 @@ export default function SponsorshipManager() {
     if (!mounted) return null;
 
     return (
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
-            {/* Command Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-                        Data <span className="text-emerald-500">Center</span>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+                        Sponsorship Data Center
                     </h1>
-                    <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-                        Manage Sponsorship Records • UK & USA
+                    <p className="text-xs text-white/40 mt-0.5">
+                        Manage and sync immigration sponsorship records for UK & USA
                     </p>
                 </div>
             </div>
 
             {/* Sector Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                    { label: 'Total Records', val: country === 'uk' ? '64K' : '142K', icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                    { label: 'Accuracy', val: '99.9%', icon: Shield, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                    { label: 'Update Speed', val: 'Fast', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                    { label: 'Total Records', val: country === 'uk' ? '64K' : '142K', icon: Globe, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+                    { label: 'Accuracy', val: '99.9%', icon: Shield, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+                    { label: 'Update Speed', val: 'Fast', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10' },
                 ].map((m, i) => (
-                    <div key={i} className="bg-white/5 border border-white/5 p-8 rounded-[2rem] flex flex-col justify-between h-36 group hover:bg-white/[0.08] transition-all shadow-xl">
+                    <div key={i} className="bg-[#111216] border border-white/5 p-4 rounded-2xl flex flex-col justify-between h-28 group hover:border-white/10 transition-all shadow-xl">
                         <div className="flex justify-between items-start">
-                            <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
-                                <m.icon className="w-6 h-6" />
+                            <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                                <m.icon className="w-4 h-4" />
                             </div>
-                            <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+                            <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
                         </div>
                         <div>
-                            <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-                            <p className="text-3xl font-black text-white">{m.val}</p>
+                            <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider">{m.label}</p>
+                            <p className="text-xl font-bold text-white tracking-tight">{m.val}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="bg-[#111111] border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl relative">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
-                
-                <div className="p-8 border-b border-white/5 bg-white/2">
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3">
-                        <Database className="w-5 h-5 text-emerald-500" />
-                        Sync Records
-                    </h3>
-                    <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Export or Import Database Entries</p>
+            <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl relative">
+                <div className="p-4 sm:p-5 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
+                    <div>
+                        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                            <Database className="w-4 h-4 text-emerald-400" />
+                            Sync Records
+                        </h3>
+                        <p className="text-xs text-white/40 mt-0.5">Export or import sponsorship database entries</p>
+                    </div>
                 </div>
 
-                <div className="p-10">
-                    <Tabs value={country} onValueChange={(v) => setCountry(v as 'uk' | 'us')} className="space-y-10">
-                        <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl w-fit">
-                            <TabsTrigger value="uk" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-white/40">UK Records</TabsTrigger>
-                            <TabsTrigger value="us" className="px-8 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-white/40">USA Records</TabsTrigger>
+                <div className="p-4 sm:p-5 space-y-5">
+                    <Tabs value={country} onValueChange={(v) => setCountry(v as 'uk' | 'us')} className="space-y-4">
+                        <TabsList className="bg-white/5 border border-white/5 p-1 rounded-xl w-fit">
+                            <TabsTrigger value="uk" className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-white/40">UK Records</TabsTrigger>
+                            <TabsTrigger value="us" className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-white/40">USA Records</TabsTrigger>
                         </TabsList>
 
                         <AnimatePresence mode="wait">
-                            <motion.div key={country} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                                <div className="bg-emerald-500/5 border border-emerald-500/10 p-8 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                    <div className="space-y-4">
-                                        <h4 className="text-emerald-400 font-black uppercase tracking-widest text-xs">File Requirements ({country.toUpperCase()})</h4>
-                                        <ul className="grid grid-cols-1 gap-3 text-[10px] font-bold text-emerald-400/60 uppercase tracking-[0.15em]">
-                                            <li className="flex items-center gap-2"><CheckCircle className="w-3 h-3" /> Company Name Mapping</li>
-                                            <li className="flex items-center gap-2"><CheckCircle className="w-3 h-3" /> License / Tax ID</li>
-                                            <li className="flex items-center gap-2"><CheckCircle className="w-3 h-3" /> Status & Expiry Data</li>
+                            <motion.div key={country} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="space-y-4">
+                                <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="space-y-2">
+                                        <h4 className="text-emerald-400 font-semibold text-xs uppercase tracking-wider">File Requirements ({country.toUpperCase()})</h4>
+                                        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-emerald-400/70">
+                                            <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Company Name Mapping</li>
+                                            <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> License / Tax ID</li>
+                                            <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Status & Expiry Data</li>
                                         </ul>
                                     </div>
                                     
-                                    <div className="flex flex-col gap-3">
+                                    <div className="flex flex-col sm:items-end gap-1.5 shrink-0">
                                         <a 
                                             href={`/api/admin/sponsorships/download?country=${country}`}
                                             download
-                                            className="px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-3 text-white/60 hover:text-white"
+                                            className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-xs font-semibold flex items-center justify-center gap-2 text-white/70 hover:text-white"
                                         >
-                                            <FileText className="w-4 h-4 text-emerald-500" />
-                                            Download Current Dataset
+                                            <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                                            Download Dataset
                                         </a>
-                                        <p className="text-[8px] text-center text-white/20 font-black uppercase tracking-widest">Last Export: Today</p>
+                                        <p className="text-[10px] text-white/30 font-medium">Last Export: Today</p>
                                     </div>
                                 </div>
                             </motion.div>
                         </AnimatePresence>
 
-                        <div className="space-y-8 pt-10 border-t border-white/5">
-                            <div className="space-y-4">
-                                <Label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">Upload Data (.CSV)</Label>
-                                <div className="p-10 bg-white/[0.02] border border-white/5 rounded-[2.5rem] border-dashed group hover:border-emerald-500/30 transition-all text-center">
-                                    <div className="p-4 bg-emerald-500/10 rounded-2xl w-fit mx-auto mb-6 group-hover:scale-110 transition-transform">
-                                        <Upload className="w-8 h-8 text-emerald-500" />
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold text-white/60">Upload Data (.CSV)</Label>
+                                <div className="p-6 bg-white/[0.01] border border-white/10 rounded-xl border-dashed hover:border-emerald-500/40 transition-all text-center">
+                                    <div className="p-3 bg-emerald-500/10 rounded-xl w-fit mx-auto mb-3">
+                                        <Upload className="w-5 h-5 text-emerald-400" />
                                     </div>
                                     <Input
                                         id="csv-upload"
                                         type="file"
                                         accept=".csv"
                                         onChange={handleFileChange}
-                                        className="bg-white/5 border-white/5 text-white/40 file:bg-white/10 file:text-white file:border-0 file:rounded-xl file:px-6 file:py-2 file:mr-4 hover:file:bg-emerald-500 hover:file:text-white transition-all cursor-pointer h-16 flex items-center max-w-sm mx-auto"
+                                        className="bg-white/5 border-white/10 text-white/60 file:bg-white/10 file:text-white file:border-0 file:rounded-lg file:px-3 file:py-1 file:mr-3 hover:file:bg-emerald-600 hover:file:text-white transition-all cursor-pointer h-10 text-xs flex items-center max-w-sm mx-auto"
                                     />
-                                    <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-6">Maximum File Size: 4MB</p>
+                                    <p className="text-[10px] text-white/30 font-medium mt-3">Maximum File Size: 4MB • UTF-8 CSV</p>
                                 </div>
                             </div>
 
                             {stats && (
-                                <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="p-10 bg-white/[0.05] border border-emerald-500/20 rounded-[2.5rem] shadow-xl">
-                                    <div className="flex items-center gap-3 mb-8">
-                                        <CheckCircle className="w-5 h-5 text-emerald-500" />
-                                        <span className="text-sm font-black text-white uppercase tracking-widest">Update Successful</span>
+                                <motion.div initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="p-4 bg-white/[0.03] border border-emerald-500/20 rounded-xl shadow-lg">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                        <span className="text-xs font-semibold text-white">Update Successful</span>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-8">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div>
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest block mb-1">New Entries</span>
-                                            <span className="text-3xl font-black text-emerald-500">{stats.imported.toLocaleString()}</span>
+                                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block mb-0.5">New Entries</span>
+                                            <span className="text-xl font-bold text-emerald-400">{stats.imported.toLocaleString()}</span>
                                         </div>
                                         <div>
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest block mb-1">Updated</span>
-                                            <span className="text-3xl font-black text-blue-500">{stats.updated.toLocaleString()}</span>
+                                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block mb-0.5">Updated</span>
+                                            <span className="text-xl font-bold text-blue-400">{stats.updated.toLocaleString()}</span>
                                         </div>
                                         <div>
-                                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest block mb-1">Errors</span>
-                                            <span className="text-3xl font-black text-red-500">{stats.errors.toLocaleString()}</span>
+                                            <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wider block mb-0.5">Errors</span>
+                                            <span className="text-xl font-bold text-red-400">{stats.errors.toLocaleString()}</span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -216,16 +216,16 @@ export default function SponsorshipManager() {
                             <Button
                                 onClick={handleUpload}
                                 disabled={!file || loading}
-                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl py-8 shadow-lg shadow-emerald-500/20 uppercase tracking-[0.2em] text-xs transition-all"
+                                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl h-10 shadow-lg shadow-emerald-500/10 text-xs transition-all"
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         Updating Records...
                                     </>
                                 ) : (
                                     <>
-                                        <Zap className="mr-2 h-5 w-5" />
+                                        <Zap className="mr-2 h-4 w-4" />
                                         Sync Now
                                     </>
                                 )}

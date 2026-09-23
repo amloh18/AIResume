@@ -4,7 +4,16 @@ import { PortalConnectionService } from '@/lib/services/portal-connection-servic
 
 /**
  * POST /api/portal-connections/[id]/sync
- * Triggers an immediate background sync for a portal connection
+ *
+ * Attempts a job sync for a connected account.
+ *
+ * ⚠️ A `200` here does **not** mean jobs were found. The three consumer portals
+ * have no implemented job source, so the honest answer is
+ * `sourceUnavailable: true` with zero results — which the caller must surface as
+ * "nothing to sync yet", not as a discovery count. The previous implementation
+ * returned hard-coded sample roles from the adapters, so this endpoint always
+ * looked like it worked while writing fabricated postings into the shared job
+ * pool.
  */
 export async function POST(
   request: NextRequest,
@@ -29,14 +38,15 @@ export async function POST(
       'manual'
     );
 
-    return NextResponse.json({
-      ...syncResult,
-    });
+    return NextResponse.json(syncResult);
   } catch (error: any) {
+    // The service throws a single opaque message for both "missing" and "not
+    // yours", so a caller cannot probe for other users' connection ids.
+    if (error?.message === 'Portal connection not found') {
+      return NextResponse.json({ error: 'Portal connection not found' }, { status: 404 });
+    }
+
     console.error('[API] POST /api/portal-connections/[id]/sync error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to synchronize portal jobs' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to synchronize portal jobs' }, { status: 500 });
   }
 }

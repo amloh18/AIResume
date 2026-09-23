@@ -8,9 +8,26 @@ import { checkForDuplicate } from '@/lib/jobs/deduplicate';
 
 /**
  * POST /api/jobs/naukri/auto-apply
- * Handles automated 1-click application preparation, questionnaire solving,
- * and saving to the Job Tracker with live step progression.
+ *
+ * Prepares a Naukri application: generates AI answers to the recruiter's screening questions and adds the
+ * job to the tracker so the user can submit it.
+ *
+ * ## What this route does NOT do
+ *
+ * It does not apply. This file calls exactly one service — `NaukriApplyService.answerScreeningQuestions`,
+ * which is regex/AI text generation with no browser and no submit. (The one place a real Naukri submit is
+ * implemented is `UnifiedApplyService.applyToNaukri`, and the worker's `isAutomatable` gate routes naukri
+ * to `review_required` before it is ever reached.)
+ *
+ * The route used to claim otherwise: `status: 'applied'`, the tag `naukri-auto-applied`, an increment of
+ * `naukriIntegration.stats.totalApplied`, and "Application submitted successfully" in the response. It
+ * also wrote a `statusHistory` timeline narrating "Submitted via 1-Click Naukri Auto-Apply" and a
+ * `metadata` block — neither field exists on `JobApplication`, so Mongoose's strict mode dropped both
+ * silently. The `applied` status and the counter persisted; the narrative did not.
+ *
+ * Now it records a `saved` row with a truthful `stageHistory`, and returns `submitted: false`.
  */
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
@@ -61,7 +78,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check daily limit for Naukri
+    /*
+      Per-source daily cap. This now bounds *preparations* per day rather than submissions, because that is
+      the only thing this route produces. The number is unchanged so existing plan expectations still hold.
+    */
     const dailyLimit = (user as any).naukriIntegration?.preferences?.dailyLimit ?? 25;
     const today = new Date().toISOString().split('T')[0];
     const todayStart = new Date(today + 'T00:00:00Z');
@@ -78,20 +98,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Generate AI screening answers
+    // 2. Generate AI screening answers — this is the actual product value of this route.
     const answers = await NaukriApplyService.answerScreeningQuestions(
       auth.userId,
       screeningQuestions,
       { title, company, description }
     );
 
-    // 3. Create or update JobApplication in Tracker
-    // Dedup check: prevent duplicate jobs per user
+    // 3. Add to the tracker as SAVED. Nothing has been submitted, so nothing may say it was.
     const dedup = await checkForDuplicate(auth.userId, title, company, jobUrl);
     if (dedup.isDuplicate && dedup.existingJob) {
       return NextResponse.json({
         success: true,
         duplicate: true,
+        submitted: false,
         existingJob: dedup.existingJob,
         matchType: dedup.matchType,
         message: 'This job already exists in your tracker',
@@ -99,73 +119,65 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const jobData = {
+    const jobApplication = await JobApplication.create({
       userId: auth.userId,
       jobTitle: title,
       company,
       jobUrl: jobUrl || undefined,
       jobDescription: description || '',
-      location: location || 'India',
+      // `location || 'India'` used to assert a country for every unlabelled posting.
+      location: location || undefined,
       source: 'naukri',
       atsType: 'naukri',
-      status: 'applied',
+      // Prepared, not applied.
+      status: 'saved',
+      currentStage: 'saved',
+      internalStatus: 'saved',
+      applicationMethod: 'manual',
+      automationEnabled: false,
       priority: 'high',
       salary: salary || undefined,
       applicationDate: new Date(),
-      tags: ['naukri-auto-applied'],
-      statusHistory: [
+      tags: ['screening-answers-prepared'],
+      stageHistory: [
         {
-          status: 'queued',
-          date: new Date(Date.now() - 3000),
-          notes: 'Auto-apply task queued',
-        },
-        {
-          status: 'tailoring_cv',
-          date: new Date(Date.now() - 2000),
-          notes: 'Tailored resume generated for Naukri JD',
-        },
-        {
-          status: 'answering_questionnaire',
-          date: new Date(Date.now() - 1000),
-          notes: `Solved ${answers.length} recruiter screening questions`,
-        },
-        {
-          status: 'applied',
-          date: new Date(),
-          notes: 'Submitted via 1-Click Naukri Auto-Apply',
+          stage: 'saved',
+          internalStatus: 'saved',
+          changedAt: new Date(),
+          reason:
+            answers.length > 0
+              ? `Prepared ${answers.length} screening answer(s) for manual submission on Naukri`
+              : 'Added to tracker for manual submission on Naukri',
+          source: 'user',
         },
       ],
-      metadata: {
-        screeningAnswers: answers,
-        appliedVia: 'naukri_integration',
-        appliedAt: new Date(),
-      },
-    };
+    });
 
-    const jobApplication = await JobApplication.create(jobData);
-
-    // 4. Update user stats
+    /*
+      Only the credit counter is bumped: a tracker record genuinely was created. The previous
+      `naukriIntegration.stats.totalApplied` increment is gone — it counted applications that never
+      happened.
+    */
     await User.findByIdAndUpdate(auth.userId, {
-      $inc: {
-        'naukriIntegration.stats.totalApplied': 1,
-        'credits.totalCreated.jobs': 1,
-      },
-      $set: {
-        'naukriIntegration.stats.lastAppliedAt': new Date(),
-      },
+      $inc: { 'credits.totalCreated.jobs': 1 },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Application submitted successfully and added to Tracker',
+      submitted: false,
+      requiresManualSubmission: true,
+      message:
+        answers.length > 0
+          ? `Prepared ${answers.length} screening answer(s). Review them and submit the application on Naukri.`
+          : 'Added to your tracker. Submit the application on Naukri when you are ready.',
       jobId: jobApplication._id,
       application: jobApplication,
       screeningAnswers: answers,
     });
   } catch (error: any) {
-    console.error('Error in Naukri auto-apply:', error);
+    console.error('Error preparing Naukri application:', error);
     return NextResponse.json(
-      { error: error.message || 'Auto-apply failed' },
+      { error: error.message || 'Failed to prepare application' },
       { status: 500 }
     );
   }

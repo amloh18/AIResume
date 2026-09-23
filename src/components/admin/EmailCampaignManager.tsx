@@ -236,7 +236,7 @@ export default function EmailCampaignManager() {
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-10"
+      className="space-y-5"
     >
       <AnimatePresence>
         {viewingCampaign && (
@@ -248,98 +248,98 @@ export default function EmailCampaignManager() {
       </AnimatePresence>
 
       {/* Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-            Campaign <span className="text-emerald-500">Matrix</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Email Campaigns
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-            Broadcasting Intel • {metrics.totalUsers.toLocaleString()} Targeted Nodes
+          <p className="text-xs text-white/40 mt-0.5">
+            Broadcast manager • {metrics.totalUsers.toLocaleString()} targeted users
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-500 transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
             <input
               type="text"
-              placeholder="Search Matrix..."
+              placeholder="Search campaigns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
+              className="pl-9 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:bg-white/10 w-full sm:w-56 transition-all"
             />
           </div>
           
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
+            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs font-semibold text-white/70 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
           >
-            <option value="all">Statuses: All</option>
+            <option value="all">Status: All</option>
             {CAMPAIGN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           <Button
             onClick={handleSyncUsers}
             disabled={syncing}
-            className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-2xl px-6 py-6"
+            className="bg-white/5 hover:bg-white/10 text-white/70 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs font-semibold h-auto"
           >
-            {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
-            <span className="ml-2 font-black text-xs uppercase tracking-widest">Sync</span>
+            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Users className="w-3.5 h-3.5 mr-1.5" />}
+            Sync
           </Button>
 
           <Button
             onClick={() => { setSelectedCampaign(null); setShowEditor(true); }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-8 py-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl px-3.5 py-1.5 text-xs h-auto shadow-md"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            <span className="uppercase tracking-widest text-xs">Deploy Campaign</span>
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            New Campaign
           </Button>
         </div>
       </div>
 
       {/* Quick Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Network Reach', val: metrics.totalUsers, icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Active Signals', val: metrics.totalCampaigns, icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Engaged Nodes', val: metrics.activeRecipients, icon: Activity, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-          { label: 'Success Velocity', val: '92.4%', icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Network Reach', val: metrics.totalUsers, icon: Globe, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Active Signals', val: metrics.totalCampaigns, icon: Zap, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Engaged Nodes', val: metrics.activeRecipients, icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: 'Success Velocity', val: '92.4%', icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         ].map((m, i) => (
-          <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between h-32 group hover:bg-white/[0.08] transition-all">
+          <div key={i} className="bg-[#111216] border border-white/5 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-28 group hover:border-white/10 transition-all shadow-lg">
             <div className="flex justify-between items-start">
               <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
-                <m.icon className="w-5 h-5" />
+                <m.icon className="w-4 h-4" />
               </div>
-              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
             </div>
             <div>
-              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-              <p className="text-2xl font-black text-white">{m.val.toLocaleString()}</p>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-0.5">{m.label}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{m.val.toLocaleString()}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Campaigns Table */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+      <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-white/5 bg-white/5">
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Signal Name</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Intel Subject</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Reach</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Telemetry</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Campaign Name</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Subject</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Status</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Reach</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Telemetry</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs">Decrypting Campaigns...</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">Loading Campaigns...</td></tr>
               ) : filteredCampaigns.length === 0 ? (
-                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs">No active signals found in sector</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">No active campaigns found</td></tr>
               ) : (
                 filteredCampaigns.map((campaign) => {
                   const openRate = campaign.sentCount > 0 ? Math.round((campaign.openedCount / campaign.sentCount) * 100) : 0;
@@ -348,60 +348,57 @@ export default function EmailCampaignManager() {
                       key={campaign._id}
                       variants={item}
                       onClick={() => ['sent', 'sending', 'cancelled', 'archived'].includes(campaign.status) ? setViewingCampaign(campaign) : handleEditCampaign(campaign)}
-                      className="group cursor-pointer hover:bg-white/[0.03] transition-colors"
+                      className="group cursor-pointer hover:bg-white/[0.02] transition-colors"
                     >
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-emerald-400 group-hover:bg-emerald-500/10 transition-all`}>
-                            <Mail className="w-5 h-5" />
+                      <td className="py-3 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 group-hover:text-emerald-400 group-hover:bg-emerald-500/10 transition-all shrink-0`}>
+                            <Mail className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{campaign.campaignName}</div>
-                            <div className="text-[10px] text-white/30 font-bold uppercase tracking-widest mt-0.5">Created {formatDate(campaign.createdAt)}</div>
+                            <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">{campaign.campaignName}</div>
+                            <div className="text-[10px] text-white/30 font-medium mt-0.5">Created {formatDate(campaign.createdAt)}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="text-xs text-white/60 font-medium max-w-[200px] truncate">{campaign.subject}</div>
+                      <td className="py-3 px-5">
+                        <div className="text-white/60 font-medium max-w-[200px] truncate">{campaign.subject}</div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="py-3 px-5">
                         {getStatusBadge(campaign.status)}
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-2 text-white/40">
-                          <Users className="w-3.5 h-3.5" />
-                          <span className="text-xs font-bold">{campaign.targetedUserCount.toLocaleString()}</span>
+                      <td className="py-3 px-5">
+                        <div className="flex items-center gap-1.5 text-white/60">
+                          <Users className="w-3.5 h-3.5 text-white/30" />
+                          <span className="font-medium">{campaign.targetedUserCount.toLocaleString()}</span>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
+                      <td className="py-3 px-5">
                         {campaign.status === 'sent' ? (
-                          <div className="flex items-center gap-3">
-                            <div className="flex flex-col">
-                              <span className="text-xs font-black text-white">{openRate}%</span>
-                              <span className="text-[9px] font-bold text-white/20 uppercase tracking-tighter text-nowrap">Open Rate</span>
-                            </div>
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-bold text-white">{openRate}%</span>
                             <div className="w-12 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500" style={{ width: `${openRate}%` }} />
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${openRate}%` }} />
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-black text-white/10 uppercase tracking-widest">Awaiting Link</span>
+                          <span className="text-[10px] text-white/30 font-medium">Pending send</span>
                         )}
                       </td>
-                      <td className="px-8 py-6 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="py-3 px-5 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
                           {!['sent', 'sending', 'archived'].includes(campaign.status) && (
-                            <button onClick={() => handleEditCampaign(campaign)} className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all">
-                              <Edit className="w-4 h-4" />
+                            <button onClick={() => handleEditCampaign(campaign)} className="p-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-all">
+                              <Edit className="w-3.5 h-3.5" />
                             </button>
                           )}
                           {['sent', 'sending', 'recurring'].includes(campaign.status) ? (
-                            <button onClick={() => handleArchiveClick(campaign)} className="p-2.5 rounded-xl bg-white/5 hover:bg-amber-500/10 text-white/30 hover:text-amber-400 transition-all">
-                              <Archive className="w-4 h-4" />
+                            <button onClick={() => handleArchiveClick(campaign)} className="p-1.5 rounded-lg bg-white/5 hover:bg-amber-500/10 text-white/40 hover:text-amber-400 transition-all">
+                              <Archive className="w-3.5 h-3.5" />
                             </button>
                           ) : (
-                            <button onClick={() => handleDeleteClick(campaign)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all">
-                              <Trash2 className="w-4 h-4" />
+                            <button onClick={() => handleDeleteClick(campaign)} className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-all">
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           )}
                         </div>

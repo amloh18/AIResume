@@ -34,7 +34,7 @@ import {
 } from '@/lib/worker/claimNext';
 import { processApplication } from '@/lib/worker/processApplication';
 import { ensureConnection } from '@/lib/database';
-import { getCronSecrets, isAuthorizedCronRequest } from '@/lib/auth/cronAuth';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,10 +48,6 @@ const MAX_BATCH = 20;
 
 /** A queue item locked for longer than this is assumed abandoned by a crashed worker. */
 const STUCK_LOCK_MINUTES = 30;
-
-function unauthorized() {
-  return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-}
 
 function resolveBatchSize(request: NextRequest): number {
   const raw = request.nextUrl.searchParams.get('limit') || process.env.AUTO_APPLY_CRON_BATCH;
@@ -128,12 +124,11 @@ async function runQueue(batchSize: number) {
 }
 
 export async function GET(request: NextRequest) {
-  // Same helper the proxy uses, so the two gates cannot disagree about what a valid token is. The
-  // "no secret configured" case matches the rest of the cron routes, which allow through and leave the
-  // proxy to reject; the proxy fails closed.
-  if (getCronSecrets().length > 0 && !isAuthorizedCronRequest(request.headers)) {
-    return unauthorized();
-  }
+  // Fail closed. This used to let the request through when no secret was configured, on the theory that
+  // the proxy would reject it — which made the proxy a single point of failure and contradicted the
+  // defence-in-depth intent of having a check here at all.
+  const denied = cronAuthFailure(request.headers);
+  if (denied) return denied;
 
   try {
     return NextResponse.json(await runQueue(resolveBatchSize(request)));

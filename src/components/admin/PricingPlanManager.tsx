@@ -94,95 +94,94 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
   if (!mounted) return null;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className={currentTab === 'revenue' ? "space-y-0" : "space-y-10"}>
-      {/* Command Header */}
+    <motion.div variants={container} initial="hidden" animate="show" className={currentTab === 'revenue' ? "space-y-0" : "space-y-5"}>
+      {/* Header */}
       {currentTab !== 'revenue' && (
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-              Economic <span className="text-emerald-500">Matrix</span>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Pricing & Plans
             </h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-              Monetization Protocols • Multi-Regional Pricing
+            <p className="text-xs text-white/40 mt-0.5">
+              Monetization Protocols & Multi-Regional Pricing
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl px-8 py-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-center gap-2 text-xs uppercase tracking-widest transition-all">
-              <Plus className="w-5 h-5" /> Establish Plan
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl px-3.5 py-1.5 flex items-center gap-1.5 text-xs transition-all shadow-sm">
+              <Plus className="w-3.5 h-3.5" /> Establish Plan
             </button>
           </div>
         </div>
       )}
 
       <Tabs value={currentTab} onValueChange={onSubTabChange} className="w-full">
-        <TabsContent value="plans" className="mt-10 space-y-10">
+        <TabsContent value="plans" className="mt-4 space-y-4">
           {/* Quick Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Active Protocols', val: safePlans.filter(p => p.status === 'active').length, icon: Shield, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-              { label: 'Signal Overlays', val: promotionalOffersState.length, icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-              { label: 'Sector Coverage', val: safeCountryPricing.length, icon: Globe, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { label: 'Active Protocols', val: safePlans.filter(p => p.status === 'active').length, icon: Shield, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Signal Overlays', val: promotionalOffersState.length, icon: Zap, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+              { label: 'Sector Coverage', val: safeCountryPricing.length, icon: Globe, color: 'text-amber-400', bg: 'bg-amber-500/10' },
             ].map((m, i) => (
-              <div key={i} className="bg-[#111111] border border-white/10 p-8 rounded-[2.5rem] flex flex-col justify-between h-40 group hover:border-white/20 transition-all shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] blur-3xl rounded-full" />
-                <div className="flex justify-between items-start relative z-10">
-                  <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
-                    <m.icon className="w-6 h-6" />
+              <div key={i} className="bg-[#111216] border border-white/5 p-4 rounded-2xl flex flex-col justify-between h-28 group hover:border-white/10 transition-all shadow-xl">
+                <div className="flex justify-between items-start">
+                  <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                    <m.icon className="w-4 h-4" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+                  <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
                 </div>
-                <div className="relative z-10">
-                  <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-                  <p className="text-3xl font-black text-white">{m.val}</p>
+                <div>
+                  <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider">{m.label}</p>
+                  <p className="text-xl font-bold text-white tracking-tight">{m.val}</p>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Plans Table */}
-          <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/5">
-                    <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Protocol Alias</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Base Value</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Billing Cycle</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
+                  <tr className="border-b border-white/5 bg-white/[0.02]">
+                    <th className="px-5 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Protocol Alias</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Base Value</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Billing Cycle</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-white/5 text-xs">
                   {safePlans.map((plan) => (
-                    <motion.tr key={plan._id} variants={item} className="group hover:bg-white/[0.03] transition-colors cursor-pointer" onClick={() => { setSelectedPlanForDetails(plan); setIsPlanDetailsModalOpen(true); }}>
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-sm">
+                    <motion.tr key={plan._id} variants={item} className="group hover:bg-white/[0.02] transition-colors cursor-pointer" onClick={() => { setSelectedPlanForDetails(plan); setIsPlanDetailsModalOpen(true); }}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold text-xs shrink-0">
                             {plan.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{plan.name}</div>
-                            <div className="text-[10px] text-white/30 font-bold uppercase tracking-widest truncate max-w-[150px]">{plan.key}</div>
+                            <div className="text-xs font-semibold text-white group-hover:text-emerald-400 transition-colors">{plan.name}</div>
+                            <div className="text-[10px] text-white/30 truncate max-w-[150px]">{plan.key}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-8 py-6">
-                        <div className="text-xs font-black text-white">${(plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0).toFixed(2)}</div>
+                      <td className="px-5 py-3">
+                        <div className="text-xs font-semibold text-white">${(plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0).toFixed(2)}</div>
                       </td>
-                      <td className="px-8 py-6">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{plan.billingCycle}</span>
+                      <td className="px-5 py-3">
+                        <span className="text-[10px] font-medium text-white/40 capitalize">{plan.billingCycle}</span>
                       </td>
-                      <td className="px-8 py-6">
-                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                      <td className="px-5 py-3">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
                           plan.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/5 text-white/40 border-white/10'
                         }`}>
                           {plan.status}
                         </span>
                       </td>
-                      <td className="px-8 py-6 text-right" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => { setSelectedPlanForEdit(plan); setIsEditModalOpen(true); }} className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-500/20">
-                          <Edit className="w-4 h-4" />
+                      <td className="px-5 py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { setSelectedPlanForEdit(plan); setIsEditModalOpen(true); }} className="p-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-all">
+                          <Edit className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </motion.tr>
@@ -193,25 +192,25 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
           </div>
         </TabsContent>
 
-        <TabsContent value="regional" className="mt-10">
-          <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-12 text-center shadow-2xl">
-            <div className="p-6 bg-white/5 rounded-3xl w-fit mx-auto mb-6">
-              <Globe className="h-12 w-12 text-white/10" />
+        <TabsContent value="regional" className="mt-4">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl p-8 text-center shadow-xl">
+            <div className="p-4 bg-white/5 rounded-2xl w-fit mx-auto mb-3">
+              <Globe className="h-8 w-8 text-white/20" />
             </div>
-            <h4 className="text-white font-black uppercase tracking-widest text-sm">Geospatial Overlay</h4>
-            <p className="text-white/20 text-[10px] uppercase font-bold mt-4 max-w-xs mx-auto">Regional pricing matrix is undergoing maintenance. Real-time parity adjustments active.</p>
+            <h4 className="text-white font-semibold text-sm">Geospatial Overlay</h4>
+            <p className="text-white/40 text-xs mt-1 max-w-sm mx-auto">Regional pricing matrix is undergoing maintenance. Real-time parity adjustments active.</p>
           </div>
         </TabsContent>
 
-        <TabsContent value="promotions" className="mt-10">
+        <TabsContent value="promotions" className="mt-4">
           <PromotionalOfferManager />
         </TabsContent>
 
-        <TabsContent value="coupons" className="mt-10">
+        <TabsContent value="coupons" className="mt-4">
           <DiscountCodeManager />
         </TabsContent>
 
-        <TabsContent value="revenue" className="mt-10">
+        <TabsContent value="revenue" className="mt-0">
           <RevenueManager />
         </TabsContent>
       </Tabs>
@@ -219,44 +218,44 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
       {/* Detail Modal Overhaul */}
       <AnimatePresence>
         {isPlanDetailsModalOpen && selectedPlanForDetails && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setIsPlanDetailsModalOpen(false)} />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-[#111111] border border-white/10 rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden">
-              <div className="p-8 border-b border-white/5 bg-white/2 flex items-center justify-between">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsPlanDetailsModalOpen(false)} />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }} className="relative bg-[#111216] border border-white/10 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden">
+              <div className="p-4 sm:p-5 border-b border-white/5 bg-white/[0.01] flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight">{selectedPlanForDetails.name}</h3>
-                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-1">Protocol Blueprint</p>
+                  <h3 className="text-sm font-semibold text-white">{selectedPlanForDetails.name}</h3>
+                  <p className="text-xs text-white/40 mt-0.5">Protocol Blueprint</p>
                 </div>
-                <button onClick={() => setIsPlanDetailsModalOpen(false)} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-white/40 hover:text-white transition-all">
-                  <X className="w-5 h-5" />
+                <button onClick={() => setIsPlanDetailsModalOpen(false)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/40 hover:text-white transition-all">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="p-10 space-y-10">
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Allocation Metrics</h4>
-                    <div className="space-y-3">
+              <div className="p-4 sm:p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Allocation Metrics</h4>
+                    <div className="space-y-2">
                       {[
                         { label: 'CV Limit', val: selectedPlanForDetails.maxCVs === -1 ? 'Unlimited' : selectedPlanForDetails.maxCVs },
                         { label: 'Exports', val: selectedPlanForDetails.maxExports === -1 ? 'Unlimited' : selectedPlanForDetails.maxExports },
                         { label: 'Storage', val: `${selectedPlanForDetails.storageLimit} GB` }
                       ].map((stat, i) => (
-                        <div key={i} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl border border-white/5">
-                          <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">{stat.label}</span>
-                          <span className="text-xs font-black text-white">{stat.val}</span>
+                        <div key={i} className="flex justify-between items-center p-2.5 bg-white/[0.02] rounded-xl border border-white/5">
+                          <span className="text-[10px] text-white/40 font-medium">{stat.label}</span>
+                          <span className="text-xs font-semibold text-white">{stat.val}</span>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Feature Matrix</h4>
-                    <div className="p-6 bg-white/5 rounded-2xl border border-white/5 max-h-[160px] overflow-y-auto scrollbar-hide">
-                      <ul className="space-y-2">
+                  <div className="space-y-2">
+                    <h4 className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Feature Matrix</h4>
+                    <div className="p-3 bg-white/[0.02] rounded-xl border border-white/5 max-h-[140px] overflow-y-auto">
+                      <ul className="space-y-1.5">
                         {selectedPlanForDetails.features.map((f, i) => (
-                          <li key={i} className="flex items-center gap-3 text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                            <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                            {f}
+                          <li key={i} className="flex items-center gap-2 text-xs text-white/60">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                            <span className="truncate">{f}</span>
                           </li>
                         ))}
                       </ul>
@@ -264,12 +263,12 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
                   </div>
                 </div>
 
-                <div className="pt-6 flex gap-4">
-                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForPreview(selectedPlanForDetails); setIsPreviewModalOpen(true); }} className="flex-1 px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl transition-all flex items-center justify-center gap-2">
-                    <Eye className="w-4 h-4" /> Visual Preview
+                <div className="pt-2 flex gap-3">
+                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForPreview(selectedPlanForDetails); setIsPreviewModalOpen(true); }} className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-white font-medium text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 border border-white/10">
+                    <Eye className="w-3.5 h-3.5" /> Visual Preview
                   </button>
-                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForEdit(selectedPlanForDetails); setIsEditModalOpen(true); }} className="flex-1 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2">
-                    <Edit className="w-4 h-4" /> Reconfigure
+                  <button onClick={() => { setIsPlanDetailsModalOpen(false); setSelectedPlanForEdit(selectedPlanForDetails); setIsEditModalOpen(true); }} className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs rounded-xl shadow-lg shadow-emerald-500/10 transition-all flex items-center justify-center gap-1.5">
+                    <Edit className="w-3.5 h-3.5" /> Reconfigure
                   </button>
                 </div>
               </div>

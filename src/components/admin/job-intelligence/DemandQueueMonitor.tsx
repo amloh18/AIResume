@@ -108,38 +108,38 @@ export default function DemandQueueMonitor() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Summary Bar */}
-      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-4 gap-4 shadow-xl">
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">{data?.totalSegments || 0}</div>
-          <div className="text-xs text-white/50 mt-0.5">Total Segments</div>
+          <div className="text-xl font-bold text-white tracking-tight">{data?.totalSegments || 0}</div>
+          <div className="text-xs text-white/40 mt-0.5">Total Segments</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-amber-400">{stats.fetching?.count || 0}</div>
-          <div className="text-xs text-white/50 mt-0.5">Currently Fetching</div>
+          <div className="text-xl font-bold text-amber-400 tracking-tight">{stats.fetching?.count || 0}</div>
+          <div className="text-xs text-white/40 mt-0.5">Currently Fetching</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-red-400">{data?.staleCount || 0}</div>
-          <div className="text-xs text-white/50 mt-0.5">Stale (1h+)</div>
+          <div className="text-xl font-bold text-red-400 tracking-tight">{data?.staleCount || 0}</div>
+          <div className="text-xs text-white/40 mt-0.5">Stale (1h+)</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-emerald-400">
+          <div className="text-xl font-bold text-emerald-400 tracking-tight">
             {stats.queued?.count || 0}
           </div>
-          <div className="text-xs text-white/50 mt-0.5">Queued</div>
+          <div className="text-xs text-white/40 mt-0.5">Queued</div>
         </div>
       </div>
 
       {/* Segments Table */}
-      <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/5">
+      <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
+        <div className="px-5 py-3 border-b border-white/5 bg-white/[0.02]">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white">Demand Segments</h3>
+              <h3 className="text-xs font-semibold text-white">Demand Segments</h3>
               {search || statusFilter !== 'all' ? (
-                <span className="text-[11px] text-white/40">
+                <span className="text-[10px] text-white/40">
                   ({filteredSegments.length} of {segments.length})
                 </span>
               ) : null}

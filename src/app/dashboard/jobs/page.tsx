@@ -16,7 +16,14 @@ export default function JobsPage() {
     <div className="absolute inset-0 dashboard-workspace text-[#0f172a] dark:text-gray-150 font-sans overflow-hidden selection:bg-[#83d60d]/30 flex flex-col pr-2 pb-2 pl-2 lg:pl-0">
       <div className="dashboard-content-card rounded-2xl border border-[var(--border-primary)] shadow-sm flex-1 min-h-0 flex flex-col overflow-hidden px-3 sm:px-5 md:px-6 lg:px-8">
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden scrollbar-hide overscroll-contain">
-          <div className="py-4 md:py-6">
+          {/* This wrapper is the link between the scrolling shell and JobsDashboard, and it
+              must have a definite height. Without one, every `flex-1 min-h-0` inside
+              JobsDashboard is inert — its parent is a plain content-sized block, not a flex
+              container — so the comms panel sizes to its own content and the whole page
+              scrolls instead of the panel scrolling internally.
+              Tall tabs are unaffected: they overflow this box and the shell above scrolls,
+              exactly as they did before. */}
+          <div className="h-full py-4 md:py-6">
             <Suspense fallback={<JobsLoadingState />}>
               <RouteGuard requireAuth={true}>
                 <JobsDashboard />

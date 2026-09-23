@@ -1311,9 +1311,20 @@ ${userName}`
       }
 
       /*
-        The endpoint dedupes rather than enqueueing a second row. Nothing was
-        submitted, so do NOT force this record to 'applied' — that would mark a
-        job as applied when it is merely sitting in the queue.
+        Branch on the endpoint's status discriminator — it is the only thing that says what happened.
+
+        `POST /api/jobs/auto-apply` returns exactly `skipped` | `already_queued` | `queued`, all with
+        HTTP 200. Two traps:
+
+          - `skipped` comes back as **HTTP 200 with `success: false`**, so `applyRes.ok` is true even
+            though the decision engine refused to apply.
+          - Only `applied` means something was submitted. `queued` means it is waiting in the queue and
+            nothing has been sent to any employer.
+
+        The previous code handled `already_queued` and then fell straight through to PUT
+        `status: 'applied'` and toast "Applied successfully!" — so a *queued* job (the normal outcome)
+        and a *skipped* job were both recorded as applied. The comment above that PUT already said not
+        to do this; the branch it described was never written.
       */
       if (applyData?.status === 'already_queued') {
         toast.success('This application is already queued for processing.');
@@ -1321,14 +1332,33 @@ ${userName}`
         return;
       }
 
-      // Update the existing record's status to applied
-      await fetch(`/api/jobs/${jobId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'applied' }),
-      });
+      if (applyData?.status === 'skipped') {
+        toast(applyData.message || 'This job was skipped by the application rules.', { icon: 'ℹ️' });
+        onRefresh?.();
+        return;
+      }
 
-      toast.success(applyData.message || 'Applied successfully!');
+      if (applyData?.status === 'queued') {
+        toast.success(applyData.message || 'Application queued for processing.');
+        onRefresh?.();
+        return;
+      }
+
+      if (applyData?.status === 'applied') {
+        await fetch(`/api/jobs/${jobId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'applied' }),
+        });
+        toast.success(applyData.message || 'Applied successfully!');
+        onRefresh?.();
+        return;
+      }
+
+      // Unrecognised status: report it rather than assuming the application went through.
+      toast(applyData?.message || 'The application did not complete. Check your tracker for its state.', {
+        icon: 'ℹ️',
+      });
       onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to apply');

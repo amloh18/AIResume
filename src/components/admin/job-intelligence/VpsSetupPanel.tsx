@@ -241,7 +241,7 @@ export default function VpsSetupPanel() {
 
       {/* Status Grid */}
       {status && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+        <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
           <h3 className="text-sm font-bold text-white mb-4">Installation Status</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <StatusItem
@@ -322,7 +322,7 @@ export default function VpsSetupPanel() {
       {status && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Worker gateway (JobSpy + LinkedIn) */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Wifi className="w-4 h-4 text-emerald-400" />
@@ -353,7 +353,7 @@ export default function VpsSetupPanel() {
           </div>
 
           {/* Ingestion microservice (public ATS sources) */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-400" />
@@ -413,7 +413,7 @@ export default function VpsSetupPanel() {
           </div>
 
           {/* Background worker loop container */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-emerald-400" />
@@ -445,7 +445,7 @@ export default function VpsSetupPanel() {
           </div>
 
           {/* Mail server */}
-          <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+          <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Inbox className="w-4 h-4 text-emerald-400" />

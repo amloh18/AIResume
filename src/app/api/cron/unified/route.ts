@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
 import { importUSH1BEmployers } from '@/lib/services/sponsorshipRegistryService';
 import dailySummaryEmailService from '@/lib/services/dailySummaryEmailService';
@@ -31,16 +32,9 @@ import { cleanupGuestUsers } from '@/lib/services/guestCleanupService';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Fail closed — a missing CRON_SECRET must never make this endpoint public.
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.

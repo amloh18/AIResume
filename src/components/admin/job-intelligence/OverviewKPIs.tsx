@@ -66,10 +66,10 @@ export default function OverviewKPIs({ kpis }: OverviewKPIsProps) {
   ];
 
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-2xl shadow-sm grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-white/5">
+    <div className="bg-[#111216] border border-white/5 rounded-2xl shadow-xl grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-white/5">
       {metrics.map((m) => (
-        <div key={m.label} className="px-5 py-4 flex items-center gap-3.5 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-white/5 text-emerald-400 flex items-center justify-center shrink-0">
+        <div key={m.label} className="px-4 py-3 flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-white/5 text-emerald-400 flex items-center justify-center shrink-0">
             {m.icon}
           </div>
           <div className="min-w-0">

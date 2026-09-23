@@ -60,6 +60,7 @@ import {
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/ui/Logo';
 import CodeVerificationScreen from '@/components/auth/CodeVerificationScreen';
+import { ConnectedJobAccounts } from '@/components/dashboard/settings/ConnectedJobAccounts';
 import { toast } from '@/lib/hot-toast';
 import { getStrengthDescription, getWeaknessDescription } from '@/lib/cv-descriptions';
 import guestCVService from '@/lib/services/guestCVService';
@@ -77,7 +78,8 @@ export type OnboardingStage =
   | 'JOB_APPLICATION_VOLUME' // Step 10: Expected monthly application volume
   | 'TRACKER_AUTOPILOT'   // Step 11: Application Autopilot / Pipeline Tracker
   | 'JOB_APPLICATION_MODE'   // Step 12: How much should BuildAIResume handle?
-  | 'LAUNCH';             // Step 13: Final Launch & CEO Note
+  | 'JOB_ACCOUNTS'        // Step 13: Connect the job sites you personally use
+  | 'LAUNCH';             // Step 14: Final Launch & CEO Note
 
 export interface CareerPathway {
   id: string;
@@ -234,7 +236,8 @@ const STAGE_TO_STEP: Record<OnboardingStage | string, number> = {
   'JOB_APPLICATION_VOLUME': 10,
   'TRACKER_AUTOPILOT': 11,
   'JOB_APPLICATION_MODE': 12,
-  'LAUNCH': 13,
+  'JOB_ACCOUNTS': 13,
+  'LAUNCH': 14,
   // Backward-compatible mappings for old stage names
   'JOB_TARGETS': 5,
   'JOB_INTENSITY': 9,
@@ -320,7 +323,8 @@ const STEP_TO_STAGE: Record<number, OnboardingStage> = {
   10: 'JOB_APPLICATION_VOLUME',
   11: 'TRACKER_AUTOPILOT',
   12: 'JOB_APPLICATION_MODE',
-  13: 'LAUNCH'
+  13: 'JOB_ACCOUNTS',
+  14: 'LAUNCH'
 };
 
 function WelcomePageContent() {
@@ -424,7 +428,7 @@ function WelcomePageContent() {
   const [isTypingLetter, setIsTypingLetter] = useState<boolean>(true);
 
   useEffect(() => {
-    if (currentStep === 13) {
+    if (currentStep === 14) {
       setTypedLetterLength(0);
       setIsTypingLetter(true);
       let currentLen = 0;
@@ -578,6 +582,9 @@ function WelcomePageContent() {
         // Application mode is required
         return !!applicationMode;
       case 13:
+        // Job accounts are optional — the user can also connect later from Settings
+        return true;
+      case 14:
         return true;
       default:
         return true;
@@ -818,7 +825,7 @@ function WelcomePageContent() {
           setEditorCompleted(true);
           setTransformedScore(prev => Math.min(96, Math.max(88, prev || 88)));
           triggerNotification('Profile saved! Check out your score boost.');
-        } else if (stepParam && parseInt(stepParam) >= 1 && parseInt(stepParam) <= 12) {
+        } else if (stepParam && parseInt(stepParam) >= 1 && parseInt(stepParam) <= 13) {
           setCurrentStep(parseInt(stepParam));
         } else if (sessionData.success && sessionData.data) {
           const { onboarding, userLifecycleState, profileName, profileRole, masterCVData, masterCVId } = sessionData.data;
@@ -990,7 +997,7 @@ function WelcomePageContent() {
       return;
     }
 
-    if (currentStep < 13) {
+    if (currentStep < 14) {
       setCurrentStep(currentStep + 1);
     } else {
       const rec = getRecommendedTier();
@@ -1285,7 +1292,7 @@ function WelcomePageContent() {
                   <div
                     className="h-full rounded-full bg-black transition-all duration-500"
                     style={{ 
-                      width: `${Math.max(8, Math.round((currentStep / 13) * 100))}%` 
+                      width: `${Math.max(8, Math.round((currentStep / 14) * 100))}%` 
                     }}
                   />
                 </div>
@@ -2615,8 +2622,26 @@ function WelcomePageContent() {
               </div>
             )}
 
-            {/* STEP 13: Final Launch & CEO Note */}
+            {/* STEP 13: Connect Job Accounts */}
             {currentStep === 13 && (
+              <div className="space-y-8">
+                <div className="space-y-3 text-center">
+                  <span className="onboarding-step-label text-white bg-[#013f2e] px-3 py-1 rounded-full font-bold">
+                    Job Accounts
+                  </span>
+                </div>
+                {/*
+                  Reads and writes the same connection records as Settings. There is
+                  no onboarding-specific endpoint and no local copy of the state —
+                  that is what makes "connect here, see it there" true by construction
+                  rather than by synchronisation.
+                */}
+                <ConnectedJobAccounts variant="onboarding" />
+              </div>
+            )}
+
+            {/* STEP 14: Final Launch & CEO Note */}
+            {currentStep === 14 && (
               <div className="space-y-8 max-w-2xl mx-auto py-4 relative">
                 <div className="space-y-3 text-center relative z-10">
                   <span className="onboarding-step-label px-3 py-1 rounded-full bg-slate-100 text-black font-bold">
@@ -2679,7 +2704,7 @@ function WelcomePageContent() {
       {/* Footer Navigation Bar - The ONLY primary CTA to move forward */}
       <footer className="px-6 py-4 border-t transition-colors duration-300 text-xs text-gray-400 border-gray-150 bg-[#f3f2ee]">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          {currentStep !== 13 ? (
+          {currentStep !== 14 ? (
             <Button
               onClick={handleBack}
               disabled={currentStep === 1}
@@ -2696,7 +2721,7 @@ function WelcomePageContent() {
             &copy; {new Date().getFullYear()} AIResume. All features secured.
           </div>
 
-          {currentStep !== 13 ? (
+          {currentStep !== 14 ? (
             <Button
               onClick={() => handleNext()}
               disabled={!isStepValid}

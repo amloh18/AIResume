@@ -548,8 +548,22 @@ export default function TopJobMatchesSection() {
           setTimeout(() => {
             applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, jobId, 'queued');
           }, 1500);
+        } else if (resData.status === 'applied') {
+          applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, 'applied');
         } else {
-          applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, resData.status);
+          /*
+            Unrecognised status — do not assume it succeeded. This branch used to report success for any
+            status it did not recognise, so a value added to the endpoint later would silently read as a
+            win here.
+          */
+          applyProgress.completeApply(
+            targetJob.title,
+            targetJob.company,
+            false,
+            resData.message || 'The application did not complete.',
+            jobId,
+            resData.status
+          );
         }
       } else {
         // Genuine submission failure

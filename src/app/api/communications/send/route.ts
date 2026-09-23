@@ -19,7 +19,19 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
     const body = await request.json();
 
-    const { to, cc, bcc, subject, body: textBody, htmlBody, jobId, applicationId, inReplyTo, replyTo } = body;
+    const { to, cc, bcc, subject, body: textBody, htmlBody, jobId, applicationId, inReplyTo, replyTo, threadId } = body;
+
+    let resolvedThreadId = threadId;
+    if (!resolvedThreadId && inReplyTo) {
+      try {
+        const parentComm: any = await Communication.findOne({ messageId: inReplyTo, userId }).select('threadId _id').lean();
+        if (parentComm) {
+          resolvedThreadId = parentComm.threadId || parentComm._id;
+        }
+      } catch {
+        // ignore lookup errors
+      }
+    }
 
     if (!to || !Array.isArray(to) || to.length === 0) {
       return NextResponse.json({ success: false, error: 'At least one recipient is required' }, { status: 400 });
@@ -85,6 +97,7 @@ export async function POST(request: NextRequest) {
       replyTo: replyTo || senderEmail,
       jobId: jobId || undefined,
       applicationId: applicationId || undefined,
+      threadId: resolvedThreadId || undefined,
       classification: 'UNKNOWN',
       classificationConfidence: 0,
       matchConfidence: 'unmatched',

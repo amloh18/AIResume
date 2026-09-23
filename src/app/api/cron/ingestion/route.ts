@@ -18,6 +18,7 @@
 // }
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { BackgroundScheduler } from '@/lib/ingestion/backgroundScheduler';
 import { BaselineScheduler } from '@/lib/ingestion/baselineSchedule';
 
@@ -25,16 +26,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  // Fail closed — a missing CRON_SECRET must never make this endpoint public.
+  const denied = cronAuthFailure(request.headers);
+  if (denied) return denied;
 
   try {
     // Run the complete scheduler cycle
@@ -92,16 +86,9 @@ export async function GET(request: NextRequest) {
  * Accepts optional body with { action: 'baseline' | 'demand' | 'health' }.
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret or admin auth
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
+  // Fail closed — a missing CRON_SECRET must never make this endpoint public.
+  const denied = cronAuthFailure(request.headers);
+  if (denied) return denied;
 
   const body = await request.json().catch(() => ({}));
   const action = body.action || 'full';

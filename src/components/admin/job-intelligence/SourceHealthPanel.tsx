@@ -207,11 +207,11 @@ export default function SourceHealthPanel() {
 
       {/* System Health Overview (Locks & Queue Status) */}
       {data?.health && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-bold text-white">System Ingestion & Lock Health</h3>
+              <h3 className="text-xs font-semibold text-white">System Ingestion & Lock Health</h3>
             </div>
             {data.locks && (
               <span className="text-[10px] text-white/40 font-mono">
@@ -219,23 +219,23 @@ export default function SourceHealthPanel() {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/[0.03] rounded-xl px-4 py-3 text-center">
-              <div className={`text-xl font-bold ${data.health.locks.stale > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
+              <div className={`text-lg font-bold ${data.health.locks.stale > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                 {data.health.locks.active}
               </div>
               <div className="text-[10px] text-white/40 mt-0.5">Active Locks</div>
             </div>
-            <div className="bg-white/[0.03] rounded-xl px-4 py-3 text-center">
-              <div className="text-xl font-bold text-white">{data.health.demand.total}</div>
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
+              <div className="text-lg font-bold text-white">{data.health.demand.total}</div>
               <div className="text-[10px] text-white/40 mt-0.5">Demand Segments</div>
             </div>
-            <div className="bg-white/[0.03] rounded-xl px-4 py-3 text-center">
-              <div className="text-xl font-bold text-blue-400">{data.health.sources.healthy}</div>
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
+              <div className="text-lg font-bold text-blue-400">{data.health.sources.healthy}</div>
               <div className="text-[10px] text-white/40 mt-0.5">Healthy Sources</div>
             </div>
-            <div className="bg-white/[0.03] rounded-xl px-4 py-3 text-center">
-              <div className={`text-xl font-bold ${data.health.demand.fetching > 0 ? 'text-blue-400' : 'text-white/60'}`}>
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
+              <div className={`text-lg font-bold ${data.health.demand.fetching > 0 ? 'text-blue-400' : 'text-white/60'}`}>
                 {data.health.demand.fetching}
               </div>
               <div className="text-[10px] text-white/40 mt-0.5">Fetching Now</div>
@@ -246,11 +246,11 @@ export default function SourceHealthPanel() {
 
       {/* Stale Locks Warning */}
       {data?.health && data.health.locks.stale > 0 && (
-        <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-5 flex items-start gap-3">
-          <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+        <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 flex items-start gap-3">
+          <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-sm font-bold text-amber-400">Stale Locks Detected</h4>
-            <p className="text-xs text-white/50 mt-1">
+            <h4 className="text-xs font-semibold text-amber-400">Stale Locks Detected</h4>
+            <p className="text-xs text-white/50 mt-0.5">
               {data.health.locks.stale} lock{data.health.locks.stale > 1 ? 's' : ''} have expired but not been cleaned up.
               The next scheduler cycle will automatically clear them.
             </p>
@@ -260,34 +260,34 @@ export default function SourceHealthPanel() {
 
       {/* Summary Bar */}
       {summary && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-6 gap-3 shadow-xl">
           <div className="text-center">
-            <div className="text-2xl font-bold text-white">{summary.total}</div>
-            <div className="text-xs text-white/50 mt-0.5">Total Sources</div>
+            <div className="text-xl font-bold text-white tracking-tight">{summary.total}</div>
+            <div className="text-xs text-white/40 mt-0.5">Total Sources</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-400">{summary.healthy}</div>
-            <div className="text-xs text-white/50 mt-0.5">Healthy</div>
+            <div className="text-xl font-bold text-emerald-400 tracking-tight">{summary.healthy}</div>
+            <div className="text-xs text-white/40 mt-0.5">Healthy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-amber-400">
+            <div className="text-xl font-bold text-amber-400 tracking-tight">
               {summary.statusCounts?.degraded || 0}
             </div>
-            <div className="text-xs text-white/50 mt-0.5">Degraded</div>
+            <div className="text-xs text-white/40 mt-0.5">Degraded</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-400">{summary.unhealthy - (summary.statusCounts?.degraded || 0)}</div>
-            <div className="text-xs text-white/50 mt-0.5">Unhealthy</div>
+            <div className="text-xl font-bold text-red-400 tracking-tight">{summary.unhealthy - (summary.statusCounts?.degraded || 0)}</div>
+            <div className="text-xs text-white/40 mt-0.5">Unhealthy</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">{summary.configured}</div>
-            <div className="text-xs text-white/50 mt-0.5">Configured</div>
+            <div className="text-xl font-bold text-blue-400 tracking-tight">{summary.configured}</div>
+            <div className="text-xs text-white/40 mt-0.5">Configured</div>
           </div>
           <div className="text-center">
-            <div className={`text-2xl font-bold ${summary.due && summary.due > 0 ? 'text-amber-400' : 'text-white/60'}`}>
+            <div className={`text-xl font-bold tracking-tight ${summary.due && summary.due > 0 ? 'text-amber-400' : 'text-white/60'}`}>
               {summary.due ?? sources.filter((s) => s.enabled && (s.isDue || (s.nextEligibleRun && new Date(s.nextEligibleRun).getTime() <= Date.now()))).length}
             </div>
-            <div className="text-xs text-white/50 mt-0.5">Due Now</div>
+            <div className="text-xs text-white/40 mt-0.5">Due Now</div>
           </div>
         </div>
       )}
@@ -354,8 +354,8 @@ export default function SourceHealthPanel() {
               key={src.source}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`bg-white/[0.03] border rounded-2xl p-5 transition-all hover:bg-white/[0.05] ${
-                hasFailures ? 'border-red-500/20' : isDue && src.enabled ? 'border-amber-500/20 bg-amber-500/[0.02]' : 'border-white/10'
+              className={`bg-[#111216] border rounded-2xl p-4 transition-all shadow-xl hover:border-white/10 ${
+                hasFailures ? 'border-red-500/20' : isDue && src.enabled ? 'border-amber-500/20 bg-amber-500/[0.02]' : 'border-white/5'
               }`}
             >
               {/* Header */}

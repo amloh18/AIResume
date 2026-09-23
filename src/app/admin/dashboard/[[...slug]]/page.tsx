@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, Search, Bell, Command, ChevronRight, Activity, Calendar } from 'lucide-react';
+import { Menu, Search, Bell, Command, ChevronRight, ChevronLeft, Activity, Calendar } from 'lucide-react';
 import AdminNavigation from '@/components/admin/AdminNavigation';
 import RecentActivityPanel from '@/components/admin/RecentActivityPanel';
 import AdminLiveStatusBar from '@/components/admin/AdminLiveStatusBar';
@@ -184,81 +184,119 @@ export default function AdminDashboard() {
         {/* Main Workspace */}
         <div className="flex flex-col flex-1 lg:pl-[300px] h-screen overflow-hidden relative z-10">
           
-          {/* High-End Header */}
-          <header className="h-20 flex items-center justify-between px-8 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl z-30">
-            <div className="flex items-center gap-6">
+          {/* Header (FlowMate inspired with merged inner breadcrumb) */}
+          <header className="h-16 flex items-center justify-between px-6 lg:px-8 border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-xl z-30 shrink-0">
+            <div className="flex items-center gap-4">
               <button 
                 onClick={() => setIsMobileMenuOpen(true)} 
                 className="lg:hidden p-2 text-white/60 hover:text-white transition-colors"
               >
-                <Menu className="w-6 h-6" />
+                <Menu className="w-5 h-5" />
               </button>
 
-              {/* Breadcrumbs / Path */}
-              <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-white/30">
-                <Command className="w-4 h-4" />
-                <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('overview')}>Admin</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange(activeTab)}>{activeTab}</span>
-                {activeSubTab && (
-                  <>
-                    <ChevronRight className="w-3 h-3" />
-                    <span 
-                      className={`cursor-pointer hover:text-white transition-colors ${!userIdParam ? 'text-emerald-400 font-black' : ''}`}
-                      onClick={() => handleTabChange(activeTab, activeSubTab)}
-                    >
-                      {activeSubTab}
-                    </span>
-                  </>
-                )}
-                {userIdParam && (
-                  <>
-                    <ChevronRight className="w-3 h-3" />
-                    <span className="text-emerald-400 font-black truncate max-w-[200px]">{userIdParam}</span>
-                  </>
-                )}
-              </div>
+              {/* Merged Breadcrumbs & Back Navigation */}
+              {userIdParam ? (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => router.push('/admin/dashboard/management-users')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 text-xs font-semibold transition-all group"
+                  >
+                    <ChevronLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+                    <span>Back to Users</span>
+                  </button>
+                  <div className="hidden sm:flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/30">
+                    <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('overview')}>Admin</span>
+                    <span>/</span>
+                    <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('management', 'users')}>Management</span>
+                    <span>/</span>
+                    <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('management', 'users')}>Users</span>
+                    <span>/</span>
+                    <span className="text-emerald-400 font-bold">User 360</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="hidden sm:flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-white/30">
+                  <Command className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="cursor-pointer hover:text-white transition-colors" onClick={() => handleTabChange('overview')}>Admin</span>
+                  <span>/</span>
+                  <span className={`cursor-pointer hover:text-white transition-colors ${!activeSubTab ? 'text-emerald-400 font-bold' : ''}`} onClick={() => handleTabChange(activeTab)}>
+                    {activeTab}
+                  </span>
+                  {activeSubTab && (
+                    <>
+                      <span>/</span>
+                      <span 
+                        className="text-emerald-400 font-bold cursor-pointer hover:text-emerald-300 transition-colors"
+                        onClick={() => handleTabChange(activeTab, activeSubTab)}
+                      >
+                        {activeSubTab}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Top Actions */}
-            <div className="flex items-center gap-4">
-              {/* Refined Search */}
+            {/* Top Right Actions (Search, Date, Notifications, User) */}
+            <div className="flex items-center gap-3 sm:gap-4">
+              {/* Search Bar */}
               <div className="hidden md:flex items-center relative group">
-                <Search className="absolute left-4 w-4 h-4 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
+                <Search className="absolute left-3.5 w-4 h-4 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
                 <input 
                   type="text" 
-                  placeholder="Search dashboard..."
-                  className="bg-white/5 border border-white/5 rounded-2xl py-2 pl-11 pr-4 w-64 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 transition-all"
+                  placeholder="Search users, tasks, analytics..."
+                  className="bg-white/5 border border-white/5 rounded-xl py-1.5 pl-10 pr-9 w-64 lg:w-72 text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:bg-white/10 transition-all"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <div className="absolute right-3 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-white/20 font-mono">
+                <div className="absolute right-2.5 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] text-white/30 font-mono">
                   ⌘K
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    fetchActivities();
-                    setIsActivityPanelOpen(true);
-                  }}
-                  className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-emerald-400 transition-all relative"
-                >
-                  <Activity className="w-4 h-4" />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] animate-pulse" />
-                </button>
-                <button className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-white transition-all">
-                  <Bell className="w-4 h-4" />
-                </button>
+              {/* Date Filter Pill */}
+              <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white/60 font-medium">
+                <Calendar className="w-3.5 h-3.5 text-white/40" />
+                <span>Last 7 days</span>
+              </div>
+
+              {/* Live Activity Button */}
+              <button 
+                onClick={() => {
+                  fetchActivities();
+                  setIsActivityPanelOpen(true);
+                }}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-emerald-400 transition-all relative"
+                title="Activity Log"
+              >
+                <Activity className="w-4 h-4" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              </button>
+
+              {/* Notification Bell with Badge */}
+              <button className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-white/60 hover:text-white transition-all relative">
+                <Bell className="w-4 h-4" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-[9px] font-black text-white flex items-center justify-center border-2 border-[#0a0a0a]">
+                  3
+                </span>
+              </button>
+
+              {/* Admin User Chip */}
+              <div className="flex items-center gap-2.5 pl-2 border-l border-white/10">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-xs shadow-md">
+                  {user?.name?.[0] || user?.email?.[0]?.toUpperCase() || 'A'}
+                </div>
+                <div className="hidden lg:block text-left leading-tight">
+                  <p className="text-xs font-bold text-white truncate max-w-[120px]">{user?.name || 'Admin User'}</p>
+                  <p className="text-[10px] text-white/40 truncate max-w-[120px]">{user?.email || 'admin@buildairesume.com'}</p>
+                </div>
               </div>
             </div>
           </header>
 
           {/* Dynamic Content Surface */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth scrollbar-hide">
-            <div className="p-6 lg:p-10 max-w-[1600px] mx-auto">
+            <div className="p-4 sm:p-6 max-w-[1600px] mx-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${activeTab}-${activeSubTab}`}

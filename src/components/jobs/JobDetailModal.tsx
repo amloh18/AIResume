@@ -28,6 +28,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { MatchScoreBadge } from './MatchScoreBadge';
 import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 import { MatchBreakdownBars } from './MatchBreakdownBars';
 import { renderRichText, timeAgo } from '@/lib/utils/format-utils';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
@@ -255,14 +256,18 @@ export function JobDetailModal({
             <div className="p-6 pb-4 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:text-lime-400 font-black ring-1 ring-lime-500/20 text-h3">
-                    {job.company
-                      .split(/\s+/)
-                      .filter(Boolean)
-                      .slice(0, 2)
-                      .map((w) => w[0]?.toUpperCase())
-                      .join('')}
-                  </div>
+                  {/* Real company logo. This header previously hand-rolled an initials
+                      tile from `job.company` and never read `job.companyLogo`, so it
+                      showed a letter while every other job view (JobsListView, the
+                      tracker stage views, the interview coach) showed the logo. Use the
+                      shared component instead of a second logo path: it prefers the
+                      persisted `companyLogo`, otherwise resolves one and writes it back. */}
+                  <CompanyLogo
+                    company={job.company}
+                    size={48}
+                    logoUrl={job.companyLogo}
+                    jobId={job.id || job._id}
+                  />
                   <div className="min-w-0">
                     <h2 className="text-h2 font-bold text-gray-900 dark:text-white leading-snug truncate">
                       {job.title}

@@ -94,6 +94,20 @@ export interface PortalSyncResult {
   jobsCreated: number;
   jobsUpdated: number;
   jobsDeduplicated: number;
+  /**
+   * True when the portal has no implemented job source, so `0 jobs` is the
+   * expected result rather than a failure.
+   *
+   * This exists because the three consumer portals (Naukri/Indeed/LinkedIn) are
+   * session-captured account connections, not API feeds. Their adapters returned
+   * hard-coded sample roles and the sync wrote them into the shared `jobs`
+   * collection, so "0 jobs" never happened and the UI could report a fabricated
+   * discovery count. Now it can say, truthfully, that nothing is wired up yet —
+   * and a caller can distinguish that from a genuine sync failure.
+   */
+  sourceUnavailable?: boolean;
+  /** Safe, user-presentable explanation. Never contains internal detail. */
+  note?: string;
   error?: {
     code: string;
     message: string;

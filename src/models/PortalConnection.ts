@@ -34,6 +34,16 @@ export interface IPortalConnection extends Document {
   status: PortalConnectionStatus;
   authMethod: PortalAuthMethod;
 
+  /**
+   * When the user last connected this account.
+   *
+   * Distinct from `sessionMetadata.createdAt`, which the adapters also refresh on
+   * every reconnect: this is the date the card prints, so it must survive a
+   * health-check pass untouched. Optional because rows written before this field
+   * existed have none — read paths fall back rather than assume.
+   */
+  connectedAt?: Date;
+
   account: {
     portalUserId?: string;
     email?: string;
@@ -148,6 +158,9 @@ const PortalConnectionSchema = new Schema<IPortalConnection>(
       default: 'disconnected',
       index: true,
     },
+    connectedAt: {
+      type: Date,
+    },
     authMethod: {
       type: String,
       required: true,
@@ -225,9 +238,25 @@ const PortalConnectionSchema = new Schema<IPortalConnection>(
   }
 );
 
-// Compound indexes
-PortalConnectionSchema.index({ userId: 1, provider: 1, status: 1 });
-PortalConnectionSchema.index({ userId: 1, provider: 1, providerAccountId: 1 });
+// ⚠️ ONE connection per user+source, enforced by the database rather than by
+// convention. The adapters upsert on this same key, but two concurrent connects
+// (a double-click, or two tabs) could previously both insert, because the
+// compound indexes here were not unique — and the read path then hid the
+// duplicate with a last-write-wins map, so it never surfaced as a bug.
+//
+// ⚠️ Deploying this against a database that already contains duplicates makes the
+// index build fail. Run `node scripts/migrate-portal-connections-dedupe.mjs
+// --apply` first.
+PortalConnectionSchema.index(
+  { userId: 1, provider: 1 },
+  { unique: true, name: 'userId_1_provider_1' }
+);
+
+// Status is filtered on every listing query. The previous
+// `{ userId, provider, providerAccountId }` index is dropped: its prefix is
+// already covered by the unique index above, and nothing queries on
+// `providerAccountId` after `userId` + `provider`.
+PortalConnectionSchema.index({ userId: 1, status: 1 });
 
 let PortalConnectionModel: Model<IPortalConnection>;
 

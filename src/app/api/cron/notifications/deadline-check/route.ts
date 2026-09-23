@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getConnection } from '@/lib/database';
 import deadlineNotificationService from '@/lib/services/deadlineNotificationService';
 
-const verifyCronSecret = (request: NextRequest): boolean => {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  return cronSecret ? authHeader === `Bearer ${cronSecret}` : false;
-};
-
 export async function POST(request: NextRequest) {
   try {
-    if (!verifyCronSecret(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Fail closed, and accept CRON_API_KEY as well as CRON_SECRET so this cannot disagree with the proxy.
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     await getConnection();
 

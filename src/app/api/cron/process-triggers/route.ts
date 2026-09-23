@@ -1,16 +1,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { triggerService } from '@/lib/services/triggerEmailService';
 import { subHours, subDays } from 'date-fns';
 
 export async function GET(request: NextRequest) {
-    // 1. Security Check
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // 1. Security Check — fails closed when CRON_SECRET is unset.
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     try {
         await getConnection();

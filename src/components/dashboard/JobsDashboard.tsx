@@ -430,9 +430,6 @@ export default function JobsDashboard() {
   const applyingRef = useRef<string | null>(null);
   const [portalConnections, setPortalConnections] = useState<any[]>([]);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
-  const [naukriEmail, setNaukriEmail] = useState<string>('');
-  const [indeedConnected, setIndeedConnected] = useState<boolean>(false);
-  const [indeedEmail, setIndeedEmail] = useState<string>('');
   const [isSyncingPortals, setIsSyncingPortals] = useState<boolean>(false);
   const [connectModalOpen, setConnectModalOpen] = useState<boolean>(false);
   const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType>('naukri');
@@ -455,18 +452,17 @@ export default function JobsDashboard() {
       const res = await fetch('/api/portal-connections');
       if (res.ok) {
         const data = await res.json();
-        if (data.success && Array.isArray(data.connections)) {
-          setPortalConnections(data.connections);
-          const naukri = data.connections.find((c: any) => c.id === 'naukri');
-          const indeed = data.connections.find((c: any) => c.id === 'indeed');
-
-          const isNaukriActive = naukri?.status === 'connected' && Boolean(naukri?.account?.email);
-          const isIndeedActive = indeed?.status === 'connected' && Boolean(indeed?.account?.email);
-
-          setNaukriConnected(isNaukriActive);
-          setNaukriEmail(naukri?.account?.email || '');
-          setIndeedConnected(isIndeedActive);
-          setIndeedEmail(indeed?.account?.email || '');
+        // Canonical payload: `sources` (the three external accounts) plus
+        // `network`. It used to be `connections` with a per-provider `status`
+        // that callers had to interpret themselves.
+        if (data.success && Array.isArray(data.sources)) {
+          setPortalConnections(data.sources);
+          const naukri = data.sources.find((c: any) => c.source === 'naukri');
+          // Read the server's projection rather than re-deriving it here. The
+          // local `status === 'connected' && account.email` test this replaces
+          // reported a connected account as disconnected whenever no email had
+          // been stored.
+          setNaukriConnected(naukri?.state === 'connected');
         }
       }
     } catch (e) {
@@ -1047,9 +1043,24 @@ export default function JobsDashboard() {
             applyProgress.completeApply(job.title, job.company, true, resData.message || `Application queued for ${resData.mode || 'auto'} processing.`, job._id, 'queued');
             updateProgress(appId, 100, `Application queued for ${resData.mode || 'auto'} processing`, 'progress');
           }, 1500);
+        } else if (resData.status === 'applied') {
+          applyProgress.completeApply(job.title, job.company, true, resData.message, job._id, 'applied');
+          updateProgress(appId, 100, `Applied to ${job.title}!`, 'progress');
         } else {
-          applyProgress.completeApply(job.title, job.company, true, resData.message, job._id, resData.status);
-          updateProgress(appId, 100, resData.status === 'applied' ? `Applied to ${job.title}!` : `Documents ready for ${job.title}`, 'progress');
+          /*
+            Unrecognised status. This used to fall through to a success toast plus "Documents ready",
+            so any status the endpoint added later would silently be reported as a win. Report what
+            actually came back instead of guessing.
+          */
+          applyProgress.completeApply(
+            job.title,
+            job.company,
+            false,
+            resData.message || 'The application did not complete.',
+            job._id,
+            resData.status
+          );
+          updateProgress(appId, 100, resData.message || 'The application did not complete', 'info');
         }
       } else {
         // Genuine submission failure on employer site
@@ -1308,38 +1319,55 @@ export default function JobsDashboard() {
   const handleSyncAllPortals = async () => {
     try {
       setIsSyncingPortals(true);
-      toast({
-        title: 'Syncing Live Portals',
-        description: 'Ingesting fresh roles from active job portal streams...',
-      });
 
-      const activePrivateConnections = portalConnections.filter(
-        (c) => !c.isPublicFeed && c.status === 'connected' && (c.connectionId || c.id)
-      );
+      const connectedSources = portalConnections.filter((c: any) => c.state === 'connected');
 
-      if (activePrivateConnections.length === 0) {
+      if (connectedSources.length === 0) {
         await fetchJobs();
         toast({
           title: 'Jobs Refreshed',
-          description: 'Updated with latest roles from direct ATS boards.',
+          description: 'Updated with the latest roles from the AIResume job network.',
         });
         return;
       }
 
-      await Promise.all(
-        activePrivateConnections.map((conn) => {
-          const targetId = conn.connectionId || conn.id;
-          return fetch(`/api/portal-connections/${targetId}/sync`, {
+      const results = await Promise.all(
+        connectedSources.map((conn: any) =>
+          fetch(`/api/portal-connections/${encodeURIComponent(conn.source)}/sync`, {
             method: 'POST',
-          }).catch(() => {});
-        })
+          })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null)
+        )
       );
 
       await fetchJobs();
       await fetchPortalConnections();
+
+      /*
+        ⚠️ Report what actually happened.
+
+        The three consumer portals are session-captured account connections with
+        no implemented job source, so a sync legitimately returns zero jobs and
+        says so via `sourceUnavailable`. The previous copy claimed "Discover feed
+        updated with latest portal roles" unconditionally — which was true only
+        because the adapters returned hard-coded sample roles that got written
+        into the shared job pool.
+      */
+      const created = results.reduce((sum, r) => sum + (r?.jobsCreated || 0), 0);
+      const unavailable = results.some((r) => r?.sourceUnavailable);
+
       toast({
-        title: 'Sync Complete',
-        description: 'Discover feed updated with latest portal roles.',
+        title:
+          created > 0
+            ? `Sync complete — ${created} new job${created === 1 ? '' : 's'}`
+            : 'Nothing new to sync',
+        description:
+          created > 0
+            ? 'Discover feed updated with the latest roles.'
+            : unavailable
+              ? 'Your connected accounts are saved. Job discovery from them isn’t available yet.'
+              : 'No new roles were found.',
       });
     } catch (err: any) {
       toast({
@@ -1361,19 +1389,23 @@ export default function JobsDashboard() {
   // tab content must FILL the space between the header block and the bottom of
   // the layout frame instead of sizing to its own content.
   //
-  // Filling requires a full-height flex chain up to the frame
-  // (`OptimizedDashboardLayout` gives us `h-full flex flex-col`). But the root
-  // and container below are shared by every tab, and constraining them would
-  // break the tall tabs — measured: with the chain applied unconditionally, a
-  // 2400px dashboard tab drops `main.scrollHeight` from 2418px to 751px, i.e.
-  // no scrollable overflow and the content becomes unreachable.
+  // Filling needs a full-height chain from the frame all the way down. The frame
+  // supplies its end (OptimizedDashboardLayout gives us `h-full flex flex-col`),
+  // but the route shell in `app/dashboard/jobs/page.tsx` sits in between and must
+  // also be definite — otherwise the chain is dead on arrival, because this
+  // element's parent is then a plain content-sized block rather than a flex
+  // container and `flex-1` does nothing.
   //
-  // So the chain is applied ONLY for comms. Every other tab keeps its previous
-  // natural-height, page-scrolling behaviour byte-for-byte.
+  // Hence `h-full` here rather than `flex-1`: this element is a child of that
+  // block. Applied ONLY for comms — the root and container below are shared by
+  // every tab, and constraining them unconditionally squashes the tall tabs.
+  // Measured: with `flex-1 min-h-0` on a 2400px dashboard tab, the default
+  // `flex-shrink: 1` compressed the content down to the viewport height instead
+  // of letting it overflow and scroll, so it became unreachable.
   const isCommsTab = activeTab === 'comms';
 
   return (
-    <div className={`w-full bg-transparent ${isCommsTab ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
+    <div className={`w-full bg-transparent ${isCommsTab ? 'h-full min-h-0 flex flex-col' : ''}`}>
       <div
         className={`w-full max-w-[1850px] mx-auto ${
           isCommsTab ? 'flex-1 min-h-0 flex flex-col gap-6' : 'space-y-6'
