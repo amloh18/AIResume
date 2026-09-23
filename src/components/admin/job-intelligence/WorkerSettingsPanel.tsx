@@ -238,9 +238,9 @@ function SectionPanel({ section, expanded, onToggle, settings, update, newRegion
   newAshbyCompany: string; setNewAshbyCompany: (v: string) => void;
 }) {
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
+    <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
       <button onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-white/[0.03] transition-colors">
+        className="w-full flex items-center justify-between p-4 hover:bg-white/[0.02] transition-colors">
         <span className="text-sm font-bold text-white">{SECTION_LABELS[section]}</span>
         {expanded ? <ChevronUp className="w-4 h-4 text-white/40" /> : <ChevronDown className="w-4 h-4 text-white/40" />}
       </button>

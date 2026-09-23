@@ -1,5 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getAdminEmailCampaign } from '@/models/admin-models';
@@ -20,11 +21,13 @@ export async function POST(request: NextRequest) {
         );
 
         if (!isAdmin) {
-            // Allow header-based auth for internal tooling/curl
-            const authHeader = request.headers.get('authorization');
-            if (authHeader !== `Bearer ${process.env.CRON_SECRET || 'dev-secret'}`) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-            }
+            /*
+              Header-based auth for internal tooling/curl. This previously fell back to the hard-coded
+              literal 'dev-secret' when CRON_SECRET was unset, so a deployment that had never set the
+              secret accepted a constant published in the source as the key. It now fails closed.
+            */
+            const denied = cronAuthFailure(request.headers);
+            if (denied) return denied;
         }
 
         const EmailCampaign = await getAdminEmailCampaign();

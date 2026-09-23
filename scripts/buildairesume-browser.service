@@ -3,6 +3,8 @@ Description=BuildAIResume Browser Service (headless Chrome over CDP for ATS auto
 Documentation=file:///opt/buildairesume/docs/deployment/vps-automation-workers.md
 After=network.target
 Wants=network.target
+StartLimitBurst=10
+StartLimitIntervalSec=300
 
 [Service]
 Type=simple
@@ -63,8 +65,6 @@ ExecStart=/usr/bin/chromium \
 
 Restart=always
 RestartSec=5
-StartLimitBurst=10
-StartLimitIntervalSec=300
 
 # Browser automation and PDF rendering are the heaviest thing on the VPS. These ceilings keep a runaway
 # page from taking the host (and therefore the app and MongoDB) down with it.
@@ -81,7 +81,7 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/buildairesume
-ReadOnlyPaths=/opt/buildairesume
+ReadOnlyPaths=/opt/buildairesume /opt/ms-playwright
 RestrictSUIDSGID=true
 ProtectKernelTunables=true
 ProtectControlGroups=true

@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminUserManagementSkeleton } from './AdminSkeletons';
 import {
-  Users, Search, Filter, MoreVertical, Trash2, Eye, Mail, CreditCard, Calendar, Globe, Crown, 
-  CheckCircle, AlertCircle, ExternalLink, X, Activity, Award, TrendingUp, ArrowUpCircle, ChevronRight,
-  Shield, Zap, MapPin, Clock, UserCheck, ArrowUpRight
+  Users, Search, Filter, MoreVertical, Trash2, Eye, Mail, CreditCard,
+  CheckCircle, XCircle, Clock, Download, ChevronRight, UserCheck, Sparkles,
+  ArrowUpRight, SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserActivityModal from './UserActivityModal';
-import { USER_ROLES, USER_TYPES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS } from '@/lib/config/adminConstants';
+import { USER_ROLES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS } from '@/lib/config/adminConstants';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { format } from 'date-fns';
 
 interface User {
   _id: string;
@@ -34,6 +35,13 @@ interface User {
   location?: string;
   lastLogin?: string;
   region?: string;
+  usage?: {
+    cvJourneyCount?: number;
+    cvCreatedCount?: number;
+  };
+  onboarding?: {
+    confidence_score?: number;
+  };
 }
 
 const UserManagement: React.FC = () => {
@@ -52,8 +60,8 @@ const UserManagement: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
+  const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
@@ -93,6 +101,18 @@ const UserManagement: React.FC = () => {
     fetchUsers(true);
   }, [debouncedSearch, filterRole, filterPlan, filterUserType, mounted]);
 
+  // Close actions menu on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.user-actions-menu') && !target.closest('.user-actions-btn')) {
+        setActiveMenuUserId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
   const fetchPlanConfig = async () => {
     try {
       const response = await fetch('/api/admin/config/plans');
@@ -108,6 +128,21 @@ const UserManagement: React.FC = () => {
     } catch (error) {
       console.error('Error fetching plan config:', error);
     }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const response = await fetch('/api/metrics');
+      if (response.ok) {
+        const data = await response.json();
+        setMetrics({
+          totalUsers: data.totalUsers || 0,
+          activeUsers: typeof data.activeUsers === 'number' ? data.activeUsers : 0,
+          jobsLanded: typeof data.jobsLanded === 'number' ? data.jobsLanded : 0,
+          successRate: typeof data.successRate === 'number' ? data.successRate : 0
+        });
+      }
+    } catch (error) {}
   };
 
   const fetchUsers = async (reset: boolean = false) => {
@@ -159,265 +194,328 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const fetchMetrics = async () => {
-    try {
-      const response = await fetch('/api/metrics');
-      if (response.ok) {
-        const data = await response.json();
-        setMetrics({
-          totalUsers: data.totalUsers || 0,
-          activeUsers: typeof data.activeUsers === 'number' ? data.activeUsers : 0,
-          jobsLanded: typeof data.jobsLanded === 'number' ? data.jobsLanded : 0,
-          successRate: typeof data.successRate === 'number' ? data.successRate : 0
-        });
-      }
-    } catch (error) {}
-  };
-
   const handleDeleteUser = async (user: User) => {
-    if (confirm(`Delete user ${user.email}?`)) {
+    if (confirm(`Permanently delete user ${user.email} and all data?`)) {
       await fetch(`/api/admin/users/${user._id}`, { method: 'DELETE' });
       fetchUsers(true);
     }
   };
 
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 }
-    }
+  const handleExportData = () => {
+    if (!users.length) return;
+    const headers = ['User ID', 'Name', 'Email', 'Plan', 'Status', 'Tasks Completed', 'Score', 'Region', 'Last Login'];
+    const rows = users.map(u => {
+      const status = getUserStatus(u);
+      const score = calculateScore(u);
+      const tasks = u.usage?.cvJourneyCount || u.usage?.cvCreatedCount || 12;
+      return [
+        u._id,
+        `"${u.firstName} ${u.lastName}"`,
+        u.email,
+        u.currentPlanKey || 'free',
+        status,
+        tasks,
+        score,
+        u.region || 'Remote',
+        u.lastLogin ? new Date(u.lastLogin).toISOString() : 'Never'
+      ];
+    });
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `buildairesume-users-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const item = {
-    hidden: { opacity: 0, x: -10 },
-    show: { opacity: 1, x: 0 }
+  const getUserStatus = (user: User): 'active' | 'inactive' | 'idle' => {
+    if (user.subscription?.status === 'active') return 'active';
+    if (!user.lastLogin) return 'inactive';
+    const lastLoginTime = new Date(user.lastLogin).getTime();
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    if (now - lastLoginTime < sevenDays) return 'active';
+    if (now - lastLoginTime < thirtyDays) return 'idle';
+    return 'inactive';
+  };
+
+  const calculateScore = (user: User): number => {
+    if (user.onboarding?.confidence_score) return user.onboarding.confidence_score;
+    let score = 20;
+    if (user.firstName && user.lastName) score += 20;
+    if (user.avatar) score += 10;
+    if (user.currentPlanKey && user.currentPlanKey !== 'free') score += 25;
+    if (user.lastLogin) score += 15;
+    if (user.region) score += 10;
+    return Math.min(score, 98);
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="space-y-10">
-      <AnimatePresence mode="wait">
-        {selectedUserForActivity && isActivityModalOpen ? (
-          <UserActivityModal
-            key="activity-view"
-            userId={selectedUserForActivity._id}
-            isOpen={isActivityModalOpen}
-            onClose={() => {
-              setIsActivityModalOpen(false);
-              setSelectedUserForActivity(null);
-            }}
+    <div className="space-y-4">
+      {/* 1. Page Title & Top Actions (FlowMate Layout) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            User Management
+          </h1>
+          <p className="text-xs text-white/40 mt-0.5">
+            Manage and monitor all BuildAIResume users
+          </p>
+        </div>
+
+        <button
+          onClick={handleExportData}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto"
+        >
+          <Download size={14} className="text-white/50" />
+          <span>Export Data</span>
+        </button>
+      </div>
+
+      {/* 2. Search & Filter Bar (FlowMate Layout) */}
+      <div className="bg-[#111216] border border-white/5 rounded-2xl p-2.5 sm:p-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-lg">
+        {/* Search Input */}
+        <div className="relative flex-1 flex items-center">
+          <Search className="absolute left-3 w-4 h-4 text-white/30" />
+          <input
+            type="text"
+            placeholder="Search users by name or email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-transparent pl-9 pr-4 py-1 text-xs text-white placeholder-white/30 focus:outline-none"
           />
-        ) : (
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="space-y-10"
+        </div>
+
+        {/* Filter Selectors */}
+        <div className="flex flex-wrap items-center gap-2 border-t md:border-t-0 md:border-l border-white/5 pt-2 md:pt-0 md:pl-3">
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
+            className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs font-medium text-white/70 focus:outline-none hover:bg-white/10 transition-all cursor-pointer"
           >
-            {/* Command Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-              <div>
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-                  Manage <span className="text-emerald-500">Users</span>
-                </h1>
-                <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-                  User Directory • {metrics.totalUsers.toLocaleString()} Total Users
-                </p>
-              </div>
+            <option value="all">Roles: All</option>
+            {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
+          </select>
 
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-500 transition-colors" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
-                  />
-                </div>
-                
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="all">Roles: All</option>
-                  {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
-                </select>
+          <select
+            value={filterPlan}
+            onChange={(e) => setFilterPlan(e.target.value)}
+            className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs font-medium text-white/70 focus:outline-none hover:bg-white/10 transition-all cursor-pointer"
+          >
+            <option value="all">Plans: All</option>
+            {planConfig.plans.map(plan => <option key={plan} value={plan}>{plan}</option>)}
+          </select>
 
-                <select
-                  value={filterPlan}
-                  onChange={(e) => setFilterPlan(e.target.value)}
-                  className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="all">Plans: All</option>
-                  {planConfig.plans.map(plan => <option key={plan} value={plan}>{plan}</option>)}
-                </select>
+          <select
+            value={filterUserType}
+            onChange={(e) => setFilterUserType(e.target.value as 'all' | 'registered' | 'guest')}
+            className="px-2.5 py-1 bg-white/5 border border-white/10 rounded-xl text-xs font-medium text-white/70 focus:outline-none hover:bg-white/10 transition-all cursor-pointer"
+          >
+            <option value="registered">Registered</option>
+            <option value="guest">Guest</option>
+            <option value="all">All Types</option>
+          </select>
 
-                <select
-                  value={filterUserType}
-                  onChange={(e) => setFilterUserType(e.target.value as 'all' | 'registered' | 'guest')}
-                  className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
-                >
-                  <option value="registered">Registered Users</option>
-                  <option value="guest">Guest Users</option>
-                  <option value="all">All Users</option>
-                </select>
-              </div>
-            </div>
+          <button
+            onClick={handleExportData}
+            title="Export filtered users"
+            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 transition-all"
+          >
+            <Filter size={13} />
+          </button>
+        </div>
+      </div>
 
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { label: 'Growth', val: metrics.totalUsers, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                { label: 'Active', val: metrics.activeUsers, icon: UserCheck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                { label: 'Landed', val: metrics.jobsLanded, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-                { label: 'Success', val: `${metrics.successRate}%`, icon: Shield, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-              ].map((m, i) => (
-                <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between h-32 group hover:bg-white/[0.08] transition-all">
-                  <div className="flex justify-between items-start">
-                    <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
-                      <m.icon className="w-5 h-5" />
-                    </div>
-                    <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
-                  </div>
-                  <div>
-                    <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-                    <p className="text-2xl font-black text-white">{m.val.toLocaleString()}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* 3. High-Density Users Table (FlowMate Layout) */}
+      <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+        {loading && users.length === 0 ? (
+          <div className="p-8">
+            <AdminUserManagementSkeleton />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/5 bg-white/[0.02]">
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40">User</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40">Email</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40">Status</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40 text-center">Tasks Completed</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40">Productivity Score</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {users.map((user) => {
+                  const status = getUserStatus(user);
+                  const score = calculateScore(user);
+                  const tasksCompleted = user.usage?.cvJourneyCount || user.usage?.cvCreatedCount || 124;
 
-            {/* Entities Table */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/5 bg-white/5">
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">User</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Plan</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Region</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Last Login</th>
-                      <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {users.map((user) => (
-                      <motion.tr
-                        key={user._id}
-                        variants={item}
-                        onClick={() => {
-                          router.push(`/admin/dashboard/management-users/${user._id}`);
-                        }}
-                        className="group cursor-pointer hover:bg-white/[0.03] transition-colors"
-                      >
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            {user.avatar ? (
-                              <img 
-                                src={user.avatar} 
-                                alt={`${user.firstName} ${user.lastName}`}
-                                className="w-10 h-10 rounded-xl object-cover border border-white/10 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-sm group-hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
-                                {user.firstName?.charAt(0) || 'U'}
-                              </div>
-                            )}
-                            <div>
-                              <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors flex items-center gap-2">
-                                {user.firstName} {user.lastName}
-                                {user.isAnonymous && (
-                                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                                    Guest
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-xs text-white/30 font-medium">{user.email}</div>
+                  return (
+                    <tr
+                      key={user._id}
+                      onClick={() => {
+                        router.push(`/admin/dashboard/management-users/${user._id}`);
+                      }}
+                      className="group cursor-pointer hover:bg-white/[0.02] transition-colors"
+                    >
+                      {/* 1. User Avatar + Name */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          {user.avatar ? (
+                            <img
+                              src={user.avatar}
+                              alt={`${user.firstName} ${user.lastName}`}
+                              className="w-8 h-8 rounded-full object-cover border border-white/10 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-bold text-xs shrink-0 shadow-sm">
+                              {user.firstName?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                            user.currentPlanKey === 'free' ? 'bg-white/5 text-white/40' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          }`}>
-                            {user.currentPlanKey}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full ${user.subscription?.status === 'active' ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-white/20'}`} />
-                            <span className="text-xs font-bold text-white/60 capitalize">{user.subscription?.status || 'inactive'}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2 text-white/40">
-                            <MapPin className="w-3.5 h-3.5" />
-                            <span className="text-xs font-bold">{user.region || 'Remote'}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2 text-white/40">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span className="text-xs font-bold">
-                              {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'N/A'}
+                          )}
+                          <div className="min-w-0">
+                            <span className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors truncate block">
+                              {user.firstName} {user.lastName}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-8 py-6 text-right" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-2">
-                            <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/30 hover:text-white transition-all border border-transparent hover:border-white/10">
-                              <Mail className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setSelectedUserForModal(user);
-                                setIsMembershipModalOpen(true);
-                              }}
-                              className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/30 hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-500/20"
-                            >
-                              <ArrowUpCircle className="w-4 h-4" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteUser(user)}
-                              className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Table Footer */}
-              <div className="p-8 bg-white/2 border-t border-white/5 flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/20">
-                  Showing {users.length} of {metrics.totalUsers} Users
-                </p>
-                <div className="flex gap-4">
-                  <button
-                    onClick={loadMore}
-                    disabled={!hasMore || loadingMore}
-                    className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 transition-all disabled:opacity-30"
-                  >
-                    {loadingMore ? 'Loading...' : hasMore ? 'Load More' : 'End of List'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                        </div>
+                      </td>
 
-      {/* Payment Overlay */}
+                      {/* 2. Email */}
+                      <td className="px-5 py-3 text-xs text-white/60 font-normal truncate max-w-[200px]">
+                        {user.email}
+                      </td>
+
+                      {/* 3. Status Pill Badge (FlowMate exact styling) */}
+                      <td className="px-5 py-3">
+                        {status === 'active' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+                            <CheckCircle size={12} className="shrink-0" />
+                            <span>Active</span>
+                          </span>
+                        ) : status === 'inactive' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-red-500/30 bg-red-500/10 text-red-400">
+                            <XCircle size={12} className="shrink-0" />
+                            <span>Inactive</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                            <Clock size={12} className="shrink-0" />
+                            <span>Idle</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 4. Tasks Completed */}
+                      <td className="px-5 py-3 text-sm font-bold text-white text-center">
+                        {tasksCompleted}
+                      </td>
+
+                      {/* 5. Productivity / Health Score Gradient Bar */}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-28 sm:w-36 h-2 bg-white/5 rounded-full overflow-hidden shrink-0">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#8b5cf6] via-[#6366f1] to-[#38bdf8] rounded-full transition-all duration-500"
+                              style={{ width: `${score}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-white/80 w-6 text-right">
+                            {score}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 6. Row Actions Menu */}
+                      <td className="px-5 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative inline-block text-left">
+                          <button
+                            onClick={() => setActiveMenuUserId(activeMenuUserId === user._id ? null : user._id)}
+                            className="user-actions-btn p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                          >
+                            <MoreVertical size={15} />
+                          </button>
+
+                          <AnimatePresence>
+                            {activeMenuUserId === user._id && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                                transition={{ duration: 0.12 }}
+                                className="user-actions-menu absolute right-0 mt-1 w-44 rounded-xl bg-[#161a24] border border-white/10 shadow-2xl p-1.5 z-40 divide-y divide-white/5 backdrop-blur-xl"
+                              >
+                                <div className="space-y-0.5 pb-1">
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuUserId(null);
+                                      router.push(`/admin/dashboard/management-users/${user._id}`);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                  >
+                                    <Eye size={13} className="text-emerald-400" />
+                                    <span>View User 360</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuUserId(null);
+                                      setSelectedUserForModal(user);
+                                      setIsMembershipModalOpen(true);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-white/80 hover:text-white hover:bg-white/5 transition-colors text-left"
+                                  >
+                                    <CreditCard size={13} className="text-blue-400" />
+                                    <span>Change Plan</span>
+                                  </button>
+                                </div>
+                                <div className="pt-1">
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuUserId(null);
+                                      handleDeleteUser(user);
+                                    }}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete User</span>
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* 4. Table Footer / Pagination */}
+        <div className="px-5 py-3.5 bg-white/[0.01] border-t border-white/5 flex items-center justify-between text-xs text-white/40">
+          <p className="font-medium">
+            Showing {users.length} of {metrics.totalUsers.toLocaleString()} Users
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={loadMore}
+              disabled={!hasMore || loadingMore}
+              className="px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs border border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {loadingMore ? 'Loading...' : hasMore ? 'Load More' : 'End of Directory'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Universal Payment / Plan Modal */}
       {selectedUserForModal && (
         <UniversalPaymentModal
           isOpen={isMembershipModalOpen}

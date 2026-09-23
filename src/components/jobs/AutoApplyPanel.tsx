@@ -9,19 +9,16 @@ import {
   X,
   Save,
   CheckCircle2,
-  Globe,
   Briefcase,
   DollarSign,
   Loader2,
-  RefreshCw,
-  Trash2,
   ChevronDown,
   Sparkles,
   Check,
 } from 'lucide-react';
 import toast from '@/lib/hot-toast';
 import Link from 'next/link';
-import PortalConnectModal, { PortalType } from '@/components/dashboard/settings/PortalConnectModal';
+import { ConnectedJobAccounts } from '@/components/dashboard/settings/ConnectedJobAccounts';
 import ContextualLimitModal from './ContextualLimitModal';
 import type { UserEntitlements } from '@/lib/services/entitlement-service';
 import {
@@ -108,10 +105,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
   const [saving, setSaving] = useState(false);
   const [newRole, setNewRole] = useState('');
   const [newLocation, setNewLocation] = useState('');
-  const [portalConnections, setPortalConnections] = useState<any[]>([]);
-  const [syncingPortalId, setSyncingPortalId] = useState<string | null>(null);
-  const [disconnectingPortalId, setDisconnectingPortalId] = useState<string | null>(null);
-  const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType | null>(null);
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   
@@ -147,7 +140,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
   const fetchData = async () => {
     try {
       setLoading(true);
-      await Promise.all([fetchPreferences(), fetchPortalConnections(), fetchEntitlements()]);
+      await Promise.all([fetchPreferences(), fetchEntitlements()]);
     } finally {
       setLoading(false);
     }
@@ -197,57 +190,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
       }
     } catch (error) {
       console.error('Failed to load auto-apply preferences:', error);
-    }
-  };
-
-  const fetchPortalConnections = async () => {
-    try {
-      const res = await fetch('/api/portal-connections');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.connections)) {
-          setPortalConnections(data.connections);
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load portal connections:', e);
-    }
-  };
-
-  const handleSyncPortal = async (portalId: string, name: string) => {
-    try {
-      setSyncingPortalId(portalId);
-      const res = await fetch(`/api/portal-connections/${portalId}/sync`, {
-        method: 'POST',
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success(`Found ${data.jobsCreated || 0} new jobs from ${name}`);
-        await fetchPortalConnections();
-      } else {
-        throw new Error(data.error || 'Sync failed');
-      }
-    } catch (error: any) {
-      toast.error(error.message || `Failed to sync ${name}. Your connection may need attention.`);
-    } finally {
-      setSyncingPortalId(null);
-    }
-  };
-
-  const handleDisconnectPortal = async (portalId: string, name: string) => {
-    if (!confirm(`Are you sure you want to disconnect your ${name} account?`)) return;
-    try {
-      setDisconnectingPortalId(portalId);
-      const res = await fetch(`/api/portal-connections?id=${portalId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) throw new Error('Failed to disconnect');
-      toast.success(`${name} disconnected`);
-      await fetchPortalConnections();
-    } catch (error: any) {
-      toast.error('We couldn\'t complete the disconnection right now. Please try again.');
-    } finally {
-      setDisconnectingPortalId(null);
     }
   };
 
@@ -375,22 +317,8 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
         </div>
 
         {/* ROW 2: Connected Job Accounts */}
-        <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
-              <span>Connected Job Accounts</span>
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Connect your job-search accounts to personalize discovery and enable supported application features.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="h-24 bg-gray-100 dark:bg-gray-900 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        </div>
+        {/* Renders its own loading skeleton, so it needs no branch here. */}
+        <ConnectedJobAccounts />
 
         {/* ROW 3: Roles + Locations */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
@@ -444,39 +372,15 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
     );
   }
 
-  const PORTALS_LIST: {
-    id: PortalType;
-    name: string;
-    icon: any;
-    color: string;
-    bg: string;
-    capabilities: { jobDiscovery: boolean; applicationAutomation: boolean };
-  }[] = [
-    { 
-      id: 'naukri', 
-      name: 'Naukri', 
-      icon: Globe, 
-      color: 'text-blue-500', 
-      bg: 'bg-blue-50 dark:bg-blue-950/30',
-      capabilities: { jobDiscovery: true, applicationAutomation: true }
-    },
-    { 
-      id: 'indeed', 
-      name: 'Indeed', 
-      icon: Briefcase, 
-      color: 'text-indigo-500', 
-      bg: 'bg-indigo-50 dark:bg-indigo-950/30',
-      capabilities: { jobDiscovery: true, applicationAutomation: true }
-    },
-    { 
-      id: 'linkedin', 
-      name: 'LinkedIn', 
-      icon: Globe, 
-      color: 'text-sky-500', 
-      bg: 'bg-sky-50 dark:bg-sky-950/30',
-      capabilities: { jobDiscovery: true, applicationAutomation: false }
-    },
-  ];
+  /*
+    The per-portal card list that used to live here moved into
+    `ConnectedJobAccounts`, along with the connect / sync / disconnect handlers.
+
+    It had to go rather than be adapted: it carried a hardcoded capability map
+    (`applicationAutomation: true` for Naukri and Indeed) that the cards rendered
+    as "Automated application support" — a feature that does not exist — and it
+    was the second copy of connection state in this file.
+  */
 
   const currentCurrency = CURRENCY_CONFIG[preferences.salaryCurrency] || CURRENCY_CONFIG.INR_LPA;
   
@@ -516,11 +420,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
     if (days === 0) return 'Available immediately';
     return `Available within ${days} days`;
   };
-
-  const allDisconnected = PORTALS_LIST.every(p => {
-    const conn = portalConnections.find(c => c.id === p.id);
-    return !(conn?.status === 'connected' && Boolean(conn?.account?.email));
-  });
 
   return (
     <div className="w-full max-w-[1600px] mx-auto space-y-6 pb-12">
@@ -727,164 +626,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ROW 2: Connected Job Accounts (Inline Grid)                              */}
-      {/* ========================================================================= */}
-      <div className="bg-white dark:bg-[#141810] border border-gray-200/90 dark:border-white/10 rounded-3xl p-6 sm:p-7 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Globe className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
-              <span>Connected Job Accounts</span>
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              Connect your job-search accounts to personalize discovery and enable supported application features.
-            </p>
-          </div>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0">
-            BuildAIResume also searches across employers automatically
-          </span>
-        </div>
-
-        {/* Inline Grid for All Portals */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {PORTALS_LIST.map((p) => {
-            const connection = portalConnections.find((c) => c.id === p.id);
-            const isConnected = connection?.status === 'connected' && Boolean(connection?.account?.email);
-            const email = connection?.account?.email;
-            const isSyncing = syncingPortalId === p.id || syncingPortalId === connection?.connectionId;
-            const isDisconnecting = disconnectingPortalId === p.id || disconnectingPortalId === connection?.connectionId;
-            const IconComp = p.icon;
-
-            if (!isConnected) {
-              return (
-                <div
-                  key={p.id}
-                  className="p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01] flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl ${p.bg} ${p.color} shrink-0`}>
-                          <IconComp className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
-                            <span>{p.name}</span>
-                            {p.id === 'linkedin' && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-bold">
-                                Soon
-                              </span>
-                            )}
-                          </h4>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Not connected</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1 text-[11px] text-gray-500 dark:text-gray-400 pt-1">
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
-                        <span>Personalized discovery feed</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {p.capabilities.applicationAutomation ? (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
-                            <span>Automated application support</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="w-3.5 h-3.5 inline-flex items-center justify-center text-gray-400 text-xs shrink-0">•</span>
-                            <span>Direct application sync</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setSelectedConnectPortal(p.id)}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-lime-500 dark:hover:border-lime-400 hover:text-lime-700 dark:hover:text-lime-300 transition-colors shadow-2xs text-center"
-                  >
-                    Connect {p.name}
-                  </button>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                key={p.id}
-                className="p-4 sm:p-5 rounded-2xl border border-lime-500/25 bg-lime-50/30 dark:bg-lime-900/10 flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-xl ${p.bg} ${p.color} shrink-0`}>
-                        <IconComp className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate">
-                          {p.name}
-                        </h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">Connected</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-[11px] text-gray-600 dark:text-gray-400 pt-1">
-                    <div className="truncate font-medium text-gray-800 dark:text-gray-200">
-                      {email}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 shrink-0" />
-                      <span>{p.capabilities.applicationAutomation ? 'Discovery & Auto-Apply active' : 'Discovery active'}</span>
-                    </div>
-                    {connection?.updatedAt && (
-                      <div className="text-[10px] text-gray-400 pt-0.5">
-                        Synced {new Date(connection.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleSyncPortal(connection?.connectionId || p.id, p.name)}
-                    disabled={isSyncing}
-                    className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    {isSyncing ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-lime-600" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 text-lime-600" />
-                    )}
-                    <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDisconnectPortal(connection?.connectionId || p.id, p.name)}
-                    disabled={isDisconnecting}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors shrink-0"
-                    title="Disconnect Account"
-                  >
-                    {isDisconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <ConnectedJobAccounts />
 
       {/* ========================================================================= */}
       {/* ROW 3: Two Column Layout: Roles & Locations/Workplace                    */}
@@ -1189,18 +931,6 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
           <span>Save Preferences</span>
         </button>
       </div>
-
-      {/* Portal Connect Modal */}
-      {selectedConnectPortal && (
-        <PortalConnectModal
-          portal={selectedConnectPortal}
-          isOpen={Boolean(selectedConnectPortal)}
-          onClose={() => setSelectedConnectPortal(null)}
-          onSuccess={() => {
-            fetchPortalConnections();
-          }}
-        />
-      )}
 
       {/* Contextual Limit Interception Modal */}
       {limitModalOpen && (

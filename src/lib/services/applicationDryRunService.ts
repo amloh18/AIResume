@@ -14,6 +14,15 @@ export interface DryRunField {
 
 export interface DryRunResult {
   success: boolean;
+  /**
+   * True when the field list was **inferred from the ATS type** rather than read from the live page.
+   *
+   * `performDryRun` never loads `applicationUrl`: there is no browser and no DOM here. It maps a
+   * hard-coded field list per ATS type, so `fields` describes what that ATS *usually* asks for — not
+   * what this employer's form actually contains. Callers must label it as a preview and must not present
+   * `fieldsDetected` / `wouldSubmit` as observations about the real page.
+   */
+  simulated: boolean;
   atsType: string;
   applicationUrl: string;
   fieldsDetected: number;
@@ -55,6 +64,8 @@ export class ApplicationDryRunService {
 
     const result: DryRunResult = {
       success: false,
+      // Nothing in this service reads the live page, so every result it produces is a simulation.
+      simulated: true,
       atsType: 'unknown',
       applicationUrl,
       fieldsDetected: 0,
@@ -64,16 +75,22 @@ export class ApplicationDryRunService {
       resumeAttached: !!candidateData.resumeUrl,
       coverLetterAttached: !!candidateData.coverLetterText,
       errors: [],
-      warnings: [],
+      warnings: [
+        `Preview only: the form at ${applicationUrl} was not loaded. Fields are inferred from the detected ATS type.`,
+      ],
       wouldSubmit: false,
     };
 
     try {
-      // Detect ATS type from URL
+      // A string match on the URL — no request is made and nothing is fetched.
       result.atsType = this.detectATSType(applicationUrl);
       logger.info(`[DRY-RUN] Detected ATS type: ${result.atsType}`);
 
-      // Simulate field detection based on ATS type
+      /*
+        Inferred, not detected. `detectFieldsForATS` returns a hard-coded list per ATS type, so the
+        `fieldsDetected` counter was reporting the size of a constant rather than anything found on the
+        employer's form.
+      */
       const detectedFields = this.detectFieldsForATS(result.atsType);
       result.fieldsDetected = detectedFields.length;
 

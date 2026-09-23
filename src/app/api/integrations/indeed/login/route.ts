@@ -1,82 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import { getConnection } from '@/lib/database';
-import User from '@/models/User';
-import { encryptToken } from '@/lib/auth/token-encryption';
 
 /**
- * POST /api/integrations/indeed/login
- * Links user's Indeed account via direct credentials or session token.
+ * POST /api/integrations/indeed/login — RETIRED.
+ *
+ * ## Why this no longer accepts a login
+ *
+ * This route never contacted Indeed. Given any email and password it fabricated a token:
+ *
+ *     userSessionToken = `indeed_auth_${Buffer.from(`${email}:${Date.now()}`).toString('base64')}`;
+ *
+ * ...stored it as `indeedIntegration.encryptedCookieJar`, and set `sessionStatus: 'active'`. The token was
+ * a base64 of the caller's own email and a timestamp — it authenticated nothing and would be rejected by
+ * Indeed immediately. Its only real effect was to make the account *look* connected, which is worse than
+ * failing: it produced a session that the apply path would later try to use.
+ *
+ * Two further problems:
+ *
+ *  1. It collected a job-site **password**. Passwords must never reach this server (see the account
+ *     connection rules in `AGENTS.md`); the canonical connect flow does not accept them either.
+ *  2. It wrote to `User.indeedIntegration`, which is the **legacy** store. The canonical connection record
+ *     is the `PortalConnection` collection, and that is what Settings and onboarding read. A connection
+ *     written here is invisible to the product.
+ *
+ * ## Where connections go now
+ *
+ * `POST /api/portal-connections/complete` — the canonical endpoint. It validates the provider, rejects any
+ * credential-shaped field server-side, and writes the one record the UI reads.
+ *
+ * The extension's cookie hand-off is unaffected: that is `POST /api/integrations/indeed/session`, which
+ * this change deliberately leaves in place.
  */
+
+const RETIRED = {
+  error: {
+    code: 'ENDPOINT_RETIRED',
+    message:
+      'Password-based account linking is no longer supported. Connect your Indeed account from Settings → Connected Job Accounts.',
+    useInstead: '/api/portal-connections/complete',
+  },
+};
+
 export async function POST(request: NextRequest) {
-  try {
-    const auth = await authenticateRequest(request);
-    if (!auth || !auth.userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { email, password, token, cookies, preferences } = body;
-
-    await getConnection();
-    const user = await User.findById(auth.userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    let userSessionToken = token || '';
-    let connectedEmail = email || user.email;
-
-    if (email && password) {
-      userSessionToken = `indeed_auth_${Buffer.from(`${email}:${Date.now()}`).toString('base64')}`;
-    } else if (cookies) {
-      userSessionToken = typeof cookies === 'string' ? cookies : JSON.stringify(cookies);
-    }
-
-    if (!userSessionToken && !cookies && !email) {
-      return NextResponse.json(
-        { error: 'Email and password or valid session token required' },
-        { status: 400 }
-      );
-    }
-
-    const encryptedCookieJar = encryptToken(userSessionToken || `auth_${Date.now()}`);
-
-    // Only update portal connection data, NOT general job-search preferences.
-    // General job-search preferences belong in JobSearchProfile.
-    const currentStats = {
-      totalFetched: Number(user.indeedIntegration?.stats?.totalFetched || 0),
-      totalApplied: Number(user.indeedIntegration?.stats?.totalApplied || 0),
-    };
-
-    const updatedUser = await User.findByIdAndUpdate(
-      auth.userId,
-      {
-        $set: {
-          'indeedIntegration.enabled': true,
-          'indeedIntegration.connectedAt': user.indeedIntegration?.connectedAt || new Date(),
-          'indeedIntegration.lastSyncedAt': new Date(),
-          'indeedIntegration.sessionStatus': 'active',
-          'indeedIntegration.userEmail': connectedEmail,
-          'indeedIntegration.encryptedCookieJar': encryptedCookieJar,
-          'indeedIntegration.stats': currentStats,
-        },
-      },
-      { new: true }
-    );
-
-    return NextResponse.json({
-      success: true,
-      message: 'Indeed account linked successfully!',
-      sessionStatus: 'active',
-      userEmail: connectedEmail,
-      stats: currentStats,
-    });
-  } catch (error: any) {
-    console.error('Indeed login error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to authenticate Indeed account' },
-      { status: 500 }
-    );
+  const auth = await authenticateRequest(request);
+  if (!auth || !auth.userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  /*
+    501 rather than a silent success: an external caller still using this path must find out, loudly,
+     instead of being handed a token that will not work.
+  */
+  return NextResponse.json(RETIRED, { status: 501 });
 }

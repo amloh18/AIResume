@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { applyDeepFreeze } from '@/lib/services/deep-freeze-service';
@@ -10,11 +11,9 @@ export const runtime = 'nodejs';
  * Identifies users whose subscription ended and freezes their Journey CVs
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  // Verify cron secret — fails closed when CRON_SECRET is unset.
+  const denied = cronAuthFailure(request.headers);
+  if (denied) return denied;
   
   try {
     await getConnection();

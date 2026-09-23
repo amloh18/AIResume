@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import creditResetService from '@/lib/services/creditResetService';
 
 /**
@@ -11,16 +12,9 @@ import creditResetService from '@/lib/services/creditResetService';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Optional: Add authentication/authorization check
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Fail closed — a missing CRON_SECRET must never make this endpoint public.
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     const result = await creditResetService.resetCreditsForEligibleUsers();
 

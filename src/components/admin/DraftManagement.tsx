@@ -108,125 +108,125 @@ const DraftManagement: React.FC = () => {
   if (!mounted) return null;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
       {/* Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-            CV <span className="text-emerald-500">Drafts</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            CV Drafts & In-Progress Resumes
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-            In-progress Resumes • {drafts.length} Active Drafts
+          <p className="text-xs text-white/40 mt-0.5">
+            Active onboarding and builder sessions • {drafts.length} drafts in pipeline
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-emerald-400 transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
             <input
               type="text"
-              placeholder="Search by ID..."
+              placeholder="Search by session ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-6 py-3 bg-white/5 border border-white/5 rounded-2xl text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white/10 w-full sm:w-64 transition-all"
+              className="pl-9 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:bg-white/10 w-full sm:w-56 transition-all"
             />
           </div>
           
           <select
             value={filterStatus}
             onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-            className="px-4 py-3 bg-white/5 border border-white/5 rounded-2xl text-xs font-black uppercase tracking-widest text-white/60 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
+            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs font-semibold text-white/70 focus:outline-none hover:bg-white/10 transition-all appearance-none cursor-pointer"
           >
-            <option value="all">Statuses: All</option>
+            <option value="all">Status: All</option>
             {DRAFT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          <Button onClick={fetchDrafts} className="bg-white/5 hover:bg-white/10 text-white/60 border border-white/5 rounded-2xl p-6 transition-all">
-            <RefreshCw className="w-5 h-5" />
+          <Button onClick={fetchDrafts} className="p-2 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 rounded-xl transition-all h-auto">
+            <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
       {/* Quick Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Drafts', val: drafts.length, icon: FileText, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Conversion', val: '24%', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Active', val: drafts.filter(d => d.status === 'linked').length, icon: Shield, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-          { label: 'AI Analyzed', val: drafts.filter(d => d.hasAiAnalysis).length, icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Total Drafts', val: drafts.length, icon: FileText, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Conversion', val: '24%', icon: Zap, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Active', val: drafts.filter(d => d.status === 'linked').length, icon: Shield, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: 'AI Analyzed', val: drafts.filter(d => d.hasAiAnalysis).length, icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         ].map((m, i) => (
-          <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between h-32 group hover:bg-white/[0.08] transition-all shadow-xl">
+          <div key={i} className="bg-[#111216] border border-white/5 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-28 group hover:border-white/10 transition-all shadow-lg">
             <div className="flex justify-between items-start">
               <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
-                <m.icon className="w-5 h-5" />
+                <m.icon className="w-4 h-4" />
               </div>
-              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
             </div>
             <div>
-              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-              <p className="text-2xl font-black text-white">{m.val.toLocaleString()}</p>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-0.5">{m.label}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{m.val.toLocaleString()}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Drafts Table */}
-      <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
+      <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-white/5 bg-white/5">
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">User</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Draft Name</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Step</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Date</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] text-right">Actions</th>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">User</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Draft Name</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Step</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Status</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Date</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">Loading Drafts...</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">Loading Drafts...</td></tr>
               ) : drafts.length === 0 ? (
-                <tr><td colSpan={6} className="px-8 py-20 text-center text-white/20 font-black uppercase tracking-widest text-xs italic">No drafts found</td></tr>
+                <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">No drafts found</td></tr>
               ) : (
                 drafts.map((draft) => (
-                  <motion.tr key={draft.id} variants={item} className="group hover:bg-white/[0.03] transition-colors cursor-default">
-                    <td className="px-8 py-6">
+                  <motion.tr key={draft.id} variants={item} className="group hover:bg-white/[0.02] transition-colors cursor-default">
+                    <td className="py-3 px-5">
                       {draft.userEmail ? (
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 font-black text-sm">
-                            <User className="w-5 h-5" />
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
+                            <User className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="text-sm font-black text-white group-hover:text-emerald-400 transition-colors">{draft.userName || 'Unknown'}</div>
-                            <div className="text-xs text-white/30 font-medium">{draft.userEmail}</div>
+                            <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">{draft.userName || 'Unknown'}</div>
+                            <div className="text-[11px] text-white/40">{draft.userEmail}</div>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-4 opacity-40">
-                          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
-                            <Clock className="w-5 h-5" />
+                        <div className="flex items-center gap-3 opacity-60">
+                          <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 shrink-0">
+                            <Clock className="w-4 h-4" />
                           </div>
                           <div>
-                            <div className="text-sm font-black text-white">Anonymous</div>
-                            <div className="text-[10px] font-mono">{draft.sessionId.substring(0, 12)}...</div>
+                            <div className="font-semibold text-white">Anonymous</div>
+                            <div className="text-[10px] font-mono text-white/30">{draft.sessionId.substring(0, 12)}...</div>
                           </div>
                         </div>
                       )}
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="text-sm font-black text-white">{draft.cvDataPreview.name || 'Untitled Draft'}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{draft.cvDataPreview.workCount} Work / {draft.cvDataPreview.educationCount} Edu</span>
+                    <td className="py-3 px-5">
+                      <div className="font-semibold text-white">{draft.cvDataPreview.name || 'Untitled Draft'}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-white/30">{draft.cvDataPreview.workCount} Work • {draft.cvDataPreview.educationCount} Edu</span>
                         {draft.hasAiAnalysis && <Sparkles className="w-3 h-3 text-purple-400 animate-pulse" />}
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="px-3 py-1 bg-white/5 rounded-lg w-fit text-[10px] font-black uppercase tracking-widest text-white/40 border border-white/5">Step {draft.currentStep}</div>
+                    <td className="py-3 px-5">
+                      <div className="px-2.5 py-0.5 bg-white/5 rounded-lg w-fit text-[10px] font-semibold text-white/60 border border-white/10">Step {draft.currentStep}</div>
                     </td>
-                    <td className="px-8 py-6">
-                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                    <td className="py-3 px-5">
+                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider border ${
                         draft.status === 'converted' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
                         draft.status === 'linked' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                         'bg-white/5 text-white/40 border-white/10'
@@ -234,16 +234,16 @@ const DraftManagement: React.FC = () => {
                         {draft.status}
                       </span>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="text-xs font-black text-white/40">{new Date(draft.createdAt).toLocaleDateString()}</div>
+                    <td className="py-3 px-5">
+                      <div className="text-xs text-white/40">{new Date(draft.createdAt).toLocaleDateString()}</div>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => handleViewDetails(draft)} className="p-2.5 rounded-xl bg-white/5 hover:bg-emerald-500/10 text-white/30 hover:text-emerald-400 transition-all">
-                          <Eye className="w-4 h-4" />
+                    <td className="py-3 px-5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => handleViewDetails(draft)} className="p-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-all">
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(draft.id)} className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/10 text-white/30 hover:text-red-400 transition-all">
-                          <Trash2 className="w-4 h-4" />
+                        <button onClick={() => handleDelete(draft.id)} className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
@@ -256,10 +256,10 @@ const DraftManagement: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="p-8 bg-white/2 border-t border-white/5 flex items-center justify-between">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Previous</button>
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-6 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-black text-[10px] uppercase tracking-widest border border-white/5 disabled:opacity-30">Next</button>
+          <div className="py-3 px-5 bg-white/[0.02] border-t border-white/5 flex items-center justify-between text-xs">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-semibold text-xs border border-white/10 disabled:opacity-30">Previous</button>
+            <span className="text-[11px] text-white/40 font-medium">Page {page} of {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-semibold text-xs border border-white/10 disabled:opacity-30">Next</button>
           </div>
         )}
       </div>

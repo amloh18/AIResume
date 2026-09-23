@@ -10,18 +10,30 @@ import {
   PortalProvider,
   PortalAuthMethod,
   IPortalConnection,
-  getPortalConnectionModel,
 } from '@/models/PortalConnection';
 
 export class LinkedInAdapter extends BasePortalAdapter {
   readonly provider: PortalProvider = 'linkedin';
-  readonly defaultAuthMethod: PortalAuthMethod = 'oauth';
 
+  /**
+   * `browser_session`, not `oauth`.
+   *
+   * LinkedIn does offer real OAuth, but this codebase has no LinkedIn OAuth
+   * integration — no client id, no redirect handler, no token exchange. The
+   * adapter declared `oauth` anyway and wrote `authMethod: 'oauth'` on every
+   * connection, which recorded a flow that never ran.
+   *
+   * ⚠️ Connecting LinkedIn is **not** the same thing as LinkedIn ingestion or
+   * automation. This records the account connection only.
+   */
+  readonly defaultAuthMethod: PortalAuthMethod = 'browser_session';
+
+  /** See `NaukriAdapter.getCapabilities` — nothing is wired up for a connected account yet. */
   getCapabilities(): PortalCapabilities {
     return {
-      jobDiscovery: true,
-      jobDetails: true,
-      jobSave: true,
+      jobDiscovery: false,
+      jobDetails: false,
+      jobSave: false,
       application: false,
       applicationStatus: false,
       messaging: false,
@@ -35,67 +47,47 @@ export class LinkedInAdapter extends BasePortalAdapter {
     connection: IPortalConnection;
     validation: PortalConnectionValidationResult;
   }> {
-    const PortalConnection = await getPortalConnectionModel();
+    // No invented fallback address — see `NaukriAdapter.completeConnection`.
+    const email = request.accountEmail?.trim() || undefined;
+    const displayName = request.displayName?.trim() || undefined;
 
-    let encryptedState: string | undefined;
-    if (request.sessionPayload) {
-      encryptedState = this.encryptPayload(request.sessionPayload);
-    }
-
-    const email = request.accountEmail || `${request.displayName || 'linkedin_user'}@linkedin.member`;
-    const displayName = request.displayName || 'LinkedIn Member';
-
-    const connection = await PortalConnection.findOneAndUpdate(
-      { userId, provider: 'linkedin' },
-      {
-        userId,
-        provider: 'linkedin',
-        status: 'connected',
-        authMethod: 'oauth',
-        account: {
-          email,
-          displayName,
-          portalUserId: email,
-        },
-        capabilities: this.getCapabilities(),
-        encryptedSessionState: encryptedState,
-        sessionMetadata: {
-          createdAt: new Date(),
-          lastValidatedAt: new Date(),
-          expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
-          lastUsedAt: new Date(),
-        },
-        sync: {
-          enabled: true,
-          intervalMinutes: 60,
-          lastSuccessAt: new Date(),
-        },
-        health: {
-          status: 'healthy',
-          consecutiveFailures: 0,
-          lastError: undefined,
-        },
-        preferences: {
-          targetTitles: request.preferences?.targetTitles || ['Software Engineer', 'Engineering Lead'],
-          targetLocations: request.preferences?.targetLocations || ['London', 'Remote'],
-          experienceYears: request.preferences?.experienceYears ?? 4,
-        },
-      },
-      { upsert: true, new: true }
-    );
-
-    const validation: PortalConnectionValidationResult = {
-      valid: true,
-      status: 'connected',
-      health: 'healthy',
+    const connection = await this.markConnected(userId, {
+      authMethod: this.defaultAuthMethod,
       account: {
         email,
         displayName,
         portalUserId: email,
       },
-    };
+      sessionPayload: request.sessionPayload,
+      sessionTtlDays: 60,
+      syncIntervalMinutes: 60,
+      preferences: {
+        targetTitles: request.preferences?.targetTitles?.length
+          ? request.preferences.targetTitles
+          : ['Software Engineer', 'Engineering Lead'],
+        targetLocations: request.preferences?.targetLocations?.length
+          ? request.preferences.targetLocations
+          : ['London', 'Remote'],
+        experienceYears: request.preferences?.experienceYears ?? 4,
+        minSalary: request.preferences?.minSalary ?? 0,
+        dailyLimit: request.preferences?.dailyLimit ?? 25,
+        autoApplyEnabled: false,
+      },
+    });
 
-    return { connection, validation };
+    return {
+      connection,
+      validation: {
+        valid: true,
+        status: 'connected',
+        health: 'healthy',
+        account: {
+          email,
+          displayName,
+          portalUserId: email,
+        },
+      },
+    };
   }
 
   async validateConnection(
@@ -110,6 +102,13 @@ export class LinkedInAdapter extends BasePortalAdapter {
     };
   }
 
+  /**
+   * See `NaukriAdapter.fetchJobs` — no fabricated postings.
+   *
+   * The single hard-coded job that used to live here was tagged
+   * `atsType: 'greenhouse'`, so it was also misfiled in the shared `jobs`
+   * collection under the wrong source.
+   */
   async fetchJobs(
     connection: IPortalConnection,
     options?: PortalSyncOptions
@@ -118,22 +117,6 @@ export class LinkedInAdapter extends BasePortalAdapter {
     cursor?: string;
     hasMore?: boolean;
   }> {
-    const jobs: NormalizedPortalJob[] = [
-      {
-        externalId: `li_${Date.now()}_1`,
-        provider: 'linkedin',
-        title: 'Senior Software Engineer - Distributed Systems',
-        company: 'Stripe',
-        location: 'London, UK (Remote)',
-        description: 'Building next-generation global financial infrastructure and APIs.',
-        jobUrl: 'https://www.linkedin.com/jobs/view/stripe-senior-software-engineer',
-        salary: { min: 110000, max: 150000, currency: 'GBP', period: 'yearly' },
-        remote: true,
-        atsType: 'greenhouse',
-        postedDate: new Date(),
-      },
-    ];
-
-    return { jobs, hasMore: false };
+    return { jobs: [], hasMore: false };
   }
 }

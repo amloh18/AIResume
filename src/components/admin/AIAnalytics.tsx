@@ -97,73 +97,73 @@ const AIAnalytics: React.FC = () => {
   ];
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
       {/* Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-            Intelligence <span className="text-emerald-500">Analytics</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            AI & Intelligence Analytics
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-            Neural Network Performance • Cost & Token Telemetry
+          <p className="text-xs text-white/40 mt-0.5">
+            Model performance, cost breakdown, and token telemetry
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-1 rounded-2xl">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-white/5 border border-white/5 p-1 rounded-xl">
             {['7d', '30d', '90d', '1y'].map(range => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeRange === range ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-white/40 hover:text-white'}`}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${timeRange === range ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/40 hover:text-white'}`}
               >
                 {range}
               </button>
             ))}
           </div>
-          <button onClick={fetchAIData} className="p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40">
-            <Activity className="w-5 h-5" />
+          <button onClick={fetchAIData} className="p-2 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all text-white/50 hover:text-white">
+            <Activity className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Primary Metrics Bento */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Token Velocity', val: aiData?.totalTokens.toLocaleString() || '0', sub: 'Nodes Processed', icon: Brain, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Compute Cost', val: `$${aiData?.totalCost.toFixed(2) || '0.00'}`, sub: 'Sector Budget', icon: DollarSign, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Cycle Count', val: aiData?.totalRequests.toLocaleString() || '0', sub: 'Total Inferences', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-          { label: 'Node Efficiency', val: aiData?.averageTokensPerRequest.toFixed(0) || '0', sub: 'Tokens / Cycle', icon: Cpu, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Token Velocity', val: aiData?.totalTokens.toLocaleString() || '0', sub: 'Nodes Processed', icon: Brain, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Compute Cost', val: `$${aiData?.totalCost.toFixed(2) || '0.00'}`, sub: 'Sector Budget', icon: DollarSign, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Cycle Count', val: aiData?.totalRequests.toLocaleString() || '0', sub: 'Total Inferences', icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: 'Node Efficiency', val: aiData?.averageTokensPerRequest.toFixed(0) || '0', sub: 'Tokens / Cycle', icon: Cpu, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         ].map((m, i) => (
-          <motion.div key={i} variants={item} className="bg-[#111111] border border-white/10 p-8 rounded-[2.5rem] flex flex-col justify-between h-44 group hover:border-white/20 transition-all shadow-2xl">
+          <motion.div key={i} variants={item} className="bg-[#111216] border border-white/5 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-32 group hover:border-white/10 transition-all shadow-lg">
             <div className="flex justify-between items-start">
-              <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
-                <m.icon className="w-6 h-6" />
+              <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-4 h-4" />
               </div>
-              <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
             </div>
             <div>
-              <p className="text-white/20 text-[10px] font-black uppercase tracking-widest mb-1">{m.label}</p>
-              <p className="text-3xl font-black text-white tracking-tighter">{m.val}</p>
-              <p className="text-[9px] font-bold text-white/10 uppercase tracking-widest mt-1">{m.sub}</p>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-0.5">{m.label}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{m.val}</p>
+              <p className="text-[10px] font-medium text-white/30">{m.sub}</p>
             </div>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Main Performance Chart */}
-        <motion.div variants={item} className="lg:col-span-8 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+        <motion.div variants={item} className="lg:col-span-8 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
-          <div className="flex justify-between items-center mb-12">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight">Neural Propagation</h3>
-              <p className="text-white/30 text-xs font-bold mt-1 uppercase tracking-widest">Inference & Token Density</p>
+              <h3 className="text-sm font-bold text-white tracking-tight">Neural Propagation</h3>
+              <p className="text-xs text-white/40 mt-0.5">Inference & token density over time</p>
             </div>
-            <div className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-white/40">Temporal Flow</div>
+            <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-lg text-[10px] font-semibold uppercase tracking-wider text-white/40">Temporal Flow</div>
           </div>
 
-          <div className="h-[350px] w-full">
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={aiData?.dailyUsage}>
                 <defs>
@@ -173,46 +173,46 @@ const AIAnalytics: React.FC = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 700 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 700 }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff' }}
+                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
                   itemStyle={{ fontSize: '12px', fontWeight: 700 }}
                 />
-                <Area type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={4} fill="transparent" name="Cycles" />
-                <Area type="monotone" dataKey="tokens" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorTokens)" name="Tokens" />
+                <Area type="monotone" dataKey="requests" stroke="#3b82f6" strokeWidth={3} fill="transparent" name="Cycles" />
+                <Area type="monotone" dataKey="tokens" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorTokens)" name="Tokens" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
         {/* Cost Matrix */}
-        <motion.div variants={item} className="lg:col-span-4 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl flex flex-col">
-          <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Cost Nexus</h3>
-          <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-10">Resource Allocation</p>
+        <motion.div variants={item} className="lg:col-span-4 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col">
+          <h3 className="text-sm font-bold text-white tracking-tight mb-1">Cost Nexus</h3>
+          <p className="text-xs text-white/40 mb-4">Resource Allocation</p>
           
-          <div className="flex-1 relative min-h-[200px]">
+          <div className="flex-1 relative min-h-[160px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={costBreakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={10} dataKey="value" stroke="none">
+                <Pie data={costBreakdownData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={6} dataKey="value" stroke="none">
                   {costBreakdownData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-black text-white">${aiData?.totalCost.toFixed(2)}</span>
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Load</span>
+              <span className="text-2xl font-black text-white">${aiData?.totalCost.toFixed(2)}</span>
+              <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Total Load</span>
             </div>
           </div>
           
-          <div className="space-y-4 mt-10">
+          <div className="space-y-2.5 mt-4">
             {costBreakdownData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]" style={{ backgroundColor: item.color }} />
-                  <span className="text-xs font-black text-white uppercase tracking-widest">{item.name} Protocol</span>
+              <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-xs font-semibold text-white">{item.name} Protocol</span>
                 </div>
-                <span className="text-xs font-black text-emerald-400">${item.value.toFixed(2)}</span>
+                <span className="text-xs font-bold text-emerald-400">${item.value.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -220,43 +220,44 @@ const AIAnalytics: React.FC = () => {
       </div>
 
       {/* Endpoint Table */}
-      <motion.div variants={item} className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl">
-        <div className="p-8 border-b border-white/5 bg-white/2">
-          <h3 className="text-lg font-black text-white uppercase tracking-tight">Endpoint Telemetry</h3>
+      <motion.div variants={item} className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-4 sm:p-5 border-b border-white/5">
+          <h3 className="text-sm font-bold text-white tracking-tight">Endpoint Telemetry</h3>
+          <p className="text-xs text-white/40 mt-0.5">Interface query volume and token usage</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-white/5 bg-white/5">
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Interface</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Compute Cycles</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Total Tokens</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Economic Load</th>
-                <th className="px-8 py-5 text-[10px] font-black text-white/30 uppercase tracking-[0.2em]">Velocity Avg</th>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Interface</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Compute Cycles</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Total Tokens</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Economic Load</th>
+                <th className="py-3 px-5 text-[10px] font-bold text-white/40 uppercase tracking-wider">Velocity Avg</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {aiData?.usageByEndpoint.map((ep, idx) => (
-                <tr key={idx} className="hover:bg-white/[0.03] transition-colors group">
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-white/5 text-white/20 group-hover:text-emerald-500 transition-colors">
-                        <Network className="w-4 h-4" />
+                <tr key={idx} className="hover:bg-white/[0.02] transition-colors group">
+                  <td className="py-3 px-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-white/5 text-white/30 group-hover:text-emerald-400 transition-colors">
+                        <Network className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-sm font-black text-white">{ep.endpoint}</span>
+                      <span className="font-semibold text-white">{ep.endpoint}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-6 font-mono text-xs text-white/60">{ep.requests.toLocaleString()}</td>
-                  <td className="px-8 py-6 font-mono text-xs text-white/60">{ep.tokens.toLocaleString()}</td>
-                  <td className="px-8 py-6">
-                    <span className="text-xs font-black text-emerald-400/80">${ep.cost?.toFixed(3) || '0.00'}</span>
+                  <td className="py-3 px-5 font-mono text-white/60">{ep.requests.toLocaleString()}</td>
+                  <td className="py-3 px-5 font-mono text-white/60">{ep.tokens.toLocaleString()}</td>
+                  <td className="py-3 px-5">
+                    <span className="font-bold text-emerald-400">${ep.cost?.toFixed(3) || '0.00'}</span>
                   </td>
-                  <td className="px-8 py-6">
+                  <td className="py-3 px-5">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 flex-1 max-w-[60px] bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500" style={{ width: `${Math.min((ep.tokens / ep.requests) / 10, 100)}%` }} />
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((ep.tokens / ep.requests) / 10, 100)}%` }} />
                       </div>
-                      <span className="text-[10px] font-black text-white/20">{(ep.tokens / ep.requests).toFixed(0)}</span>
+                      <span className="text-[10px] font-bold text-white/40">{(ep.tokens / ep.requests).toFixed(0)}</span>
                     </div>
                   </td>
                 </tr>

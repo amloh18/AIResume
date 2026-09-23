@@ -1,18 +1,20 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import type { JobsMetrics, Job, JobMatch, Application } from '@/types/automation-schema';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    
-    if (!userId) {
+    // Identity from the session — a request header is not authentication.
+    const auth = await getAuthenticatedUser(request);
+    if (!auth?.userId) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'User not authenticated' } },
         { status: 401 }
       );
     }
+    const userId = auth.userId;
 
     const { getDb } = await import('@/lib/db');
     const db = await getDb();

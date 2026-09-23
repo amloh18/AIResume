@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { importUSH1BEmployers } from '@/lib/services/sponsorshipRegistryService';
 
 /**
@@ -21,16 +22,9 @@ import { importUSH1BEmployers } from '@/lib/services/sponsorshipRegistryService'
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Fail closed — a missing CRON_SECRET must never make this endpoint public.
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     console.log('🔄 Starting US H-1B employer registry update...');
     const result = await importUSH1BEmployers();

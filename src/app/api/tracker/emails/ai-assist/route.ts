@@ -52,6 +52,40 @@ export async function POST(request: NextRequest) {
     let fallbackSubject = '';
 
     switch (actionType) {
+      case 'recreate':
+      case 'reply':
+        prompt = `
+TASK: Write or rewrite a reply email from candidate ${candidateName} to ${recruiterName} at ${companyName} regarding the ${jobTitle} role.
+${variables.LAST_MESSAGE ? `LATEST MESSAGE FROM RECRUITER:\n"""\n${variables.LAST_MESSAGE}\n"""\n` : ''}
+${variables.CURRENT_DRAFT ? `CURRENT DRAFT TO REWRITE/IMPROVE:\n"""\n${variables.CURRENT_DRAFT}\n"""\n` : ''}
+${variables.THREAD_SUMMARY ? `THREAD CONTEXT:\n${variables.THREAD_SUMMARY}\n` : ''}
+INPUTS:
+- Candidate: ${candidateName}
+- Recruiter / Hiring Team: ${recruiterName}
+- Target Role: ${jobTitle}
+- Company: ${companyName}
+- Desired Tone: ${tonePreference}
+- Custom Instructions / Candidate Notes: ${customInstruction || 'Write a clear, compelling, professional response that directly addresses the recruiter\'s message.'}
+
+GUIDANCE:
+- Directly answer questions, scheduling proposals, or requests from the recruiter's latest message.
+- Keep the writing polished, concise, authentic, and professional.
+- Do NOT fabricate facts, availability, or experience.
+- Do NOT use bracketed placeholders like [Your Name] — use actual provided inputs.
+`;
+        responseSchema = {
+          type: 'object',
+          properties: {
+            subject: { type: 'string' },
+            body: { type: 'string' },
+            writing_notes: { type: 'string' }
+          },
+          required: ['subject', 'body']
+        };
+        fallbackSubject = variables.CURRENT_SUBJECT || `Re: ${jobTitle} at ${companyName}`;
+        fallbackText = `Dear ${recruiterName},\n\nThank you for getting in touch regarding the ${jobTitle} position at ${companyName}.\n\nI remain very enthusiastic about this opportunity and would be glad to coordinate next steps. Please let me know what dates and times work best for your team.\n\nThank you again for your time and consideration.\n\nBest regards,\n${candidateName}`;
+        break;
+
       case 'initial_outreach':
         prompt = `
 TASK: Write a cold outreach email from ${candidateName} to a recruiter or hiring manager at ${companyName} expressing interest in the ${jobTitle} role.

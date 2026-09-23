@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import {
   Users, FileText, TrendingUp, Activity, Clock, Briefcase, Play, Square, Pause, Plus, ArrowUpRight, ArrowUp, Sparkles, Database, Shield, Zap, Calendar
 } from 'lucide-react';
@@ -148,47 +149,43 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-10"
+      className="space-y-5"
     >
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <motion.h1 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-5xl font-black text-white tracking-tighter"
-          >
-            ADMIN <span className="text-emerald-500">DASHBOARD</span>
-          </motion.h1>
-          <p className="text-white/40 font-medium tracking-[0.2em] uppercase text-xs mt-2">
-            Live Stats & Analytics • v2.6.0
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Dashboard Overview
+          </h1>
+          <p className="text-xs text-white/40 mt-0.5">
+            Live Platform Telemetry & System Analytics • {format(time, 'HH:mm:ss')}
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-sm transition-all backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <button className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 hover:text-white font-semibold text-xs transition-all">
             Export Data
           </button>
-          <button className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+          <button className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md">
             + New Task
           </button>
         </div>
       </div>
 
       {/* Bento Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 auto-rows-[160px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 auto-rows-[140px]">
         
-        {/* Large Stats Card (Obsidian Emerald) */}
+        {/* Large Stats Card */}
         <motion.button 
           variants={item}
           onClick={() => onTabChange?.('management', 'users')}
-          className="lg:col-span-4 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group text-left shadow-2xl"
+          className="lg:col-span-4 lg:row-span-2 bg-[#111216] border border-white/5 rounded-2xl p-5 relative overflow-hidden group text-left shadow-xl hover:border-white/10 transition-colors"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="relative z-10 flex flex-col h-full justify-between">
             <div className="flex justify-between items-start">
-              <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                <Users className="w-6 h-6 text-emerald-500" />
+              <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                <Users className="w-5 h-5 text-emerald-400" />
               </div>
               <div className={`${CHIP_INLINE} font-black tracking-widest uppercase ${CHIP_TONES_DARK.emerald}`}>
                 <ArrowUp className="w-3 h-3" />
@@ -196,18 +193,18 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
               </div>
             </div>
             <div>
-              <p className="text-white/30 text-xs font-black uppercase tracking-[0.2em] mb-2">Total Users</p>
-              <h2 className="text-6xl font-black text-white tracking-tighter">
+              <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-1">Total Users</p>
+              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
                 {kpiData?.totalUsers?.toLocaleString() || '0'}
               </h2>
             </div>
-            <div className="flex items-center gap-4 text-xs font-bold text-white/20">
-              <span className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <div className="flex items-center gap-3 text-xs font-semibold text-white/30">
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 {kpiData?.activeUsers || 0} Online
               </span>
               <span>•</span>
-              <span>Updated Just Now</span>
+              <span>Real-time</span>
             </div>
           </div>
         </motion.button>
@@ -216,36 +213,36 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
         <motion.button 
           variants={item}
           onClick={() => onTabChange?.('analytics', 'system')}
-          className="lg:col-span-5 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 relative overflow-hidden group text-left shadow-2xl"
+          className="lg:col-span-5 lg:row-span-2 bg-[#111216] border border-white/5 rounded-2xl p-5 relative overflow-hidden group text-left shadow-xl hover:border-white/10 transition-colors"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full" />
           <div className="relative z-10 h-full flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-white font-black text-sm uppercase tracking-[0.2em]">System Health</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-bold text-xs uppercase tracking-wider">System Health</h3>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Healthy</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Healthy</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-1">Speed</p>
-                  <p className="text-3xl font-black text-white">{kpiData?.systemHealth?.speed || 24}<span className="text-sm text-white/30 ml-1">ms</span></p>
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-0.5">Speed</p>
+                  <p className="text-2xl font-black text-white">{kpiData?.systemHealth?.speed || 24}<span className="text-xs text-white/40 ml-1">ms</span></p>
                 </div>
                 <div>
-                  <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-1">Status</p>
-                  <p className="text-3xl font-black text-white">{kpiData?.systemHealth?.status || 100}<span className="text-sm text-white/30 ml-1">%</span></p>
+                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-0.5">Status</p>
+                  <p className="text-2xl font-black text-white">{kpiData?.systemHealth?.status || 100}<span className="text-xs text-white/40 ml-1">%</span></p>
                 </div>
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white/30 mb-1">
+            <div className="space-y-3">
+              <div className="flex justify-between text-[10px] font-bold text-white/40 mb-1">
                 <span>Overall Progress</span>
                 <span>{kpiData?.systemHealth?.status || 100}%</span>
               </div>
-              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${kpiData?.systemHealth?.status || 100}%` }}
@@ -262,33 +259,33 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
           </div>
         </motion.button>
 
-        {/* Small Action Card (Obsidian) */}
+        {/* Small Action Card */}
         <motion.div 
           variants={item}
           onClick={() => onTabChange?.('management', 'pricing')}
-          className="lg:col-span-3 lg:row-span-1 bg-emerald-600 rounded-[2rem] p-6 flex items-center justify-between group cursor-pointer shadow-lg shadow-emerald-500/20"
+          className="lg:col-span-3 lg:row-span-1 bg-emerald-600 rounded-2xl p-5 flex items-center justify-between group cursor-pointer shadow-lg shadow-emerald-500/20"
         >
           <div className="text-black">
             <h4 className="text-[10px] font-black uppercase tracking-widest opacity-60">Revenue</h4>
-            <p className="text-2xl font-black tracking-tighter">₹{(kpiData?.revenue || 0).toLocaleString()}</p>
+            <p className="text-2xl font-black tracking-tight">₹{(kpiData?.revenue || 0).toLocaleString()}</p>
           </div>
-          <div className="p-3 bg-black/10 rounded-2xl">
-            <TrendingUp className="w-6 h-6 text-black" />
+          <div className="p-2.5 bg-black/10 rounded-xl">
+            <TrendingUp className="w-5 h-5 text-black" />
           </div>
         </motion.div>
 
-        {/* Small Stat Card (Obsidian) */}
+        {/* Small Stat Card */}
         <motion.div 
           variants={item}
           onClick={() => onTabChange?.('analytics', 'ai')}
-          className="lg:col-span-3 lg:row-span-1 bg-[#111111] border border-white/10 rounded-[2rem] p-6 flex items-center justify-between group hover:border-emerald-500/50 transition-all cursor-pointer shadow-xl"
+          className="lg:col-span-3 lg:row-span-1 bg-[#111216] border border-white/5 rounded-2xl p-5 flex items-center justify-between group hover:border-emerald-500/50 transition-all cursor-pointer shadow-xl"
         >
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/30">AI Activity</h4>
-            <p className="text-2xl font-black text-white tracking-tighter">{(kpiData?.aiUsage || 0).toLocaleString()}</p>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-white/40">AI Activity</h4>
+            <p className="text-2xl font-black text-white tracking-tight">{(kpiData?.aiUsage || 0).toLocaleString()}</p>
           </div>
-          <div className="p-3 bg-white/5 rounded-2xl text-emerald-500">
-            <Zap className="w-6 h-6" />
+          <div className="p-2.5 bg-white/5 rounded-xl text-emerald-400">
+            <Zap className="w-5 h-5" />
           </div>
         </motion.div>
 
@@ -296,7 +293,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
         <motion.button 
           variants={item}
           onClick={() => onTabChange?.('analytics', 'ai')}
-          className="lg:col-span-8 lg:row-span-3 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 text-left shadow-2xl relative overflow-hidden group"
+          className="lg:col-span-8 lg:row-span-3 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 text-left shadow-xl relative overflow-hidden group hover:border-white/10 transition-colors"
         >
           <div className="flex justify-between items-center mb-10">
             <div>
@@ -341,23 +338,24 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
         </motion.button>
 
         {/* Side Panel: Resource Distribution */}
+        {/* Side Panel: Resource Distribution */}
         <motion.div 
           variants={item}
-          className="lg:col-span-4 lg:row-span-3 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl flex flex-col"
+          className="lg:col-span-4 lg:row-span-3 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col"
         >
-          <h3 className="text-white font-black text-lg tracking-tight mb-2">User Breakdown</h3>
-          <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-6">Platform Activity</p>
+          <h3 className="text-white font-bold text-sm tracking-tight mb-1">User Breakdown</h3>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mb-4">Platform Activity</p>
           
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-h-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  paddingAngle={8}
+                  innerRadius={60}
+                  outerRadius={85}
+                  paddingAngle={6}
                   dataKey="value"
                   stroke="none"
                 >
@@ -367,59 +365,59 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onTabChange }) => {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
-              <span className="text-3xl font-black text-white tracking-tighter">{kpiData?.efficiency || 0}%</span>
-              <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Efficiency</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center mt-1">
+              <span className="text-2xl font-black text-white tracking-tight">{kpiData?.efficiency || 0}%</span>
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Efficiency</span>
             </div>
           </div>
           
-          <div className="space-y-3 mt-6">
+          <div className="space-y-2 mt-4">
             {pieData.map((item, idx) => {
               const total = pieData.reduce((acc, curr) => acc + curr.value, 0);
               const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0;
               return (
-                <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-3 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-3">
+                <div key={idx} className="flex items-center justify-between bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+                  <div className="flex items-center gap-2.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs font-bold text-white/60">{item.name}</span>
+                    <span className="text-xs font-medium text-white/70">{item.name}</span>
                   </div>
-                  <span className="text-xs font-black text-white">{percentage}%</span>
+                  <span className="text-xs font-bold text-white">{percentage}%</span>
                 </div>
               );
             })}
           </div>
         </motion.div>
 
-        {/* Active Nodes (Small Grid) - NOW FULL WIDTH */}
+        {/* Active Nodes - Full Width */}
         <motion.div 
           variants={item}
-          className="lg:col-span-12 lg:row-span-2 bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl"
+          className="lg:col-span-12 lg:row-span-2 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl"
         >
-          <div className="flex justify-between items-center mb-8">
-            <h3 className="text-white font-black text-lg tracking-tight">Users List</h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-white font-bold text-sm tracking-tight">Recent Registered Users</h3>
             <button 
               onClick={() => onTabChange?.('management', 'users')}
-              className="px-4 py-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-[10px] font-black uppercase tracking-widest text-white/40"
+              className="px-3 py-1.5 bg-white/5 rounded-xl hover:bg-white/10 transition-colors text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white"
             >
               View Full Directory
             </button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
             {recentUsers.slice(0, 12).map((user, idx) => (
-              <div key={idx} className="flex flex-col items-center justify-center bg-white/[0.02] p-6 rounded-[1.5rem] border border-white/5 text-center hover:bg-white/[0.05] transition-all group">
+              <div key={idx} className="flex flex-col items-center justify-center bg-white/[0.02] p-3.5 rounded-xl border border-white/5 text-center hover:bg-white/[0.05] transition-all group">
                 {user.avatar ? (
                   <img 
                     src={user.avatar} 
                     alt={`${user.firstName || 'User'}`}
-                    className="w-12 h-12 rounded-2xl object-cover border border-white/10 mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
+                    className="w-9 h-9 rounded-full object-cover border border-white/10 mb-2 group-hover:border-emerald-400 transition-all"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg mb-4 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-bold text-xs mb-2 group-hover:shadow-[0_0_12px_rgba(16,185,129,0.3)] transition-all">
                     {(user.name || user.firstName || 'U').charAt(0).toUpperCase()}
                   </div>
                 )}
-                <p className="text-sm font-black text-white truncate w-full px-2">{user.name || user.firstName || 'User'}</p>
-                <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.15em] mt-1">{user.subscription?.planKey || 'Free'}</p>
+                <p className="text-xs font-bold text-white truncate w-full px-1">{user.name || user.firstName || 'User'}</p>
+                <p className="text-[10px] font-medium text-white/30 uppercase tracking-wider mt-0.5">{user.subscription?.planKey || 'Free'}</p>
               </div>
             ))}
           </div>

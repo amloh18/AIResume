@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import mongoose from 'mongoose';
 import EmailCampaign, { IEmailCampaign } from '@/models/admin/EmailCampaign';
 import campaignEmailService from '@/lib/services/campaignEmailService';
@@ -10,14 +11,15 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
     try {
-        // 1. Verify Cron Secret
-        const authHeader = request.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            // Allow local development testing if needed, or stick to strict checking
-            if (process.env.NODE_ENV === 'production') {
-                return new Response('Unauthorized', { status: 401 });
-            }
-        }
+        /*
+          1. Verify Cron Secret — fails closed.
+
+          The previous version rejected only in production, and compared against the literal string
+          "Bearer undefined" whenever CRON_SECRET was unset. Any non-production deployment therefore
+          ran this endpoint for anyone who asked, and no deployment was protected by a missing secret.
+        */
+        const denied = cronAuthFailure(request.headers);
+        if (denied) return denied;
 
         // Connect to DB if not connected (handled by model import side-effects usually, but good to ensure)
         if (mongoose.connection.readyState === 0) {

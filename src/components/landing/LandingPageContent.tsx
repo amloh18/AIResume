@@ -84,9 +84,9 @@ export default function LandingPageContent() {
 
       <div className="relative">
         <Hero withBanner={bannerActive} />
-        <HowItWorks />
-        <TestimonialSnippet index={1} />
         <Features />
+        <TestimonialSnippet index={1} />
+        <HowItWorks />
         <ChromeExtension />
         <Testimonials />
 

@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import PortalFetcherService, { JobSearchCriteria, JobListing } from '@/lib/services/portal-fetcher-service';
 import QuotaService from '@/lib/services/quota-service';
 
@@ -130,15 +130,20 @@ const sampleJobs: JobListing[] = [
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID from headers (fallback for demo)
-    const headersList = await headers();
-    let userId = headersList.get('x-user-id');
-    
-    // If no user ID, try to get from auth or use a temp one for demo
-    if (!userId || userId === 'temp-user-id') {
-      userId = 'demo-user-' + Date.now();
+    /*
+      Identity from the session. The header path and the `demo-user-<timestamp>` fallback are gone: the
+      fallback meant every call queried a brand-new, empty identity, so the response was fiction rather
+      than anyone's real search.
+    */
+    const auth = await getAuthenticatedUser(request);
+    if (!auth?.userId) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'User authentication required' } },
+        { status: 401 }
+      );
     }
-    
+    const userId = auth.userId;
+
     const searchParams = request.nextUrl.searchParams;
 
     // Parse query parameters
@@ -301,14 +306,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get user ID from headers (fallback for demo)
-    const headersList = await headers();
-    let userId = headersList.get('x-user-id');
-    
-    // If no user ID, use a temp one for demo
-    if (!userId || userId === 'temp-user-id') {
-      userId = 'demo-user-' + Date.now();
+    // Identity from the session — see the note on GET.
+    const auth = await getAuthenticatedUser(request);
+    if (!auth?.userId) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'User authentication required' } },
+        { status: 401 }
+      );
     }
+    const userId = auth.userId;
 
     const body = await request.json();
 

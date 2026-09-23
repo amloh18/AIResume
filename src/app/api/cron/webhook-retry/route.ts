@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import webhookRetryService from '@/lib/services/webhookRetryService';
 
 /**
  * Webhook Retry Cron Endpoint
  * Should be called periodically (e.g., every 15 minutes) by a cron service
- * 
- * Security: Requires CRON_SECRET or CRON_API_KEY authentication
+ *
+ * Security: authenticated by the shared cron guard — `CRON_SECRET`, with `CRON_API_KEY` accepted as an
+ * alias. This route's own `verifyCronSecret` helper was already fail-closed and already accepted both
+ * names, but it was the last endpoint carrying its own copy of the check; every cron route now goes
+ * through `cronAuthFailure` so the fail-closed rule lives in exactly one place.
  */
-const verifyCronSecret = (request: NextRequest): boolean => {
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET || process.env.CRON_API_KEY;
-  
-  return cronSecret ? authHeader === `Bearer ${cronSecret}` : false;
-};
 
 export async function GET(request: NextRequest) {
   return POST(request);
@@ -20,10 +18,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret
-    if (!verifyCronSecret(request)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50', 10);

@@ -65,8 +65,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    /*
+      `data.simulated` is always true.
+
+      This endpoint does not open `applicationUrl` — there is no browser in this path. The field list is
+      inferred from the ATS type, so it describes what that ATS *typically* asks for, not what this
+      employer's form contains. The UI must present it as a preview rather than as a reading of the page,
+      and must not treat `wouldSubmit` as a prediction about the real form.
+    */
     return NextResponse.json({
       success: true,
+      simulated: true,
       data: result,
     });
   } catch (error: any) {

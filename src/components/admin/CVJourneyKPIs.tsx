@@ -115,75 +115,72 @@ const CVJourneyKPIs: React.FC = () => {
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
       {/* Command Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase">
-            User <span className="text-emerald-500">Journeys</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            User Journeys & Funnel
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-[0.2em] mt-2">
-            Engagement Matrix • Conversion & Velocity Telemetry
+          <p className="text-xs text-white/40 mt-0.5">
+            Application funnel, completion rates, and journey retention telemetry
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-white/5 border border-white/5 p-1 rounded-2xl">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-white/5 border border-white/5 p-1 rounded-xl">
             {['7d', '30d', '90d', '1y'].map(range => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${timeRange === range ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-white/40 hover:text-white'}`}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${timeRange === range ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/40 hover:text-white'}`}
               >
                 {range}
               </button>
             ))}
           </div>
-          <button onClick={fetchKPIData} className="p-3 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-white/40">
-            <RefreshCw className="w-5 h-5" />
+          <button onClick={fetchKPIData} className="p-2 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all text-white/50 hover:text-white">
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Engagement Bento */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Journeys Initiated', val: kpiData?.userEngagement.cvJourneysInitiated || 0, sub: 'Target Locked', icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-          { label: 'Completion Flux', val: `${kpiData?.userEngagement.cvJourneyCompletionRate.toFixed(1)}%`, sub: 'Sector Ready', icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-          { label: 'Node Retention', val: `${kpiData?.userEngagement.userRetentionRate.toFixed(1)}%`, sub: 'Return Signal', icon: Activity, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-          { label: 'Studio Pulse', val: kpiData?.userEngagement.studioUsageFrequency.toLocaleString() || 0, sub: 'Save Events', icon: Sparkles, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Journeys Initiated', val: kpiData?.userEngagement.cvJourneysInitiated || 0, sub: 'Target Locked', icon: Target, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: 'Completion Flux', val: `${kpiData?.userEngagement.cvJourneyCompletionRate.toFixed(1)}%`, sub: 'Sector Ready', icon: CheckCircle, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'Node Retention', val: `${kpiData?.userEngagement.userRetentionRate.toFixed(1)}%`, sub: 'Return Signal', icon: Activity, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+          { label: 'Studio Pulse', val: kpiData?.userEngagement.studioUsageFrequency.toLocaleString() || 0, sub: 'Save Events', icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10' },
         ].map((m, i) => (
-          <div key={i} className="bg-[#111111] border border-white/10 p-8 rounded-[2.5rem] flex flex-col justify-between h-44 group hover:border-white/20 transition-all shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/[0.02] blur-3xl rounded-full" />
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              <div className="flex justify-between items-start">
-                <div className={`p-3 rounded-2xl ${m.bg} ${m.color}`}>
-                  <m.icon className="w-6 h-6" />
-                </div>
-                <ArrowUpRight className="w-4 h-4 text-white/20 group-hover:text-white transition-colors" />
+          <div key={i} className="bg-[#111216] border border-white/5 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-32 group hover:border-white/10 transition-all shadow-lg relative overflow-hidden">
+            <div className="flex justify-between items-start">
+              <div className={`p-2 rounded-xl ${m.bg} ${m.color}`}>
+                <m.icon className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-white/20 text-[10px] font-black uppercase tracking-widest">{m.label}</p>
-                <p className="text-3xl font-black text-white tracking-tighter">{m.val}</p>
-                <p className="text-[9px] font-bold text-white/10 uppercase tracking-widest mt-1">{m.sub}</p>
-              </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white transition-colors" />
+            </div>
+            <div>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-0.5">{m.label}</p>
+              <p className="text-2xl font-black text-white tracking-tight">{m.val}</p>
+              <p className="text-[10px] font-medium text-white/30">{m.sub}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Growth Vector */}
-        <motion.div variants={item} className="lg:col-span-8 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+        <motion.div variants={item} className="lg:col-span-8 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
-          <div className="flex justify-between items-center mb-12">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-xl font-black text-white uppercase tracking-tight">Asset Accrual</h3>
-              <p className="text-white/30 text-xs font-bold mt-1 uppercase tracking-widest">CV & Cover Letter Propagation</p>
+              <h3 className="text-sm font-bold text-white tracking-tight">Asset Accrual</h3>
+              <p className="text-xs text-white/40 mt-0.5">CV & cover letter propagation over time</p>
             </div>
           </div>
 
-          <div className="h-[350px] w-full">
+          <div className="h-[280px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={assetGrowthChartData}>
                 <defs>
@@ -193,57 +190,59 @@ const CVJourneyKPIs: React.FC = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.03)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 900 }} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 700 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10, fontWeight: 700 }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff' }}
+                  contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff' }}
                   itemStyle={{ fontSize: '12px', fontWeight: 700 }}
                 />
-                <Area type="monotone" dataKey="cvs" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorCVs)" name="CVs" />
-                <Area type="monotone" dataKey="coverLetters" stroke="#3b82f6" strokeWidth={4} fill="transparent" name="Cover Letters" />
+                <Area type="monotone" dataKey="cvs" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorCVs)" name="CVs" />
+                <Area type="monotone" dataKey="coverLetters" stroke="#3b82f6" strokeWidth={3} fill="transparent" name="Cover Letters" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </motion.div>
 
         {/* Status Funnel */}
-        <motion.div variants={item} className="lg:col-span-4 bg-[#111111] border border-white/10 rounded-[2.5rem] p-10 shadow-2xl flex flex-col">
-          <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Process Funnel</h3>
-          <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-10">Application Status Velocity</p>
-          
-          <div className="flex-1 space-y-6">
-            {kpiData?.applicationFunnel.applicationStatusFunnel.map((item, idx) => (
-              <div key={idx} className="space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="text-white/40">{item._id}</span>
-                  <span className="text-white">{item.count}</span>
+        <motion.div variants={item} className="lg:col-span-4 bg-[#111216] border border-white/5 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-white tracking-tight mb-1">Process Funnel</h3>
+            <p className="text-xs text-white/40 mb-4">Application Status Velocity</p>
+            
+            <div className="space-y-3.5">
+              {kpiData?.applicationFunnel.applicationStatusFunnel.map((item, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider">
+                    <span className="text-white/40">{item._id}</span>
+                    <span className="text-white font-semibold">{item.count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }} 
+                      animate={{ width: `${(item.count / (kpiData?.summary.totalJourneys || 1)) * 100}%` }} 
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: getStatusColor(item._id) }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }} 
-                    animate={{ width: `${(item.count / (kpiData?.summary.totalJourneys || 1)) * 100}%` }} 
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: getStatusColor(item._id) }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          <div className="mt-10 pt-8 border-t border-white/5">
+          <div className="mt-6 pt-4 border-t border-white/5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Conversion Vector</p>
-                <p className="text-3xl font-black text-emerald-500">{kpiData?.applicationFunnel.trackedToAppliedConversionRate.toFixed(1)}%</p>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Conversion Vector</p>
+                <p className="text-2xl font-black text-emerald-400">{kpiData?.applicationFunnel.trackedToAppliedConversionRate.toFixed(1)}%</p>
               </div>
-              <TrendingUp className="w-10 h-10 text-emerald-500/20" />
+              <TrendingUp className="w-8 h-8 text-emerald-500/20" />
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Quick Summary Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Total Nodes', val: kpiData?.summary.totalUsers, icon: Users },
           { label: 'Master CVs', val: kpiData?.summary.totalMasterCVs, icon: UserCheck },
@@ -252,9 +251,9 @@ const CVJourneyKPIs: React.FC = () => {
           { label: 'Total Journeys', val: kpiData?.summary.totalJourneys, icon: Briefcase },
           { label: 'Completed', val: kpiData?.summary.completedJourneys, icon: Award },
         ].map((s, i) => (
-          <div key={i} className="bg-white/5 border border-white/5 p-6 rounded-3xl text-center hover:bg-white/[0.08] transition-all">
-            <p className="text-xl font-black text-white">{s.val?.toLocaleString()}</p>
-            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mt-1">{s.label}</p>
+          <div key={i} className="bg-[#111216] border border-white/5 p-4 rounded-xl text-center hover:bg-white/[0.04] transition-all">
+            <p className="text-lg font-black text-white">{s.val?.toLocaleString()}</p>
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>

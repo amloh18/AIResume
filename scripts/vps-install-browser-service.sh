@@ -84,20 +84,20 @@ detect_browser_bin() {
   done
 
   local search_dirs=(
+    "/opt/ms-playwright"
     "/var/lib/${SERVICE_USER}/.cache/ms-playwright"
     "${PROJECT_DIR}/scripts/.venv"
-    "/root/.cache/ms-playwright"
     "${HOME:-/root}/.cache/ms-playwright"
-    "/opt/ms-playwright"
+    "/root/.cache/ms-playwright"
   )
 
   local dir match
   for dir in "${search_dirs[@]}"; do
     [[ -d "$dir" ]] || continue
     # Full Chromium first, then the headless shell (which is enough for CDP + printToPDF).
-    match="$(ls -d "$dir"/chromium-*/chrome-linux/chrome 2>/dev/null | sort -V | tail -1 || true)"
+    match="$(ls -d "$dir"/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1 || true)"
     if [[ -z "$match" ]]; then
-      match="$(ls -d "$dir"/chromium_headless_shell-*/chrome-linux/headless_shell 2>/dev/null | sort -V | tail -1 || true)"
+      match="$(ls -d "$dir"/chromium_headless_shell-*/chrome-linux*/headless_shell 2>/dev/null | sort -V | tail -1 || true)"
     fi
     if [[ -n "$match" && -x "$match" ]]; then
       echo "$match"
@@ -194,10 +194,10 @@ verify() {
   local bridge_ip
   bridge_ip="$(detect_bridge_ip)"
 
-  info "Waiting for Chrome to expose the DevTools endpoint..."
+  info "Waiting for Chrome to expose the DevTools endpoint on ${bridge_ip}:${BROWSER_PORT}..."
   local attempts=0
   until [[ "$attempts" -ge 20 ]]; do
-    if curl -fsS --max-time 2 "http://127.0.0.1:${BROWSER_PORT}/json/version" >/dev/null 2>&1; then
+    if curl -fsS --max-time 2 "http://${bridge_ip}:${BROWSER_PORT}/json/version" >/dev/null 2>&1; then
       break
     fi
     attempts=$((attempts + 1))
@@ -205,8 +205,8 @@ verify() {
   done
 
   local version_json
-  if ! version_json="$(curl -fsS --max-time 5 "http://127.0.0.1:${BROWSER_PORT}/json/version" 2>/dev/null)"; then
-    err "Nothing answered on 127.0.0.1:${BROWSER_PORT}/json/version."
+  if ! version_json="$(curl -fsS --max-time 5 "http://${bridge_ip}:${BROWSER_PORT}/json/version" 2>/dev/null)"; then
+    err "Nothing answered on ${bridge_ip}:${BROWSER_PORT}/json/version."
     echo
     run_privileged journalctl -u "$SERVICE_NAME" -n 40 --no-pager || true
     exit 1
@@ -246,12 +246,14 @@ verify() {
 }
 
 show_status() {
+  local bridge_ip
+  bridge_ip="$(detect_bridge_ip)"
   run_privileged systemctl status "$SERVICE_NAME" --no-pager || true
   echo
-  if curl -fsS --max-time 5 "http://127.0.0.1:${BROWSER_PORT}/json/version" 2>/dev/null; then
+  if curl -fsS --max-time 5 "http://${bridge_ip}:${BROWSER_PORT}/json/version" 2>/dev/null; then
     echo
   else
-    warn "Nothing is listening on 127.0.0.1:${BROWSER_PORT}."
+    warn "Nothing is listening on ${bridge_ip}:${BROWSER_PORT}."
   fi
 }
 

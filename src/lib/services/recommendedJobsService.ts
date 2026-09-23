@@ -253,29 +253,63 @@ export class RecommendedJobsService {
   private static async enrichWithInteractions(jobs: RecommendedJob[], userId: string): Promise<void> {
     const db = await getDb();
     const jobIds = jobs.map((j) => new ObjectId(j._id));
+    const jobIdStrings = jobs.map((j) => j._id);
 
-    const [savedDocs, appliedDocs, passedDocs] = await Promise.all([
-      db.collection('jobs').countDocuments({
-        _id: { $in: jobIds },
-        userId: new ObjectId(userId),
-        status: 'saved',
-      }).catch(() => 0),
-      db.collection('applications').find({
-        userId: new ObjectId(userId),
-        jobId: { $in: jobIds },
-      }).project({ jobId: 1 }).toArray().catch(() => []),
+    let userKeys: any[] = [String(userId)];
+    try {
+      userKeys.push(new ObjectId(userId));
+    } catch {
+      /* Not an ObjectId — the string form is the only usable key. */
+    }
+
+    /*
+      Saved and applied state live in `jobapplications`, keyed by the catalog job id as a STRING.
+
+      Three bugs used to sit here:
+
+        - The saved lookup counted `jobs` documents by `status: 'saved'`. The catalog collection has no
+          `status` field, so it could never match — and its result was discarded anyway in favour of the
+          hard-coded `saved: false` below. Every saved job rendered as unsaved, so the bookmark never
+          filled in.
+        - The applied lookup queried a collection named `applications`, which does not exist. The model is
+          `JobApplication` → `jobapplications`, so that set was always empty too.
+        - `new ObjectId(userId)` was unguarded, so a non-ObjectId caller id threw instead of degrading.
+
+      `passed_jobs` keeps its ObjectId form — it stores ObjectIds and was not part of this defect.
+    */
+    const [applicationDocs, passedDocs] = await Promise.all([
+      db
+        .collection('jobapplications')
+        .find({ userId: { $in: userKeys }, jobId: { $in: jobIdStrings } })
+        .project({ jobId: 1, status: 1 })
+        .toArray()
+        .catch(() => []),
       db.collection('passed_jobs').find({
-        userId: new ObjectId(userId),
+        userId: { $in: userKeys },
         jobId: { $in: jobIds },
       }).project({ jobId: 1 }).toArray().catch(() => []),
     ]);
 
-    const appliedSet = new Set(appliedDocs.map((d: any) => d.jobId?.toString()));
-    const passedSet = new Set(passedDocs.map((d: any) => d.jobId?.toString()));
+    /*
+      A `jobapplications` row means "saved" only while it is still in a pre-submission state; anything
+      past that has actually been applied to. Conflating the two is what made the saved flag meaningless.
+    */
+    const PRE_SUBMISSION_STATUSES = new Set(['saved', 'created', 'draft']);
+    const savedSet = new Set<string>();
+    const appliedSet = new Set<string>();
+
+    for (const doc of applicationDocs as any[]) {
+      const key = doc?.jobId?.toString();
+      if (!key) continue;
+      if (PRE_SUBMISSION_STATUSES.has(String(doc.status))) savedSet.add(key);
+      else appliedSet.add(key);
+    }
+
+    const passedSet = new Set((passedDocs as any[]).map((d) => d?.jobId?.toString()));
 
     for (const job of jobs) {
       job.userInteractions = {
-        saved: false, // TODO: check saved_jobs collection
+        saved: savedSet.has(job._id),
         applied: appliedSet.has(job._id),
         dismissed: passedSet.has(job._id),
       };

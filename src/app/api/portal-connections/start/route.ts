@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { PortalConnectionService } from '@/lib/services/portal-connection-service';
 import { PortalProvider } from '@/models/PortalConnection';
+import { portalAdapterRegistry } from '@/lib/portals/PortalAdapterRegistry';
 
 /**
  * POST /api/portal-connections/start
- * Generates short-lived connection attempt for user
+ *
+ * Issues a short-lived connection attempt. Stateless: it mints an id and a state
+ * value and persists nothing, so a user who abandons the flow leaves no trace.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +20,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const provider = body.provider as PortalProvider;
 
-    if (!provider) {
+    if (!provider || typeof provider !== 'string') {
       return NextResponse.json({ error: 'Provider is required' }, { status: 400 });
+    }
+
+    // Reject unknown providers instead of silently materialising one. The registry
+    // falls back to a generic adapter for *any* string, so without this check an
+    // arbitrary value would create a connection row that no surface can render.
+    const supported = portalAdapterRegistry.getAllSupportedProviders();
+    if (!supported.includes(provider)) {
+      return NextResponse.json({ error: 'Unsupported provider' }, { status: 400 });
     }
 
     const startResult = await PortalConnectionService.startConnectionAttempt(
@@ -36,9 +47,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[API] POST /api/portal-connections/start error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to start portal connection attempt' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to start portal connection attempt' }, { status: 500 });
   }
 }

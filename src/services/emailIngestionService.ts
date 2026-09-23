@@ -139,82 +139,159 @@ interface MatchResult {
   score: number;
 }
 
+const UNMATCHED: MatchResult = { jobId: null, applicationId: null, confidence: 'unmatched', score: 0 };
+
+/** Below this, a match is noise: it would set an association the UI would then show as fact. */
+const MIN_MATCH_SCORE = 30;
+
+/**
+ * Whole-word (well, whole-token) containment.
+ *
+ * The previous matcher used `emailText.includes(companyNorm)`, which scores "Meta" against
+ * "metadata" and a company called "AI" against every message that mentions email. A wrong match is
+ * worse than no match — it files a stranger's mail under a real application — so terms are only
+ * counted when they appear as a standalone token, and only when long enough to be distinctive.
+ */
+function containsTerm(haystack: string, term: string): boolean {
+  if (term.length < 3) return false;
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(haystack);
+}
+
+/** "Build AI Resume" → "buildairesume", so a company name can be compared against a sender domain. */
+function domainSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * The user's identity keys, in every form the data may hold.
+ *
+ * `JobApplication.userId` is declared `Schema.Types.Mixed`, and Mongoose applies **no casting** to a
+ * Mixed path: a query written with a string never matches a document that stored an ObjectId, and
+ * every create path stores an ObjectId. Querying both forms is what makes this join work at all —
+ * without it the application list came back empty and every email was `unmatched`.
+ */
+function userKeysFor(userId: string | mongoose.Types.ObjectId): (string | mongoose.Types.ObjectId)[] {
+  if (typeof userId !== 'string') return [userId];
+  return mongoose.Types.ObjectId.isValid(userId)
+    ? [userId, new mongoose.Types.ObjectId(userId)]
+    : [userId];
+}
+
+/** `Communication.userId` is a real ObjectId path, so it casts — feed it only valid keys or it throws. */
+function objectIdKeysFor(userId: string | mongoose.Types.ObjectId): mongoose.Types.ObjectId[] {
+  if (userId instanceof mongoose.Types.ObjectId) return [userId];
+  return mongoose.Types.ObjectId.isValid(userId) ? [new mongoose.Types.ObjectId(userId)] : [];
+}
+
+/**
+ * Resolve an inbound email to one of the user's applications.
+ *
+ * Matching is done against `JobApplication` — the fields the application already carries. The
+ * previous implementation joined through the `Job` catalog collection using `JobApplication.jobId`
+ * as a Mongo `_id`, which could not work:
+ *   - no create path in the app ever writes `JobApplication.jobId`, so the `$in` was always empty;
+ *   - the `Job` documents it then read expose `jobTitle` / `company` as **strings** and contacts as
+ *     `contacts[]`, while the matcher read `job.title`, `job.company.name` and
+ *     `job.contactDetails.email` — three paths that do not exist, so every score was 0.
+ * Both faults produced the same symptom: every message came back `unmatched`, which is why nothing
+ * ever appeared under a job in the tracker.
+ *
+ * Throughout this codebase `jobId` denotes the `JobApplication._id` (`ApplicationJourney.jobId`,
+ * `EmailMessage.jobId`, `StageChangeLog.jobId`, the `/api/jobs` tracker listing), so that is what is
+ * returned for both keys — every consumer that filters on either one then finds the message.
+ */
 async function matchToApplication(
   userId: string | mongoose.Types.ObjectId,
   senderEmail: string,
   senderDomain: string,
-  subject: string
+  subject: string,
+  threadMessageIds: string[] = []
 ): Promise<MatchResult> {
   try {
     // Dynamic model import to avoid circular dependencies
     const JobApplication = mongoose.model('JobApplication');
-    const Job = mongoose.model('Job');
+    const userKeys = userKeysFor(userId);
 
-    // Get user's applications
-    const applications = await JobApplication.find({ userId }).limit(200).lean();
-    if (applications.length === 0) {
-      return { jobId: null, applicationId: null, confidence: 'unmatched', score: 0 };
+    // Most-recent-first, so a long application history cannot push the relevant record past the limit.
+    const applications = await JobApplication.find({ userId: { $in: userKeys } })
+      .sort({ updatedAt: -1 })
+      .limit(200)
+      .lean();
+
+    if (applications.length === 0) return UNMATCHED;
+
+    // ── 1. Thread continuity ────────────────────────────────────────────
+    // The highest-precision signal, and the only one that survives a recruiter replying from a
+    // different domain: if this message answers mail already tied to an application, it belongs to
+    // that same application.
+    const commUserKeys = objectIdKeysFor(userId);
+    if (threadMessageIds.length > 0 && commUserKeys.length > 0) {
+      // The explicit result type is required: `Communication` is exported as a union of two `Model`
+      // branches, so `findOne(...).lean()` otherwise resolves to a union that includes an array.
+      const prior = (await Communication.findOne({
+        userId: { $in: commUserKeys },
+        messageId: { $in: threadMessageIds },
+        applicationId: { $ne: null },
+      })
+        .sort({ receivedAt: -1 })
+        .lean()) as { applicationId?: unknown } | null;
+
+      const priorAppId = prior?.applicationId ? String(prior.applicationId) : null;
+      if (priorAppId && applications.some(a => String(a._id) === priorAppId)) {
+        return { jobId: priorAppId, applicationId: priorAppId, confidence: 'high', score: 100 };
+      }
     }
 
-    // Get associated jobs
-    const jobIds = applications.map(a => a.jobId).filter(Boolean);
-    const jobs = await Job.find({ _id: { $in: jobIds } }).limit(200).lean();
-    const jobMap = new Map(jobs.map(j => [String(j._id), j]));
+    // ── 2. Field scoring, entirely against the application ─────────────
+    const sender = senderEmail.toLowerCase();
+    const domain = senderDomain.toLowerCase();
+    const emailText = `${subject} ${sender}`.toLowerCase();
 
-    const emailText = `${subject} ${senderEmail} ${senderDomain}`.toLowerCase();
-
-    let bestMatch: MatchResult = { jobId: null, applicationId: null, confidence: 'unmatched', score: 0 };
+    let best: MatchResult = UNMATCHED;
 
     for (const app of applications) {
-      const job = jobMap.get(String(app.jobId));
-      if (!job) continue;
+      const companyNorm = String(app.company || '').toLowerCase().trim();
+      const titleNorm = String(app.jobTitle || '').toLowerCase().trim();
 
       let score = 0;
-      const companyNorm = (job.company?.name || '').toLowerCase();
-      const titleNorm = (job.title || '').toLowerCase();
 
-      // Company name match
-      if (companyNorm && emailText.includes(companyNorm)) {
-        score += 60;
-      }
+      // Company named in the subject or sender address.
+      if (companyNorm && containsTerm(emailText, companyNorm)) score += 60;
 
-      // Sender domain match
-      if (job.company?.domain && senderDomain.includes(job.company.domain)) {
-        score += 30;
-      }
+      // Company name echoed by the sender's domain (no-reply@stripe.com for "Stripe").
+      const slug = domainSlug(companyNorm);
+      if (slug.length >= 4 && domain.includes(slug)) score += 30;
 
-      // Job title match
-      if (titleNorm && emailText.includes(titleNorm)) {
-        score += 20;
-      }
+      // Role named in the subject.
+      if (titleNorm && containsTerm(emailText, titleNorm)) score += 20;
 
-      // Sender email match with job contact
-      if (job.contactDetails?.email) {
-        const contactEmail = job.contactDetails.email.toLowerCase();
-        if (senderEmail.toLowerCase() === contactEmail) {
-          score += 40;
-        }
-      }
+      // A recruiter writing from an address already recorded on the application.
+      const knownContacts = [
+        app.contactDetails?.email,
+        ...(Array.isArray(app.contacts) ? app.contacts.map((c: any) => c?.email) : []),
+      ]
+        .filter(Boolean)
+        .map((e: any) => String(e).toLowerCase());
+      if (knownContacts.includes(sender)) score += 40;
 
-      if (score > bestMatch.score) {
-        let confidence: MatchConfidence = 'unmatched';
-        if (score >= 80) confidence = 'high';
-        else if (score >= 50) confidence = 'medium';
-        else if (score >= 30) confidence = 'low';
+      // Keep the invariant `jobId === null` ⇔ `confidence === 'unmatched'`, so callers can never
+      // read a weak guess as an association.
+      if (score < MIN_MATCH_SCORE || score <= best.score) continue;
 
-        bestMatch = {
-          jobId: String(job._id),
-          applicationId: String(app._id),
-          confidence,
-          score,
-        };
-      }
+      const id = String(app._id);
+      best = {
+        jobId: id,
+        applicationId: id,
+        confidence: score >= 80 ? 'high' : score >= 50 ? 'medium' : 'low',
+        score,
+      };
     }
 
-    return bestMatch;
+    return best;
   } catch (error) {
     console.error('Match error:', error);
-    return { jobId: null, applicationId: null, confidence: 'unmatched', score: 0 };
+    return UNMATCHED;
   }
 }
 
@@ -268,8 +345,12 @@ async function processInboundEmail(
     // 3. Classify
     const classification = classifyEmail(subject, bodySnippet);
 
-    // 4. Match to application
-    const match = await matchToApplication(userId, senderEmail, senderDomain, subject);
+    // 4. Match to application.
+    //    In-Reply-To / References are passed through so that a reply inside a known thread resolves
+    //    to the same application even when neither the sender address nor the subject names the
+    //    company — the common case for a recruiter answering from a shared inbox.
+    const threadMessageIds = [inReplyTo, ...references].filter(Boolean) as string[];
+    const match = await matchToApplication(userId, senderEmail, senderDomain, subject, threadMessageIds);
 
     // 5. Determine communication type
     let commType: any = 'unknown';
@@ -413,6 +494,16 @@ let lastError: { message: string; code?: string; at: string } | null = null;
 let nextPollAt: number | null = null;
 
 /**
+ * Set when the worker is misconfigured in a way that makes ingestion impossible.
+ *
+ * This is deliberately *not* routed through `lastError` / `consecutiveFailures`: a missing owner is
+ * not a transient failure, so backing off and retrying forever would only bury the cause. It is
+ * reported through `getIngestionStatus()` so an operator can see it without reading the logs.
+ */
+let configurationError: string | null = null;
+let configurationErrorLogged = false;
+
+/**
  * Flatten a fetch failure into something readable.
  *
  * `fetch` wraps the real problem: the top-level message is a useless "fetch failed" and the useful
@@ -434,9 +525,24 @@ async function pollInbox(): Promise<boolean> {
   isIngesting = true;
 
   try {
-    // Get all users with Stalwart accounts
-    // For now, process a single user (admin)
-    const accountId = process.env.STALWART_ACCOUNT_ID || 'admin@morigrid.com';
+    // Who owns this mailbox?
+    //
+    // The previous version fell back to a hardcoded `'000000000000000000000001'`. That id belongs to
+    // no user, so every ingested message was filed under a stranger — invisible in every real user's
+    // Comms panel, while the log line still reported a successful ingestion. Refusing to ingest is
+    // the honest behaviour: until this is configured there is nobody to attribute the mail to.
+    const ownerId = process.env.STALWART_USER_ID;
+    if (!ownerId) {
+      configurationError =
+        'STALWART_USER_ID is not set, so ingested mail has no owner. Set it to the user id that owns the Stalwart mailbox.';
+      if (!configurationErrorLogged) {
+        console.error(`[EmailIngestion] ${configurationError} Skipping ingestion.`);
+        configurationErrorLogged = true;
+      }
+      return true; // Misconfiguration, not a transient failure — do not engage the failure backoff.
+    }
+    configurationError = null;
+    configurationErrorLogged = false;
 
     // Search for unread inbound emails
     const emails = await searchEmails({
@@ -447,10 +553,7 @@ async function pollInbox(): Promise<boolean> {
     let processed = 0;
     for (const email of emails) {
       try {
-        const result = await processInboundEmail(
-          process.env.STALWART_USER_ID || '000000000000000000000001',
-          email
-        );
+        const result = await processInboundEmail(ownerId, email);
         if (result) processed++;
       } catch (error) {
         console.error('Failed to process email:', email.id, error);
@@ -523,6 +626,7 @@ export function startIngestionWorker(): void {
   workerStopped = false;
   consecutiveFailures = 0;
   lastError = null;
+  configurationErrorLogged = false; // Re-announce a misconfiguration after a restart.
 
   console.log('🚀 Starting email ingestion worker...');
   scheduleNextPoll(INGESTION_CONFIG.STARTUP_DELAY_MS);
@@ -545,6 +649,11 @@ export function getIngestionStatus() {
     /** Non-zero means the last poll(s) failed and the loop is backing off. */
     consecutiveFailures,
     lastError,
+    /**
+     * Non-null means ingestion is disabled by configuration, not by an outage — the loop is not
+     * retrying because retrying cannot help. Currently only set when `STALWART_USER_ID` is missing.
+     */
+    configurationError,
     nextPollAt: nextPollAt ? new Date(nextPollAt).toISOString() : null,
     pollIntervalMs: INGESTION_CONFIG.POLL_INTERVAL_MS,
     maxBackoffMs: INGESTION_CONFIG.MAX_BACKOFF_MS,
