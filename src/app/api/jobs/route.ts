@@ -176,11 +176,24 @@ export async function GET(req: NextRequest) {
       trackerQuery.status = statusFilter;
     }
 
-    // Lite mode: return only IDs for bookmark detection (much faster)
+    // Lite mode: return only the fields callers index by (much faster).
+    // `companyLogo` is included because it is the only way an already-resolved logo reaches the
+    // client: without it every avatar re-runs the logo fetch chain on every load, and the logo
+    // the client persists back is never read.
     if (liteMode) {
       const limitVal = limitParam ? parseInt(limitParam, 10) : 200;
       const apps = await JobApplication.find(trackerQuery)
-        .select({ _id: 1, jobId: 1, externalId: 1, jobUrl: 1, sourceUrl: 1, company: 1, jobTitle: 1, title: 1 })
+        .select({
+          _id: 1,
+          jobId: 1,
+          externalId: 1,
+          jobUrl: 1,
+          sourceUrl: 1,
+          company: 1,
+          jobTitle: 1,
+          title: 1,
+          companyLogo: 1,
+        })
         .sort({ updatedAt: -1 })
         .limit(isNaN(limitVal) ? 200 : limitVal)
         .lean();

@@ -205,326 +205,306 @@ export default function SourceHealthPanel() {
         </button>
       </div>
 
-      {/* System Health Overview (Locks & Queue Status) */}
-      {data?.health && (
-        <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 shadow-xl">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-xs font-semibold text-white">System Ingestion & Lock Health</h3>
-            </div>
-            {data.locks && (
-              <span className="text-[10px] text-white/40 font-mono">
-                Active Locks: {data.locks.active}
-              </span>
+      {/* Unified Health & Summary Card */}
+      <div className="bg-[#111216] border border-white/5 rounded-2xl shadow-xl overflow-hidden">
+
+        {/* Top row: header + lock health stats */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-semibold text-white">Ingestion Health</span>
+          </div>
+          <div className="flex items-center gap-4 text-[11px]">
+            {data?.health && (
+              <>
+                <span className="flex items-center gap-1.5 text-white/50">
+                  <span className={`font-bold ${data.health.locks.stale > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>{data.health.locks.active}</span>
+                  Active Locks
+                  {data.health.locks.stale > 0 && (
+                    <span className="text-amber-400 font-semibold">· {data.health.locks.stale} stale</span>
+                  )}
+                </span>
+                <span className="flex items-center gap-1.5 text-white/50">
+                  <span className="font-bold text-white">{data.health.demand.total}</span>
+                  Demand Segments
+                </span>
+                <span className="flex items-center gap-1.5 text-white/50">
+                  <span className={`font-bold ${data.health.demand.fetching > 0 ? 'text-blue-400' : 'text-white/60'}`}>{data.health.demand.fetching}</span>
+                  Fetching
+                </span>
+              </>
             )}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
-              <div className={`text-lg font-bold ${data.health.locks.stale > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {data.health.locks.active}
+        </div>
+
+        {/* Summary stats row */}
+        {summary && (
+          <div className="grid grid-cols-3 md:grid-cols-6 divide-x divide-white/[0.05] border-b border-white/5">
+            {[
+              { label: 'Total Sources', val: summary.total, color: 'text-white' },
+              { label: 'Healthy', val: summary.healthy, color: 'text-emerald-400' },
+              { label: 'Degraded', val: summary.statusCounts?.degraded || 0, color: 'text-amber-400' },
+              { label: 'Unhealthy', val: summary.unhealthy - (summary.statusCounts?.degraded || 0), color: 'text-red-400' },
+              { label: 'Configured', val: summary.configured, color: 'text-blue-400' },
+              {
+                label: 'Due Now',
+                val: summary.due ?? sources.filter(s => s.enabled && (s.isDue || (s.nextEligibleRun && new Date(s.nextEligibleRun).getTime() <= Date.now()))).length,
+                color: (summary.due ?? 0) > 0 ? 'text-amber-400' : 'text-white/50'
+              },
+            ].map((m) => (
+              <div key={m.label} className="py-3 px-4 text-center">
+                <div className={`text-lg font-bold tracking-tight ${m.color}`}>{m.val}</div>
+                <div className="text-[10px] text-white/40 mt-0.5">{m.label}</div>
               </div>
-              <div className="text-[10px] text-white/40 mt-0.5">Active Locks</div>
-            </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
-              <div className="text-lg font-bold text-white">{data.health.demand.total}</div>
-              <div className="text-[10px] text-white/40 mt-0.5">Demand Segments</div>
-            </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
-              <div className="text-lg font-bold text-blue-400">{data.health.sources.healthy}</div>
-              <div className="text-[10px] text-white/40 mt-0.5">Healthy Sources</div>
-            </div>
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl px-3 py-2 text-center">
-              <div className={`text-lg font-bold ${data.health.demand.fetching > 0 ? 'text-blue-400' : 'text-white/60'}`}>
-                {data.health.demand.fetching}
-              </div>
-              <div className="text-[10px] text-white/40 mt-0.5">Fetching Now</div>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Stale Locks Warning */}
-      {data?.health && data.health.locks.stale > 0 && (
-        <div className="bg-amber-500/5 border border-amber-500/10 rounded-2xl p-4 flex items-start gap-3">
-          <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-xs font-semibold text-amber-400">Stale Locks Detected</h4>
-            <p className="text-xs text-white/50 mt-0.5">
-              {data.health.locks.stale} lock{data.health.locks.stale > 1 ? 's' : ''} have expired but not been cleaned up.
-              The next scheduler cycle will automatically clear them.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Bar */}
-      {summary && (
-        <div className="bg-[#111216] border border-white/5 rounded-2xl p-4 grid grid-cols-2 md:grid-cols-6 gap-3 shadow-xl">
-          <div className="text-center">
-            <div className="text-xl font-bold text-white tracking-tight">{summary.total}</div>
-            <div className="text-xs text-white/40 mt-0.5">Total Sources</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-emerald-400 tracking-tight">{summary.healthy}</div>
-            <div className="text-xs text-white/40 mt-0.5">Healthy</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-amber-400 tracking-tight">
-              {summary.statusCounts?.degraded || 0}
-            </div>
-            <div className="text-xs text-white/40 mt-0.5">Degraded</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-red-400 tracking-tight">{summary.unhealthy - (summary.statusCounts?.degraded || 0)}</div>
-            <div className="text-xs text-white/40 mt-0.5">Unhealthy</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl font-bold text-blue-400 tracking-tight">{summary.configured}</div>
-            <div className="text-xs text-white/40 mt-0.5">Configured</div>
-          </div>
-          <div className="text-center">
-            <div className={`text-xl font-bold tracking-tight ${summary.due && summary.due > 0 ? 'text-amber-400' : 'text-white/60'}`}>
-              {summary.due ?? sources.filter((s) => s.enabled && (s.isDue || (s.nextEligibleRun && new Date(s.nextEligibleRun).getTime() <= Date.now()))).length}
-            </div>
-            <div className="text-xs text-white/40 mt-0.5">Due Now</div>
-          </div>
-        </div>
-      )}
-
-      {/* LinkedIn Session Status Banner */}
-      {data?.linkedinSession && data.linkedinSession.enabled && data.linkedinSession.status !== 'PROFILE_EXISTS' && data.linkedinSession.status !== 'SESSION_OK' && (
-        <div className={`rounded-2xl p-4 flex items-start gap-3 ${
-          data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
-            ? 'bg-red-500/5 border border-red-500/10'
-            : 'bg-amber-500/5 border border-amber-500/10'
-        }`}>
-          <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${
+        {/* LinkedIn warning (inline, only when issue exists) */}
+        {data?.linkedinSession && data.linkedinSession.enabled &&
+          data.linkedinSession.status !== 'PROFILE_EXISTS' &&
+          data.linkedinSession.status !== 'SESSION_OK' && (
+          <div className={`flex items-start gap-3 px-4 py-3 border-b border-white/5 ${
             data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
-              ? 'text-red-400'
-              : 'text-amber-400'
-          }`} />
-          <div>
-            <h4 className={`text-sm font-bold ${
+              ? 'bg-red-500/[0.04]'
+              : 'bg-amber-500/[0.04]'
+          }`}>
+            <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${
               data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
-                ? 'text-red-400'
-                : 'text-amber-400'
-            }`}>
-              LinkedIn: {data.linkedinSession.status.replace(/_/g, ' ')}
-            </h4>
-            <p className="text-xs text-white/50 mt-1">
-              {data.linkedinSession.status === 'PROFILE_MISSING' && 'Browser profile directory not found on VPS. Create it and run login_linkedin.py.'}
-              {data.linkedinSession.status === 'PROFILE_EMPTY' && 'Browser profile exists but has no session data. Run login_linkedin.py on the VPS to authenticate.'}
-              {data.linkedinSession.status === 'NEEDS_REAUTH' && 'LinkedIn session expired. Run login_linkedin.py again to re-authenticate.'}
-              {data.linkedinSession.status === 'NOT_CONFIGURED' && 'LinkedIn is not enabled. Set LINKEDIN_ENABLED=true and enable in Worker Settings.'}
-            </p>
-            <p className="text-[10px] text-white/30 mt-1.5 font-mono">
-              VPS: scripts/linkedin-worker/login_linkedin.py
-            </p>
+                ? 'text-red-400' : 'text-amber-400'
+            }`} />
+            <div className="flex-1 min-w-0">
+              <span className={`text-xs font-bold ${
+                data.linkedinSession.status === 'NEEDS_REAUTH' || data.linkedinSession.status === 'BLOCKED' || data.linkedinSession.status === 'CHALLENGE'
+                  ? 'text-red-400' : 'text-amber-400'
+              }`}>
+                LinkedIn: {data.linkedinSession.status.replace(/_/g, ' ')}
+              </span>
+              <span className="text-xs text-white/40 ml-2">
+                {data.linkedinSession.status === 'PROFILE_MISSING' && 'Browser profile not found on VPS — run login_linkedin.py'}
+                {data.linkedinSession.status === 'PROFILE_EMPTY' && 'Profile exists but no session — run login_linkedin.py'}
+                {data.linkedinSession.status === 'NEEDS_REAUTH' && 'Session expired — run login_linkedin.py to re-authenticate'}
+                {data.linkedinSession.status === 'NOT_CONFIGURED' && 'Set LINKEDIN_ENABLED=true and enable in Worker Settings'}
+              </span>
+              <span className="text-[10px] text-white/25 font-mono ml-2">scripts/linkedin-worker/login_linkedin.py</span>
+            </div>
           </div>
+        )}
+
+        {/* Stale locks warning (inline) */}
+        {data?.health && data.health.locks.stale > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 bg-amber-500/[0.04]">
+            <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-xs text-amber-400 font-semibold">
+              {data.health.locks.stale} stale lock{data.health.locks.stale > 1 ? 's' : ''} detected
+            </span>
+            <span className="text-xs text-white/40">— will be cleared on next scheduler cycle</span>
+          </div>
+        )}
+
+        {/* Source Workers subheader + Run All button */}
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Source Workers</span>
+          <button
+            onClick={triggerAllSources}
+            disabled={runningAll}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-all disabled:opacity-30"
+          >
+            <Zap className={`w-3.5 h-3.5 ${runningAll ? 'animate-pulse' : ''}`} />
+            {runningAll ? 'Running All…' : 'Run All Sources'}
+          </button>
         </div>
-      )}
-
-      {/* Run All Button */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-bold text-white">Source Workers</span>
-        <button
-          onClick={triggerAllSources}
-          disabled={runningAll}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-all disabled:opacity-30"
-        >
-          <Zap className={`w-4 h-4 ${runningAll ? 'animate-pulse' : ''}`} />
-          {runningAll ? 'Running All Workers...' : 'Run All Sources'}
-        </button>
       </div>
 
-      {/* Source Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {sources.map((src) => {
-          const def = src.registryDef;
-          const hasFailures = src.consecutiveFailures > 0;
-          const isConfigured = src.configStatus.ready;
-          const isDue = src.isDue || (src.enabled && src.nextEligibleRun && new Date(src.nextEligibleRun).getTime() <= Date.now());
-          const lastRunAgo = timeAgo(src.lastRunAt);
-          const lastSuccessAgo = timeAgo(src.lastSuccessAt);
-          const nextDueIn = timeUntil(src.nextEligibleRun);
+      {/* Source Workers Table */}
+      <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-white/5 bg-white/[0.02]">
+                <th className="text-left px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Source</th>
+                <th className="text-left px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="text-left px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Last Run</th>
+                <th className="text-left px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Next Due</th>
+                <th className="text-left px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Last Success</th>
+                <th className="text-right px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Avg Yield</th>
+                <th className="text-right px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Duration</th>
+                <th className="text-right px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Interval</th>
+                <th className="text-right px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Max/Run</th>
+                <th className="text-right px-4 py-3 text-white/40 font-semibold uppercase tracking-wider whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {sources.map((src) => {
+                const def = src.registryDef;
+                const hasFailures = src.consecutiveFailures > 0;
+                const isConfigured = src.configStatus.ready;
+                const isDue = src.isDue || (src.enabled && src.nextEligibleRun && new Date(src.nextEligibleRun).getTime() <= Date.now());
+                const lastRunAgo = timeAgo(src.lastRunAt);
+                const lastSuccessAgo = timeAgo(src.lastSuccessAt);
+                const nextDueIn = timeUntil(src.nextEligibleRun);
 
-          return (
-            <motion.div
-              key={src.source}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`bg-[#111216] border rounded-2xl p-4 transition-all shadow-xl hover:border-white/10 ${
-                hasFailures ? 'border-red-500/20' : isDue && src.enabled ? 'border-amber-500/20 bg-amber-500/[0.02]' : 'border-white/5'
-              }`}
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    {src.healthStatus === 'healthy' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    ) : src.healthStatus === 'degraded' || src.healthStatus === 'stale' ? (
-                      <AlertTriangle className="w-4 h-4 text-amber-400" />
-                    ) : src.healthStatus === 'running' ? (
-                      <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
-                    ) : src.healthStatus === 'config_error' || src.healthStatus === 'not_initialized' ? (
-                      <AlertTriangle className="w-4 h-4 text-amber-400" />
-                    ) : src.healthStatus === 'disabled' ? (
-                      <XCircle className="w-4 h-4 text-white/30" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-400" />
-                    )}
-                    <h4 className="text-sm font-bold text-white capitalize">{def?.name || src.source}</h4>
-                  </div>
-                  {def?.description && (
-                    <p className="text-[11px] text-white/40 mt-1 line-clamp-1">{def.description}</p>
-                  )}
-                  {/* Health status badge */}
-                  <div className="mt-1.5">
-                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${
-                      src.healthStatus === 'healthy' ? CHIP_TONES_DARK.emerald :
-                      src.healthStatus === 'degraded' ? CHIP_TONES_DARK.amber :
-                      src.healthStatus === 'stale' ? CHIP_TONES_DARK.neutral :
-                      src.healthStatus === 'running' ? CHIP_TONES_DARK.blue :
-                      src.healthStatus === 'config_error' ? CHIP_TONES_DARK.amber :
-                      src.healthStatus === 'not_initialized' ? CHIP_TONES_DARK.neutral :
-                      src.healthStatus === 'disabled' ? `${CHIP_TONES_DARK.neutral} opacity-60` :
-                      CHIP_TONES_DARK.rose
-                    }`}>
-                      {src.healthStatus === 'config_error' ? 'Config Required' :
-                       src.healthStatus === 'not_initialized' ? 'Not Initialized' :
-                       src.healthStatus}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {isDue && src.enabled && (
-                    <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${CHIP_TONES_DARK.amber}`}>
-                      <Timer className="w-2.5 h-2.5" /> Due
-                    </span>
-                  )}
-                  <span className={`${CHIP_INLINE} font-bold uppercase tracking-wider ${
-                    src.enabled ? CHIP_TONES_DARK.emerald : CHIP_TONES_DARK.neutral
-                  }`}>
-                    {src.enabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-              </div>
+                const statusIcon = src.healthStatus === 'healthy' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : src.healthStatus === 'degraded' || src.healthStatus === 'stale' ? (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                ) : src.healthStatus === 'running' ? (
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin shrink-0" />
+                ) : src.healthStatus === 'config_error' || src.healthStatus === 'not_initialized' ? (
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                ) : src.healthStatus === 'disabled' ? (
+                  <XCircle className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                ) : (
+                  <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                );
 
-              {/* Metrics Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <Clock className="w-3 h-3" /> Last Run
-                  </div>
-                  <div className="text-xs font-semibold text-white">{lastRunAgo}</div>
-                </div>
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <Timer className="w-3 h-3" /> Next Due
-                  </div>
-                  <div className={`text-xs font-semibold ${isDue && src.enabled ? 'text-amber-400 font-bold' : 'text-white'}`}>
-                    {nextDueIn}
-                  </div>
-                </div>
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <CheckCircle2 className="w-3 h-3" /> Last Success
-                  </div>
-                  <div className="text-xs font-semibold text-white">{lastSuccessAgo}</div>
-                </div>
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <Zap className="w-3 h-3" /> Avg Yield
-                  </div>
-                  <div className="text-xs font-semibold text-white">{src.avgYield} jobs</div>
-                </div>
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <Activity className="w-3 h-3" /> Avg Duration
-                  </div>
-                  <div className="text-xs font-semibold text-white">{formatDuration(src.avgDuration)}</div>
-                </div>
-                <div className="bg-white/[0.03] rounded-xl px-3 py-2">
-                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] mb-0.5">
-                    <Clock className="w-3 h-3" /> Interval
-                  </div>
-                  <div className="text-xs font-semibold text-white">
-                    {def?.refreshIntervalMs ? formatInterval(def.refreshIntervalMs) : 'Default'}
-                  </div>
-                </div>
-              </div>
+                const statusColor =
+                  src.healthStatus === 'healthy' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
+                  src.healthStatus === 'degraded' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                  src.healthStatus === 'stale' ? 'text-white/50 bg-white/5 border-white/10' :
+                  src.healthStatus === 'running' ? 'text-blue-400 bg-blue-500/10 border-blue-500/20' :
+                  src.healthStatus === 'config_error' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' :
+                  src.healthStatus === 'disabled' ? 'text-white/20 bg-white/5 border-white/5' :
+                  'text-red-400 bg-red-500/10 border-red-500/20';
 
-              {/* Failure Warning */}
-              {hasFailures && (
-                <div className="bg-red-500/5 border border-red-500/10 rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-                  <span className="text-[11px] text-red-400">
-                    {src.consecutiveFailures} consecutive failure{src.consecutiveFailures > 1 ? 's' : ''}
-                    {src.lastFailureAt && ` (last: ${timeAgo(src.lastFailureAt)})`}
-                  </span>
-                </div>
-              )}
+                return (
+                  <motion.tr
+                    key={src.source}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`group hover:bg-white/[0.02] transition-colors ${
+                      hasFailures ? 'bg-red-500/[0.02]' : isDue && src.enabled ? 'bg-amber-500/[0.02]' : ''
+                    }`}
+                  >
+                    {/* Source Name */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 min-w-[140px]">
+                        {statusIcon}
+                        <div>
+                          <div className="font-semibold text-white capitalize whitespace-nowrap">
+                            {def?.name || src.source}
+                          </div>
+                          {def?.type && (
+                            <div className="text-[10px] text-white/30 uppercase tracking-wider mt-0.5">{def.type}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-              {/* Config Warning */}
-              {!isConfigured && (
-                <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl px-3 py-2 mb-3">
-                  <span className="text-[11px] text-amber-400">
-                    {src.configStatus.reason || 'Not configured'}
-                  </span>
-                </div>
-              )}
+                    {/* Status badges */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>
+                          {src.healthStatus === 'config_error' ? 'Config Req.' :
+                           src.healthStatus === 'not_initialized' ? 'Uninit.' :
+                           src.healthStatus}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          src.enabled
+                            ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                            : 'text-white/30 bg-white/5 border-white/10'
+                        }`}>
+                          {src.enabled ? 'On' : 'Off'}
+                        </span>
+                        {isDue && src.enabled && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                            <Timer className="w-2.5 h-2.5" /> Due
+                          </span>
+                        )}
+                      </div>
+                      {/* Inline warnings */}
+                      {hasFailures && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />
+                          <span className="text-[10px] text-red-400">
+                            {src.consecutiveFailures} failure{src.consecutiveFailures > 1 ? 's' : ''}
+                            {src.lastFailureAt && ` (${timeAgo(src.lastFailureAt)})`}
+                          </span>
+                        </div>
+                      )}
+                      {!isConfigured && (
+                        <div className="text-[10px] text-amber-400 mt-1 truncate max-w-[160px]">
+                          {src.configStatus.reason || 'Not configured'}
+                        </div>
+                      )}
+                      {src.source === 'linkedin' && data?.linkedinSession && src.enabled && (
+                        <div className={`text-[10px] mt-1 font-semibold ${
+                          data.linkedinSession.status === 'PROFILE_EXISTS' || data.linkedinSession.status === 'SESSION_OK'
+                            ? 'text-emerald-400' : 'text-amber-400'
+                        }`}>
+                          LI: {data.linkedinSession.status.replace(/_/g, ' ')}
+                        </div>
+                      )}
+                    </td>
 
-              {/* LinkedIn Session Status */}
-              {src.source === 'linkedin' && data?.linkedinSession && src.enabled && (
-                <div className={`rounded-xl px-3 py-2 mb-3 flex items-center gap-2 ${
-                  data.linkedinSession.status === 'PROFILE_EXISTS' || data.linkedinSession.status === 'SESSION_OK'
-                    ? 'bg-emerald-500/5 border border-emerald-500/10'
-                    : 'bg-amber-500/5 border border-amber-500/10'
-                }`}>
-                  <span className={`text-[11px] font-bold ${
-                    data.linkedinSession.status === 'PROFILE_EXISTS' || data.linkedinSession.status === 'SESSION_OK'
-                      ? 'text-emerald-400'
-                      : 'text-amber-400'
-                  }`}>
-                    Session: {data.linkedinSession.status.replace(/_/g, ' ')}
-                  </span>
-                </div>
-              )}
+                    {/* Last Run */}
+                    <td className="px-4 py-3 text-white/70 whitespace-nowrap">{lastRunAgo}</td>
 
-              {/* Refresh Interval & Limits info */}
-              {def && (
-                <div className="flex items-center justify-between text-[10px] text-white/30 mb-3">
-                  <span>Type: <span className="text-white/50 uppercase">{def.type}</span></span>
-                  <span>Max: {def.maxResults} jobs/run</span>
-                </div>
-              )}
+                    {/* Next Due */}
+                    <td className={`px-4 py-3 whitespace-nowrap font-semibold ${isDue && src.enabled ? 'text-amber-400' : 'text-white/70'}`}>
+                      {nextDueIn}
+                    </td>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => triggerSource(src.source)}
-                  disabled={!src.enabled || !isConfigured || triggeringSource === src.source}
-                  className="flex-1 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${triggeringSource === src.source ? 'animate-spin' : ''}`} />
-                  {triggeringSource === src.source ? 'Running...' : 'Run Now'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedSourceForConfig(src as any)}
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-colors"
-                  title="Configure Portal Settings"
-                >
-                  <Sliders className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          );
-        })}
+                    {/* Last Success */}
+                    <td className="px-4 py-3 text-white/70 whitespace-nowrap">{lastSuccessAgo}</td>
+
+                    {/* Avg Yield */}
+                    <td className="px-4 py-3 text-right text-white/70 whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <Zap className="w-3 h-3 text-white/30" />
+                        {src.avgYield} jobs
+                      </div>
+                    </td>
+
+                    {/* Avg Duration */}
+                    <td className="px-4 py-3 text-right text-white/70 whitespace-nowrap">
+                      {formatDuration(src.avgDuration)}
+                    </td>
+
+                    {/* Interval */}
+                    <td className="px-4 py-3 text-right text-white/70 whitespace-nowrap">
+                      {def?.refreshIntervalMs ? formatInterval(def.refreshIntervalMs) : '—'}
+                    </td>
+
+                    {/* Max/Run */}
+                    <td className="px-4 py-3 text-right text-white/50 whitespace-nowrap">
+                      {def?.maxResults ? `${def.maxResults}` : '—'}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => triggerSource(src.source)}
+                          disabled={!src.enabled || !isConfigured || triggeringSource === src.source}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-bold hover:bg-emerald-500/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${triggeringSource === src.source ? 'animate-spin' : ''}`} />
+                          {triggeringSource === src.source ? 'Running…' : 'Run Now'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSourceForConfig(src as any)}
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 hover:text-white transition-colors"
+                          title="Configure Portal Settings"
+                        >
+                          <Sliders className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {sources.length === 0 && (
+          <div className="py-16 text-center text-white/30 text-xs">No sources found</div>
+        )}
       </div>
+
 
       {/* Ingestion Runs History */}
       <RunsExplorer />

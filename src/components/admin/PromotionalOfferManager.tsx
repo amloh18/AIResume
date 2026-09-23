@@ -314,15 +314,11 @@ const PromotionalOfferManager: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Promotional Offers</h2>
-          <p className="text-xs text-white/40 mt-0.5">Manage promotional campaigns and special offers</p>
-        </div>
+      {/* Toolbar */}
+      <div className="flex justify-end">
         <button
           onClick={() => setShowForm(true)}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-full font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
         >
           <Plus size={14} />
           Create Offer

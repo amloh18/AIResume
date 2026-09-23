@@ -59,9 +59,19 @@ interface CompanyLogoProps {
   logoUrl?: string | null;
   /** When set, a successfully resolved logo URL is persisted back to this job. */
   jobId?: string | null;
+  /**
+   * Text for the initials fallback, when `initialsOf(company)` would be wrong.
+   *
+   * The fallback defaults to the company's own initials, which is right when the logo
+   * *represents the company*. But when a logo is being used as a person's avatar — e.g. a
+   * recruiter's message, where the company is only a hint for which logo to fetch — the
+   * fallback should be the person's initials. Without this, a sender whose company is
+   * "Airbnb" would fall back to "AI" instead of their own initials.
+   */
+  fallbackLabel?: string;
 }
 
-export default function CompanyLogo({ company, size = 20, className = '', logoUrl, jobId }: CompanyLogoProps) {
+export default function CompanyLogo({ company, size = 20, className = '', logoUrl, jobId, fallbackLabel }: CompanyLogoProps) {
   const cacheKey = (company || '').trim().toLowerCase() || 'empty';
   const domain = useMemo(() => normalizeCompany(company), [company]);
 
@@ -120,7 +130,7 @@ export default function CompanyLogo({ company, size = 20, className = '', logoUr
         style={{ ...boxStyle, fontSize: Math.max(8, Math.round(size * 0.42)) }}
         title={company}
       >
-        {initialsOf(company)}
+        {fallbackLabel || initialsOf(company)}
       </span>
     );
   }

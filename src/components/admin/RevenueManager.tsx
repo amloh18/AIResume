@@ -143,50 +143,39 @@ export default function RevenueManager() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Revenue Summary
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Financial Overview & Monetization Telemetry
-          </p>
-        </div>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5">
+        <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
+          <SelectTrigger className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white/70 hover:bg-white/10 transition-all w-36 h-8">
+            <Calendar className="h-3.5 w-3.5 mr-1.5 text-white/40" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-[#111216] border-white/10 text-white rounded-xl text-xs">
+            <SelectItem value="day">Today</SelectItem>
+            <SelectItem value="week">This Week</SelectItem>
+            <SelectItem value="month">This Month</SelectItem>
+            <SelectItem value="quarter">This Quarter</SelectItem>
+            <SelectItem value="year">This Year</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white/70 hover:bg-white/10 transition-all w-36 h-9">
-              <Calendar className="h-3.5 w-3.5 mr-1.5 text-white/40" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[#111216] border-white/10 text-white rounded-xl text-xs">
-              <SelectItem value="day">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
+        <button
+          onClick={handleExportCSV}
+          className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-white/70 hover:text-white flex items-center gap-1.5 text-xs font-semibold h-8"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Report
+        </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-white/70 hover:text-white flex items-center gap-1.5 text-xs font-semibold h-9"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Report
-          </button>
-
-          <a
-            href="https://dashboard.stripe.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3.5 py-1.5 bg-[#635BFF] hover:bg-[#5851E2] text-white rounded-xl flex items-center gap-1.5 transition-all text-xs font-semibold h-9 shadow-sm"
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            Stripe
-          </a>
-        </div>
+        <a
+          href="https://dashboard.stripe.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3.5 py-1.5 bg-[#635BFF] hover:bg-[#5851E2] text-white rounded-xl flex items-center gap-1.5 transition-all text-xs font-semibold h-8 shadow-sm"
+        >
+          <CreditCard className="h-3.5 w-3.5" />
+          Stripe
+        </a>
       </div>
 
       {/* Stats Bento */}

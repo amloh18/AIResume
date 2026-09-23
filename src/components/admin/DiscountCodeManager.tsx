@@ -280,30 +280,24 @@ const DiscountCodeManager: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Discount Codes</h2>
-          <p className="text-xs text-white/40 mt-0.5">Manage promotional codes, trials, and discounts</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="rounded bg-white/5 border-white/10 text-emerald-600 focus:ring-emerald-500"
-            />
-            <span className="text-xs text-white/60">Show Inactive</span>
-          </label>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
-          >
-            <Plus size={14} />
-            Add Discount Code
-          </button>
-        </div>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showInactive}
+            onChange={(e) => setShowInactive(e.target.checked)}
+            className="rounded bg-white/5 border-white/10 text-emerald-600 focus:ring-emerald-500"
+          />
+          <span className="text-xs text-white/60">Show Inactive</span>
+        </label>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-semibold transition-all shadow-sm"
+        >
+          <Plus size={14} />
+          Add Discount Code
+        </button>
       </div>
 
       {/* Summary Stats */}

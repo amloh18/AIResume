@@ -247,18 +247,9 @@ export default function EmailCampaignManager() {
         )}
       </AnimatePresence>
 
-      {/* Command Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Email Campaigns
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Broadcast manager • {metrics.totalUsers.toLocaleString()} targeted users
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
+      {/* Filter Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
             <input
@@ -266,10 +257,10 @@ export default function EmailCampaignManager() {
               placeholder="Search campaigns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:bg-white/10 w-full sm:w-56 transition-all"
+              className="pl-9 pr-4 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 focus:bg-white/10 w-full sm:w-48 transition-all"
             />
           </div>
-          
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -278,7 +269,9 @@ export default function EmailCampaignManager() {
             <option value="all">Status: All</option>
             {CAMPAIGN_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+        </div>
 
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleSyncUsers}
             disabled={syncing}

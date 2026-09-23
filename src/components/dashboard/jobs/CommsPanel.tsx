@@ -43,6 +43,7 @@ import {
   Edit3,
   RotateCcw,
 } from 'lucide-react';
+import CompanyLogo from '@/components/ui/CompanyLogo';
 
 // ============================================================================
 // Types
@@ -90,6 +91,8 @@ interface Job {
   jobTitle?: string;
   company?: any;
   status?: string;
+  /** A logo already resolved and persisted by a previous view, when the API returns it. */
+  companyLogo?: string | null;
 }
 
 interface CommsFilter {
@@ -1009,6 +1012,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
                   key={comm._id}
                   communication={comm}
                   threadCount={threadCount}
+                  jobs={jobs}
                   isSelected={selectedComm?._id === comm._id}
                   onSelect={() => {
                     setSelectedComm(comm);
@@ -1092,12 +1096,14 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
 function EmailRow({
   communication: comm,
   threadCount,
+  jobs,
   isSelected,
   onSelect,
   onToggleStar,
 }: {
   communication: Communication;
   threadCount?: number;
+  jobs: Job[];
   isSelected: boolean;
   onSelect: () => void;
   onToggleStar: () => void;
@@ -1141,15 +1147,12 @@ function EmailRow({
       />
 
       <div className="flex gap-3">
-        {/* Avatar. A sender disc is most of what makes a list read as mail rather than as records. */}
-        <div className="relative flex-shrink-0">
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold ${avatarTone(
-              comm.senderName || comm.senderEmail
-            )}`}
-          >
-            {initialsOf(comm.senderName || comm.senderEmail)}
-          </div>
+        {/* Avatar. A sender disc is most of what makes a list read as mail rather than as records.
+            The wrapper stays `relative` so the direction badge keeps its corner, and `flex` so the
+            avatar is a flex item: an inline-level box would sit on the text baseline and add
+            descender space, shifting the badge and the row height. */}
+        <div className="relative flex flex-shrink-0">
+          <SenderAvatar comm={comm} jobs={jobs} size={36} />
           <span
             className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white dark:border-[#121811] ${
               isInbound ? 'bg-emerald-500' : 'bg-blue-500'
@@ -1660,13 +1663,7 @@ function EmailDetail({
         </div>
 
         <div className="flex items-start gap-3 mt-3">
-          <div
-            className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${avatarTone(
-              comm.senderName || comm.senderEmail
-            )}`}
-          >
-            {initialsOf(comm.senderName || comm.senderEmail)}
-          </div>
+          <SenderAvatar comm={comm} jobs={jobs} size={36} className="flex-shrink-0" />
 
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2 flex-wrap">
@@ -1725,13 +1722,7 @@ function EmailDetail({
               <div key={msg._id || index} className="space-y-2">
                 {/* Recruiter Header */}
                 <div className="flex items-center gap-2.5">
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${avatarTone(
-                      msg.senderName || msg.senderEmail
-                    )}`}
-                  >
-                    {initialsOf(msg.senderName || msg.senderEmail)}
-                  </div>
+                  <SenderAvatar comm={msg} jobs={jobs} size={32} className="shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
@@ -2245,4 +2236,78 @@ function avatarTone(seed: string): string {
     hash = (hash * 31 + key.charCodeAt(i)) % 100000;
   }
   return AVATAR_TONES[hash % AVATAR_TONES.length];
+}
+
+/**
+ * The company behind a communication, for logo lookup.
+ *
+ * Prefers the company on the linked application; otherwise reads the company a recruiter puts in
+ * parentheses in their display name ("Jane Holmes (Stripe)"). `name` is null when nothing
+ * identifies a company — the caller then falls back to the sender's initials rather than guessing
+ * at a domain.
+ */
+function companyOfCommunication(
+  comm: Communication,
+  jobs: Job[]
+): { name: string | null; logoUrl: string | null; jobId: string | null } {
+  const linked = comm.jobId ? jobs.find((j) => String(j._id) === String(comm.jobId)) : null;
+
+  if (linked) {
+    const name =
+      typeof linked.company === 'string' ? linked.company : linked.company?.name || null;
+    return { name: name || null, logoUrl: linked.companyLogo || null, jobId: String(linked._id) };
+  }
+
+  const match = comm.senderName?.match(/\((.*?)\)/);
+  return { name: match ? match[1] : null, logoUrl: null, jobId: null };
+}
+
+/**
+ * A communication's avatar: the company's logo when we can identify the company, the sender's
+ * initials otherwise.
+ *
+ * A logo answers "who is this from" faster than initials — but only when it really is the sender's
+ * company. So the initials remain the fallback, and they are the *sender's* initials rather than
+ * the company's, which is what `fallbackLabel` is for: without it a recruiter at Airbnb would
+ * fall back to "AI" instead of their own initials.
+ */
+function SenderAvatar({
+  comm,
+  jobs,
+  size = 36,
+  className = '',
+}: {
+  comm: Communication;
+  jobs: Job[];
+  size?: number;
+  className?: string;
+}) {
+  const seed = comm.senderName || comm.senderEmail;
+  const { name, logoUrl, jobId } = useMemo(() => companyOfCommunication(comm, jobs), [comm, jobs]);
+
+  if (name) {
+    return (
+      <CompanyLogo
+        company={name}
+        logoUrl={logoUrl}
+        jobId={jobId}
+        size={size}
+        fallbackLabel={initialsOf(seed)}
+        className={className}
+      />
+    );
+  }
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold ${avatarTone(
+        seed
+      )} ${className}`}
+      style={{ width: size, height: size, fontSize: Math.max(8, Math.round(size * 0.34)) }}
+      title={seed}
+    >
+      {initialsOf(seed)}
+    </span>
+  );
 }

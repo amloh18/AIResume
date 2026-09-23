@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/lib/auth/cronAuth.ts",
+    "src/lib/auth/cron-guard.ts",
+    "src/app/api/cron/**/*.ts",
+    "src/app/api/admin/seed-recurring-campaigns/route.ts",
+    "src/app/api/applications/**/*.ts",
+    "src/app/api/automation/**/*.ts",
+    "src/app/api/jobs/**/*.ts",
+    "src/app/api/integrations/**/*.ts",
+    "src/lib/portals/**/*.ts",
+    "src/lib/services/recommendedJobsService.ts",
+    "src/lib/services/applicationDryRunService.ts",
+    "src/services/emailIngestionService.ts",
+    "src/components/dashboard/JobsDashboard.tsx",
+    "src/components/dashboard/jobs/JobSidebar.tsx",
+    "src/components/dashboard/redesigned/TopJobMatchesSection.tsx"
+  ],
+  "exclude": ["node_modules", "scripts", "scratch"]
+}

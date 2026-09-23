@@ -150,40 +150,31 @@ export default function UnifiedNotificationManager() {
 
     return (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
-            {/* Command Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                        Notification & Alert Center
-                    </h1>
-                    <p className="text-xs text-white/40 mt-0.5">
-                        Manage system-wide broadcasts, offers, test dispatches, and channel delivery
-                    </p>
-                </div>
-            </div>
 
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-                <TabsList className="flex items-center gap-1 bg-white/5 border border-white/5 p-1 rounded-xl w-fit">
-                    {[
-                        { id: 'overview', icon: BarChart3, label: 'Overview' },
-                        { id: 'send', icon: Megaphone, label: 'Send Alert' },
-                        { id: 'test', icon: Beaker, label: 'Send Test' },
-                        { id: 'offers', icon: DollarSign, label: 'Offers' },
-                        { id: 'history', icon: History, label: 'History' }
-                    ].map(tab => (
-                        <TabsTrigger 
-                            key={tab.id} 
-                            value={tab.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-white/50 hover:text-white"
-                        >
-                            <tab.icon className="h-3.5 w-3.5" />
-                            {tab.label}
-                        </TabsTrigger>
-                    ))}
-                </TabsList>
+      <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#111216] border border-white/5 overflow-x-auto max-w-full w-fit">
+        {[
+          { id: 'overview', icon: BarChart3, label: 'Overview' },
+          { id: 'send', icon: Megaphone, label: 'Send Alert' },
+          { id: 'test', icon: Beaker, label: 'Send Test' },
+          { id: 'offers', icon: DollarSign, label: 'Offers' },
+          { id: 'history', icon: History, label: 'History' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === tab.id ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
                 {/* Telemetry Tab */}
-                <TabsContent value="overview" className="space-y-5 mt-4">
+                {activeTab === 'overview' && (
+                    <div className="space-y-5 mt-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {[
                             { label: 'Total Sent', val: '1,234', icon: Send, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
@@ -212,10 +203,12 @@ export default function UnifiedNotificationManager() {
                         <h4 className="text-white/60 font-bold text-xs uppercase tracking-wider">Live Activity</h4>
                         <p className="text-white/30 text-xs mt-1">No notifications sent recently</p>
                     </div>
-                </TabsContent>
+                    </div>
+                )}
 
                 {/* Broadcast Tab */}
-                <TabsContent value="send" className="mt-4">
+                {activeTab === 'send' && (
+                    <div className="mt-4">
                     <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
                         <div className="p-4 sm:p-5 border-b border-white/5">
                             <h3 className="text-sm font-bold text-white tracking-tight">Create Notification</h3>
@@ -281,10 +274,12 @@ export default function UnifiedNotificationManager() {
                             </Button>
                         </div>
                     </div>
-                </TabsContent>
+                    </div>
+                )}
 
                 {/* Test Lab Tab */}
-                <TabsContent value="test" className="mt-4">
+                {activeTab === 'test' && (
+                    <div className="mt-4">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <div className="lg:col-span-2 space-y-4">
                             <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
@@ -376,10 +371,12 @@ export default function UnifiedNotificationManager() {
                             </div>
                         </div>
                     </div>
-                </TabsContent>
+                    </div>
+                )}
 
                 {/* History Tab */}
-                <TabsContent value="history" className="mt-4">
+                {activeTab === 'history' && (
+                    <div className="mt-4">
                     <div className="bg-[#111216] border border-white/5 rounded-2xl p-10 flex flex-col items-center justify-center text-center shadow-xl">
                         <div className="p-4 bg-white/5 rounded-2xl mb-3">
                             <History className="h-8 w-8 text-white/30" />
@@ -387,8 +384,8 @@ export default function UnifiedNotificationManager() {
                         <h4 className="text-white/70 font-bold text-sm">Notification History</h4>
                         <p className="text-white/30 text-xs mt-1 max-w-sm">History is currently being prepared for display. Check back soon for full access.</p>
                     </div>
-                </TabsContent>
-            </Tabs>
+                    </div>
+                )}
         </motion.div>
     );
 }

@@ -98,33 +98,22 @@ const AIAnalytics: React.FC = () => {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
-      {/* Command Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            AI & Intelligence Analytics
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Model performance, cost breakdown, and token telemetry
-          </p>
+      {/* Time Range Toolbar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <div className="flex items-center gap-1.5 p-1.5 bg-[#111216] border border-white/5 rounded-full">
+          {['7d', '30d', '90d', '1y'].map(range => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${timeRange === range ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+            >
+              {range}
+            </button>
+          ))}
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1 bg-white/5 border border-white/5 p-1 rounded-xl">
-            {['7d', '30d', '90d', '1y'].map(range => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${timeRange === range ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/40 hover:text-white'}`}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-          <button onClick={fetchAIData} className="p-2 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-all text-white/50 hover:text-white">
-            <Activity className="w-4 h-4" />
-          </button>
-        </div>
+        <button onClick={fetchAIData} className="p-2 bg-white/5 border border-white/5 rounded-full hover:bg-white/10 transition-all text-white/50 hover:text-white">
+          <Activity className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Primary Metrics Bento */}
