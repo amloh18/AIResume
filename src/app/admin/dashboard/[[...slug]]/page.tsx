@@ -142,8 +142,11 @@ export default function AdminDashboard() {
           <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-500/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
         </div>
 
-        {/* Sidebar */}
-        <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40 lg:w-[300px]">
+        {/* Sidebar — an in-flow flex sibling of the workspace, so the two SHARE the row
+            width. It must NOT go back to `fixed` + a compensating `pl-*` on the workspace:
+            that pattern leaves the workspace spanning the full viewport and merely padded
+            clear of the sidebar, so the sidebar floats over the content instead of beside it. */}
+        <div className="hidden lg:flex lg:flex-col lg:relative lg:z-40 lg:w-[270px] lg:shrink-0 lg:h-full">
           <AdminNavigation 
             activeTab={activeTab} 
             activeSubTab={activeSubTab} 
@@ -163,11 +166,11 @@ export default function AdminDashboard() {
               className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md lg:hidden"
             >
               <motion.div
-                initial={{ x: -300 }}
+                initial={{ x: -270 }}
                 animate={{ x: 0 }}
-                exit={{ x: -300 }}
+                exit={{ x: -270 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="w-[300px] h-full"
+                className="w-[270px] h-full"
               >
                 <AdminNavigation 
                   activeTab={activeTab} 
@@ -181,8 +184,10 @@ export default function AdminDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Main Workspace */}
-        <div className="flex flex-col flex-1 lg:pl-[300px] h-screen overflow-hidden relative z-10">
+        {/* Main Workspace — a flex sibling of the sidebar, so it takes the REMAINING width
+            rather than the full viewport. No `pl-*` offset: the sidebar occupies its own
+            column, which is what stops the two from overlapping. */}
+        <div className="flex flex-col flex-1 h-screen overflow-hidden relative z-10">
           
           {/* Header (FlowMate inspired with merged inner breadcrumb) */}
           <header className="h-16 flex items-center justify-between px-6 lg:px-8 border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-xl z-30 shrink-0">

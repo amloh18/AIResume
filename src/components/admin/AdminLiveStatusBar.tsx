@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Database, Server, Zap, Cpu, RefreshCw, CheckCircle2, AlertTriangle, XCircle, Clock, Shield } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Database, Server, Zap, Cpu, RefreshCw, Shield, Clock } from 'lucide-react';
 
 interface SystemHealthData {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -26,6 +26,7 @@ export default function AdminLiveStatusBar() {
   const [latency, setLatency] = useState<number>(18);
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchLiveHealth = async () => {
     setIsRefreshing(true);
@@ -34,7 +35,6 @@ export default function AdminLiveStatusBar() {
       const res = await fetch('/api/health', { cache: 'no-store' });
       const duration = Date.now() - start;
       setLatency(duration);
-
       if (res.ok) {
         const data = await res.json();
         setHealth(data);
@@ -61,98 +61,101 @@ export default function AdminLiveStatusBar() {
   const memPct = health?.checks?.memory?.percentage || 38;
 
   return (
-    <footer className="h-11 px-6 flex items-center justify-between border-t border-white/5 text-[11px] font-mono text-white/50 bg-[#080808]/95 backdrop-blur-xl z-30">
-      {/* Left: Live System Components */}
-      <div className="flex items-center gap-5 overflow-x-auto scrollbar-hide py-1">
-        {/* All Systems Operational Pill */}
-        <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold tracking-wider uppercase shrink-0">
+    <footer className="h-10 px-4 flex items-center border-t border-white/5 text-[10px] font-mono text-white/50 bg-[#080808]/95 backdrop-blur-xl z-30">
+      {/* Horizontal scrolling carousel */}
+      <div
+        ref={scrollRef}
+        className="flex items-center gap-4 overflow-x-auto scrollbar-hide flex-1"
+        style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+      >
+        {/* All Systems Operational */}
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-bold tracking-wider uppercase shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span>All Systems Operational</span>
+          All Systems Operational
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden sm:block" />
+        <span className="text-white/10 shrink-0">|</span>
 
-        {/* Database Live Status */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-white/40">DB:</span>
-          <div className="flex items-center gap-1.5 font-bold text-white">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-            MongoDB <span className="text-emerald-400 font-semibold">({dbLatency}ms)</span>
-          </div>
+        {/* DB Status */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Database className="w-3 h-3 text-emerald-400" />
+          <span className="text-white/40">DB</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+          <span className="text-white font-semibold">MongoDB</span>
+          <span className="text-emerald-400">({dbLatency}ms)</span>
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden sm:block" />
+        <span className="text-white/10 shrink-0">|</span>
 
-        {/* API Gateway Live Latency */}
-        <div className="flex items-center gap-2">
-          <Server className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-white/40">API Gateway:</span>
-          <div className="flex items-center gap-1.5 font-bold text-white">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            200 OK <span className="text-cyan-400 font-semibold">({latency}ms)</span>
-          </div>
+        {/* API Gateway */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Server className="w-3 h-3 text-cyan-400" />
+          <span className="text-white/40">API</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+          <span className="text-white font-semibold">200 OK</span>
+          <span className="text-cyan-400">({latency}ms)</span>
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden md:block" />
+        <span className="text-white/10 shrink-0">|</span>
 
-        {/* Ingestion Microservice */}
-        <div className="hidden md:flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5 text-amber-400" />
-          <span className="text-white/40">Ingestion:</span>
-          <div className="flex items-center gap-1.5 font-bold text-white">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Active <span className="text-white/50 font-normal">(8 Sources)</span>
-          </div>
+        {/* Ingestion */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Zap className="w-3 h-3 text-amber-400" />
+          <span className="text-white/40">Ing</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+          <span className="text-white font-semibold">Active</span>
+          <span className="text-white/40">(8)</span>
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden lg:block" />
+        <span className="text-white/10 shrink-0">|</span>
 
-        {/* Auto-Apply Workers */}
-        <div className="hidden lg:flex items-center gap-2">
-          <Cpu className="w-3.5 h-3.5 text-purple-400" />
-          <span className="text-white/40">Auto-Apply Fleet:</span>
-          <div className="flex items-center gap-1.5 font-bold text-white">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            3 Nodes Live
-          </div>
+        {/* Auto-Apply */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Cpu className="w-3 h-3 text-purple-400" />
+          <span className="text-white/40">Fleet</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+          <span className="text-white font-semibold">3 Nodes</span>
         </div>
 
-        <div className="h-3 w-px bg-white/10 hidden xl:block" />
+        <span className="text-white/10 shrink-0">|</span>
 
-        {/* RAM Usage */}
-        <div className="hidden xl:flex items-center gap-2">
-          <span className="text-white/40">Memory:</span>
-          <span className="font-bold text-white">{memUsed}MB <span className="text-white/40 font-normal">({memPct}%)</span></span>
+        {/* Memory */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-white/40">RAM</span>
+          <span className="text-white font-semibold">{memUsed}MB</span>
+          <span className="text-white/40">({memPct}%)</span>
+        </div>
+
+        <span className="text-white/10 shrink-0">|</span>
+
+        {/* Security */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Shield className="w-3 h-3 text-emerald-400" />
+          <span className="text-white/40">Sec</span>
+          <span className="text-emerald-400 font-semibold">Secure</span>
+        </div>
+
+        <span className="text-white/10 shrink-0">|</span>
+
+        {/* Version */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-white/40">v</span>
+          <span className="text-white/60 font-semibold">2.6.0</span>
         </div>
       </div>
 
-      {/* Right: Security Status, Version, Refresh & Last Sync */}
-      <div className="flex items-center gap-3 sm:gap-4 pl-4 flex-shrink-0 text-[10px] text-white/40">
-        <span className="hidden md:flex items-center gap-1.5">
-          <Shield className="w-3 h-3 text-emerald-400" />
-          <span>Security: <strong className="text-emerald-400">Secure</strong></span>
+      {/* Right: Timestamp + Refresh */}
+      <div className="flex items-center gap-2 pl-3 flex-shrink-0 border-l border-white/10">
+        <span className="flex items-center gap-1 text-white/30">
+          <Clock className="w-3 h-3" />
+          {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
-
-        <span className="hidden lg:inline text-white/20">•</span>
-
-        <span className="hidden lg:inline">
-          App Version: <strong className="text-white/60">v2.6.0</strong>
-        </span>
-
-        <span className="text-white/20 hidden sm:inline">•</span>
-
-        <span className="hidden sm:flex items-center gap-1 text-white/40">
-          <Clock className="w-3 h-3 text-white/30" />
-          Updated {lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
-
         <button
           onClick={fetchLiveHealth}
-          title="Refresh live system status"
-          className="p-1 rounded-lg hover:bg-white/10 text-white/40 hover:text-white transition-all"
+          title="Refresh"
+          className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white transition-all"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-emerald-400' : ''}`} />
         </button>
       </div>
     </footer>

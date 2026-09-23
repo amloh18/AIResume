@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import {
   LayoutDashboard, BarChart3, Users, Settings, LogOut, Activity, Mail, Database, CreditCard, Shield, X, Sparkles, FileText, MessageSquare, Bell, ChevronRight,
-  Globe, Gift, Tag, DollarSign
+  Globe, Gift, Tag, DollarSign, ExternalLink
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
@@ -40,6 +40,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       title: 'Main',
       items: [
         { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
+        { id: 'user-dashboard', label: 'User Dashboard', icon: ExternalLink, action: () => router.push('/dashboard/jobs') },
       ]
     },
     {
@@ -121,14 +122,14 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       </div>
 
       {/* Logo Area */}
-      <div className="p-8 pb-4 flex items-center justify-between">
+      <div className="px-5 pt-5 pb-2 flex items-center justify-between">
         <div className="relative group">
           <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
           <Logo size="md" />
         </div>
       </div>
       
-      <div className="px-8 mb-8">
+      <div className="px-5 mb-3">
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -140,18 +141,17 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-6 space-y-10 scrollbar-hide py-4">
+      <div className="flex-1 overflow-y-auto px-3 space-y-3 scrollbar-hide py-2">
         {navGroups.map((group, groupIdx) => (
           <motion.div 
             key={groupIdx}
+            role="group"
+            aria-label={group.title}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 * groupIdx }}
           >
-            <h3 className="px-4 text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4">
-              {group.title}
-            </h3>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {group.items.map((item) => {
                 const isActive = activeTab === item.id;
                 const Icon = item.icon;
@@ -167,7 +167,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
                           if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
                         }
                       }}
-                      className={`relative w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 text-left overflow-hidden ${
+                      className={`relative w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 text-left overflow-hidden ${
                         isActive && !item.action
                           ? 'bg-white/5 text-white'
                           : 'text-white/50 hover:text-white hover:bg-white/[0.02]'
@@ -181,16 +181,16 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
                         />
                       )}
                       
-                      <div className={`relative z-10 p-2 rounded-xl transition-all duration-300 ${
+                      <div className={`relative z-10 p-1.5 rounded-lg transition-all duration-300 ${
                         isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/40 group-hover/item:text-white/70'
                       }`}>
-                        <Icon className="w-5 h-5 flex-shrink-0" />
+                        <Icon className="w-4 h-4 flex-shrink-0" />
                       </div>
                       
-                      <span className="relative z-10 font-medium text-sm tracking-tight">{item.label}</span>
+                      <span className="relative z-10 font-medium text-[13px] tracking-tight">{item.label}</span>
                       
                       {item.subItems && (
-                        <ChevronRight className={`ml-auto w-4 h-4 transition-transform duration-300 ${isActive ? 'rotate-90 text-emerald-500' : 'text-white/20'}`} />
+                        <ChevronRight className={`ml-auto w-3.5 h-3.5 transition-transform duration-300 ${isActive ? 'rotate-90 text-emerald-500' : 'text-white/20'}`} />
                       )}
                     </button>
                     
@@ -203,7 +203,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
                           exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="mt-2 ml-6 pl-6 border-l border-white/5 space-y-1">
+                          <div className="mt-1 ml-4 pl-4 border-l border-white/5 space-y-0.5">
                             {item.subItems.map(subItem => {
                               const SubIcon = subItem.icon;
                               const isSubActive = activeSubTab === subItem.id;
@@ -214,7 +214,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
                                     onTabChange(item.id, subItem.id);
                                     if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
                                   }}
-                                  className={`group/sub w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-300 text-left text-xs ${
+                                  className={`group/sub w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all duration-300 text-left text-xs ${
                                     isSubActive
                                       ? 'text-emerald-400 font-semibold'
                                       : 'text-white/30 hover:text-white/70'
@@ -240,15 +240,15 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       </div>
 
       {/* Footer Area */}
-      <div className="p-6 mt-auto space-y-4">
+      <div className="px-3 pt-2 pb-3 mt-auto">
         {/* User Profile Card */}
-        <div className="relative group p-[1px] rounded-[1.5rem] overflow-hidden bg-white/5 hover:bg-gradient-to-br hover:from-emerald-500/50 hover:to-transparent transition-all duration-500">
-          <div className="bg-[#0a0a0a] rounded-[1.5rem] p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] flex-shrink-0">
+        <div className="relative group p-[1px] rounded-2xl overflow-hidden bg-white/5 hover:bg-gradient-to-br hover:from-emerald-500/50 hover:to-transparent transition-all duration-500">
+          <div className="bg-[#0a0a0a] rounded-2xl p-2.5 flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-base shadow-[0_0_20px_rgba(16,185,129,0.3)] flex-shrink-0">
               {user?.email?.charAt(0).toUpperCase() || 'A'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">
+              <p className="text-[13px] font-bold text-white truncate">
                 {user?.name || 'Admin'}
               </p>
               <p className="text-[10px] text-white/30 truncate uppercase tracking-wider">
@@ -257,7 +257,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
             </div>
             <button 
               onClick={handleSignOut}
-              className="p-2 text-white/20 hover:text-red-400 transition-colors"
+              className="p-1.5 text-white/20 hover:text-red-400 transition-colors"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />

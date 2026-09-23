@@ -5,6 +5,18 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
+// The Comms tab's reading pane, reused verbatim for this job's thread (see the Comms tab
+// block below). Dependency direction matters: `CommsPanel` imports only UI utilities, so
+// this stays a diamond, not a cycle. If `CommsPanel` ever needs `JobSidebar`, extract
+// `EmailDetail` into its own module rather than importing it back.
+import { EmailDetail, type Communication } from '@/components/dashboard/jobs/CommsPanel';
+import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
+import {
+  commsCacheUserId,
+  commsListCacheKey,
+  commsJobsCacheKey,
+  commsAccountCacheKey,
+} from '@/lib/utils/comms-cache-keys';
 import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
@@ -129,7 +141,6 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isJobDescriptionExpanded, setIsJobDescriptionExpanded] = useState(false);
   const [showEmailTemplate, setShowEmailTemplate] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
   const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerCreatedStagePreview | null>(null);
@@ -151,6 +162,135 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     setJobTags(job.tags || []);
     setIsEditingNotes(false);
   }, [job]);
+
+  // ── Comms tab: this job's real thread ────────────────────────────────────
+  // The tab used to synthesise a two-message thread from `job.status` (a fake "thank you for
+  // your application" plus a drafted email). It now renders the same reading pane the Comms tab
+  // uses — `EmailDetail` — fed with the job's actual communications, so there is one thread
+  // implementation rather than two that disagree.
+  //
+  // The cache key is the Comms tab's own list key for a `{ jobId }` filter, so both surfaces
+  // share one entry: whichever loads first spares the other the round trip, and a read/star
+  // change made in either is visible in the other. `Communication.jobId` is the
+  // `JobApplication._id` throughout this codebase (see `emailIngestionService`), which is what
+  // `job._id` holds here — the same value the Comms tab's job filter sends.
+  const commsUserId = commsCacheUserId(getUserIdForAPI(user));
+  const commsThreadCacheKey = commsListCacheKey(commsUserId, { jobId: job._id });
+  const [commsThread, setCommsThread] = useState<Communication[]>([]);
+  const [commsLoading, setCommsLoading] = useState(false);
+  const [commsError, setCommsError] = useState<string | null>(null);
+  // Bumped only by the optimistic mutations below, so the mirror effect can tell a local change
+  // apart from a publish. Same pattern as CommsPanel, for the same reason.
+  const [commsMutationRevision, setCommsMutationRevision] = useState(0);
+
+  const fetchCommsThread = useCallback(async () => {
+    const jobId = job._id;
+    if (!jobId) return;
+    try {
+      setCommsLoading(true);
+      setCommsError(null);
+      // `limit` matches the Comms tab's list fetch so a shared entry holds the same window.
+      const res = await fetch(`/api/communications?jobId=${encodeURIComponent(jobId)}&limit=100`);
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      const data = await res.json();
+      const list: Communication[] = data.communications || data.data?.communications || [];
+      setCommsThread(list);
+      // `unreadCount` is a global figure on this endpoint — it ignores the filter — so it means
+      // the same thing here as it does in the Comms tab and is safe to publish under the shared
+      // key. Sending anything else would make the Comms tab read a wrong count from this entry.
+      writeSessionCache(commsThreadCacheKey, {
+        list,
+        unread: data.unreadCount ?? data.data?.unreadCount ?? 0,
+      });
+    } catch (error: any) {
+      console.error('Failed to load job communications:', error);
+      setCommsError(error?.message || 'Could not load messages');
+    } finally {
+      setCommsLoading(false);
+    }
+  }, [job._id, commsThreadCacheKey]);
+
+  useEffect(() => {
+    if (activeTab !== 'communication') return;
+    const cached = readSessionCache<{ list: Communication[]; unread: number }>(commsThreadCacheKey);
+    if (cached) {
+      setCommsThread(cached.list || []);
+      setCommsError(null);
+      return;
+    }
+    setCommsThread([]);
+    fetchCommsThread();
+  }, [activeTab, commsThreadCacheKey, fetchCommsThread]);
+
+  // Mirror read/star changes into the cache so reopening this tab — or switching to the Comms
+  // tab — shows them. Keyed on the revision alone: the key is fixed while a job is open, but
+  // adding `commsThread` to the deps would also fire on every publish, and the fetch publishes
+  // already.
+  useEffect(() => {
+    if (commsMutationRevision === 0) return;
+    const cached = readSessionCache<{ list: Communication[]; unread: number }>(commsThreadCacheKey);
+    if (!cached) return;
+    writeSessionCache(commsThreadCacheKey, { ...cached, list: commsThread });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commsMutationRevision]);
+
+  const selectedComm = useMemo(() => {
+    if (commsThread.length === 0) return null;
+    // The newest inbound message: it is the one awaiting a reply, and the composer only
+    // prefills a recipient for an inbound message. The list arrives newest-first. Resolving
+    // this per render rather than holding a selection means sending a reply — which adds an
+    // outbound message — does not move the pane off the message being answered.
+    return commsThread.find((c) => c.direction === 'inbound') || commsThread[0];
+  }, [commsThread]);
+
+  // The job list `EmailDetail` resolves a message's company, logo and title from. Prefer the
+  // Comms tab's cached list — it carries `companyLogo`, which this `job` object does not — and
+  // append this job so a message still resolves when the cached window does not reach it.
+  const commsJobs = useMemo(() => {
+    const cached = readSessionCache<any[]>(commsJobsCacheKey(commsUserId));
+    return Array.isArray(cached) && cached.length > 0 ? [...cached, job] : [job];
+  }, [commsUserId, job]);
+
+  // The user's application email, for the "From" of a reply sent from this tab. Prefer the
+  // Comms tab's cached account, then the same fallbacks `getUserEmail()` uses.
+  const commsAssignedEmail = useMemo(() => {
+    const cached = readSessionCache<{ assignedEmail?: string | null }>(
+      commsAccountCacheKey(commsUserId)
+    );
+    return cached?.assignedEmail || (user as any)?.stalwartEmail || user?.email || '';
+  }, [commsUserId, user]);
+
+  const handleSetCommsReadState = async (commId: string, isRead: boolean) => {
+    const current = commsThread.find((c) => c._id === commId);
+    if (current && current.isRead === isRead) return;
+    try {
+      await fetch(`/api/communications/${commId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead }),
+      });
+      setCommsThread((prev) => prev.map((c) => (c._id === commId ? { ...c, isRead } : c)));
+      setCommsMutationRevision((v) => v + 1);
+    } catch (error) {
+      console.error('Failed to update read state:', error);
+    }
+  };
+
+  const handleToggleCommsStar = async (commId: string, currentStarred: boolean) => {
+    try {
+      await fetch(`/api/communications/${commId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isStarred: !currentStarred }),
+      });
+      setCommsThread((prev) =>
+        prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
+      );
+      setCommsMutationRevision((v) => v + 1);
+    } catch (error) {
+      console.error('Failed to toggle star:', error);
+    }
+  };
 
   const handleSaveNotes = async () => {
     const targetJobId = job._id || job.id;
@@ -1618,18 +1758,6 @@ ${userName}`
     } catch (error) {
       console.error('❌ Error duplicating job:', error);
       toast.error('Failed to duplicate job. Please try again.');
-    }
-  };
-
-  const handleCopyToClipboard = async (text: string, fieldName: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(fieldName);
-      toast.success(`${fieldName === 'subject' ? 'Subject' : 'Email'} copied to clipboard!`);
-      setTimeout(() => setCopiedField(null), 2000);
-    } catch (error) {
-      console.error('Failed to copy:', error);
-      toast.error('Failed to copy to clipboard');
     }
   };
 
@@ -3151,95 +3279,54 @@ ${userName}`
                     transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-3"
                   >
-                    {/* Thread Container */}
-                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810] overflow-hidden">
-                      {/* Recruiter Message (Left) */}
-                      <div className="border-b border-gray-100 dark:border-white/5">
-                        <div className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 dark:bg-white/10 text-[10px] font-bold text-gray-600 dark:text-gray-300">
-                              {(job.contactDetails?.name || job.company || 'R').charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className="text-[11px] font-bold text-gray-900 dark:text-white block">
-                                {job.contactDetails?.name || 'Recruiter'}
-                              </span>
-                              <span className="text-[9px] text-gray-400 dark:text-gray-500">
-                                {job.contactDetails?.role || job.company || 'Hiring Team'}
-                              </span>
-                            </div>
-                            {job.status === 'applied' || job.status === 'screening' ? (
-                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">Applied follow-up</span>
-                            ) : job.status === 'interview' ? (
-                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">Interview follow-up</span>
-                            ) : null}
+                    {/* This job's real thread, rendered with the Comms tab's own reading pane.
+                        It used to be synthesised from `job.status` — a fake recruiter message
+                        plus a generic drafted email — which contradicted the actual messages
+                        whenever there were any, and showed a reassuring "your application has
+                        been received" to a job with no reply at all. */}
+                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810] overflow-hidden flex flex-col max-h-[68vh]">
+                      {commsLoading ? (
+                        <div className="p-6 space-y-5 animate-pulse" aria-busy="true">
+                          <div className="space-y-2">
+                            <div className="w-3/4 h-5 rounded bg-gray-200 dark:bg-white/10" />
+                            <div className="w-1/2 h-3.5 rounded bg-gray-200 dark:bg-white/10" />
                           </div>
-                          <div className="ml-9">
-                            <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                              {job.status === 'applied' || job.status === 'screening'
-                                ? 'Thank you for your application'
-                                : job.status === 'interview'
-                                ? 'Interview scheduled'
-                                : 'Waiting for response'}
-                            </p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-                              {job.status === 'applied' || job.status === 'screening'
-                                ? `Your application for ${job.jobTitle} at ${job.company} has been received. The hiring team is reviewing candidates.`
-                                : job.status === 'interview'
-                                ? `Interview round for ${job.jobTitle} at ${job.company} is being coordinated.`
-                                : `No messages yet from ${job.company}.`}
-                            </p>
+                          <div className="space-y-2.5 pt-4 border-t border-gray-200 dark:border-white/10">
+                            <div className="w-full h-3.5 rounded bg-gray-200 dark:bg-white/10" />
+                            <div className="w-full h-3.5 rounded bg-gray-200 dark:bg-white/10" />
+                            <div className="w-4/5 h-3.5 rounded bg-gray-200 dark:bg-white/10" />
                           </div>
                         </div>
-                      </div>
-
-                      {/* Your Message (Right) — Always show drafted email */}
-                      <div className="bg-gray-50/50 dark:bg-white/[0.02]">
-                        <div className="p-4">
-                          <div className="flex items-center gap-2 mb-2 justify-end">
-                            <span className="text-[11px] font-bold text-gray-900 dark:text-white">
-                              {getUserName()}<span className="text-[9px] font-normal text-gray-400 dark:text-gray-500 ml-1.5">{getUserEmail() || 'your@email.com'}</span>
-                            </span>
-                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#013f2e] text-[10px] font-bold text-white shrink-0">
-                              {(getUserName() || 'Y').charAt(0).toUpperCase()}
-                            </div>
+                      ) : selectedComm ? (
+                        <EmailDetail
+                          communication={selectedComm}
+                          allCommunications={commsThread}
+                          jobs={commsJobs}
+                          assignedEmail={commsAssignedEmail}
+                          candidateName={getUserName()}
+                          onToggleStar={() =>
+                            handleToggleCommsStar(selectedComm._id, selectedComm.isStarred)
+                          }
+                          onSetReadState={(isRead) =>
+                            handleSetCommsReadState(selectedComm._id, isRead)
+                          }
+                          onThreadUpdated={() => fetchCommsThread()}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-8 text-center">
+                          <div className="w-12 h-12 rounded-2xl bg-gray-100 dark:bg-white/5 flex items-center justify-center mb-3">
+                            <Mail className="w-6 h-6 text-gray-400 dark:text-gray-500 opacity-70" />
                           </div>
-                          <div className="ml-9">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                                Subject: {getEmailSubject(job)}
-                              </span>
-                              <button
-                                onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                                className="text-[9px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline"
-                              >
-                                Copy
-                              </button>
-                            </div>
-                            <div className="rounded-lg bg-white dark:bg-[#20281d] border border-gray-100 dark:border-white/5 p-3 max-h-[200px] overflow-y-auto">
-                              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
-                                {getEmailTemplate(job)}
-                              </p>
-                            </div>
-                            <div className="flex gap-2 mt-2.5">
-                              <button
-                                onClick={() => handleOpenEmail(0)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#013f2e] text-white text-[10px] font-bold hover:brightness-95 transition"
-                              >
-                                <Send className="w-3 h-3" />
-                                Send Draft
-                              </button>
-                              <button
-                                onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#20281d] text-gray-700 dark:text-gray-300 text-[10px] font-bold hover:bg-gray-50 dark:hover:bg-[#273021] transition"
-                              >
-                                <Copy className="w-3 h-3" />
-                                Copy
-                              </button>
-                            </div>
-                          </div>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            No messages yet
+                          </p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-sm">
+                            {commsError
+                              ? commsError
+                              : `Nothing has arrived from ${job.company} for this application yet. Recruiter replies show up here automatically once they reach your application email.`}
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Quick Actions */}

@@ -28,6 +28,7 @@ import {
   WORKPLACE_ID_TO_LABEL,
   type WorkplaceType,
 } from '@/lib/jobs/workplace';
+import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
 
 interface AutoApplyPreferences {
   enabled: boolean;
@@ -101,7 +102,21 @@ const EXPERIENCE_TIERS = [
 ];
 
 export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPanelProps) {
-  const [loading, setLoading] = useState(true);
+  // ── Session-cache keys ──────────────────────────────────────────────────
+  // Leaving the Settings tab unmounts this panel, and every remount re-ran both
+  // fetches: a skeleton flash plus a reset of anything typed but not yet saved.
+  // These keys let a remount reuse what this page load already fetched. A browser
+  // refresh starts empty — that is the "refresh reloads" half of the contract — and
+  // a save still re-reads entitlements from the server, which is the other half.
+  // Namespaced by user because the store is process-wide.
+  const prefsCacheKey = `autoapply-prefs:${userId || 'anon'}`;
+  const entitlementsCacheKey = `autoapply-entitlements:${userId || 'anon'}`;
+
+  // Seed the skeleton flag from the cache so a revisit renders the real layout on
+  // the first paint instead of flashing a placeholder for a frame.
+  const [loading, setLoading] = useState(
+    () => !readSessionCache(prefsCacheKey) || !readSessionCache(entitlementsCacheKey)
+  );
   const [saving, setSaving] = useState(false);
   const [newRole, setNewRole] = useState('');
   const [newLocation, setNewLocation] = useState('');
@@ -132,19 +147,53 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
   });
 
   const [savedPreferences, setSavedPreferences] = useState<string>('');
+  // Gates the mirror effect below. Until the first load has published real data,
+  // `preferences` still holds the built-in defaults, and caching those would let a
+  // later remount hydrate defaults and skip the fetch — presenting the defaults as
+  // if they were the user's saved settings.
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const cachedPrefs = readSessionCache<{
+      preferences: AutoApplyPreferences;
+      savedPreferences: string;
+    }>(prefsCacheKey);
+    const cachedEntitlements = readSessionCache<UserEntitlements>(entitlementsCacheKey);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      await Promise.all([fetchPreferences(), fetchEntitlements()]);
-    } finally {
-      setLoading(false);
+    if (cachedPrefs) {
+      setPreferences(cachedPrefs.preferences);
+      setSavedPreferences(cachedPrefs.savedPreferences);
     }
-  };
+    if (cachedEntitlements) setEntitlements(cachedEntitlements);
+
+    // Fetch only the parts this page load is genuinely missing, so a revisit is
+    // instant rather than a second full round trip.
+    const pending: Promise<unknown>[] = [];
+    if (!cachedPrefs) pending.push(fetchPreferences());
+    if (!cachedEntitlements) pending.push(fetchEntitlements());
+
+    if (pending.length === 0) {
+      setLoading(false);
+      setDataLoaded(true);
+      return;
+    }
+
+    setLoading(true);
+    Promise.all(pending).finally(() => {
+      setLoading(false);
+      setDataLoaded(true);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefsCacheKey, entitlementsCacheKey]);
+
+  // Keep the cache in step with what is on screen — including edits the user has
+  // typed but not yet saved, which is what makes a tab switch feel like nothing
+  // happened. There is one key per user, so unlike the comms list there is no
+  // "which filter owns this snapshot" ambiguity to guard against here.
+  useEffect(() => {
+    if (!dataLoaded) return;
+    writeSessionCache(prefsCacheKey, { preferences, savedPreferences });
+  }, [dataLoaded, preferences, savedPreferences, prefsCacheKey]);
 
   const fetchEntitlements = async () => {
     try {
@@ -153,6 +202,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
         const data = await res.json();
         if (data.success && data.entitlements) {
           setEntitlements(data.entitlements);
+          writeSessionCache(entitlementsCacheKey, data.entitlements);
         }
       }
     } catch (e) {
@@ -186,6 +236,10 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
           };
           setPreferences(loadedPrefs);
           setSavedPreferences(JSON.stringify(loadedPrefs));
+          writeSessionCache(prefsCacheKey, {
+            preferences: loadedPrefs,
+            savedPreferences: JSON.stringify(loadedPrefs),
+          });
         }
       }
     } catch (error) {

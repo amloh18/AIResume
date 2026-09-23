@@ -44,12 +44,20 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
+import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
+import {
+  commsCacheUserId,
+  commsListCacheKey,
+  commsJobsCacheKey as commsJobsKey,
+  commsUnreadCacheKey as commsUnreadKey,
+  commsAccountCacheKey as commsAccountKey,
+} from '@/lib/utils/comms-cache-keys';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface Communication {
+export interface Communication {
   _id: string;
   userId: string;
   jmapEmailId?: string;
@@ -221,6 +229,12 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
   const [selectedComm, setSelectedComm] = useState<Communication | null>(null);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [totalUnread, setTotalUnread] = useState(0);
+  // Bumped only by the optimistic mutations below (never by a fetch or a cache
+  // hydration), so the mirror effect can tell "the user changed something" apart
+  // from "a publish just landed". Without that distinction the effect would fire
+  // on a filter switch — while `communications` still held the previous filter's
+  // list — and briefly overwrite the new filter's snapshot with the old list.
+  const [localMutationRevision, setLocalMutationRevision] = useState(0);
 
   // Assigned Application Email state
   const [assignedEmail, setAssignedEmail] = useState<string | null>(null);
@@ -235,15 +249,42 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
   const [actionNotice, setActionNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
 
+  // ── Session-cache keys ──────────────────────────────────────────────────
+  // This panel unmounts whenever the user leaves the Comms tab, and each remount
+  // re-ran all four fetches below — a spinner and a full reload on every visit,
+  // even when nothing had changed server-side. These keys let a remount reuse
+  // what this page load already fetched. The key formats live in
+  // `@/lib/utils/comms-cache-keys`, because the journey sidebar's Comms tab reads the
+  // same records through the same reading-pane component and only an identical string
+  // shares an entry. Namespaced by user because the store is process-wide. The session
+  // arrives with the initial server-rendered value (`ClientProviders` passes it into
+  // `SessionProvider`), so the id is available on the first render and the key never
+  // changes under a mounted effect.
+  const userId = commsCacheUserId((session?.user as any)?.id);
+  const commsJobsCacheKey = commsJobsKey(userId);
+  const commsUnreadCacheKey = commsUnreadKey(userId);
+  const commsAccountCacheKey = commsAccountKey(userId);
+
+  const commsListKey = useCallback(
+    (f: CommsFilter) => commsListCacheKey(userId, f),
+    [userId]
+  );
+
   // Fetch assigned email account
   const fetchAssignedEmail = useCallback(async () => {
     try {
       const res = await fetch('/api/communications/account');
       if (res.ok) {
         const data = await res.json();
-        setAssignedEmail(data.assignedEmail || null);
-        setSuggestedEmail(data.suggestedEmail || null);
-        setEmailStatus(data.status || (data.assignedEmail ? 'active' : 'unassigned'));
+        const snapshot = {
+          assignedEmail: data.assignedEmail || null,
+          suggestedEmail: data.suggestedEmail || null,
+          emailStatus: data.status || (data.assignedEmail ? 'active' : 'unassigned'),
+        };
+        setAssignedEmail(snapshot.assignedEmail);
+        setSuggestedEmail(snapshot.suggestedEmail);
+        setEmailStatus(snapshot.emailStatus);
+        writeSessionCache(commsAccountCacheKey, snapshot);
       } else {
         setEmailStatus('unassigned');
       }
@@ -251,7 +292,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
       console.error('Failed to fetch assigned email:', error);
       setEmailStatus('unassigned');
     }
-  }, []);
+  }, [commsAccountCacheKey]);
 
   // Fetch communications
   const fetchCommunications = useCallback(async () => {
@@ -269,8 +310,10 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
         const data = await res.json();
         const list: Communication[] =
           data.communications || data.data?.communications || [];
+        const unread = data.unreadCount ?? data.data?.unreadCount ?? 0;
         setCommunications(list);
-        setTotalUnread(data.unreadCount ?? data.data?.unreadCount ?? 0);
+        setTotalUnread(unread);
+        writeSessionCache(commsListKey(filter), { list, unread });
 
         // Keep selected email updated if exists in list without breaking referential identity
         setSelectedComm((prev) => {
@@ -292,7 +335,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
     } finally {
       setLoading(false);
     }
-  }, [filter.jobId, filter.direction, filter.classification, filter.status]);
+  }, [filter.jobId, filter.direction, filter.classification, filter.status, commsListKey]);
 
   // Fetch jobs for filter dropdown (both tracker applications & jobs)
   const fetchJobs = useCallback(async () => {
@@ -300,12 +343,14 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
       const res = await fetch('/api/jobs?limit=200&lite=true');
       if (res.ok) {
         const data = await res.json();
-        setJobs(data.jobs || []);
+        const list = data.jobs || [];
+        setJobs(list);
+        writeSessionCache(commsJobsCacheKey, list);
       }
     } catch (error) {
       console.error('Failed to fetch jobs:', error);
     }
-  }, []);
+  }, [commsJobsCacheKey]);
 
   // Fetch unread counts per job
   const fetchUnreadCounts = useCallback(async () => {
@@ -313,19 +358,75 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
       const res = await fetch('/api/communications/unread-count');
       if (res.ok) {
         const data = await res.json();
-        setUnreadCounts(data.counts || data.data?.counts || {});
+        const counts = data.counts || data.data?.counts || {};
+        setUnreadCounts(counts);
+        writeSessionCache(commsUnreadCacheKey, counts);
       }
     } catch (error) {
       console.error('Failed to fetch unread counts:', error);
     }
-  }, []);
+  }, [commsUnreadCacheKey]);
 
   useEffect(() => {
-    fetchAssignedEmail();
-    fetchCommunications();
-    fetchJobs();
-    fetchUnreadCounts();
-  }, [fetchAssignedEmail, fetchCommunications, fetchJobs, fetchUnreadCounts]);
+    // Reuse whatever this page load already fetched and fetch only the parts
+    // that are genuinely missing, so returning to the tab is instant. A browser
+    // refresh starts empty (that is the "refresh reloads" half of the contract),
+    // and every explicit update path — sync, seed, send — still calls these
+    // fetchers directly and overwrites the cache, which is the other half.
+    const cachedAccount = readSessionCache<any>(commsAccountCacheKey);
+    if (cachedAccount) {
+      setAssignedEmail(cachedAccount.assignedEmail);
+      setSuggestedEmail(cachedAccount.suggestedEmail);
+      setEmailStatus(cachedAccount.emailStatus);
+    } else {
+      fetchAssignedEmail();
+    }
+
+    const cachedList = readSessionCache<any>(commsListKey(filter));
+    if (cachedList) {
+      setCommunications(cachedList.list);
+      setTotalUnread(cachedList.unread);
+      setLoading(false);
+    } else {
+      fetchCommunications();
+    }
+
+    const cachedJobs = readSessionCache<any>(commsJobsCacheKey);
+    if (cachedJobs) setJobs(cachedJobs);
+    else fetchJobs();
+
+    const cachedUnread = readSessionCache<any>(commsUnreadCacheKey);
+    if (cachedUnread) setUnreadCounts(cachedUnread);
+    else fetchUnreadCounts();
+  }, [
+    fetchAssignedEmail,
+    fetchCommunications,
+    fetchJobs,
+    fetchUnreadCounts,
+    commsAccountCacheKey,
+    commsJobsCacheKey,
+    commsUnreadCacheKey,
+    commsListKey,
+    filter,
+  ]);
+
+  // Mirror optimistic mutations (mark read/unread, star) into the session cache so
+  // returning to the tab shows the change rather than the snapshot from before it.
+  // Keyed on the revision counter alone, on purpose: adding `communications` to the
+  // deps would also fire this on every publish, and adding `filter` would fire it on
+  // a filter switch — and both of those can run while `communications` still holds
+  // the *previous* filter's list, which would clobber another key's snapshot. The
+  // mutations bump the counter in the same batch as the state update, so the closure
+  // below already sees the new list. Only an entry this page load actually fetched is
+  // touched; a filter that was never loaded must not be fabricated here, or the mount
+  // effect above would see a hit and skip its fetch, showing an empty list.
+  useEffect(() => {
+    if (localMutationRevision === 0) return;
+    const key = commsListKey(filter);
+    if (!readSessionCache(key)) return;
+    writeSessionCache(key, { list: communications, unread: totalUnread });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localMutationRevision]);
 
   // Generate / Assign Application Email
   const handleGenerateEmail = async () => {
@@ -433,6 +534,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
       );
       setSelectedComm((prev) => (prev?._id === commId ? { ...prev, isRead } : prev));
       setTotalUnread((prev) => (isRead ? Math.max(0, prev - 1) : prev + 1));
+      setLocalMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to update read state:', error);
     }
@@ -450,6 +552,7 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
       setCommunications((prev) =>
         prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
       );
+      setLocalMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to toggle star:', error);
     }
@@ -1276,7 +1379,8 @@ interface EmailDetailProps {
   jobs: Job[];
   assignedEmail: string;
   candidateName: string;
-  onClose: () => void;
+  /** Omit when there is no list to return to — the back/close controls are then hidden. */
+  onClose?: () => void;
   onToggleStar: () => void;
   onSetReadState: (isRead: boolean) => void;
   onThreadUpdated?: (newComm: any) => void;
@@ -1346,7 +1450,17 @@ Best regards,
 ${user}`;
 }
 
-function EmailDetail({
+/**
+ * The reading pane: message header, the whole thread in chronological order, and the reply
+ * composer.
+ *
+ * Exported because the journey sidebar's Comms tab renders this same view for a single job —
+ * it passes that job's communications as `allCommunications` and the newest inbound message as
+ * `communication`. Keep it self-contained (it fetches its own thread) so both callers behave
+ * identically. `onClose` is optional: the sidebar has no list to go back to, and omitting it
+ * hides the back/close controls rather than rendering buttons that do nothing.
+ */
+export function EmailDetail({
   communication: comm,
   allCommunications,
   jobs,
@@ -1643,23 +1757,27 @@ function EmailDetail({
             beside the preview, so the back control is the only way to return to it.
             The classification itself is still visible per row in the message list. */}
         <div className="flex items-start gap-2">
-          <button
-            onClick={onClose}
-            className="sm:hidden -ml-1.5 mt-0.5 p-1.5 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0"
-            title="Back to list"
-          >
-            <ChevronRight className="w-4 h-4 rotate-180" />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="sm:hidden -ml-1.5 mt-0.5 p-1.5 text-gray-500 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0"
+              title="Back to list"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+            </button>
+          )}
           <h2 className="flex-1 min-w-0 text-lg font-bold text-gray-900 dark:text-white leading-snug break-words">
             {comm.subject}
           </h2>
-          <button
-            onClick={onClose}
-            className="hidden sm:inline-flex mt-0.5 p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0"
-            title="Close reading pane"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="hidden sm:inline-flex mt-0.5 p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex-shrink-0"
+              title="Close reading pane"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-start gap-3 mt-3">
