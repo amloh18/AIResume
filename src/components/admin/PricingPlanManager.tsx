@@ -93,27 +93,49 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
 
   if (!mounted) return null;
 
-  return (
-    <motion.div variants={container} initial="hidden" animate="show" className={currentTab === 'revenue' ? "space-y-0" : "space-y-5"}>
-      {/* Header */}
-      {currentTab !== 'revenue' && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Pricing & Plans
-            </h1>
-            <p className="text-xs text-white/40 mt-0.5">
-              Monetization Protocols & Multi-Regional Pricing
-            </p>
-          </div>
+  const pricingTabs = [
+    { id: 'plans', label: 'Plans & Tiers', icon: Zap },
+    { id: 'regional', label: 'Regional Pricing', icon: Globe },
+    { id: 'promotions', label: 'Promotional Offers', icon: TrendingUp },
+    { id: 'coupons', label: 'Discount Codes', icon: Shield },
+    { id: 'revenue', label: 'Revenue Analytics', icon: ArrowUpRight },
+  ];
 
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsAddCountryModalOpen(true)} className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl px-3.5 py-1.5 flex items-center gap-1.5 text-xs transition-all shadow-sm">
-              <Plus className="w-3.5 h-3.5" /> Establish Plan
-            </button>
-          </div>
+  return (
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
+      {/* Sub Tab Navigation Pill Bar + Action Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#111216] border border-white/5 overflow-x-auto max-w-full">
+          {pricingTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = currentTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onSubTabChange && onSubTabChange(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
-      )}
+
+        {currentTab === 'plans' && (
+          <button
+            onClick={() => setIsAddCountryModalOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-full px-4 py-2 flex items-center gap-1.5 text-xs transition-all shadow-sm shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Establish Plan</span>
+          </button>
+        )}
+      </div>
 
       <Tabs value={currentTab} onValueChange={onSubTabChange} className="w-full">
         <TabsContent value="plans" className="mt-4 space-y-4">

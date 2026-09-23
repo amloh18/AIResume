@@ -1855,7 +1855,13 @@ export default function JobsDashboard() {
           //
           // `min-h-0` is required: without it a flex item refuses to shrink below
           // its content size and the chain does nothing.
-          <div className="flex-1 min-h-0 flex flex-col px-6 pb-6">
+          //
+          // No bottom padding here. There used to be a `pb-6`, which stacked on the
+          // route shell's `py-4 md:py-6` and left 48px under the panel against the
+          // 24px `gap-6` above it — measured on a 2x screenshot as 99 device px
+          // (panel edge y=193 to card edge y=292). The shell already supplies the
+          // bottom spacing for every tab, so this wrapper only insets horizontally.
+          <div className="flex-1 min-h-0 flex flex-col px-6">
             <CommsPanel />
           </div>
         )}

@@ -280,17 +280,6 @@ export default function AdminDashboard() {
                   3
                 </span>
               </button>
-
-              {/* Admin User Chip */}
-              <div className="flex items-center gap-2.5 pl-2 border-l border-white/10">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-400 flex items-center justify-center text-black font-black text-xs shadow-md">
-                  {user?.name?.[0] || user?.email?.[0]?.toUpperCase() || 'A'}
-                </div>
-                <div className="hidden lg:block text-left leading-tight">
-                  <p className="text-xs font-bold text-white truncate max-w-[120px]">{user?.name || 'Admin User'}</p>
-                  <p className="text-[10px] text-white/40 truncate max-w-[120px]">{user?.email || 'admin@buildairesume.com'}</p>
-                </div>
-              </div>
             </div>
           </header>
 
@@ -323,7 +312,7 @@ export default function AdminDashboard() {
                         onClose={() => router.push('/admin/dashboard/management-users')} 
                       />
                     ) : (
-                      <UserManagement />
+                      <UserManagement searchQuery={searchQuery} />
                     )
                   )}
                   

@@ -1968,7 +1968,7 @@ export default function Step1Dashboard({
                 </div>
 
               {isLoadingCVs ? (
-                <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 px-1"}>
+                <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-5 px-1"}>
                   {[1, 2, 3, 4, 5, 6].map(i => (
                     <div key={i} className="relative rounded-t-xl overflow-hidden border border-gray-200/80 dark:border-white/5 bg-gray-100 dark:bg-white/[0.03]">
                       <div className="w-full aspect-[1/1.414] animate-pulse relative">
@@ -1995,7 +1995,7 @@ export default function Step1Dashboard({
                 </div>
               ) : (filteredCVs.length > 0 || (draftCV && (filterType === 'all' || filterType === 'cv')) || orphanedCoverLetters.length > 0) ? (
                 viewLayout !== 'list' ? (
-                  <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 px-1"}>
+                  <div className={viewLayout === 'compact' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2 sm:gap-3 px-1" : "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-5 px-1"}>
                   
                   {/* Render Draft CV if it exists */}
                   {draftCV && (filterType === 'all' || filterType === 'cv') && (

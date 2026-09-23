@@ -107,26 +107,15 @@ const SystemHealth: React.FC = () => {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
-      {/* Command Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            System Infrastructure Health
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Real-time server telemetry, API gateways, database, and system resources
-          </p>
+      {/* Status Toolbar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-xs font-semibold text-emerald-400">All Systems Operational</span>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold text-emerald-400">All Systems Operational</span>
-          </div>
-          <button onClick={fetchSystemStatus} className="p-2 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-white/50 hover:text-white">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
+        <button onClick={fetchSystemStatus} className="p-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-all text-white/50 hover:text-white">
+          <RefreshCw className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Component Status Bento */}

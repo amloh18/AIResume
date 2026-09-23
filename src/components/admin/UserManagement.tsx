@@ -44,13 +44,17 @@ interface User {
   };
 }
 
-const UserManagement: React.FC = () => {
+interface UserManagementProps {
+  searchQuery?: string;
+}
+
+const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchQuery || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery || '');
   const [filterRole, setFilterRole] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
   const [filterUserType, setFilterUserType] = useState<'all' | 'registered' | 'guest'>('registered');
@@ -80,6 +84,12 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof searchQuery === 'string') {
+      setSearchTerm(searchQuery);
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -203,7 +213,7 @@ const UserManagement: React.FC = () => {
 
   const handleExportData = () => {
     if (!users.length) return;
-    const headers = ['User ID', 'Name', 'Email', 'Plan', 'Status', 'Tasks Completed', 'Score', 'Region', 'Last Login'];
+    const headers = ['User ID', 'Name', 'Email', 'Plan', 'Status', 'Plan Tier', 'Score', 'Region', 'Last Login'];
     const rows = users.map(u => {
       const status = getUserStatus(u);
       const score = calculateScore(u);
@@ -257,25 +267,6 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* 1. Page Title & Top Actions (FlowMate Layout) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            User Management
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Manage and monitor all BuildAIResume users
-          </p>
-        </div>
-
-        <button
-          onClick={handleExportData}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs font-semibold transition-all self-start sm:self-auto"
-        >
-          <Download size={14} className="text-white/50" />
-          <span>Export Data</span>
-        </button>
-      </div>
 
       {/* 2. Search & Filter Bar (FlowMate Layout) */}
       <div className="bg-[#111216] border border-white/5 rounded-2xl p-2.5 sm:p-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-lg">
@@ -324,9 +315,10 @@ const UserManagement: React.FC = () => {
           <button
             onClick={handleExportData}
             title="Export filtered users"
-            className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 rounded-xl text-xs font-medium transition-all cursor-pointer"
           >
-            <Filter size={13} />
+            <Download size={13} className="text-white/50" />
+            <span>Export Data</span>
           </button>
         </div>
       </div>
@@ -345,7 +337,7 @@ const UserManagement: React.FC = () => {
                   <th className="px-5 py-3 text-xs font-semibold text-white/40">User</th>
                   <th className="px-5 py-3 text-xs font-semibold text-white/40">Email</th>
                   <th className="px-5 py-3 text-xs font-semibold text-white/40">Status</th>
-                  <th className="px-5 py-3 text-xs font-semibold text-white/40 text-center">Tasks Completed</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-white/40 text-center">Plan</th>
                   <th className="px-5 py-3 text-xs font-semibold text-white/40">Productivity Score</th>
                   <th className="px-5 py-3 text-xs font-semibold text-white/40 text-right">Actions</th>
                 </tr>
@@ -354,7 +346,6 @@ const UserManagement: React.FC = () => {
                 {users.map((user) => {
                   const status = getUserStatus(user);
                   const score = calculateScore(user);
-                  const tasksCompleted = user.usage?.cvJourneyCount || user.usage?.cvCreatedCount || 124;
 
                   return (
                     <tr
@@ -411,9 +402,21 @@ const UserManagement: React.FC = () => {
                         )}
                       </td>
 
-                      {/* 4. Tasks Completed */}
-                      <td className="px-5 py-3 text-sm font-bold text-white text-center">
-                        {tasksCompleted}
+                      {/* 4. Plan Badge */}
+                      <td className="px-5 py-3 text-center">
+                        {(() => {
+                          const plan = user.currentPlanKey || 'free';
+                          const isFree = plan === 'free' || plan === 'FREE' || plan === '';
+                          return isFree ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-white/10 bg-white/5 text-white/50">
+                              Free
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 capitalize">
+                              {plan}
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* 5. Productivity / Health Score Gradient Bar */}

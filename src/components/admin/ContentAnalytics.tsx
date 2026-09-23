@@ -52,17 +52,7 @@ export default function ContentAnalytics() {
 
     return (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
-            {/* Command Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                        Content & Template Analytics
-                    </h1>
-                    <p className="text-xs text-white/40 mt-0.5">
-                        Blueprint usage frequency, categories, and social proof telemetry
-                    </p>
-                </div>
-            </div>
+
 
             {/* Broadcast System Alert Panel */}
             <motion.div variants={item} className="bg-[#111216] border border-red-500/20 hover:border-red-500/30 p-5 rounded-2xl shadow-xl relative overflow-hidden">

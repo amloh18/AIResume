@@ -93,17 +93,7 @@ export default function SponsorshipManager() {
 
     return (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-5">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                        Sponsorship Data Center
-                    </h1>
-                    <p className="text-xs text-white/40 mt-0.5">
-                        Manage and sync immigration sponsorship records for UK & USA
-                    </p>
-                </div>
-            </div>
+
 
             {/* Sector Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -139,11 +129,22 @@ export default function SponsorshipManager() {
                 </div>
 
                 <div className="p-4 sm:p-5 space-y-5">
-                    <Tabs value={country} onValueChange={(v) => setCountry(v as 'uk' | 'us')} className="space-y-4">
-                        <TabsList className="bg-white/5 border border-white/5 p-1 rounded-xl w-fit">
-                            <TabsTrigger value="uk" className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-white/40">UK Records</TabsTrigger>
-                            <TabsTrigger value="us" className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-white/40">USA Records</TabsTrigger>
-                        </TabsList>
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#0a0a0a] border border-white/5 w-fit">
+                        <button
+                            onClick={() => setCountry('uk')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${country === 'uk' ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <Globe className="w-3.5 h-3.5" />
+                            UK Records
+                        </button>
+                        <button
+                            onClick={() => setCountry('us')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${country === 'us' ? 'bg-emerald-600 text-white shadow-sm' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            <Globe className="w-3.5 h-3.5" />
+                            USA Records
+                        </button>
+                    </div>
 
                         <AnimatePresence mode="wait">
                             <motion.div key={country} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="space-y-4">
@@ -231,7 +232,6 @@ export default function SponsorshipManager() {
                                 )}
                             </Button>
                         </div>
-                    </Tabs>
                 </div>
             </div>
         </motion.div>

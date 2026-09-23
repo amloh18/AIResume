@@ -94,50 +94,37 @@ export default function JobIntelligenceDashboard({
 
   return (
     <div className="space-y-5">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            Job Ingestion & Sourcing Platform
-            <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Live Stream
-            </span>
-          </h1>
-          <p className="text-xs text-white/40 mt-0.5">
-            Real-time multi-source ATS streaming, SHA-256 deduplication, and intelligent catalog management
-          </p>
+      {/* Sub Tab Navigation Pill Bar + Action Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-full bg-[#111216] border border-white/5 overflow-x-auto max-w-full">
+          {subTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = currentTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onSubTabChange && onSubTabChange(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         <button
           onClick={fetchOverview}
           disabled={loading}
-          className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          className="px-3.5 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white flex items-center gap-2 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0 self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Refreshing...' : 'Refresh Pipeline'}
+          <span>{loading ? 'Refreshing...' : 'Refresh Pipeline'}</span>
         </button>
-      </div>
-
-      {/* Sub Tab Navigation Pill Bar */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-[#111216] border border-white/5 overflow-x-auto">
-        {subTabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onSubTabChange && onSubTabChange(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                isActive
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          );
-        })}
       </div>
 
       {/* Render View */}
