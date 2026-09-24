@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { BackgroundScheduler } from '@/lib/ingestion/backgroundScheduler';
 import { BaselineScheduler } from '@/lib/ingestion/baselineSchedule';
 
@@ -29,6 +30,11 @@ export async function GET(request: NextRequest) {
   // Fail closed — a missing CRON_SECRET must never make this endpoint public.
   const denied = cronAuthFailure(request.headers);
   if (denied) return denied;
+
+  // Overlap guard: a 5-minute tick must not start a second scheduler cycle while the previous one
+  // still holds segment locks — the stale-recovery step would otherwise free them mid-flight.
+  const lock = acquireCronLock('ingestion:get');
+  if (!lock) return cronBusyResponse('ingestion:get');
 
   try {
     // Run the complete scheduler cycle
@@ -78,6 +84,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 
@@ -92,6 +100,10 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const action = body.action || 'full';
+
+  // Overlap guard — same reason as GET: an overlapping manual trigger would fight the scheduled cycle.
+  const lock = acquireCronLock('ingestion:post');
+  if (!lock) return cronBusyResponse('ingestion:post');
 
   try {
     switch (action) {
@@ -124,5 +136,7 @@ export async function POST(request: NextRequest) {
       { success: false, action, error: err.message },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }

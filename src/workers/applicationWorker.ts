@@ -1,5 +1,7 @@
 import { claimNextApplication, completeQueueItem, failQueueItem, releaseStuckItems } from '@/lib/worker/claimNext';
 import { processApplication } from '@/lib/worker/processApplication';
+import { log } from '@/lib/structured-logger';
+import { newCorrelationId, runWithCorrelation } from '@/lib/observability/correlation';
 
 const POLL_INTERVAL_MS = 10_000; // 10 seconds
 const STUCK_RELEASE_MINUTES = 30;
@@ -34,18 +36,35 @@ async function workerTick(): Promise<void> {
     const queueItemId = queueItem._id;
     const applicationId = String(jobApplication._id);
 
-    console.log(`[ApplicationWorker] Processing ${applicationId} (attempt ${queueItem.attempts}/${queueItem.maxAttempts})`);
+    /*
+      Re-open the trace the enqueueing request (or cron run) started.
 
-    // Process the application
-    const result = await processApplication({ queueItem, jobApplication });
+      `queueItem.correlationId` was written by the producer; everything logged below — ATS
+      detection, the Playwright run, the state transitions, the completion — now carries that same
+      id, so "user clicked Apply at 14:02" and "worker submitted at 14:05" are one query apart.
+      Queue documents written before the field existed simply start a fresh trace here.
+    */
+    await runWithCorrelation(
+      {
+        correlationId: queueItem.correlationId || newCorrelationId(),
+        applicationId,
+        queueItemId: String(queueItemId),
+        userId: String(jobApplication.userId),
+      },
+      async () => {
+        log.info(`[ApplicationWorker] Processing ${applicationId} (attempt ${queueItem.attempts}/${queueItem.maxAttempts})`);
 
-    if (result.success) {
-      await completeQueueItem(queueItemId);
-      console.log(`[ApplicationWorker] Completed ${applicationId}: ${result.status}`);
-    } else {
-      await failQueueItem(queueItemId, result.message, true);
-      console.warn(`[ApplicationWorker] Failed ${applicationId}: ${result.message}`);
-    }
+        const result = await processApplication({ queueItem, jobApplication });
+
+        if (result.success) {
+          await completeQueueItem(queueItemId);
+          log.info(`[ApplicationWorker] Completed ${applicationId}: ${result.status}`);
+        } else {
+          await failQueueItem(queueItemId, result.message, true);
+          log.warn(`[ApplicationWorker] Failed ${applicationId}: ${result.message}`);
+        }
+      }
+    );
 
     // If more items in queue, process next tick immediately
     const ApplicationQueueMod = await import('@/models/ApplicationQueue');
@@ -56,7 +75,7 @@ async function workerTick(): Promise<void> {
     }
 
   } catch (err: any) {
-    console.error('[ApplicationWorker] Tick error:', err.message);
+    log.error('[ApplicationWorker] Tick error:', err);
   } finally {
     isRunning = false;
   }
@@ -68,7 +87,7 @@ async function workerTick(): Promise<void> {
  */
 export function startApplicationWorker(): void {
   if (workerTimer) return;
-  console.log('[ApplicationWorker] Starting background worker (polling every 10s)');
+  log.info('[ApplicationWorker] Starting background worker (polling every 10s)');
   workerTimer = setInterval(workerTick, POLL_INTERVAL_MS);
   // Run first tick immediately
   workerTick().catch(() => {});
@@ -81,6 +100,6 @@ export function stopApplicationWorker(): void {
   if (workerTimer) {
     clearInterval(workerTimer);
     workerTimer = null;
-    console.log('[ApplicationWorker] Stopped');
+    log.info('[ApplicationWorker] Stopped');
   }
 }

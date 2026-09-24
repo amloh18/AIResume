@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import * as crypto from 'crypto';
 
 /**
@@ -97,7 +98,13 @@ export async function GET(
     
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
+    // Ownership comes from the session, not from `?userId=`. The query parameter is ignored: trusting
+    // it let any caller read any user's cached analysis by guessing a CV id.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = authResult.userId;
     const targetRole = searchParams.get('targetRole') || '';
     const seniorityLevel = searchParams.get('seniorityLevel') || '';
     const jobDataParam = searchParams.get('jobData');
@@ -109,13 +116,6 @@ export async function GET(
       } catch {
         // Ignore parse errors
       }
-    }
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
     }
 
     const cvId = toObjectId(id);
@@ -189,7 +189,6 @@ export async function POST(
     const { id } = await params;
     const body = await request.json();
     const { 
-      userId, 
       score, 
       fixes, 
       annotations,
@@ -200,12 +199,12 @@ export async function POST(
       scoreReport
     } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+    // Ownership comes from the session, not from the body. `userId` in the payload is ignored.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = authResult.userId;
 
     if (score === undefined || !Array.isArray(fixes) || !Array.isArray(annotations)) {
       return NextResponse.json(
@@ -302,15 +301,12 @@ export async function DELETE(
     await getConnection();
     
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+    // Ownership comes from the session, not from `?userId=`.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = authResult.userId;
 
     const cvId = toObjectId(id);
     // Use $unset to clear the nested object reliably (avoid casting/validation issues)

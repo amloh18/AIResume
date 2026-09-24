@@ -2,6 +2,7 @@ import { Db } from 'mongodb';
 import { applicationWatchdog } from './watchdog';
 import { applicationStateMachine } from '../application-state/stateMachine';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
+import { log } from '@/lib/structured-logger';
 
 export class ApplicationReconciliationWorker {
   private timer: NodeJS.Timeout | null = null;
@@ -31,23 +32,32 @@ export class ApplicationReconciliationWorker {
       try {
         releasedReservations = await AutoApplyQuotaService.recoverAbandoned();
         if (releasedReservations > 0) {
-          console.log(`[Reconciliation] Released ${releasedReservations} abandoned Auto-Apply reservations`);
+          log.info(`[Reconciliation] Released ${releasedReservations} abandoned Auto-Apply reservations`);
         }
       } catch (err: any) {
-        console.error('[Reconciliation] Failed to recover abandoned reservations:', err?.message);
+        log.error('[Reconciliation] Failed to recover abandoned reservations:', err?.message);
       }
 
       const reports = await applicationWatchdog.scanForStuckApplications(db);
       if (reports.length === 0) return { scanned: 0, resolved: 0, releasedReservations };
 
-      const emailsColl = db.collection('emailEvents');
+      /*
+        Inbound employer mail lives in `communications` (written by `emailIngestionService` from the
+        Stalwart JMAP feed), classified as APPLICATION_ACKNOWLEDGEMENT / INTERVIEW_INVITATION / etc.
+
+        This used to read a collection named `emailEvents` for `classification: 'application_confirmation'`
+        — neither the collection nor that classification value is written anywhere, so the "employer
+        confirmation proved the submission" branch was unreachable and every stuck application fell
+        through to review_required. It now reads the store that actually exists.
+      */
+      const emailsColl = db.collection('communications');
       let resolvedCount = 0;
 
       for (const report of reports) {
-        // Check if an inbound email receipt arrived for this application while it was stuck
+        // Any inbound employer reply matched to this application proves the submission landed.
         const emailReceipt = await emailsColl.findOne({
-          applicationId: report.applicationId,
-          classification: 'application_confirmation',
+          applicationId: { $in: [report.applicationId, String(report.applicationId)] },
+          direction: 'inbound',
         });
 
         if (emailReceipt) {

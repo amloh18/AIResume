@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { applyDeepFreeze } from '@/lib/services/deep-freeze-service';
@@ -14,6 +15,10 @@ export async function GET(request: NextRequest) {
   // Verify cron secret — fails closed when CRON_SECRET is unset.
   const denied = cronAuthFailure(request.headers);
   if (denied) return denied;
+
+  // Overlap guard: a concurrent run could downgrade the same user twice and race applyDeepFreeze.
+  const lock = acquireCronLock('deep-freeze');
+  if (!lock) return cronBusyResponse('deep-freeze');
   
   try {
     await getConnection();
@@ -64,6 +69,8 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

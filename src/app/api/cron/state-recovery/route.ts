@@ -1,47 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import stateRecoveryService from '@/lib/services/stateRecoveryService';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 
 /**
  * State Recovery Cron Route
- * 
+ *
  * This route should be called periodically (e.g., daily) to check and repair
  * inconsistent state in the database.
- * 
- * Authentication: Requires CRON_SECRET in Authorization header
- * 
+ *
+ * Authentication: `Authorization: Bearer <CRON_SECRET>` (or `CRON_API_KEY`), checked by the shared
+ * fail-closed, constant-time guard. The hand-rolled `token !== expectedSecret` compare this used to
+ * do was both timing-sensitive and inconsistent with every other cron route.
+ *
  * Usage:
  *   GET /api/cron/state-recovery
  *   Authorization: Bearer ${CRON_SECRET}
  */
 
 export async function GET(request: NextRequest) {
+  // Overlap guard: recovery must not run two repairs against the same document concurrently.
+  const lock = acquireCronLock('state-recovery');
+  if (!lock) return cronBusyResponse('state-recovery');
+
   try {
-    // Authenticate request
-    const authHeader = request.headers.get('authorization');
-    const expectedSecret = process.env.CRON_SECRET;
-
-    if (!expectedSecret) {
-      console.error('CRON_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (token !== expectedSecret) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     console.log('🔄 Starting state recovery check...');
 
@@ -99,6 +83,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

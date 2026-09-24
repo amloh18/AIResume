@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { getConnection } from '@/lib/database';
 import WebhookLog from '@/models/WebhookLog';
 
@@ -99,7 +98,10 @@ class WebhookRetryService {
       return new Date() >= nextRetryTime;
     });
 
-    return readyForRetry as FailedWebhook[];
+    // `.lean()` returns Mongoose's FlattenMaps document shape, which does not structurally overlap
+    // with the plain `FailedWebhook` interface even though every field comes from WebhookLogSchema —
+    // hence the double cast (a plain `as` is rejected by TS2352).
+    return readyForRetry as unknown as FailedWebhook[];
   }
 
   /**
@@ -179,28 +181,32 @@ class WebhookRetryService {
 
   /**
    * Retry Stripe webhook
+   *
+   * This used to reconstruct the event and then `throw new Error('...not yet fully implemented')`,
+   * so every "retry" was guaranteed to fail and the cron just burned retries until the log went
+   * `failed_permanently`. The processing logic already lived in one place —
+   * `StripeProvider.handleWebhookEvent`, shared with the live webhook route — so a retry re-invokes
+   * exactly that handler with the payload we stored when the webhook first arrived.
+   *
+   * The handler is idempotent by nature (it re-applies the same state transition), and the route's
+   * duplicate check keys on `externalId`, so replaying an already-processed event is safe.
    */
   private async retryStripeWebhook(webhookLog: any): Promise<void> {
-    // For now, we'll mark it for manual review or implement a simpler retry
-    // TODO: Extract webhook processing logic into a shared service
-    // For Phase 5, we'll focus on tracking retries and marking for review
-    
-    // Reconstruct the webhook payload
+    const { StripeProvider } = await import('@/lib/payment/providers/stripe');
+    const stripeProvider = new StripeProvider();
+
+    // The live route stores `payload: event.data`, so rebuild the envelope the handler expects.
     const event = {
+      id: webhookLog.externalId || `retry_${webhookLog._id}`,
       type: webhookLog.eventType,
-      data: {
-        object: webhookLog.payload
-      },
-      id: webhookLog.payload?.id || `retry_${webhookLog._id}`
-    };
+      data: webhookLog.payload,
+    } as any;
 
-    // Process based on event type - simplified version
-    // In a full implementation, you'd extract the handler logic here
-    console.log(`Retrying Stripe webhook: ${webhookLog.eventType}`, event);
+    const result = await stripeProvider.handleWebhookEvent(event);
 
-    // For now, throw an error to indicate retry is needed
-    // This will be enhanced when processing logic is extracted
-    throw new Error('Webhook retry processing not yet fully implemented. Manual review required.');
+    if (!result.handled) {
+      throw new Error(result.error || `Stripe handler did not handle ${event.type} on retry`);
+    }
   }
 
   /**

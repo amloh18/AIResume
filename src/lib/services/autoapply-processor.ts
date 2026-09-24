@@ -1,5 +1,23 @@
 'use strict';
 
+/**
+ * DEAD CODE INVENTORY (audit 2026-09-24, fix-tasks R8.1) — **do not extend or rewire**.
+ *
+ * Nothing in the repository imports this module (verified by repo-wide grep on 2026-09-24). It is a
+ * second, parallel auto-apply pipeline built on the legacy `AutoApplyQueue` collection, superseded by:
+ *
+ *     /api/jobs/auto-apply → ApplicationQueue → worker → processApplication → UnifiedApplyService
+ *
+ * Kept rather than deleted because the GAP-12 state-model consolidation is explicitly out of scope
+ * for this pass (fix-tasks Q4). Two hazards to know about if anyone ever wires it back up:
+ *
+ *   1. Its `UnifiedApplyService.apply(...)` call passes **no `mode`**, so it would default to `auto`
+ *      and submit with Playwright without any decision-engine gate.
+ *   2. It registers its own model under the `AutoApplyQueue` name using the *current*
+ *      ApplicationQueueSchema, i.e. the two pipelines share a schema but not a lifecycle.
+ *
+ * Removal candidate: delete this file together with the AutoApplyQueue collection during GAP-12.
+ */
 import mongoose from 'mongoose';
 
 // Application Queue Schema

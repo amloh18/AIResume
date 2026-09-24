@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import mongoose from 'mongoose';
 import EmailCampaign, { IEmailCampaign } from '@/models/admin/EmailCampaign';
 import campaignEmailService from '@/lib/services/campaignEmailService';
@@ -10,6 +10,10 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+    // Overlap guard: a concurrent run would clone the same recurring child campaign twice.
+    const lock = acquireCronLock('process-campaigns');
+    if (!lock) return cronBusyResponse('process-campaigns');
+
     try {
         /*
           1. Verify Cron Secret — fails closed.
@@ -43,7 +47,7 @@ export async function GET(request: NextRequest) {
         for (const campaign of dueScheduledCampaigns) {
             console.log(`🚀 Processing scheduled campaign: ${campaign._id} - ${campaign.campaignName}`);
             try {
-                await campaignEmailService.sendCampaign(campaign._id as string);
+                await campaignEmailService.sendCampaign(String(campaign._id));
                 results.scheduledProcessed++;
             } catch (err: any) {
                 console.error(`❌ Error processing scheduled campaign ${campaign._id}:`, err);
@@ -97,7 +101,7 @@ export async function GET(request: NextRequest) {
                 const childCampaign = await EmailCampaign.create(childCampaignData);
 
                 // B. Send the child campaign
-                await campaignEmailService.sendCampaign(childCampaign._id as string);
+                await campaignEmailService.sendCampaign(String(childCampaign._id));
 
                 // C. Update the Parent
                 // Calculate next run
@@ -149,5 +153,7 @@ export async function GET(request: NextRequest) {
             { error: 'Internal Server Error', details: error.message },
             { status: 500 }
         );
+    } finally {
+        lock.release();
     }
 }

@@ -1,36 +1,13 @@
 /**
- * Edge Runtime compatible logger for middleware
- * Minimal logging without any external dependencies
+ * Edge Runtime logger — now a **re-export**, not a fourth logger.
+ *
+ * `src/proxy.ts` runs in the edge runtime, where `node:async_hooks` (and therefore the correlation
+ * AsyncLocalStorage) is unavailable, so it historically got its own `log` object with its own output
+ * shape. The formatting, level gating and JSON shape now all come from the one structured logger,
+ * which is edge-safe by construction (it guards every `process.env` access).
+ *
+ * The only thing edge code loses is *ambient* correlation context — the proxy therefore passes its
+ * correlation id explicitly in the `context` argument of the calls it makes.
  */
 
-export const log = {
-  debug: (message: string, context?: Record<string, any>) => {
-    if (typeof console !== 'undefined') {
-      console.debug(`[DEBUG] ${message}`, context || '');
-    }
-  },
-  
-  info: (message: string, context?: Record<string, any>) => {
-    if (typeof console !== 'undefined') {
-      console.info(`[INFO] ${message}`, context || '');
-    }
-  },
-  
-  warn: (message: string, context?: Record<string, any>) => {
-    if (typeof console !== 'undefined') {
-      console.warn(`[WARN] ${message}`, context || '');
-    }
-  },
-  
-  error: (message: string, error?: Error, context?: Record<string, any>) => {
-    if (typeof console !== 'undefined') {
-      console.error(`[ERROR] ${message}`, error, context || '');
-    }
-  },
-  
-  performance: (operation: string, duration: number, context?: Record<string, any>) => {
-    if (typeof console !== 'undefined' && duration > 100) {
-      console.log(`[PERF] ${operation}: ${duration}ms`, context || '');
-    }
-  }
-};
+export { log } from '@/lib/structured-logger';

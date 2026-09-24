@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import webhookRetryService from '@/lib/services/webhookRetryService';
 
 /**
@@ -17,6 +18,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // Overlap guard: two concurrent passes would retry the same failed webhook twice.
+  const lock = acquireCronLock('webhook-retry');
+  if (!lock) return cronBusyResponse('webhook-retry');
+
   try {
     const denied = cronAuthFailure(request.headers);
     if (denied) return denied;
@@ -104,6 +109,8 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

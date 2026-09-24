@@ -1,44 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import dailySummaryEmailService from '@/lib/services/dailySummaryEmailService';
 
 /**
  * Daily Summary Email Cron Endpoint
  * Should be called daily (e.g., via Vercel Cron or external cron service)
- * 
+ *
  * Usage:
  * - Vercel Cron: Add to vercel.json
  * - External: Set up daily cron job to call this endpoint
- * 
- * Security: Requires CRON_SECRET in Authorization header
+ *
+ * Security: `Authorization: Bearer <CRON_SECRET>` (or `CRON_API_KEY`), checked by the shared
+ * fail-closed, constant-time guard rather than a hand-rolled `!==` compare.
  */
 export async function GET(request: NextRequest) {
+  // Overlap guard: a slow summary run overlapping its next tick would enqueue the same emails twice.
+  const lock = acquireCronLock('daily-summary');
+  if (!lock) return cronBusyResponse('daily-summary');
+
   try {
-    // Authenticate request
-    const authHeader = request.headers.get('authorization');
-    const expectedSecret = process.env.CRON_SECRET;
-
-    if (!expectedSecret) {
-      console.error('CRON_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    if (token !== expectedSecret) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     console.log('📧 Starting daily summary email job...');
 
@@ -64,6 +47,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

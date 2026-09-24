@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import {
   processRenewals,
   processDunning,
@@ -9,28 +11,21 @@ import {
 /**
  * Billing Scheduler Cron Endpoint
  * Should be called by a cron job service (e.g., Vercel Cron, GitHub Actions, etc.)
- * 
- * Security: Add authentication/authorization (API key, IP whitelist, etc.)
+ *
+ * Security: `Authorization: Bearer <CRON_SECRET|CRON_API_KEY>` (or the legacy `X-Api-Key` header),
+ * checked by the shared fail-closed, constant-time guard. This route previously required *only*
+ * `CRON_API_KEY` via `X-Api-Key` with a plain `!==` compare — which disagreed with `src/proxy.ts`,
+ * where `/api/cron/*` is admitted by a Bearer token, so a correctly proxied request was rejected here
+ * and an `X-Api-Key`-only request was rejected at the proxy. Both header forms now work end to end.
  */
 export async function GET(request: NextRequest) {
-  try {
-    // Security: Verify CRON_API_KEY is configured
-    const cronApiKey = process.env.CRON_API_KEY;
-    if (!cronApiKey) {
-      console.error('CRON_API_KEY is not configured - blocking request');
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+  // Overlap guard: concurrent renewal/dunning passes could double-charge a card already being retried.
+  const lock = acquireCronLock('billing');
+  if (!lock) return cronBusyResponse('billing');
 
-    const apiKey = request.headers.get('x-api-key');
-    if (apiKey !== cronApiKey) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  try {
+    const denied = cronAuthFailure(request.headers);
+    if (denied) return denied;
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'all';
@@ -68,6 +63,8 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

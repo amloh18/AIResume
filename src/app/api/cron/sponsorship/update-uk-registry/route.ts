@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
 
 /**
@@ -21,6 +22,10 @@ import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
  * }
  */
 export async function GET(request: NextRequest) {
+  // Overlap guard: a registry import running twice concurrently could duplicate sponsor documents.
+  const lock = acquireCronLock('sponsorship:uk-registry');
+  if (!lock) return cronBusyResponse('sponsorship:uk-registry');
+
   try {
     // Fail closed — a missing CRON_SECRET must never make this endpoint public.
     const denied = cronAuthFailure(request.headers);
@@ -50,6 +55,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 
