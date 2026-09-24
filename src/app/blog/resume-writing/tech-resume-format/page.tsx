@@ -175,7 +175,7 @@ export default function TechResumeFormatPage() {
             <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-6">
               <ul className="space-y-3 text-gray-300">
                 <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">1.</span> <span>Include GitHub and LinkedIn links prominently</span></li>
-                <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">2.</span> <span>Use numbers: "Reduced API latency by 40%"</span></li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">2.</span> <span>Use numbers: &quot;Reduced API latency by 40%&quot;</span></li>
                 <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">3.</span> <span>List technologies with proficiency levels</span></li>
                 <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">4.</span> <span>Include relevant certifications</span></li>
                 <li className="flex items-start gap-3"><span className="text-blue-400 font-bold">5.</span> <span>Keep it to 1-2 pages max</span></li>

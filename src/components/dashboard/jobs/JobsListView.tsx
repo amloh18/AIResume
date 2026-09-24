@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React from 'react';
@@ -287,7 +287,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                     No jobs found
                   </h4>
                   <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                    Try adjusting your filters or click "Add Job" to start tracking applications.
+                    Try adjusting your filters or click &quot;Add Job&quot; to start tracking applications.
                   </p>
                 </td>
               </tr>

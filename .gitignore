@@ -56,7 +56,11 @@ Thumbs.db
 .DS_Store?
 
 # ── DOCS  ───────────────────────────────────────────────────────────
+# Project documentation is version-controlled (AGENTS.md §53/54 requires maintaining
+# docs/application-automation/). The blanket *.md ignore previously swallowed the entire
+# docs/ tree — 54 documents were never committed because of it.
 *.md
+!AGENTS.md
 
 # ── Logs ────────────────────────────────────────────────────────────────
 npm-debug.log*

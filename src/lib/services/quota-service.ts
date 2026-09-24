@@ -122,7 +122,7 @@ export class QuotaService {
     const normalizedPlan = this.normalizePlanType(planType);
     const quotas = PLAN_QUOTAS[normalizedPlan];
     
-    let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+    const quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
     
     // Get current usage
     const hourlyCount = quota ? this.getCurrentWindowCount(quota.hourlyApplications, this.HOURLY_WINDOW_MS) : 0;
@@ -163,7 +163,7 @@ export class QuotaService {
     const normalizedPlan = this.normalizePlanType(planType);
     const quotas = PLAN_QUOTAS[normalizedPlan];
     
-    let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+    const quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
     
     const monthlyCount = quota ? this.getCurrentWindowCount(quota.monthlyJobsFetched, this.MONTHLY_WINDOW_MS) : 0;
     const monthlyLimit = quotas.jobsFetchedMonthly;
@@ -195,7 +195,7 @@ export class QuotaService {
     const now = new Date();
     const userObjId = new mongoose.Types.ObjectId(userId);
     
-    let quota = await model.findOne({ userId: userObjId });
+    const quota = await model.findOne({ userId: userObjId });
     
     if (!quota) {
       // Create new quota document
@@ -235,7 +235,7 @@ export class QuotaService {
     const now = new Date();
     const userObjId = new mongoose.Types.ObjectId(userId);
     
-    let quota = await model.findOne({ userId: userObjId });
+    const quota = await model.findOne({ userId: userObjId });
     
     if (!quota) {
       await model.create({
@@ -269,7 +269,7 @@ export class QuotaService {
     const quotas = PLAN_QUOTAS[normalizedPlan];
     const model = await getQuotaModel();
     
-    let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+    const quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
     
     const hourlyCount = quota ? this.getCurrentWindowCount(quota.hourlyApplications, this.HOURLY_WINDOW_MS) : 0;
     const dailyCount = quota ? this.getCurrentWindowCount(quota.dailyApplications, this.DAILY_WINDOW_MS) : 0;

@@ -252,13 +252,13 @@ const PanelWorkflowDemo: React.FC<{ panelType: string }> = ({ panelType }) => {
             <div className="w-full h-full flex flex-col justify-center items-center">
               {stepIndex === 0 && (
                 <div className="font-mono text-[6px] text-amber-500/80 animate-fadeIn leading-tight select-none">
-                  &#123; "basics": &#123; "name": "..." &#125; &#125;
+                  &#123; &quot;basics&quot;: &#123; &quot;name&quot;: &quot;...&quot; &#125; &#125;
                 </div>
               )}
               {stepIndex === 1 && (
                 <div className="flex items-center justify-center gap-0.5 font-mono text-[7px] animate-fadeIn">
-                  <span className="text-gray-400">"name":</span>
-                  <span className="text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1 animate-pulse">"Jane Dev"</span>
+                  <span className="text-gray-400">&quot;name&quot;:</span>
+                  <span className="text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1 animate-pulse">&quot;Jane Dev&quot;</span>
                 </div>
               )}
               {stepIndex === 2 && (
@@ -386,7 +386,17 @@ const AnalysisSkeleton: React.FC = () => {
   );
 };
 
-export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen = false, onClose }) => {
+export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = (props) => {
+  const { state } = useResumeEnhancer();
+  // Guard wrapper (react-hooks/rules-of-hooks): this early return used to sit above eleven hooks
+  // further down, so the hook count changed when `cvData` arrived. The body mounts only once
+  // cvData exists — same observable behaviour as before (skeleton while loading, the body's
+  // effects run when it appears).
+  if (!state.cvData) return <AnalysisSkeleton />;
+  return <ATSMeterPanelBody {...props} />;
+};
+
+const ATSMeterPanelBody: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen = false, onClose }) => {
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -438,10 +448,6 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
   const togglePanel = (panel: keyof typeof expanded) => {
     setExpanded(prev => ({ ...prev, [panel]: !prev[panel] }));
   };
-
-  if (!state.cvData) {
-    return <AnalysisSkeleton />;
-  }
 
   const report = state.scoreReport;
   const isMasterCV = state.cvType === 'master';
@@ -1157,7 +1163,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 dark:text-gray-400">👍</span>
-                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">What's working for you</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">What&apos;s working for you</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">

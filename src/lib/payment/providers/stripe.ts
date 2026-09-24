@@ -445,7 +445,7 @@ export class StripeProvider implements IPaymentProvider {
       const stripeInstance = getStripeInstance();
 
       // Fetch the latest subscription state from Stripe to get updated billing period
-      let periodUpdate: Record<string, any> = { 'subscription.status': 'active' };
+      const periodUpdate: Record<string, any> = { 'subscription.status': 'active' };
       if (stripeInstance) {
         try {
           const subscription = await stripeInstance.subscriptions.retrieve(invoice.subscription);

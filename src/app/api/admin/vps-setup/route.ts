@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { execSync } from 'child_process';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth-config';
 import { spawn } from 'child_process';
@@ -101,7 +102,7 @@ function resolveProjectRoot(): string {
   //    This may not be accessible from inside a container, but worth trying.
   const dokployBase = '/etc/dokploy/applications';
   try {
-    const { execSync } = require('child_process');
+
     const apps = execSync(`ls "${dokployBase}" 2>/dev/null`, { encoding: 'utf8', timeout: 5000 }).trim().split('\n').filter(Boolean);
     for (const app of apps) {
       const codeDir = path.join(dokployBase, app, 'code');
@@ -157,7 +158,7 @@ function readStatusMarker(): Record<string, boolean> | null {
  */
 function shellFileExists(filePath: string): boolean {
   try {
-    const { execSync } = require('child_process');
+
     execSync(`test -f "${filePath}"`, { timeout: 3000, stdio: 'pipe' });
     return true;
   } catch {
@@ -271,12 +272,12 @@ async function checkVpsStatus() {
   };
 
   // Check Docker
-  let docker = { installed: false, version: undefined as string | undefined, running: false };
+  const docker = { installed: false, version: undefined as string | undefined, running: false };
   if (marker?.docker === true) {
     docker.installed = true;
   }
   try {
-    const { execSync } = require('child_process');
+
     const dockerVersion = execSync('docker --version 2>/dev/null', { encoding: 'utf8', timeout: 5000 }).trim();
     docker.installed = true;
     docker.version = dockerVersion;
@@ -293,12 +294,12 @@ async function checkVpsStatus() {
   // Check Stalwart. The container is named `stalwart-mail` on the current VPS (the legacy
   // `buildairesume-stalwart` filter never matched it), so check both names and treat the configured
   // SMTP host as the stronger signal — that is what the app actually uses.
-  let stalwart = { running: false, status: undefined as string | undefined, containerName: 'stalwart-mail' };
+  const stalwart = { running: false, status: undefined as string | undefined, containerName: 'stalwart-mail' };
   if (marker?.stalwart === true) {
     stalwart.running = true;
   }
   try {
-    const { execSync } = require('child_process');
+
     const psOutput = execSync(
       'docker ps --filter name=stalwart --format "{{.Names}}: {{.Status}}" 2>/dev/null',
       { encoding: 'utf8', timeout: 5000 }

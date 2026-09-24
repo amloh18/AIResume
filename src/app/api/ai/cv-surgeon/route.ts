@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Try to find JSON object - look for the first { and try to find matching }
-            let jsonStart = content.indexOf('{');
+            const jsonStart = content.indexOf('{');
             if (jsonStart === -1) {
                 throw new Error('No JSON object found in response');
             }

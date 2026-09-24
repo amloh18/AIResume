@@ -111,7 +111,7 @@ function fillBasics(cvData: UnifiedCVDataStructure, jobData: any, keywords: stri
   const jobTitle = jobData.title || jobData.jobTitle || '';
   const companyName = jobData.company || jobData.companyName || '';
   
-  let basics = { ...cvData.basics };
+  const basics = { ...cvData.basics };
 
   // Fill label/title if empty
   if (!basics.label || basics.label.trim() === '') {
@@ -150,7 +150,7 @@ function fillSummary(cvData: UnifiedCVDataStructure, jobData: any, keywords: str
 }
 
 function fillSkills(cvData: UnifiedCVDataStructure, keywords: string[]): Partial<UnifiedCVDataStructure> {
-  let skills = [...(cvData.skills || [])];
+  const skills = [...(cvData.skills || [])];
 
   // Get all existing skill names (flattened from all categories)
   const existingSkillNames = skills.flatMap(skillCategory => 

@@ -379,6 +379,13 @@ const buildSnippetPreviewMarkup = (source: HTMLElement) => {
 export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed, onMoveToZone, isLastSnippetInZone: isLastSnippetInZoneProp }: any) => {
   const ctx = React.useContext(CanvasContext);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  // Hook stays above the conditional returns below (react-hooks/rules-of-hooks): it only reads
+  // `confirmingRemove`, so running it while `instance` is null is a harmless no-op.
+  useEffect(() => {
+    if (!confirmingRemove) return undefined;
+    const timer = window.setTimeout(() => setConfirmingRemove(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [confirmingRemove]);
   if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
@@ -396,12 +403,6 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
   const zoneBlockCount = Array.isArray(layoutZones?.[bareZoneId]) ? layoutZones[bareZoneId].length : 0;
   const isLastSnippetInZone = isLastSnippetInZoneProp ?? index === Math.max(0, zoneBlockCount - 1);
-
-  useEffect(() => {
-    if (!confirmingRemove) return undefined;
-    const timer = window.setTimeout(() => setConfirmingRemove(false), 3000);
-    return () => window.clearTimeout(timer);
-  }, [confirmingRemove]);
 
   const handleRemoveSnippet = () => {
     if (!confirmingRemove) {

@@ -66,7 +66,7 @@ export default function ATSUnlockCard({ onUnlockClick, onDismiss, isDismissed }:
                 Want to know your ATS Score?
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed max-w-xl">
-                Your resume is looking great, but it's missing context. Add a target Job Description to instantly calculate your ATS Match Score and unlock AI-powered content tailoring.
+                Your resume is looking great, but it&apos;s missing context. Add a target Job Description to instantly calculate your ATS Match Score and unlock AI-powered content tailoring.
               </p>
               
               {/* CTA Button */}

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Build prompt
-        let prompt = ANALYSIS_AGENT_PROMPT
+        const prompt = ANALYSIS_AGENT_PROMPT
             .replace('{{CV_DATA}}', typeof CV_DATA === 'string' ? CV_DATA : JSON.stringify(CV_DATA, null, 2))
             .replace('{{CV_TYPE}}', CV_TYPE)
             .replace('{{JD_DATA}}', JD_DATA ? (typeof JD_DATA === 'string' ? JD_DATA : JSON.stringify(JD_DATA, null, 2)) : 'N/A')

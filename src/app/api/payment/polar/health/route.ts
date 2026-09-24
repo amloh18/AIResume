@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { getPolar } from '@/lib/payment/polar';
 

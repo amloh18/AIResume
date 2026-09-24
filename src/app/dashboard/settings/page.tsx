@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React, { useState, Suspense, useEffect } from 'react';
@@ -1509,7 +1509,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                 <h4 className="text-small font-semibold text-gray-900 dark:text-white mb-2">Verify Your Email</h4>
                 <p className="text-small text-gray-600 dark:text-gray-400 mb-4">
-                    We've sent a 6-digit code to {user.email}. Enter it below to enable two-factor authentication.
+                    We&apos;ve sent a 6-digit code to {user.email}. Enter it below to enable two-factor authentication.
                 </p>
                 <div className="flex items-center gap-3">
                   <input
@@ -2411,7 +2411,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </div>
               <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-2">No Payment History</h4>
               <p className="text-small text-gray-500 dark:text-gray-400 mb-0">
-                You haven't made any purchases yet. Your payment history and invoices will appear here.
+                You haven&apos;t made any purchases yet. Your payment history and invoices will appear here.
               </p>
             </div>
           )}

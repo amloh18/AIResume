@@ -124,7 +124,7 @@ export class AIQuotaService {
     const joinDay = joinDate.getDate();
     
     // Determine the most recent reset date that should have occurred
-    let latestValidResetDate = new Date(now.getFullYear(), now.getMonth(), joinDay);
+    const latestValidResetDate = new Date(now.getFullYear(), now.getMonth(), joinDay);
     if (now < latestValidResetDate) {
       // If we haven't reached the join day this month, the last reset should be last month
       latestValidResetDate.setMonth(latestValidResetDate.getMonth() - 1);

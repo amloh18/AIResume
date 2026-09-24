@@ -1,7 +1,7 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import stateRecoveryService from '@/lib/services/stateRecoveryService';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
-import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 
 /**
  * State Recovery Cron Route
@@ -20,72 +20,66 @@ import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 
 export async function GET(request: NextRequest) {
   // Overlap guard: recovery must not run two repairs against the same document concurrently.
-  const lock = acquireCronLock('state-recovery');
-  if (!lock) return cronBusyResponse('state-recovery');
+  return runCron('state-recovery', request, async () => {
+    try {
+      log.info('🔄 Starting state recovery check...');
 
-  try {
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
+      // Run state recovery
+      const result = await stateRecoveryService.runRecovery();
 
-    console.log('🔄 Starting state recovery check...');
-
-    // Run state recovery
-    const result = await stateRecoveryService.runRecovery();
-
-    // Prepare response
-    const response = {
-      success: true,
-      timestamp: new Date().toISOString(),
-      result: {
-        checked: result.checked,
-        issuesFound: result.issuesFound,
-        issuesFixed: result.issuesFixed,
-        issuesRequiringManualIntervention: result.issuesRequiringManualIntervention,
-        summary: result.summary,
-        issues: result.issues.map(issue => ({
-          type: issue.type,
-          severity: issue.severity,
-          description: issue.description,
-          userId: issue.userId,
-          resourceId: issue.resourceId,
-          fixable: issue.fixable,
-        })),
-      },
-    };
-
-    // Log critical issues
-    const criticalIssues = result.issues.filter(i => i.severity === 'critical');
-    if (criticalIssues.length > 0) {
-      console.error(`⚠️ Found ${criticalIssues.length} critical issues requiring immediate attention`);
-      criticalIssues.forEach(issue => {
-        console.error(`  - ${issue.description}`);
-      });
-    }
-
-    // Log high severity issues
-    const highIssues = result.issues.filter(i => i.severity === 'high');
-    if (highIssues.length > 0) {
-      console.warn(`⚠️ Found ${highIssues.length} high severity issues`);
-    }
-
-    console.log(`✅ State recovery completed: ${result.issuesFound} issues found, ${result.issuesFixed} fixed`);
-
-    return NextResponse.json(response, { status: 200 });
-
-  } catch (error: any) {
-    console.error('❌ State recovery error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to run state recovery',
-        message: error.message,
+      // Prepare response
+      const response = {
+        success: true,
         timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
-  } finally {
-    lock.release();
-  }
+        result: {
+          checked: result.checked,
+          issuesFound: result.issuesFound,
+          issuesFixed: result.issuesFixed,
+          issuesRequiringManualIntervention: result.issuesRequiringManualIntervention,
+          summary: result.summary,
+          issues: result.issues.map(issue => ({
+            type: issue.type,
+            severity: issue.severity,
+            description: issue.description,
+            userId: issue.userId,
+            resourceId: issue.resourceId,
+            fixable: issue.fixable,
+          })),
+        },
+      };
+
+      // Log critical issues
+      const criticalIssues = result.issues.filter(i => i.severity === 'critical');
+      if (criticalIssues.length > 0) {
+        log.error(`⚠️ Found ${criticalIssues.length} critical issues requiring immediate attention`);
+        criticalIssues.forEach(issue => {
+          log.error(`  - ${issue.description}`);
+        });
+      }
+
+      // Log high severity issues
+      const highIssues = result.issues.filter(i => i.severity === 'high');
+      if (highIssues.length > 0) {
+        log.warn(`⚠️ Found ${highIssues.length} high severity issues`);
+      }
+
+      log.info(`✅ State recovery completed: ${result.issuesFound} issues found, ${result.issuesFixed} fixed`);
+
+      return NextResponse.json(response, { status: 200 });
+
+    } catch (error: any) {
+      log.error('❌ State recovery error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to run state recovery',
+          message: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        { status: 500 }
+      );
+    }
+  });
 }
 
 /**

@@ -3,7 +3,14 @@
  *
  * Tests the complete flow: Ingestion → MongoDB → User Search → Matching → Save/Apply → History
  *
- * Run: npx vitest run tests/e2e/job-pipeline.e2e.test.ts
+ * Run (explicit opt-in — the suite creates AND deletes documents, so it must never target a shared
+ * database by accident):
+ *
+ *   E2E_MONGODB_URI="mongodb+srv://..." npx vitest run tests/e2e/job-pipeline.e2e.test.ts
+ *
+ * A few phases additionally call the API on http://localhost:3000 — start `npm run dev` alongside.
+ * Without E2E_MONGODB_URI the suite reports as skipped (never as "no suite found"), so the default
+ * `npx vitest run` stays green and provably offline.
  */
 // @vitest-environment node
 
@@ -14,23 +21,24 @@ dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { ensureJobIndexes } from '@/lib/ingestion/engine';
 
 // ── Test Config ────────────────────────────────────────────────────────
 
 const E2E_RUN_ID = `e2e-job-pipeline-${Date.now()}`;
 const TEST_USER_EMAIL = `e2e-job-test-${Date.now()}@cvcircle.local`;
 /*
- * Credentials must never be hard-coded here: this file is tracked by git, so a literal URI would put
- * the Atlas username and password in the repository history forever. The test refuses to run without
- * an explicitly provided URI instead.
+ * Two hard safety rules:
+ *
+ * 1. Credentials must never be hard-coded here — this file is tracked by git, so a literal URI would
+ *    put the Atlas username and password into the repository history forever.
+ * 2. The suite deliberately does NOT read MONGODB_URI (which .env.local points at production): it
+ *    inserts and deletes documents in phases 3-40, and an accidental run against the production
+ *    database would mutate live data. Only the dedicated E2E_MONGODB_URI is honoured, and without it
+ *    the whole suite is skipped instead of throwing, so the default test run stays green/offline.
  */
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  throw new Error(
-    'MONGODB_URI is not set. Export it (or provide .env.local) before running this e2E test — ' +
-      'it deliberately has no built-in fallback so credentials cannot be committed.'
-  );
-}
+const MONGODB_URI = process.env.E2E_MONGODB_URI;
+const describeE2E = MONGODB_URI ? describe : describe.skip;
 
 // Track all test-created IDs for cleanup
 const testArtifactIds = {
@@ -65,12 +73,16 @@ function genContentHash(title: string, desc: string, loc: string): string {
 
 // ── Phase 0-2: DB Preflight ───────────────────────────────────────────
 
-describe('CVCircle E2E Job Pipeline', () => {
+describeE2E('CVCircle E2E Job Pipeline', () => {
   let db!: mongoose.mongo.Db;
 
   beforeAll(async () => {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI!);
     db = mongoose.connection.db as mongoose.mongo.Db;
+    // Create the canonical-identity indexes through the same helper production ingestion uses, so
+    // Phase 2's index preflight passes on a freshly provisioned database instead of assuming the
+    // database already had indexes that only ever existed on long-lived clusters.
+    await ensureJobIndexes(db);
   }, 30000);
 
   afterAll(async () => {
@@ -716,7 +728,7 @@ describe('CVCircle E2E Job Pipeline', () => {
   async function cleanup() {
     console.log('\n🧹 Cleaning up E2E test artifacts...');
 
-    let usersRemoved = 0, jobsRemoved = 0, runsRemoved = 0, appsRemoved = 0, matchesRemoved = 0, interactionsRemoved = 0, passedRemoved = 0;
+    let usersRemoved = 0, runsRemoved = 0, appsRemoved = 0, matchesRemoved = 0, interactionsRemoved = 0, passedRemoved = 0;
 
     try {
       // Remove test user

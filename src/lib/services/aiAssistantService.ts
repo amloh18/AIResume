@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { JobPromptContext } from '@/types/job-prompt-context';
 import { AISuggestion } from '@/lib/stores/aiStore';

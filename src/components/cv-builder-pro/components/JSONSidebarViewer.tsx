@@ -99,7 +99,7 @@ const JSONNode = ({
           borderLeft: focusedPath === path ? '2px solid #10b981' : '2px solid transparent',
         }}
       >
-        {keyName !== null && <span style={{ color: keyColor }}>"{keyName}"</span>}
+        {keyName !== null && <span style={{ color: keyColor }}>&quot;{keyName}&quot;</span>}
         {keyName !== null && <span style={{ color: '#6b7280' }}>: </span>}
         <span style={{ color: valueColor }}>{display}</span>
         {!isLast && <span style={{ color: '#4b5563' }}>,</span>}
@@ -127,7 +127,7 @@ const JSONNode = ({
         }}
       >
         <span style={{ color: '#6b7280', marginRight: 4 }}>{isExpanded ? '▼' : '▶'}</span>
-        {keyName !== null && <span style={{ color: keyColor }}>"{keyName}"</span>}
+        {keyName !== null && <span style={{ color: keyColor }}>&quot;{keyName}&quot;</span>}
         {keyName !== null && <span style={{ color: '#6b7280' }}>: </span>}
         <span style={{ color: '#9ca3af' }}>{isArray ? '[' : '{'}</span>
         {!isExpanded && <span style={{ color: '#6b7280' }}>{isArray ? ` ${entries.length} ]` : ' ... }'}{!isLast ? ',' : ''}</span>}

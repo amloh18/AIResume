@@ -57,7 +57,10 @@ class ErrorTrackingService {
 
     try {
       if (typeof window === 'undefined') {
-        // Server-side Sentry - use dynamic require (static string keeps bundler happy)
+        // Server-side Sentry - lazy CJS require (static string keeps bundler happy) so the
+        // browser-only package never enters the server bundle. This method is intentionally
+        // synchronous, so `await import()` is not an option without changing init ordering.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SentryModule = require('@sentry/nextjs');
         const { init, captureException, setUser, setTag, setContext } = SentryModule;
         
@@ -78,7 +81,9 @@ class ErrorTrackingService {
           }
         };
       } else {
-        // Client-side Sentry - use dynamic require (static string keeps bundler happy)
+        // Client-side Sentry - lazy CJS require (static string keeps bundler happy) so the
+        // server-only package never enters the client bundle; method is intentionally synchronous.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const SentryBrowserModule = require('@sentry/browser');
         const { init, captureException, setUser, setTag, setContext, addBreadcrumb } = SentryBrowserModule;
         
@@ -111,6 +116,8 @@ class ErrorTrackingService {
     }
 
     try {
+      // Lazy CJS require: LogRocket is browser-only and this method is intentionally synchronous.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const LogRocket = require('logrocket');
       
       LogRocket.init(this.config.dsn, {

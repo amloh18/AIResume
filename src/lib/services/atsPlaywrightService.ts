@@ -11,6 +11,10 @@
  * - Always clean up in finally block
  */
 
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
 // Playwright types — loaded dynamically at runtime
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Page = any;
@@ -231,9 +235,7 @@ export async function fillGreenhouseFields(
     const resumeInput = await page.$('input[data-qa="resume"], input[type="file"][name*="resume"], input[type="file"][accept*="pdf"]');
     if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
       // Write temp file and upload
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
       fs.writeFileSync(tmpFile, candidateData.resumePdf);
       await resumeInput.setInputFiles(tmpFile);
@@ -247,9 +249,7 @@ export async function fillGreenhouseFields(
   try {
     const coverLetterInput = await page.$('input[data-qa="cover_letter"], input[type="file"][name*="cover"]');
     if (coverLetterInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
       fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
       await coverLetterInput.setInputFiles(tmpFile);
@@ -566,9 +566,7 @@ export async function fillLeverFields(
   try {
     const resumeInput = await page.$('input[name="resume"]');
     if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
       fs.writeFileSync(tmpFile, candidateData.resumePdf);
       await resumeInput.setInputFiles(tmpFile);
@@ -582,9 +580,7 @@ export async function fillLeverFields(
   try {
     const coverInput = await page.$('input[name="cover_letter"]');
     if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
       fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
       await coverInput.setInputFiles(tmpFile);
@@ -858,9 +854,7 @@ export async function fillAshbyFields(
   try {
     const resumeInput = await page.$('input[name="resume"]');
     if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
       fs.writeFileSync(tmpFile, candidateData.resumePdf);
       await resumeInput.setInputFiles(tmpFile);
@@ -874,9 +868,7 @@ export async function fillAshbyFields(
   try {
     const coverInput = await page.$('input[name="cover_letter"]');
     if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
       fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
       await coverInput.setInputFiles(tmpFile);
@@ -1145,9 +1137,7 @@ export async function fillWorkableFields(
   try {
     const resumeInput = await page.$('input[name="resume"]');
     if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
       fs.writeFileSync(tmpFile, candidateData.resumePdf);
       await resumeInput.setInputFiles(tmpFile);
@@ -1161,9 +1151,7 @@ export async function fillWorkableFields(
   try {
     const coverInput = await page.$('input[name="cover_letter"]');
     if (coverInput && candidateData.coverLetterPdf && candidateData.coverLetterFileName) {
-      const fs = require('fs');
-      const path = require('path');
-      const os = require('os');
+
       const tmpFile = path.join(os.tmpdir(), candidateData.coverLetterFileName);
       fs.writeFileSync(tmpFile, candidateData.coverLetterPdf);
       await coverInput.setInputFiles(tmpFile);

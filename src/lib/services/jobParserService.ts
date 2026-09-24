@@ -1,14 +1,10 @@
-import { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
-// Try to import puppeteer, but don't fail if it's not available
-let puppeteer: any = null;
-try {
-  puppeteer = require('puppeteer');
-} catch (error) {
-  console.warn('Puppeteer not available:', error);
-}
+// puppeteer is a declared dependency (package.json), so the old try/catch fallback for a missing
+// install was dead code — a static import is equivalent in practice (the previous require also ran
+// eagerly at module load). The `if (!puppeteer)` guard in getBrowser() is kept as belt-and-braces.
 
 export interface JobDetails {
   title: string;

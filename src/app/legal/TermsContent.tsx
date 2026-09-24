@@ -25,7 +25,7 @@ export default function TermsContent() {
           1. Acceptance of Terms
         </h3>
         <p>
-          These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "Candidate," or "you") and <strong>Morigrid Labs</strong> ("Company," "AIResume," "we," "us," or "our") regarding your access to and use of the <strong>AIResume</strong> website, applications, AI resume creation tools, job search engines, and automated application services (collectively, the "Platform").
+          These Terms of Service (&quot;Terms&quot;) constitute a legally binding agreement between you (&quot;User,&quot; &quot;Candidate,&quot; or &quot;you&quot;) and <strong>Morigrid Labs</strong> (&quot;Company,&quot; &quot;AIResume,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) regarding your access to and use of the <strong>AIResume</strong> website, applications, AI resume creation tools, job search engines, and automated application services (collectively, the &quot;Platform&quot;).
         </p>
         <p>
           By creating an account, accessing, or using the Platform, you affirm that you are at least 18 years of age and agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you must immediately discontinue using AIResume.
@@ -142,7 +142,7 @@ export default function TermsContent() {
           7. Disclaimers & Limitation of Liability
         </h3>
         <p className="text-sm sm:text-base">
-          AIResume is provided on an "AS IS" and "AS AVAILABLE" basis. To the maximum extent permitted by law, Morigrid Labs disclaims all warranties, express or implied. In no event shall Morigrid Labs be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of the Platform or hiring outcomes.
+          AIResume is provided on an &quot;AS IS&quot; and &quot;AS AVAILABLE&quot; basis. To the maximum extent permitted by law, Morigrid Labs disclaims all warranties, express or implied. In no event shall Morigrid Labs be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of the Platform or hiring outcomes.
         </p>
       </div>
 

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
@@ -225,7 +225,7 @@ Focus on:
         throw new Error('Could not find JSON array in AI response');
       }
 
-      let jsonString = jsonMatch[0];
+      const jsonString = jsonMatch[0];
       const originalJsonString = jsonString;
 
       // Fix common JSON issues - multiple attempts
@@ -235,7 +235,7 @@ Focus on:
         
         // Attempt 2: Remove trailing commas + fix common escape issues
         (str: string) => {
-          let fixed = str.replace(/,\s*([}\]])/g, '$1');
+          const fixed = str.replace(/,\s*([}\]])/g, '$1');
           // Simple approach: replace newlines that appear to be in string values
           // This is a heuristic - we'll be more careful in attempt 3
           return fixed;
@@ -243,7 +243,7 @@ Focus on:
         
         // Attempt 3: More aggressive - try to fix quotes in problematic areas
         (str: string) => {
-          let fixed = str.replace(/,\s*([}\]])/g, '$1');
+          const fixed = str.replace(/,\s*([}\]])/g, '$1');
           // This is complex - we'll use a state machine approach
           let result = '';
           let inString = false;
@@ -301,7 +301,7 @@ Focus on:
               const recoveredQuestions: any[] = [];
               for (const match of matches) {
                 try {
-                  let fixed = match.replace(/,\s*([}\]])/g, '$1');
+                  const fixed = match.replace(/,\s*([}\]])/g, '$1');
                   // Try to parse this individual object
                   const parsed = JSON.parse(fixed);
                   if (parsed && typeof parsed === 'object' && parsed.question) {

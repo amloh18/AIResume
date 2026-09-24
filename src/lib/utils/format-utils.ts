@@ -23,7 +23,7 @@ export function fixFormattingToBullets(html: string): string {
     if (!html || !html.trim()) return '';
 
     // Step 1: Convert HTML to plain text while preserving line breaks
-    let text = html
+    const text = html
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/p>/gi, '\n')
         .replace(/<\/li>/gi, '\n')
@@ -101,7 +101,7 @@ export function renderRichText(raw: string): string {
     }
 
     // Remove scripts, styles, iframes, and event handlers
-    let sanitized = html
+    const sanitized = html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')

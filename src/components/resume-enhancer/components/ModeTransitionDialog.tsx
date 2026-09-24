@@ -228,7 +228,7 @@ export default function ModeTransitionDialog({
                                             className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
                                         />
                                         <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
-                                            Don't show this again for this session
+                                            Don&apos;t show this again for this session
                                         </span>
                                     </label>
 

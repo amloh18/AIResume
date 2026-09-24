@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { describe, it, expect } from 'vitest';
 import { getAnalysisModeWithValidation } from './analysis-mode';
 import { validateRole, validateJD, sanitizeInput } from './cv-data-validator';

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const email = session.user.email;
 
     // Check if user already exists
-    let existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
       // Update existing user profile

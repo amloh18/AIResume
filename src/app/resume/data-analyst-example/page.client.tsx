@@ -57,7 +57,7 @@ export default function DataAnalystExamplePage() {
 
       <section className="py-20 px-4 bg-[#141810]">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">What's Included</h2>
+          <h2 className="text-3xl font-bold text-white text-center mb-12">What&apos;s Included</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[{ icon: <BarChart3 className="w-8 h-8" />, title: 'Skills Section', desc: 'Python, SQL, Tableau, Excel, PowerBI, Statistics' },
               { icon: <Database className="w-8 h-8" />, title: 'Experience', desc: 'Quantified achievements with metrics' },

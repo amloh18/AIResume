@@ -1,6 +1,6 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
-import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
 
 /**
@@ -23,41 +23,34 @@ import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
  */
 export async function GET(request: NextRequest) {
   // Overlap guard: a registry import running twice concurrently could duplicate sponsor documents.
-  const lock = acquireCronLock('sponsorship:uk-registry');
-  if (!lock) return cronBusyResponse('sponsorship:uk-registry');
+  return runCron('sponsorship:uk-registry', request, async () => {
+    try {
+      log.info('🔄 Starting UK sponsor registry update...');
+      const result = await importUKSponsors();
 
-  try {
-    // Fail closed — a missing CRON_SECRET must never make this endpoint public.
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
-
-    console.log('🔄 Starting UK sponsor registry update...');
-    const result = await importUKSponsors();
-
-    return NextResponse.json({
-      success: true,
-      message: 'UK sponsor registry update completed',
-      timestamp: new Date().toISOString(),
-      result: {
-        imported: result.imported,
-        updated: result.updated,
-        errors: result.errors,
-        expiredMarked: result.expiredMarked
-      }
-    });
-  } catch (error: any) {
-    console.error('❌ Error in UK sponsor registry update:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update UK sponsor registry',
-        message: error.message
-      },
-      { status: 500 }
-    );
-  } finally {
-    lock.release();
-  }
+      return NextResponse.json({
+        success: true,
+        message: 'UK sponsor registry update completed',
+        timestamp: new Date().toISOString(),
+        result: {
+          imported: result.imported,
+          updated: result.updated,
+          errors: result.errors,
+          expiredMarked: result.expiredMarked
+        }
+      });
+    } catch (error: any) {
+      log.error('❌ Error in UK sponsor registry update:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to update UK sponsor registry',
+          message: error.message
+        },
+        { status: 500 }
+      );
+    }
+  });
 }
 
 // Also support POST for cron services that use POST

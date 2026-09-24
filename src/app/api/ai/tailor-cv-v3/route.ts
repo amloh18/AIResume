@@ -121,8 +121,8 @@ ${mode === 'standout'
             content = codeBlockMatch[1].trim();
         }
 
-        let jsonStart = content.indexOf('{');
-        let jsonEnd = content.lastIndexOf('}');
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
         if (jsonStart === -1 || jsonEnd === -1 || jsonEnd < jsonStart) {
             throw new Error('No valid JSON object found in response');
         }

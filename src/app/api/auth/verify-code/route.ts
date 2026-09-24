@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code is valid - handle based on type
-    let responseData: any = {
+    const responseData: any = {
       success: true,
       message: 'Code verified successfully'
     };

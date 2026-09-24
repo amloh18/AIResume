@@ -1779,7 +1779,7 @@ export default function JobsDashboard() {
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                    You've viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
+                    You&apos;ve viewed all {displayedJobs.length} {filters.savedOnly ? 'saved' : 'matching'} {displayedJobs.length === 1 ? 'job' : 'jobs'}
                   </div>
                 )}
               </div>

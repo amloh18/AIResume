@@ -318,7 +318,7 @@ export default function LogsViewer() {
                               <div className="space-y-2">
                                 <h5 className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Anomaly Report</h5>
                                 <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 text-[11px] text-red-200/70 leading-relaxed italic">
-                                  "{log.errorMessage}"
+                                  &quot;{log.errorMessage}&quot;
                                 </div>
                               </div>
                             )}

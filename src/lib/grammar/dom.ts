@@ -1,4 +1,4 @@
-import { GrammarIssue } from './engine';
+import { GrammarIssue, analyzeText } from './engine';
 
 interface TextNodeInfo {
   node: Text;
@@ -109,7 +109,6 @@ export function highlightGrammarIssues(root: HTMLElement) {
   traverse(root);
 
   // Re-run analyzeText on fullText to get correct offsets for the DOM text
-  const { analyzeText } = require('./engine');
   const locale = (root as any).dataset?.grammarLocale as 'us' | 'uk' | undefined;
   const domIssues = analyzeText(fullText, { locale });
 
@@ -127,7 +126,7 @@ export function highlightGrammarIssues(root: HTMLElement) {
 
   for (const issue of sortedIssues) {
     // Find which text nodes overlap with the issue
-    let startNodeIdx = textNodes.findIndex(n => issue.startIndex >= n.start && issue.startIndex < n.end);
+    const startNodeIdx = textNodes.findIndex(n => issue.startIndex >= n.start && issue.startIndex < n.end);
     let endNodeIdx = textNodes.findIndex(n => issue.endIndex > n.start && issue.endIndex <= n.end);
 
     // If exact match end is not found (e.g. end of string), find the last node it touches

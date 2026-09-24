@@ -57,7 +57,7 @@ export default function FrontendDeveloperExamplePage() {
 
       <section className="py-20 px-4 bg-[#141810]">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">What's Included</h2>
+          <h2 className="text-3xl font-bold text-white text-center mb-12">What&apos;s Included</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[{ icon: <Palette className="w-8 h-8" />, title: 'UI/UX Skills', desc: 'React, Vue, Tailwind, CSS3, Figma' },
               { icon: <Layout className="w-8 h-8" />, title: 'Projects', desc: 'Live websites, responsive designs' },
