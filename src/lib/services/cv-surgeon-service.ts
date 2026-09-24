@@ -351,7 +351,7 @@ export class CVSurgeonService {
         // Run keyword gap analysis
         let keywordGapAnalysis: KeywordGapAnalysisResult | undefined;
         let keywordGaps: KeywordGap[] = [];
-        let atsScore = result.score;
+        const atsScore = result.score;
 
         if (jobData?.jobDescription || jobData?.description) {
             try {

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import JSZip from 'jszip';
 import { PDFService } from './pdfService';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';

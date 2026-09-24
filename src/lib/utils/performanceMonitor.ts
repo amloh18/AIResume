@@ -219,7 +219,10 @@ export function measureRenderTime<T extends React.ComponentType<any>>(
     
     return result;
   });
-  
+
+  // Display name for React DevTools / profiler output (also satisfies react/display-name).
+  WrappedComponent.displayName = `measureRenderTime(${componentName})`;
+
   return WrappedComponent as unknown as T;
 }
 

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -350,7 +350,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                       What gets synced to your calendar:
                     </p>
                     <ul className="text-small text-blue-700 space-y-1">
-                      <li>• Job applications (excluding "created" status)</li>
+                      <li>• Job applications (excluding &quot;created&quot; status)</li>
                       <li>• Interview schedules and details</li>
                       <li>• Follow-up reminders</li>
                       <li>• Application deadlines</li>

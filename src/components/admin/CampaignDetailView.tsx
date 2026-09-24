@@ -72,9 +72,15 @@ interface CampaignDetailViewProps {
     onClose: () => void;
 }
 
-export default function CampaignDetailView({ campaign, onClose }: CampaignDetailViewProps) {
-    if (!campaign) return null;
+export default function CampaignDetailView(props: CampaignDetailViewProps) {
+    // Wrapper split (react-hooks/rules-of-hooks): the early return must not sit above the hooks in
+    // the same component — if `campaign` flips between renders, hook counts would change. The body
+    // component mounts only when campaign exists, preserving today's mount semantics exactly.
+    if (!props.campaign) return null;
+    return <CampaignDetailViewBody {...props} />;
+}
 
+function CampaignDetailViewBody({ campaign, onClose }: CampaignDetailViewProps) {
     const [recipientsData, setRecipientsData] = useState<RecipientsResponse | null>(null);
     const [loadingRecipients, setLoadingRecipients] = useState(true);
     const [recipientsError, setRecipientsError] = useState<string | null>(null);
@@ -226,7 +232,7 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                             </span>
                         </div>
                         <p className={`text-sm mt-1 ${ADMIN_THEME.text.muted}`}>
-                            Subject: <span className={ADMIN_THEME.text.primary}>"{campaign.subject}"</span>
+                            Subject: <span className={ADMIN_THEME.text.primary}>&quot;{campaign.subject}&quot;</span>
                         </p>
                     </div>
                     <button

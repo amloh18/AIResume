@@ -326,7 +326,7 @@ export default async function RolePage({ params }: { params: Promise<{ role: str
       <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Resume Not Found</h1>
-          <p className="text-gray-400 mb-8">We don't have a template for this role yet.</p>
+          <p className="text-gray-400 mb-8">We don&apos;t have a template for this role yet.</p>
           <Link href="/ai-resume-builder" className="text-green-400 hover:underline">
             Create your resume with AI →
           </Link>

@@ -1,29 +1,29 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getConnection } from '@/lib/database';
 import jobStatusNotificationService from '@/lib/services/jobStatusNotificationService';
 
 export async function POST(request: NextRequest) {
-  try {
-    // Fail closed, and accept CRON_API_KEY as well as CRON_SECRET so this cannot disagree with the proxy.
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
+  // Overlap guard: a second concurrent check would enqueue the same status notifications again.
+  return runCron('notifications:job-status-check', request, async () => {
+    try {
+      await getConnection();
 
-    await getConnection();
+      const result = await jobStatusNotificationService.checkAndEnqueue();
 
-    const result = await jobStatusNotificationService.checkAndEnqueue();
-
-    return NextResponse.json({
-      success: true,
-      message: 'Job status check completed',
-      enqueued: result.enqueued,
-    });
-  } catch (error: any) {
-    console.error('Error in job status check cron:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
-      { status: 500 }
-    );
-  }
+      return NextResponse.json({
+        success: true,
+        message: 'Job status check completed',
+        enqueued: result.enqueued,
+      });
+    } catch (error: any) {
+      log.error('Error in job status check cron:', error);
+      return NextResponse.json(
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
+      );
+    }
+  });
 }
 

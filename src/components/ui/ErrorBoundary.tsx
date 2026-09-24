@@ -140,7 +140,7 @@ class ErrorBoundary extends Component<Props, State> {
               transition={{ delay: 0.4 }}
               className="text-gray-600 dark:text-gray-300 mb-6"
             >
-              We encountered an unexpected error. Don't worry, this has been logged and we're working to fix it.
+              We encountered an unexpected error. Don&apos;t worry, this has been logged and we&apos;re working to fix it.
             </motion.p>
 
             {/* Error Details (Development Only) */}

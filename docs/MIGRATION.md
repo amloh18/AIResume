@@ -11,8 +11,8 @@ This guide documents the migration from the previous AWS account to **Morigrid L
 | Variable | Old Value | New Value |
 |----------|-----------|-----------|
 | `AWS_ACCOUNT_ID` | *(not set)* | `9129-3585-4507` |
-| `AWS_ACCESS_KEY_ID` | `AKIAT734A6OY43GMNBUK` | *Set in new account IAM* |
-| `AWS_SECRET_ACCESS_KEY` | `bAU49Z75KzMlB+5tyj4jF7wUMNmKxfRUPlyy4PwS` | *Set in new account IAM* |
+| `AWS_ACCESS_KEY_ID` | *(redacted — was a live key ID; rotate if this repo was ever public)* | *Set in new account IAM* |
+| `AWS_SECRET_ACCESS_KEY` | *(redacted — secret must never appear in docs; rotate it regardless)* | *Set in new account IAM* |
 | `AWS_S3_REGION` | `eu-north-1` | `eu-north-1` |
 | `AWS_S3_BUCKET_NAME` | `cvcircle` | `cvcircle` (or new bucket) |
 | `DYNAMODB_TABLE_NAME` | `CVCircleSingleTable` | `CVCircleSingleTable` |

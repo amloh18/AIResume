@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 import toast from '@/lib/hot-toast';
 
@@ -1323,7 +1323,7 @@ export default function ResumeEnhancerContainer({
           // Resolve CV type: 
           // 1. If mode is 'journey', force journey type
           // 2. Otherwise, prioritize cvType field, then infer from metadata/journeyId
-          let resolvedCvType: 'master' | 'journey' | 'standalone' =
+          const resolvedCvType: 'master' | 'journey' | 'standalone' =
             cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
           // For journey CVs: ensure we have jobData to show journey-based interface
@@ -1494,7 +1494,7 @@ export default function ResumeEnhancerContainer({
             }
 
             // Force journey type for journey mode
-            const resolvedCvType: 'journey' = 'journey';
+            const resolvedCvType = 'journey' as const;
 
             // Ensure we have jobData
             if (!cv.jobData && cv.journeyId) {
@@ -1632,7 +1632,7 @@ export default function ResumeEnhancerContainer({
                     const cvResponse = await fetch(`/api/cvs/${journey.cvId}`);
                     if (cvResponse.ok) {
                       const cvResult = await cvResponse.json();
-                      let loadedCV = cvResult.data?.cv || cvResult.cv;
+                      const loadedCV = cvResult.data?.cv || cvResult.cv;
 
                       if (loadedCV) {
                         // Switch to EDIT mode

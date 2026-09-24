@@ -79,7 +79,7 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
           let type: AttentionItem['type'] = 'needs_input';
           let message = '';
           let actionLabel = 'Review';
-          let actionUrl = `/dashboard/jobs?tab=applications&jobId=${job.id || job._id}`;
+          const actionUrl = `/dashboard/jobs?tab=applications&jobId=${job.id || job._id}`;
 
           if (job.automationStatus === 'failed' || job.status === 'failed') {
             type = 'failed';

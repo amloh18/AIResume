@@ -15,6 +15,8 @@ export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
+  /** Set automatically from the ambient correlation context — see `lib/observability/correlation`. */
+  correlationId?: string;
   context?: Record<string, any>;
   error?: {
     name: string;
@@ -32,6 +34,21 @@ export interface LogEntry {
     statusCode?: number;
     responseTime?: number;
   };
+}
+
+/**
+ * Ambient context (correlation id, user, queue item…) merged into every entry.
+ *
+ * Registered by `lib/observability/correlation` when Node-side code imports it; left `null` in edge
+ * runtimes, which have no AsyncLocalStorage. This module must never import that one — the dependency
+ * runs the other way — so a missing provider is simply "no context", not a crash.
+ */
+export type LogContextProvider = () => Record<string, any> | undefined;
+
+let contextProvider: LogContextProvider | null = null;
+
+export function setLogContextProvider(provider: LogContextProvider | null): void {
+  contextProvider = provider;
 }
 
 class StructuredLogger {
@@ -67,7 +84,8 @@ class StructuredLogger {
       // Pretty format for development
       const levelName = LogLevel[entry.level];
       const timestamp = new Date(entry.timestamp).toLocaleTimeString();
-      let output = `[${timestamp}] ${levelName}: ${entry.message}`;
+      const correlation = entry.correlationId ? ` [${entry.correlationId}]` : '';
+      let output = `[${timestamp}] ${levelName}${correlation}: ${entry.message}`;
       
       if (entry.context) {
         output += `\n  Context: ${JSON.stringify(entry.context, null, 2)}`;
@@ -94,13 +112,26 @@ class StructuredLogger {
   private log(level: LogLevel, message: string, context?: Record<string, any>, error?: Error, metadata?: LogEntry['metadata']): void {
     if (!this.shouldLog(level)) return;
 
+    // Ambient context (correlation id, userId, queueItemId…) — attached to every entry so a single
+    // id joins the request, the queue document and the worker run that eventually processed it.
+    const ambient = contextProvider?.();
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       message,
+      correlationId: typeof ambient?.correlationId === 'string' ? ambient.correlationId : undefined,
       context,
       metadata
     };
+
+    if (ambient) {
+      const { correlationId: _ignored, ...rest } = ambient;
+      if (Object.keys(rest).length > 0) {
+        // Caller-supplied context wins on any key collision.
+        entry.context = { ...rest, ...context };
+      }
+    }
 
     if (error) {
       entry.error = {

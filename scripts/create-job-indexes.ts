@@ -46,8 +46,12 @@ async function createIndexes() {
   }
 
   const jobsIndexes = [
-    // Dedup: canonicalId unique
-    { key: { canonicalId: 1 }, name: 'jobs_canonicalId_unique', unique: true },
+    // Dedup: canonicalId (non-unique — MUST match ensureJobIndexes() in
+    // src/lib/ingestion/engine.ts, which bootstraps the same index at runtime: MongoDB rejects the
+    // same key pattern under a different name/options, and a unique build fails outright on legacy
+    // duplicates while racing concurrent ingestion upserts. Identity is enforced by the upsert
+    // filter in batchUpsert, not by DDL.)
+    { key: { canonicalId: 1 }, name: 'jobs_canonicalId' },
     // Dedup: source.primary + company + source.sourceJobId unique (scoped by company)
     { key: { 'source.primary': 1, 'company.normalizedName': 1, 'source.sourceJobId': 1 }, name: 'jobs_source_company_jobid_unique', unique: true, sparse: true },
     // Discovery: status + postedAt (most common user query)

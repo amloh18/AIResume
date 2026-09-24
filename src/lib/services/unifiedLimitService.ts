@@ -4,6 +4,7 @@ import CV from '@/models/CV';
 import Job from '@/models/Job';
 import Template from '@/models/Template';
 import { getAdminPricingPlan } from '@/models/admin-models';
+import { getPlanLimits as getSharedPlanLimits } from '@/lib/utils/subscription-helpers';
 import mongoose from 'mongoose';
 
 // ============================================================================
@@ -62,10 +63,10 @@ class UnifiedLimitService {
     // DEPRECATED: Use getPlanLimits from subscription-helpers instead
     // This local method is kept as a private helper that wraps the shared utility
     private getPlanLimits(planKey: string) {
-        // Import dynamically to avoid circular dependencies if any
-        // In a real refactor, we would import at top level, but for now we follow the structure
-        const { getPlanLimits } = require('@/lib/utils/subscription-helpers');
-        const limits = getPlanLimits(planKey);
+        // Wraps the shared (frozen) subscription-helpers utility. This used to be a lazy
+        // `require()` "to avoid circular dependencies if any" — subscription-helpers imports
+        // nothing, so no cycle exists and a static import is safe.
+        const limits = getSharedPlanLimits(planKey);
 
         // Adapt shared limits to local interface if needed
         // Shared uses 'maxJobs', local used 'activeJobs'

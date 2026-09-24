@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 /**
  * Production monitoring and error tracking
  * Integrates with Sentry for error tracking and performance monitoring

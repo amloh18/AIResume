@@ -4,6 +4,13 @@ import { getConnection } from '@/lib/database';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import type { ATSType } from '@/types/automation-schema';
+import { log } from '@/lib/structured-logger';
+import {
+  CORRELATION_HEADER,
+  getCorrelationId,
+  resolveCorrelationId,
+  runWithCorrelation,
+} from '@/lib/observability/correlation';
 
 /**
  * POST /api/jobs/auto-apply
@@ -14,6 +21,18 @@ import type { ATSType } from '@/types/automation-schema';
  * Each request creates a reservation with a unique operationId for idempotency.
  */
 export async function POST(request: NextRequest) {
+  /*
+    Correlation: one id for the whole enqueue, echoed on the response and persisted on the queue
+    document, so the worker run that eventually submits this application can be joined back to this
+    request. The handler body is unchanged — only the ambient context around it is new.
+  */
+  const correlationId = resolveCorrelationId(request.headers.get(CORRELATION_HEADER));
+  const response = await runWithCorrelation({ correlationId }, () => enqueueAutoApply(request));
+  response.headers.set(CORRELATION_HEADER, correlationId);
+  return response;
+}
+
+async function enqueueAutoApply(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
     if (!auth || !auth.userId) {
@@ -32,6 +51,7 @@ export async function POST(request: NextRequest) {
       atsType,
       source,
       screeningQuestions = [],
+      mode: requestedMode,
     } = body;
 
     if (!title || !company) {
@@ -119,6 +139,11 @@ export async function POST(request: NextRequest) {
     const { makeApplicationDecision } = await import('@/lib/decision/engine');
     const decision = await makeApplicationDecision({
       userId: auth.userId,
+      // An explicit `mode: 'auto'` in the body is the user's own approval (the "Approve & submit"
+      // action on a staged application). The engine treats it as an override, which is what lets a
+      // `review`-mode item be re-queued for real submission after the user has looked at it.
+      requestedMode:
+        requestedMode === 'auto' || requestedMode === 'manual' ? requestedMode : undefined,
       job: {
         title,
         company,
@@ -232,12 +257,27 @@ export async function POST(request: NextRequest) {
         userId: auth.userId,
         jobId: jobApp.jobId || jobApp._id.toString(),
         status: 'queued',
+        // The execution gate travels with the queue item. Priority alone cannot express it: a
+        // `manual` decision and a `review` decision both got priority 30, and the worker had no way
+        // to tell either apart from an `auto` application that was allowed to run Playwright.
+        mode: decision.mode,
+        // …and so does the trace id, for the same reason: without it the worker's logs could not be
+        // joined to the request (or cron run) that queued this application.
+        correlationId: getCorrelationId(),
         priority: decision.mode === 'auto' ? 90 : decision.mode === 'review' ? 60 : 30,
         scheduledAt: new Date(),
         idempotencyKey,
         // Link reservation to queue item
         reservationId: reservation.reservationId,
       } as any);
+
+      /*
+        Mirror the enqueue onto the tracker document. Nothing was writing `internalStatus: 'queued'`
+        anywhere, so the watchdog's queued-stuck scan could never match a freshly enqueued application
+        — an item lost in ApplicationQueue stayed invisible (it just looked `saved`). The worker's own
+        `processing` transition overwrites this on claim.
+      */
+      await JobApplication.findByIdAndUpdate(jobApp._id, { internalStatus: 'queued' });
 
       // Link reservation to queue item
       await AutoApplyQuotaService.consumeReservation(reservation.reservationId!, {
@@ -279,7 +319,9 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Error enqueueing auto-apply:', error);
+    log.error('Error enqueueing auto-apply:', error, {
+      correlationId: getCorrelationId(),
+    });
     return NextResponse.json(
       { error: error.message || 'Failed to enqueue application' },
       { status: 500 }

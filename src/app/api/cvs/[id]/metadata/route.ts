@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import { toObjectId } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function PUT(
   request: NextRequest,
@@ -9,19 +10,22 @@ export async function PUT(
 ) {
   try {
     await getConnection();
-    
-    const { id: cvId } = await params;
-    const { userId, title, description, aiAnalysis, lastModified } = await request.json();
-    
-    console.log('🔍 CV Metadata Update - Request:', { cvId, userId, title, description, hasAiAnalysis: !!aiAnalysis });
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
+
+    // Ownership is decided by the session, never by the request body. This route previously trusted a
+    // caller-supplied `userId`, so anyone who knew a CV id could rewrite another user's title,
+    // description and AI analysis — `/api/cvs` is also in the proxy's public allowlist, so it was
+    // reachable without a session at all. The `userId` field is now ignored if still sent.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+    const userId = authResult.userId;
+
+    const { id: cvId } = await params;
+    const { title, description, aiAnalysis, lastModified } = await request.json();
+
+    console.log('🔍 CV Metadata Update - Request:', { cvId, userId, title, description, hasAiAnalysis: !!aiAnalysis });
+
     // Convert string IDs to ObjectIds for database query
     const cvObjectId = toObjectId(cvId);
     const userObjectId = toObjectId(userId);

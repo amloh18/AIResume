@@ -255,7 +255,7 @@ export class RecommendedJobsService {
     const jobIds = jobs.map((j) => new ObjectId(j._id));
     const jobIdStrings = jobs.map((j) => j._id);
 
-    let userKeys: any[] = [String(userId)];
+    const userKeys: any[] = [String(userId)];
     try {
       userKeys.push(new ObjectId(userId));
     } catch {

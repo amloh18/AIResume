@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 // ============================================================================
 // STATIC IMPORTS - Must be at top level for bundler to include them
 // ============================================================================
@@ -83,10 +83,51 @@ function cleanTextForATS(text: string | null | undefined): string {
 
 // Static imports for libraries that work without issues
 import mammoth from 'mammoth';
-import Tesseract from 'tesseract.js';
 
-// Create worker function from tesseract
-const createWorker = Tesseract.createWorker;
+// ─────────────────────────────────────────────────────────────────────────────
+// tesseract.js is resolved lazily, at call time, through a runtime `require`
+// that the bundler cannot statically analyse.
+//
+// It used to be a top-level `import Tesseract from 'tesseract.js'`, which made a
+// package declared in `optionalDependencies` — one npm is allowed to skip
+// silently when it cannot fetch it — a hard *build-time* requirement. When npm
+// skipped it the install still reported success ("added 1081 packages"), and the
+// failure only surfaced ~3.5 minutes later inside the bundler as
+// `Module not found: Can't resolve 'tesseract.js'`, naming neither the install
+// nor the network. `@napi-rs/canvas`, its sibling in the OCR path, is already
+// loaded this way for exactly the same reason.
+// ─────────────────────────────────────────────────────────────────────────────
+type TesseractCreateWorker = (
+  lang?: string,
+  oem?: number,
+  options?: Record<string, unknown>
+) => Promise<any>;
+
+let cachedCreateWorker: TesseractCreateWorker | null | undefined;
+
+/**
+ * Resolve tesseract.js's `createWorker` at runtime, or `null` when the package
+ * is not installed. The result — including a negative one — is cached, so a
+ * missing package is reported once rather than on every request.
+ */
+async function getTesseractCreateWorker(): Promise<TesseractCreateWorker | null> {
+  if (cachedCreateWorker !== undefined) return cachedCreateWorker;
+  try {
+    const { createRequire } = await import('module');
+    const path = await import('path');
+    const requireShim = createRequire(path.join(process.cwd(), 'package.json'));
+    const mod = requireShim('tesseract.js');
+    const createWorker = mod?.createWorker ?? mod?.default?.createWorker;
+    if (typeof createWorker !== 'function') {
+      throw new Error('tesseract.js loaded but createWorker is not a function');
+    }
+    cachedCreateWorker = createWorker;
+  } catch (error: any) {
+    console.warn('⚠️ tesseract.js unavailable — PDF/image OCR disabled:', error?.message);
+    cachedCreateWorker = null;
+  }
+  return cachedCreateWorker;
+}
 
 // pdf-parse and pdf2pic are loaded dynamically to avoid bundling their test files
 
@@ -349,6 +390,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
       try {
         console.log('Attempting Method 3: pdfjs canvas render → tesseract OCR...');
 
+        const createWorker = await getTesseractCreateWorker();
         if (!createWorker) throw new Error('tesseract.js not available');
 
         // Load @napi-rs/canvas (pure JS canvas - no system dependencies)
@@ -491,6 +533,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
   // 3. Handle image files (direct OCR)
   else if (mimeType.startsWith('image/')) {
     console.log('Attempting OCR on image file...');
+    const createWorker = await getTesseractCreateWorker();
     if (!createWorker) {
       throw new Error('tesseract.js not available for image OCR');
     }

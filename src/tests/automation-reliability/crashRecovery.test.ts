@@ -1,6 +1,6 @@
 import { SubmissionVerifier } from '../../verification/submissionVerifier';
-import { ApplicationWatchdog } from '../../lib/reconciliation/watchdog';
 import { generateApplicationIdempotencyKey } from '../../verification/idempotencyGuard';
+import { describe, it, expect } from 'vitest';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -51,3 +51,17 @@ export function runCrashRecoverySuite(): { passed: boolean; results: string[] } 
 
   return { passed: true, results };
 }
+
+/*
+ * Vitest entry point. This file used to export runCrashRecoverySuite() without ever registering a
+ * test, so `vitest run` failed it with "No test suite found" and the assertions below never executed
+ * in CI. The suite body is pure/offline (idempotency hashing + submission-evidence verification), so
+ * it runs unconditionally; any failed assert() throws and fails the it() block.
+ */
+describe('crash recovery (submission verification + idempotency)', () => {
+  it('passes all crash-recovery assertions', () => {
+    const { passed, results } = runCrashRecoverySuite();
+    expect(passed, results.join('\n')).toBe(true);
+    expect(results.length).toBeGreaterThanOrEqual(4);
+  });
+});

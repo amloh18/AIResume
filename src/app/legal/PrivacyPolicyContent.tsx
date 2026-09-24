@@ -25,10 +25,10 @@ export default function PrivacyPolicyContent() {
           1. Introduction & Our Privacy Commitment
         </h3>
         <p>
-          At <strong>AIResume</strong> (a product of <strong>Morigrid Labs</strong>, "we," "us," or "our"), we respect your privacy and are committed to protecting the personal and professional data you entrust to us.
+          At <strong>AIResume</strong> (a product of <strong>Morigrid Labs</strong>, &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), we respect your privacy and are committed to protecting the personal and professional data you entrust to us.
         </p>
         <p>
-          This Privacy Policy explains how we collect, use, store, process, and safeguard your personal information when you use our website, AI-assisted resume builder, job discovery engine, connected account services, and application automation features (collectively, the "Service").
+          This Privacy Policy explains how we collect, use, store, process, and safeguard your personal information when you use our website, AI-assisted resume builder, job discovery engine, connected account services, and application automation features (collectively, the &quot;Service&quot;).
         </p>
         <p>
           By accessing or using AIResume, you acknowledge that you have read, understood, and agreed to the practices described in this policy. We comply with international data protection standards, including the EU/UK General Data Protection Regulation (GDPR), the California Consumer Privacy Act (CCPA/CPRA), and the Indian Digital Personal Data Protection Act (DPDP).

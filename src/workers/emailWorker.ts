@@ -11,6 +11,8 @@
 import mongoose from 'mongoose';
 import { sendApplicationEmail, wasApplicationEmailSent } from '@/lib/services/applicationEmailService';
 import ApplicationEmailQueue from '@/models/ApplicationEmailQueue';
+import { log } from '@/lib/structured-logger';
+import { newCorrelationId, runWithCorrelation } from '@/lib/observability/correlation';
 
 // ============================================================================
 // Configuration
@@ -39,28 +41,50 @@ const WORKER_CONFIG = {
 
 let isRunning = false;
 let pollTimer: NodeJS.Timeout | null = null;
-let activeJobs = new Set<string>();
+const activeJobs = new Set<string>();
 
 // ============================================================================
 // Queue Processing
 // ============================================================================
 
 /**
- * Claim a queue item atomically
+ * Claim a queue item atomically.
+ *
+ * Exported so the claim predicate can be asserted directly in tests — it is the piece that decides
+ * whether `retrying` items are ever picked up again.
  */
-async function claimQueueItem(): Promise<any | null> {
+export async function claimQueueItem(): Promise<any | null> {
   const now = new Date();
   const lockExpiry = new Date(now.getTime() - WORKER_CONFIG.LOCK_TIMEOUT_MS);
 
   try {
-    // Find and lock a queued item
+    /*
+      Claim either a fresh item or one whose retry backoff has elapsed.
+
+      The query used to match `status: 'queued'` only, but `markAsFailed` parks retryable failures in
+      `status: 'retrying'` with a `nextRetryAt`. Those items were therefore never claimed again — the
+      `retrying` state existed in the schema and was written to, yet was a dead end from which no email
+      ever recovered. `retrying` is now a live state on the same claim path as `queued`.
+    */
     const result = await ApplicationEmailQueue.findOneAndUpdate(
       {
-        status: 'queued',
-        scheduledAt: { $lte: now },
         $or: [
-          { lockedAt: null },
-          { lockedAt: { $lt: lockExpiry } }, // Lock expired
+          {
+            status: 'queued',
+            scheduledAt: { $lte: now },
+          },
+          {
+            status: 'retrying',
+            nextRetryAt: { $lte: now },
+          },
+        ],
+        $and: [
+          {
+            $or: [
+              { lockedAt: null },
+              { lockedAt: { $lt: lockExpiry } }, // Lock expired
+            ],
+          },
         ],
       },
       {
@@ -80,7 +104,7 @@ async function claimQueueItem(): Promise<any | null> {
 
     return result;
   } catch (error) {
-    console.error('Failed to claim queue item:', error);
+    log.error('Failed to claim queue item:', error as Error);
     return null;
   }
 }
@@ -100,7 +124,7 @@ async function releaseLock(queueItemId: string): Promise<void> {
       }
     );
   } catch (error) {
-    console.error('Failed to release lock:', error);
+    log.error('Failed to release lock:', error as Error);
   }
 }
 
@@ -120,9 +144,9 @@ async function markAsSent(queueItemId: string, messageId?: string): Promise<void
         },
       }
     );
-    console.log(`✅ Email sent successfully: ${queueItemId}`);
+    log.info(`✅ Email sent successfully: ${queueItemId}`);
   } catch (error) {
-    console.error('Failed to mark as sent:', error);
+    log.error('Failed to mark as sent:', error as Error);
   }
 }
 
@@ -155,7 +179,7 @@ async function markAsFailed(queueItemId: string, error: string, retryable: boole
           $inc: { retryCount: 1 },
         }
       );
-      console.log(`⏳ Email will retry at ${nextRetryAt}: ${error}`);
+      log.info(`⏳ Email will retry at ${nextRetryAt}: ${error}`);
     } else {
       await ApplicationEmailQueue.updateOne(
         { _id: queueItemId },
@@ -169,10 +193,10 @@ async function markAsFailed(queueItemId: string, error: string, retryable: boole
           },
         }
       );
-      console.log(`❌ Email permanently failed: ${error}`);
+      log.info(`❌ Email permanently failed: ${error}`);
     }
   } catch (err) {
-    console.error('Failed to mark as failed:', err);
+    log.error('Failed to mark as failed:', err as Error);
   }
 }
 
@@ -184,22 +208,43 @@ async function processQueueItem(queueItem: any): Promise<void> {
 
   // Prevent duplicate processing
   if (activeJobs.has(itemId)) {
-    console.log(`⏭️ Skipping already active job: ${itemId}`);
+    log.info(`⏭️ Skipping already active job: ${itemId}`);
     await releaseLock(itemId);
     return;
   }
 
   activeJobs.add(itemId);
 
+  /*
+    Re-open the trace written by the request that enqueued this email (`queueItem.correlationId`):
+    the idempotency check, the SMTP attempt and the final status write all log under the same id as
+    the click that produced them. Queue documents written before the field existed start a fresh
+    trace here rather than logging uncorrelated.
+  */
+  await runWithCorrelation(
+    {
+      correlationId: queueItem.correlationId || newCorrelationId(),
+      queueItemId: itemId,
+      applicationId: queueItem.applicationId,
+      userId: queueItem.userId,
+    },
+    () => sendQueuedEmail(queueItem, itemId)
+  );
+}
+
+/** Send one claimed queue item. Runs inside that item's correlation context. */
+async function sendQueuedEmail(queueItem: any, itemId: string): Promise<void> {
   try {
-    // Check idempotency - was this email already sent?
+    // Check idempotency — was *this* email (same application, same subject) already sent?
+    // Scoped by subject so a distinct follow-up on the same application is not skipped.
     const alreadySent = await wasApplicationEmailSent(
       queueItem.applicationId,
-      'application'
+      'application',
+      queueItem.emailData?.subject
     );
 
     if (alreadySent) {
-      console.log(`⏭️ Email already sent for application: ${queueItem.applicationId}`);
+      log.info(`⏭️ Email already sent for application: ${queueItem.applicationId}`);
       await markAsSent(itemId);
       return;
     }
@@ -213,7 +258,7 @@ async function processQueueItem(queueItem: any): Promise<void> {
       await markAsFailed(itemId, result.error || 'Unknown error', result.retryable || false);
     }
   } catch (error: any) {
-    console.error(`Error processing queue item ${itemId}:`, error);
+    log.error(`Error processing queue item ${itemId}:`, error);
     await markAsFailed(itemId, error.message, true);
   } finally {
     activeJobs.delete(itemId);
@@ -235,7 +280,7 @@ async function workerLoop(): Promise<void> {
 
     // Check if we can process more jobs
     if (activeJobs.size >= WORKER_CONFIG.MAX_CONCURRENT) {
-      console.log(`⏳ At max concurrency (${activeJobs.size}/${WORKER_CONFIG.MAX_CONCURRENT})`);
+      log.info(`⏳ At max concurrency (${activeJobs.size}/${WORKER_CONFIG.MAX_CONCURRENT})`);
       return;
     }
 
@@ -249,7 +294,7 @@ async function workerLoop(): Promise<void> {
     // Process the item
     await processQueueItem(queueItem);
   } catch (error) {
-    console.error('Worker loop error:', error);
+    log.error('Worker loop error:', error as Error);
   }
 }
 
@@ -262,11 +307,11 @@ async function workerLoop(): Promise<void> {
  */
 export function startEmailWorker(): void {
   if (isRunning) {
-    console.log('⚠️ Email worker already running');
+    log.info('⚠️ Email worker already running');
     return;
   }
 
-  console.log('🚀 Starting email worker...');
+  log.info('🚀 Starting email worker...');
   isRunning = true;
 
   // Start the polling loop
@@ -279,7 +324,7 @@ export function startEmailWorker(): void {
     }
   }, 3000);
 
-  console.log(`✅ Email worker started (poll interval: ${WORKER_CONFIG.POLL_INTERVAL_MS}ms)`);
+  log.info(`✅ Email worker started (poll interval: ${WORKER_CONFIG.POLL_INTERVAL_MS}ms)`);
 }
 
 /**
@@ -287,11 +332,11 @@ export function startEmailWorker(): void {
  */
 export function stopEmailWorker(): void {
   if (!isRunning) {
-    console.log('⚠️ Email worker not running');
+    log.info('⚠️ Email worker not running');
     return;
   }
 
-  console.log('🛑 Stopping email worker...');
+  log.info('🛑 Stopping email worker...');
   isRunning = false;
 
   if (pollTimer) {
@@ -305,7 +350,7 @@ export function stopEmailWorker(): void {
 
   const waitForCompletion = () => {
     if (activeJobs.size === 0 || Date.now() - startTime > maxWait) {
-      console.log(`✅ Email worker stopped (active jobs: ${activeJobs.size})`);
+      log.info(`✅ Email worker stopped (active jobs: ${activeJobs.size})`);
       return;
     }
     setTimeout(waitForCompletion, 1000);
@@ -335,13 +380,13 @@ export function getWorkerStatus(): {
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, stopping email worker...');
+  log.info('Received SIGTERM, stopping email worker...');
   stopEmailWorker();
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('Received SIGINT, stopping email worker...');
+  log.info('Received SIGINT, stopping email worker...');
   stopEmailWorker();
   process.exit(0);
 });
@@ -350,4 +395,5 @@ export default {
   startEmailWorker,
   stopEmailWorker,
   getWorkerStatus,
+  claimQueueItem,
 };

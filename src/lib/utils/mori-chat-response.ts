@@ -412,7 +412,7 @@ export function mergeMoriCvIntoCanvas(
   if (!currentCv || typeof currentCv !== 'object') return parsed.updatedCV || currentCv;
 
   // Normalize CV data to ensure stable IDs
-  let cv = normalizeCvData(currentCv);
+  const cv = normalizeCvData(currentCv);
 
   // ── PATH A: Structured edit operations (new, deterministic system) ──
   if (Array.isArray(parsed.operations) && parsed.operations.length > 0) {

@@ -32,8 +32,9 @@ class RedisRateLimiter {
 
   private async initializeRedis(): Promise<void> {
     try {
-      // Try to import Redis (optional dependency)
-      const Redis = require('redis');
+      // Dynamic import keeps Redis optional at load time: a missing/failing package throws into
+      // this try/catch exactly like the previous lazy require did.
+      const Redis = await import('redis');
 
       if (process.env.REDIS_URL) {
         this.redis = Redis.createClient({

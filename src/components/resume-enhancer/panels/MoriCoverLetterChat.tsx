@@ -494,7 +494,7 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
                 <MousePointer2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <div className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 truncate">
                   <span className="opacity-70 mr-1">Targeting Selection:</span>
-                  "{currentSelection.text}"
+                  &quot;{currentSelection.text}&quot;
                 </div>
               </div>
               <button 

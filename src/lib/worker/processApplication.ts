@@ -4,6 +4,7 @@ import ApplicationEvent from '@/models/ApplicationEvent';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import { applicationStateMachine, type CanonicalStage, type InternalApplicationStatus } from '@/lib/application-state/stateMachine';
+import { log } from '@/lib/structured-logger';
 
 export interface ProcessContext {
   queueItem: any;
@@ -54,6 +55,45 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
 
     const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
+    /*
+      2b. Execution gate — decided by the decision engine and stored on the queue item.
+
+      `manual` and `skip` must never reach Playwright. Until now the mode only affected queue
+      *priority*, so a MANUAL application was picked up by the same worker and submitted exactly like
+      an AUTO one — the auto/review/manual distinction existed in the engine and nowhere else.
+      Queued items created before `mode` existed default to `review` (prepare + hold), never to
+      automated submission.
+    */
+    const executionMode: 'auto' | 'review' | 'manual' | 'skip' =
+      queueItem?.mode === 'auto' || queueItem?.mode === 'manual' || queueItem?.mode === 'skip'
+        ? queueItem.mode
+        : 'review';
+
+    if (executionMode === 'manual' || executionMode === 'skip') {
+      const reason =
+        executionMode === 'manual'
+          ? 'Execution mode is "manual": automation is not permitted for this application. Submit it yourself, or re-queue it with mode "auto" to approve automated submission.'
+          : 'Decision engine returned "skip": this application must not be automated.';
+
+      await applicationStateMachine.transition({
+        applicationId,
+        userId,
+        targetStage: 'staging',
+        targetStatus: 'review_required',
+        eventType: 'APPLICATION_REQUIRES_REVIEW',
+        source: 'automation_worker',
+        reason,
+        runId: queueItem._id?.toString(),
+      });
+
+      return {
+        success: true,
+        stage: 'staging',
+        status: 'review_required',
+        message: reason,
+      };
+    }
+
     // 3. Determine ATS type and check automation capability
     const atsType = jobApplication.atsType || 'unknown';
     const isAutomatable = ['greenhouse', 'lever', 'ashby', 'workable', 'workday'].includes(atsType);
@@ -90,6 +130,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     });
 
     // 5. Attempt Playwright automation via UnifiedApplyService
+    //    (the execution mode travels through so `review` prepares without submitting)
     const { UnifiedApplyService } = await import('@/lib/services/unifiedApplyService');
     const applyResult = await UnifiedApplyService.apply(userId, {
       jobId: jobApplication.jobId || jobApplication._id.toString(),
@@ -102,7 +143,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       atsType: atsType as any,
       source: jobApplication.source || 'auto_apply',
       screeningQuestions: [],
-    });
+    }, { mode: executionMode });
 
     // 6. Process result
     if (applyResult.status === 'applied') {
@@ -201,7 +242,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     };
 
   } catch (err: any) {
-    console.error(`[ApplicationWorker] Error processing ${applicationId}:`, err.message);
+    log.error(`[ApplicationWorker] Error processing ${applicationId}:`, err.message);
 
     // Transition to failed state
     await applicationStateMachine.transition({

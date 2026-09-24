@@ -33,7 +33,7 @@ import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
   let score = 0;
-  let maxScore = 5;
+  const maxScore = 5;
   if (basics.name && basics.name.trim()) score += 1;
   if (basics.email && basics.email.trim()) score += 1;
   if (basics.phone && basics.phone.trim()) score += 1;
@@ -48,7 +48,7 @@ const calculateExperienceScore = (work: any[]): number => {
   const maxEntries = 3;
   work.slice(0, maxEntries).forEach(entry => {
     let entryScore = 0;
-    let maxEntryScore = 4;
+    const maxEntryScore = 4;
     if (entry.name && entry.name.trim()) entryScore += 1;
     if (entry.position && entry.position.trim()) entryScore += 1;
     if (entry.startDate && entry.startDate.trim()) entryScore += 1;
@@ -64,7 +64,7 @@ const calculateEducationScore = (education: any[]): number => {
   const maxEntries = 2;
   education.slice(0, maxEntries).forEach(entry => {
     let entryScore = 0;
-    let maxEntryScore = 4;
+    const maxEntryScore = 4;
     if (entry.institution && entry.institution.trim()) entryScore += 1;
     if (entry.area && entry.area.trim()) entryScore += 1;
     if (entry.studyType && entry.studyType.trim()) entryScore += 1;
@@ -80,7 +80,7 @@ const calculateSkillsScore = (skills: any[]): number => {
   const maxSkills = 5;
   skills.slice(0, maxSkills).forEach(skill => {
     let skillScore = 0;
-    let maxSkillScore = 2;
+    const maxSkillScore = 2;
     const category = skill.category || skill.name || '';
     const skillItems = Array.isArray(skill.skills) ? skill.skills : Array.isArray(skill.keywords) ? skill.keywords : [];
     if (category && category.trim()) skillScore += 1;
@@ -96,7 +96,7 @@ const calculateProjectsScore = (projects: any[]): number => {
   const maxProjects = 2;
   projects.slice(0, maxProjects).forEach(project => {
     let projectScore = 0;
-    let maxProjectScore = 3;
+    const maxProjectScore = 3;
     if (project.name && project.name.trim()) projectScore += 1;
     if (project.description && project.description.trim()) projectScore += 1;
     if (project.url && project.url.trim()) projectScore += 1;
@@ -361,7 +361,7 @@ const CVManagementSection: React.FC<{
               Create Your Master CV
             </h3>
             <p className="text-gray-600 dark:text-white/70 text-small max-w-md mx-auto leading-relaxed">
-              Your Master CV acts as the foundation for all your tailored CVs and job tracking. Create it once, and we'll use it as a base for every job application you track.
+              Your Master CV acts as the foundation for all your tailored CVs and job tracking. Create it once, and we&apos;ll use it as a base for every job application you track.
             </p>
           </div>
 
@@ -1117,7 +1117,7 @@ export const IntelligenceDashboard: React.FC<{
               ))}
             </div>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
-              You're on track to hit your goal!
+              You&apos;re on track to hit your goal!
             </p>
           </div>
         </div>
@@ -1538,7 +1538,7 @@ const RecentJobsWidget: React.FC<{
         <div className="flex-1 flex flex-col items-center justify-center py-8">
           <SearchX className="w-16 h-16 text-gray-300 dark:text-gray-500 mb-4" />
           <p className="text-body font-semibold text-gray-900 dark:text-white mb-1">No Recent Jobs</p>
-          <p className="text-small text-gray-500 dark:text-gray-400 mb-6">You haven't saved any jobs yet.</p>
+          <p className="text-small text-gray-500 dark:text-gray-400 mb-6">You haven&apos;t saved any jobs yet.</p>
           {onCreateJob && (
             <button
               onClick={onCreateJob}
@@ -1739,7 +1739,7 @@ const Analytics: React.FC = () => {
 
   const calculatePersonalInfoScore = (basics: any): number => {
     let score = 0;
-    let maxScore = 5;
+    const maxScore = 5;
     if (basics.name && basics.name.trim()) score += 1;
     if (basics.email && basics.email.trim()) score += 1;
     if (basics.phone && basics.phone.trim()) score += 1;
@@ -1754,7 +1754,7 @@ const Analytics: React.FC = () => {
     const maxEntries = 3;
     work.slice(0, maxEntries).forEach(entry => {
       let entryScore = 0;
-      let maxEntryScore = 4;
+      const maxEntryScore = 4;
       if (entry.name && entry.name.trim()) entryScore += 1;
       if (entry.position && entry.position.trim()) entryScore += 1;
       if (entry.startDate && entry.startDate.trim()) entryScore += 1;

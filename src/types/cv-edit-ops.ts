@@ -300,7 +300,7 @@ export function validateEditOperation(cvData: any, op: CVEditOperation): { valid
   // Helper: find record with fallback
   const findRecordInSection = (section: any[], recordId: string): any => {
     if (!Array.isArray(section)) return null;
-    let record = section.find((r: any) => r.id === recordId);
+    const record = section.find((r: any) => r.id === recordId);
     if (record) return record;
     return section.find((r: any) => {
       if (!r) return false;
@@ -477,7 +477,7 @@ export function applyEditOperation(cvData: any, op: CVEditOperation): { cvData: 
   // Helper: find record with fallback
   const findRecord = (section: any[], recordId: string): any => {
     if (!Array.isArray(section)) return null;
-    let record = section.find((r: any) => r.id === recordId);
+    const record = section.find((r: any) => r.id === recordId);
     if (record) return record;
     // Fallback: match by name/position/company
     return section.find((r: any) => {

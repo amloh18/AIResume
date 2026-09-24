@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { UnifiedCVDataStructure, UnifiedCVDocument } from '@/types/unified-cv-schema';
 import { EnhancedResumeJSON } from '@/types/enhanced-resume-schema';
+import { migrateToLegacyFormat } from '@/lib/migrations/enhanced-resume-migration';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId; // MongoDB ObjectId linking to User collection
@@ -314,7 +315,6 @@ cvSchema.pre('save', async function (next) {
   if (this.isModified('resumeData') && this.resumeData) {
     // Keep cvData in sync for backward compatibility
     // This ensures existing components continue to work
-    const { migrateToLegacyFormat } = require('@/lib/migrations/enhanced-resume-migration');
     this.cvData = migrateToLegacyFormat(this.resumeData);
   }
 

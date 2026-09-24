@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       const currentCvType = cvType || (jdText ? 'journey' : 'standalone');
 
       // 1. Run Analysis Prompt
-      let analysisPrompt = ANALYSIS_AGENT_PROMPT
+      const analysisPrompt = ANALYSIS_AGENT_PROMPT
         .replace('{{CV_DATA}}', typeof cvData === 'string' ? cvData : JSON.stringify(cvData, null, 2))
         .replace('{{CV_TYPE}}', currentCvType)
         .replace('{{JD_DATA}}', jdText || 'N/A')
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
       const primaryRole = targetRole || 'N/A';
       const seniority = seniorityLevel || 'professional';
 
-      let tailorPrompt = CV_TAILOR_AGENT_PROMPT
+      const tailorPrompt = CV_TAILOR_AGENT_PROMPT
         .replace('{{CV_DATA}}', typeof cvData === 'string' ? cvData : JSON.stringify(cvData, null, 2))
         .replace('{{CV_TYPE}}', currentCvType)
         .replace('{{SCORE_REPORT}}', JSON.stringify(scoreReport, null, 2))

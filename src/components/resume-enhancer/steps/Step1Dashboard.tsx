@@ -54,6 +54,17 @@ export const invalidateStep1Cache = () => {
   cachedExistingCoverLetters = null;
 };
 
+// Module-scope mutators for the cross-mount cache (react-hooks/globals): assigning to the module
+// `let`s directly from inside the Step1Dashboard component is flagged as a global mutation, so the
+// writes live here next to the invalidator instead. Semantics are unchanged.
+function pruneCachedCVs(pred: (cv: ExistingCV) => boolean): void {
+  if (cachedExistingCVs) cachedExistingCVs = cachedExistingCVs.filter(pred);
+}
+
+function pruneCachedCoverLetters(pred: (cl: any) => boolean): void {
+  if (cachedExistingCoverLetters) cachedExistingCoverLetters = cachedExistingCoverLetters.filter(pred);
+}
+
 interface ExistingCV {
   _id: string;
   id?: string;
@@ -746,9 +757,7 @@ export default function Step1Dashboard({
       if (response.ok) {
         toast.success('Resume deleted successfully');
         setExistingCVs(prev => prev.filter(cv => (cv.id || cv._id) !== cvId));
-        if (cachedExistingCVs) {
-          cachedExistingCVs = cachedExistingCVs.filter(cv => (cv.id || cv._id) !== cvId);
-        }
+        pruneCachedCVs(cv => (cv.id || cv._id) !== cvId);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete resume');
@@ -769,9 +778,7 @@ export default function Step1Dashboard({
       if (response.ok) {
         toast.success('Cover letter deleted successfully');
         setExistingCoverLetters(prev => prev.filter(cl => (cl.id || cl._id) !== clId));
-        if (cachedExistingCoverLetters) {
-          cachedExistingCoverLetters = cachedExistingCoverLetters.filter(cl => (cl.id || cl._id) !== clId);
-        }
+        pruneCachedCoverLetters(cl => (cl.id || cl._id) !== clId);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete cover letter');

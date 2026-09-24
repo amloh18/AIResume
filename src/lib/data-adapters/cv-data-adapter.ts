@@ -233,7 +233,7 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
           const cleanTextForATS = (text: string): string => {
             if (!text || typeof text !== 'string') return '';
 
-            let cleaned = text
+            const cleaned = text
               // Remove bullet point characters
               .replace(/[●•▪▫◦‣⁃⁌⁍∙◘◙◉○◯◐◑◒◓◔◕◖◗◗◘◙◚◛◜◝◞◟◠◡]/g, '')
               .replace(/^[\s]*[-*→▶▸▹►▻▼▽▪▫]\s*/gm, '')

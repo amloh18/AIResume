@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import mongoose from 'mongoose';
 import { authOptions } from '@/lib/auth';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
 import JobApplication from '@/models/JobApplication';
@@ -80,7 +81,7 @@ export async function GET(
               cvTemplate = hardcodedTemplate;
             } else {
               const { Template } = await import('@/models');
-              if (require('mongoose').Types.ObjectId.isValid(templateIdStr)) {
+              if (mongoose.Types.ObjectId.isValid(templateIdStr)) {
                 cvTemplate = await Template.findById(templateIdStr);
               }
             }

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import { useMemo } from 'react';
@@ -31,10 +31,6 @@ export function usePromotionContext(): PromotionContextData {
 
   return useMemo(() => {
     const contexts: PromotionContext[] = [];
-    let cvId: string | undefined;
-    let jobId: string | undefined;
-    let journeyId: string | undefined;
-    let coverLetterId: string | undefined;
     let hasCoverLetter = false;
     let hasCV = false;
     let hasJobs = false;
@@ -50,10 +46,10 @@ export function usePromotionContext(): PromotionContextData {
     }
 
     // Extract IDs from URL params
-    cvId = searchParams?.get('cvId') || undefined;
-    jobId = searchParams?.get('jobId') || undefined;
-    journeyId = searchParams?.get('journeyId') || undefined;
-    coverLetterId = searchParams?.get('coverLetterId') || undefined;
+    const cvId = searchParams?.get('cvId') || undefined;
+    const jobId = searchParams?.get('jobId') || undefined;
+    const journeyId = searchParams?.get('journeyId') || undefined;
+    const coverLetterId = searchParams?.get('coverLetterId') || undefined;
 
     // Detect route-based contexts
     if (pathname) {

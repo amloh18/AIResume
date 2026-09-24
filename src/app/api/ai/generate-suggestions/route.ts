@@ -656,7 +656,7 @@ function cleanContent(content: string): string {
   // Also remove "- **Challenge:**", "- **Action:**", "- **Result:**"
   // Handle various formats: with/without dash, with/without bold, with/without colon spacing
   // Only remove labels that appear at start of line or after bullet points
-  let cleaned = content
+  const cleaned = content
     // Remove markdown bold labels with dash/bullet prefix (most common format)
     .replace(/^-\s*\*\*Situation:\*\*\s*/gim, '')
     .replace(/^-\s*\*\*Task:\*\*\s*/gim, '')

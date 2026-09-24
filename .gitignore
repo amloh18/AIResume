@@ -19,6 +19,9 @@ coverage/
 
 # ── Environment Variables ───────────────────────────────────────────────
 .env
+.env.*
+!.env.example
+!.env.example.*
 .env.local
 .env.development.local
 .env.test.local
@@ -31,6 +34,10 @@ firebase-key.json
 *.key
 *.csv
 cookies.txt
+*.cookies
+*.cookie
+.browser-profile/
+**/browser-profile/
 
 # ── Deployment ──────────────────────────────────────────────────────────
 .vercel
@@ -49,7 +56,11 @@ Thumbs.db
 .DS_Store?
 
 # ── DOCS  ───────────────────────────────────────────────────────────
+# Project documentation is version-controlled (AGENTS.md §53/54 requires maintaining
+# docs/application-automation/). The blanket *.md ignore previously swallowed the entire
+# docs/ tree — 54 documents were never committed because of it.
 *.md
+!AGENTS.md
 
 # ── Logs ────────────────────────────────────────────────────────────────
 npm-debug.log*

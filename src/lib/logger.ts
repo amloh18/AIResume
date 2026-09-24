@@ -1,7 +1,19 @@
 /**
- * Production-ready logging service
- * Replaces console.log with structured logging
+ * Compatibility façade over the **single** structured logger (`./structured-logger`).
+ *
+ * ## Why this file still exists
+ *
+ * The repo used to ship three server-side loggers with three different signatures:
+ * `lib/logger.ts` (string levels, `error(message, metadata, error)`), `lib/structured-logger.ts`
+ * (numeric levels, `error(message, error, context, metadata)`) and `lib/edge-logger.ts` (a third
+ * shape again). Which one a file imported decided its log format, its level filtering and whether a
+ * correlation id could ever appear. They are now one implementation — this module only adapts the
+ * older call signature so existing callers (e.g. `applicationDryRunService`) keep working unchanged.
+ *
+ * New code should import `log` from `@/lib/structured-logger` directly.
  */
+
+import { log as coreLog } from './structured-logger';
 
 export enum LogLevel {
   ERROR = 'error',
@@ -17,6 +29,7 @@ export interface LogEntry {
   service: string;
   userId?: string;
   requestId?: string;
+  correlationId?: string;
   metadata?: Record<string, any>;
   error?: {
     name: string;
@@ -25,89 +38,60 @@ export interface LogEntry {
   };
 }
 
+const isErrorLike = (value: unknown): value is Error =>
+  value instanceof Error || (Boolean(value) && typeof (value as any).message === 'string' && typeof (value as any).stack === 'string');
+
 class Logger {
-  private service: string;
-  private isProduction: boolean;
+  constructor(private service: string = 'airesume-app') {}
 
-  constructor(service: string = 'airesume-app') {
-    this.service = service;
-    this.isProduction = process.env.NODE_ENV === 'production';
-  }
-
-  private createLogEntry(
-    level: LogLevel,
+  private emit(
+    level: keyof typeof LogLevel,
     message: string,
     metadata?: Record<string, any>,
     error?: Error
-  ): LogEntry {
-    return {
-      level,
-      message,
-      timestamp: new Date().toISOString(),
-      service: this.service,
-      metadata,
-      error: error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : undefined,
-    };
-  }
+  ): void {
+    const prefixed = `[${this.service}] ${message}`;
+    const context: Record<string, any> = { service: this.service, ...metadata };
 
-  private shouldLog(level: LogLevel): boolean {
-    if (this.isProduction) {
-      // In production, only log ERROR and WARN
-      return level === LogLevel.ERROR || level === LogLevel.WARN;
-    }
-    // In development, log everything
-    return true;
-  }
-
-  private output(entry: LogEntry): void {
-    if (!this.shouldLog(entry.level)) return;
-
-    if (this.isProduction) {
-      // In production, use structured JSON logging
-      console.log(JSON.stringify(entry));
-    } else {
-      // In development, use formatted console output
-      const prefix = `[${entry.timestamp}] ${entry.level.toUpperCase()} [${entry.service}]`;
-      const message = entry.metadata 
-        ? `${prefix}: ${entry.message} ${JSON.stringify(entry.metadata, null, 2)}`
-        : `${prefix}: ${entry.message}`;
-      
-      switch (entry.level) {
-        case LogLevel.ERROR:
-          console.error(message);
-          if (entry.error) console.error(entry.error.stack);
-          break;
-        case LogLevel.WARN:
-          console.warn(message);
-          break;
-        case LogLevel.INFO:
-          console.info(message);
-          break;
-        case LogLevel.DEBUG:
-          console.debug(message);
-          break;
-      }
+    switch (level) {
+      case 'ERROR':
+        coreLog.error(prefixed, error, context);
+        break;
+      case 'WARN':
+        coreLog.warn(prefixed, context);
+        break;
+      case 'INFO':
+        coreLog.info(prefixed, context);
+        break;
+      case 'DEBUG':
+        coreLog.debug(prefixed, context);
+        break;
     }
   }
 
-  error(message: string, metadata?: Record<string, any>, error?: Error): void {
-    this.output(this.createLogEntry(LogLevel.ERROR, message, metadata, error));
+  /**
+   * `error(message, metadata?, error?)` — the historical shape. Callers in this repo also use the
+   * shorter `error(message, error)`, so an `Error` passed as the metadata slot is promoted to the
+   * error slot instead of being serialised into `{}` (which is what it used to do).
+   */
+  error(message: string, metadata?: Record<string, any> | Error, error?: Error): void {
+    if (!error && isErrorLike(metadata)) {
+      this.emit('ERROR', message, undefined, metadata as Error);
+      return;
+    }
+    this.emit('ERROR', message, metadata, error);
   }
 
   warn(message: string, metadata?: Record<string, any>): void {
-    this.output(this.createLogEntry(LogLevel.WARN, message, metadata));
+    this.emit('WARN', message, metadata);
   }
 
   info(message: string, metadata?: Record<string, any>): void {
-    this.output(this.createLogEntry(LogLevel.INFO, message, metadata));
+    this.emit('INFO', message, metadata);
   }
 
   debug(message: string, metadata?: Record<string, any>): void {
-    this.output(this.createLogEntry(LogLevel.DEBUG, message, metadata));
+    this.emit('DEBUG', message, metadata);
   }
 
   // Convenience methods for common use cases
@@ -133,11 +117,7 @@ class Logger {
 
   // Performance logging
   performance(operation: string, duration: number, metadata?: Record<string, any>): void {
-    this.info(`[PERF] ${operation} completed in ${duration}ms`, {
-      operation,
-      duration,
-      ...metadata,
-    });
+    coreLog.performance(`${operation} (${this.service})`, duration, metadata);
   }
 
   // Security logging

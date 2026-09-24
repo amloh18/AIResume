@@ -106,7 +106,7 @@ export class JobLinkParser {
 
   private static extractCompanyFromDomain(domain: string): string {
     // Remove common subdomains and TLDs
-    let company = domain
+    const company = domain
       .replace(/^www\./, '')
       .replace(/\.com$/, '')
       .replace(/\.co\.uk$/, '')

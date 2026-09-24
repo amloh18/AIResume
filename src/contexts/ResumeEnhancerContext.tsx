@@ -230,7 +230,7 @@ function cleanCorruptText(text: any): any {
   // Seeking to leverage" with "use" for clarity. Fix: use">leverage" with "use" for clarity. Fix: use">leverage...
   let prevCleaned = '';
   // Limit iterations to prevent any infinite loops
-  let iterations = 0;
+  const iterations = 0;
   while (cleaned !== prevCleaned && iterations < 15) {
     prevCleaned = cleaned;
     // Match the corrupt pattern where the closing HTML residue remains after partial mark-tag removal:

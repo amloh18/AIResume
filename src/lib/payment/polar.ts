@@ -1,5 +1,6 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { Polar } from '@polar-sh/sdk';
+import crypto from 'crypto';
 
 let polarInstance: Polar | null = null;
 
@@ -259,7 +260,6 @@ export class PolarService {
     }
     
     try {
-      const crypto = require('crypto');
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
         .update(payload)

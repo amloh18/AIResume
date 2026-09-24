@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
@@ -39,7 +39,7 @@ export const POST = withAdminAuth(
     } = validatedData;
 
     // Determine target users
-    let userQuery: any = {};
+    const userQuery: any = {};
     if (targetAudience === 'free') {
       userQuery.currentPlanKey = 'free';
     } else if (targetAudience === 'paid') {

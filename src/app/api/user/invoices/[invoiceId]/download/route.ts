@@ -179,7 +179,7 @@ export async function GET(
     doc.text('Amount', 186, 96.5, { align: 'right' });
 
     // Render items
-    let itemsToRender = invoiceItems && invoiceItems.length > 0 ? invoiceItems : [{
+    const itemsToRender = invoiceItems && invoiceItems.length > 0 ? invoiceItems : [{
       description: `${invoice.planName || 'AIResume Subscription'} (${invoice.billingCycle || 'one-time'})`,
       quantity: 1,
       unitPrice: invoice.subtotal || invoice.amount,

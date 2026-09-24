@@ -177,7 +177,7 @@ export function normalizeSurgicalFixesToAnnotations(
     
     if (!primary) {
       // Filter candidates based on section/category to avoid mismatches
-      let candidates = leaves.filter((l) => {
+      const candidates = leaves.filter((l) => {
         if (!l.value || !fix.original_text) return false;
         
         // Never assign skills fixes to name field

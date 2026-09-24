@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Determine target users
-    let userQuery: any = {};
+    const userQuery: any = {};
     if (targetAudience === 'free') {
       userQuery.currentPlanKey = 'free';
     } else if (targetAudience === 'paid') {
