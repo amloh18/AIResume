@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import creditResetService from '@/lib/services/creditResetService';
 
 /**
@@ -11,6 +12,10 @@ import creditResetService from '@/lib/services/creditResetService';
  * - External: Set up daily cron job to call this endpoint
  */
 export async function GET(request: NextRequest) {
+  // Overlap guard: a reset running twice concurrently could double-award credits.
+  const lock = acquireCronLock('credits:reset');
+  if (!lock) return cronBusyResponse('credits:reset');
+
   try {
     // Fail closed — a missing CRON_SECRET must never make this endpoint public.
     const denied = cronAuthFailure(request.headers);
@@ -35,6 +40,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

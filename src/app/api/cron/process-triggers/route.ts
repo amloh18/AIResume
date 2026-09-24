@@ -1,6 +1,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { triggerService } from '@/lib/services/triggerEmailService';
@@ -10,6 +11,10 @@ export async function GET(request: NextRequest) {
     // 1. Security Check — fails closed when CRON_SECRET is unset.
     const denied = cronAuthFailure(request.headers);
     if (denied) return denied;
+
+    // Overlap guard: a second concurrent pass would send the same trigger emails to the same users.
+    const lock = acquireCronLock('process-triggers');
+    if (!lock) return cronBusyResponse('process-triggers');
 
     try {
         await getConnection();
@@ -75,5 +80,7 @@ export async function GET(request: NextRequest) {
     } catch (error: any) {
         console.error('Trigger processing error:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    } finally {
+        lock.release();
     }
 }

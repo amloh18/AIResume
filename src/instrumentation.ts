@@ -11,9 +11,11 @@ export async function register() {
 
     Sentry.init({
       dsn: "https://88b1aba46950f4d42ae02febd2ae0e8a@o4511432633679872.ingest.de.sentry.io/4511432660156496",
-      tracesSampleRate: 1,
+      // Errors are always captured; only traces are sampled down in production.
+      tracesSampleRate: process.env.NODE_ENV === 'development' ? 1 : 0.1,
       enableLogs: true,
-      sendDefaultPii: true,
+      // Resume/application payloads are sensitive — do not attach request bodies, IPs or cookies.
+      sendDefaultPii: false,
     });
 
     // Connect to MongoDB on server boot so workers and early queries never buffer or timeout
@@ -121,9 +123,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "edge") {
     Sentry.init({
       dsn: "https://88b1aba46950f4d42ae02febd2ae0e8a@o4511432633679872.ingest.de.sentry.io/4511432660156496",
-      tracesSampleRate: 1,
+      tracesSampleRate: process.env.NODE_ENV === 'development' ? 1 : 0.1,
       enableLogs: true,
-      sendDefaultPii: true,
+      sendDefaultPii: false,
     });
   }
 }

@@ -1,3 +1,11 @@
+/**
+ * DEAD CODE INVENTORY (audit 2026-09-24, fix-tasks R8.1) — **do not extend**.
+ *
+ * No file in the repository imports `models/ApplicationUnified` (verified by grep 2026-09-24). The
+ * live application record is `JobApplication` (+ `ApplicationJourney` for document staging), and the
+ * divergence between these representations is precisely GAP-12, which fix-tasks Q4 placed out of
+ * scope for this pass. Removal/convergence candidate — do not add a second writer.
+ */
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type CanonicalStage = 'saved' | 'staging' | 'applied' | 'interview' | 'offer' | 'rejected';

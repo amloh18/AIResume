@@ -13,6 +13,7 @@
 import mongoose from 'mongoose';
 import { getEmails, searchEmails, markAsRead, resolveBodyText, type JmapEmail } from '@/lib/services/jmapService';
 import { Communication, type CommunicationClassification, type MatchConfidence } from '@/models/Communication';
+import { log } from '@/lib/structured-logger';
 
 
 // ============================================================================
@@ -290,7 +291,7 @@ async function matchToApplication(
 
     return best;
   } catch (error) {
-    console.error('Match error:', error);
+    log.error('Match error:', error as Error);
     return UNMATCHED;
   }
 }
@@ -460,7 +461,7 @@ async function processInboundEmail(
           }
         }
       } catch (transitionErr: any) {
-        console.warn('[EmailIngestion] State transition failed:', transitionErr.message);
+        log.warn('[EmailIngestion] State transition failed:', transitionErr.message);
       }
     }
 
@@ -477,7 +478,7 @@ async function processInboundEmail(
       // Duplicate key - already processed
       return null;
     }
-    console.error('Error processing email:', error);
+    log.error('Error processing email:', error);
     throw error;
   }
 }
@@ -536,7 +537,7 @@ async function pollInbox(): Promise<boolean> {
       configurationError =
         'STALWART_USER_ID is not set, so ingested mail has no owner. Set it to the user id that owns the Stalwart mailbox.';
       if (!configurationErrorLogged) {
-        console.error(`[EmailIngestion] ${configurationError} Skipping ingestion.`);
+        log.error(`[EmailIngestion] ${configurationError} Skipping ingestion.`);
         configurationErrorLogged = true;
       }
       return true; // Misconfiguration, not a transient failure — do not engage the failure backoff.
@@ -556,12 +557,12 @@ async function pollInbox(): Promise<boolean> {
         const result = await processInboundEmail(ownerId, email);
         if (result) processed++;
       } catch (error) {
-        console.error('Failed to process email:', email.id, error);
+        log.error('Failed to process email:', error as Error, { emailId: email.id });
       }
     }
 
     if (processed > 0) {
-      console.log(`📧 Ingested ${processed} new emails`);
+      log.info(`📧 Ingested ${processed} new emails`);
     }
     return true;
   } catch (error) {
@@ -571,9 +572,9 @@ async function pollInbox(): Promise<boolean> {
     // Log the full error only on the first failure of a streak. Repeating an identical stack trace on
     // every tick buries the signal; one line is enough to show it is still failing.
     if (consecutiveFailures === 1) {
-      console.error('Ingestion poll failed:', error);
+      log.error('Ingestion poll failed:', error as Error);
     } else {
-      console.warn(
+      log.warn(
         `[EmailIngestion] Still failing (${consecutiveFailures}x): ${message}${code ? ` [${code}]` : ''}`
       );
     }
@@ -600,7 +601,7 @@ async function runPollCycle(): Promise<void> {
 
   if (ok) {
     if (consecutiveFailures > 0) {
-      console.log(
+      log.info(
         `[EmailIngestion] Recovered after ${consecutiveFailures} failed poll(s); ` +
           `resuming ${INGESTION_CONFIG.POLL_INTERVAL_MS / 1000}s interval`
       );
@@ -616,7 +617,7 @@ async function runPollCycle(): Promise<void> {
     INGESTION_CONFIG.POLL_INTERVAL_MS * 2 ** (consecutiveFailures - 1),
     INGESTION_CONFIG.MAX_BACKOFF_MS
   );
-  console.warn(`[EmailIngestion] Next poll in ${Math.round(backoff / 1000)}s`);
+  log.warn(`[EmailIngestion] Next poll in ${Math.round(backoff / 1000)}s`);
   scheduleNextPoll(backoff);
 }
 
@@ -628,7 +629,7 @@ export function startIngestionWorker(): void {
   lastError = null;
   configurationErrorLogged = false; // Re-announce a misconfiguration after a restart.
 
-  console.log('🚀 Starting email ingestion worker...');
+  log.info('🚀 Starting email ingestion worker...');
   scheduleNextPoll(INGESTION_CONFIG.STARTUP_DELAY_MS);
 }
 
@@ -639,7 +640,7 @@ export function stopIngestionWorker(): void {
     pollTimer = null;
   }
   nextPollAt = null;
-  console.log('🛑 Email ingestion worker stopped');
+  log.info('🛑 Email ingestion worker stopped');
 }
 
 export function getIngestionStatus() {
@@ -686,12 +687,12 @@ export async function ingestForUser(userId: string): Promise<{
         if (result) processed++;
       } catch (error) {
         errors++;
-        console.error('Ingestion error:', error);
+        log.error('Ingestion error:', error as Error);
       }
     }
   } catch (error) {
     errors++;
-    console.error('Ingestion batch error:', error);
+    log.error('Ingestion batch error:', error as Error);
   }
 
   return { processed, errors };

@@ -19,7 +19,18 @@ import crypto from 'crypto';
 
 const E2E_RUN_ID = `e2e-job-pipeline-${Date.now()}`;
 const TEST_USER_EMAIL = `e2e-job-test-${Date.now()}@cvcircle.local`;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://amarjot:denb4BQfCnozyuEd@cluster0.ta7jxv7.mongodb.net/?appName=Cluster0';
+/*
+ * Credentials must never be hard-coded here: this file is tracked by git, so a literal URI would put
+ * the Atlas username and password in the repository history forever. The test refuses to run without
+ * an explicitly provided URI instead.
+ */
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  throw new Error(
+    'MONGODB_URI is not set. Export it (or provide .env.local) before running this e2E test — ' +
+      'it deliberately has no built-in fallback so credentials cannot be committed.'
+  );
+}
 
 // Track all test-created IDs for cleanup
 const testArtifactIds = {

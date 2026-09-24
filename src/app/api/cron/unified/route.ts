@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
 import { importUSH1BEmployers } from '@/lib/services/sponsorshipRegistryService';
 import dailySummaryEmailService from '@/lib/services/dailySummaryEmailService';
@@ -31,6 +32,11 @@ import { cleanupGuestUsers } from '@/lib/services/guestCleanupService';
  * }
  */
 export async function GET(request: NextRequest) {
+  // Overlap guard: this endpoint both emails users and deletes guest accounts — running two at once
+  // would duplicate the first and race the second.
+  const lock = acquireCronLock('unified');
+  if (!lock) return cronBusyResponse('unified');
+
   try {
     // Fail closed — a missing CRON_SECRET must never make this endpoint public.
     const denied = cronAuthFailure(request.headers);
@@ -155,6 +161,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

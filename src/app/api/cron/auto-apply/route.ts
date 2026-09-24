@@ -35,6 +35,7 @@ import {
 import { processApplication } from '@/lib/worker/processApplication';
 import { ensureConnection } from '@/lib/database';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 
 export const dynamic = 'force-dynamic';
 
@@ -130,6 +131,11 @@ export async function GET(request: NextRequest) {
   const denied = cronAuthFailure(request.headers);
   if (denied) return denied;
 
+  // Overlap guard: claiming is atomic so two runs cannot take the same item, but a concurrent run
+  // would still double the browser load and burn the batch budget twice (AGENTS.md §28, §46).
+  const lock = acquireCronLock('auto-apply');
+  if (!lock) return cronBusyResponse('auto-apply');
+
   try {
     return NextResponse.json(await runQueue(resolveBatchSize(request)));
   } catch (err: any) {
@@ -138,6 +144,8 @@ export async function GET(request: NextRequest) {
       { success: false, error: err?.message || 'Failed to process the application queue', timestamp: new Date().toISOString() },
       { status: 500 }
     );
+  } finally {
+    lock.release();
   }
 }
 

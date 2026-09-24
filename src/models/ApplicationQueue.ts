@@ -6,7 +6,26 @@ export interface IApplicationQueue extends Document {
   applicationId: mongoose.Types.ObjectId | string;
   userId: mongoose.Types.ObjectId | string;
   jobId: mongoose.Types.ObjectId | string;
-  status: QueueItemStatus;
+  status: QueueItemStatus;  /**
+   * Execution gate decided by the decision engine at enqueue time (`auto` | `review` | `manual`).
+   *
+   * Previously the decision's mode was folded into `priority` alone, so the worker could not tell an
+   * AUTO application from a MANUAL one and every queued item was submitted with Playwright. The worker
+   * reads this to enforce the gate — see `src/lib/worker/processApplication.ts`.
+   *
+   * `review` is the default so documents queued before this field existed keep working: they are
+   * prepared and held for approval rather than blocked outright.
+   */
+  mode?: 'auto' | 'review' | 'manual' | 'skip';
+  /**
+   * Trace id minted where the application was enqueued (request → queue → worker).
+   *
+   * The worker re-opens this context when it claims the item, so every log line of the eventual
+   * processing run joins the request that created it — even though the two happen minutes apart in
+   * different processes. Optional: queue documents written before this field existed simply start a
+   * fresh trace at claim time.
+   */
+  correlationId?: string;
   priority: number;
   attempts: number;
   maxAttempts: number;
@@ -34,6 +53,12 @@ const ApplicationQueueSchema = new Schema<IApplicationQueue>(
       default: 'queued',
       index: true,
     },
+    mode: {
+      type: String,
+      enum: ['auto', 'review', 'manual', 'skip'],
+      default: 'review',
+    },
+    correlationId: { type: String },
     priority: { type: Number, default: 50, index: true },
     attempts: { type: Number, default: 0 },
     maxAttempts: { type: Number, default: 3 },
