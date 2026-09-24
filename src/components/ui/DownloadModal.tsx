@@ -3,14 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { X, FileText, Download as DownloadIcon, Crown, Package } from 'lucide-react';
+import { X, FileText, Download as DownloadIcon, Crown, Package, Sparkles } from 'lucide-react';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 import { useUserData } from '@/lib/hooks/useUserData';
 
 export type DocumentType = 'cv' | 'coverLetter' | 'cvAndCoverLetter' | 'all';
-export type FormatType = 'pdf' | 'docx';
+export type FormatType = 'pdf' | 'docx' | 'svg';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -194,11 +194,38 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               />
               <div className="text-center space-y-1">
                 <span className="block text-body font-bold text-gray-100">CV</span>
-                <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
+                <span className="block text-small font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF (Crisp 300 DPI)</span>
               </div>
               {downloadingItem === 'cv-pdf' && (
                 <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
                   <div className="w-5 h-5 border-2 border-[#013f2e] border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+            </button>
+
+            {/* CV Vector SVG Card */}
+            <button
+              onClick={() => handleDirectDownload('cv', 'svg', 'cv-svg')}
+              disabled={!journeyInfo.hasCV || isDownloading}
+              className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!journeyInfo.hasCV
+                ? 'opacity-40 cursor-not-allowed bg-[#222]'
+                : 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
+                }`}
+            >
+              <Sparkles
+                className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCV ? 'text-emerald-400 group-hover:drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-gray-700'}`}
+                strokeWidth={1.5}
+              />
+              <div className="text-center space-y-1">
+                <span className="block text-body font-bold text-gray-100">CV</span>
+                <span className="block text-small font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">Vector (SVG)</span>
+              </div>
+              <span className="absolute top-4 right-4 text-[9px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold tracking-wide border border-emerald-500/30">
+                0% BLUR
+              </span>
+              {downloadingItem === 'cv-svg' && (
+                <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </button>

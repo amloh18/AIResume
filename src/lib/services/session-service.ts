@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import LoginSession, { ILoginSession } from '@/models/LoginSession';
+import { getConnection } from '@/lib/database';
 
 const SESSION_MAX_AGE_DAYS = 7;
 
@@ -128,6 +129,27 @@ export class SessionService {
    * Throws only if the row cannot be written *and* cannot be read back.
    */
   static async createSession(params: SessionRecordParams): Promise<ILoginSession> {
+    await getConnection();
+
+    // If logging in on the same browser/device, supersede any old active sessions
+    // from this exact client so orphaned duplicate sessions do not accumulate.
+    if (params.userId && params.userAgent && params.userAgent.trim().length > 0) {
+      try {
+        await LoginSession.updateMany(
+          {
+            userId: new mongoose.Types.ObjectId(params.userId),
+            userAgent: params.userAgent,
+            ip: params.ip || 'unknown',
+            jti: { $ne: params.jti },
+            revokedAt: { $exists: false },
+          },
+          { $set: { revokedAt: new Date() } }
+        );
+      } catch (err) {
+        console.warn('Non-critical: Failed to supersede previous browser sessions:', err);
+      }
+    }
+
     const session = await SessionService.ensureSession(params);
     if (!session) {
       throw new Error(`Failed to record login session for jti ${params.jti}`);
@@ -141,7 +163,7 @@ export class SessionService {
    * record telemetry must never be allowed to affect authentication.
    */
   static async ensureSession(params: SessionRecordParams): Promise<ILoginSession | null> {
-    await mongoose.connection.asPromise();
+    await getConnection();
     return upsertLoginSession(LoginSession as unknown as LoginSessionWriteModel, params);
   }
 
@@ -149,7 +171,7 @@ export class SessionService {
    * Validate that a session jti exists and is not revoked/expired.
    */
   static async validateSession(jti: string): Promise<boolean> {
-    await mongoose.connection.asPromise();
+    await getConnection();
     const session = await LoginSession.findOne({
       jti,
       revokedAt: { $exists: false },
@@ -179,7 +201,7 @@ export class SessionService {
   static async getSessionState(
     jti: string
   ): Promise<'ok' | 'missing' | 'revoked' | 'expired'> {
-    await mongoose.connection.asPromise();
+    await getConnection();
 
     const session = await LoginSession.findOne({ jti })
       .select('revokedAt expiresAt')
@@ -195,7 +217,7 @@ export class SessionService {
    * Touch a session to update lastActiveAt.
    */
   static async touchSession(jti: string): Promise<void> {
-    await mongoose.connection.asPromise();
+    await getConnection();
     await LoginSession.updateOne(
       { jti, revokedAt: { $exists: false } },
       { $set: { lastActiveAt: new Date() } }
@@ -206,7 +228,7 @@ export class SessionService {
    * Revoke a specific session by jti.
    */
   static async revokeSession(jti: string): Promise<boolean> {
-    await mongoose.connection.asPromise();
+    await getConnection();
     const result = await LoginSession.updateOne(
       { jti, revokedAt: { $exists: false } },
       { $set: { revokedAt: new Date() } }
@@ -216,9 +238,14 @@ export class SessionService {
 
   /**
    * Revoke all sessions for a user except the current one.
+   * Strictly requires a valid currentJti to prevent accidental revocation of the active session.
    */
   static async revokeAllOtherSessions(userId: string, currentJti: string): Promise<number> {
-    await mongoose.connection.asPromise();
+    if (!currentJti || typeof currentJti !== 'string' || currentJti.trim() === '') {
+      console.warn('⚠️ revokeAllOtherSessions called without currentJti - aborted to protect current session');
+      return 0;
+    }
+    await getConnection();
     const result = await LoginSession.updateMany(
       {
         userId: new mongoose.Types.ObjectId(userId),
@@ -234,7 +261,7 @@ export class SessionService {
    * Revoke ALL sessions for a user (used on password change).
    */
   static async revokeAllSessions(userId: string): Promise<number> {
-    await mongoose.connection.asPromise();
+    await getConnection();
     const result = await LoginSession.updateMany(
       {
         userId: new mongoose.Types.ObjectId(userId),
@@ -249,7 +276,7 @@ export class SessionService {
    * Get all active sessions for a user.
    */
   static async getActiveSessions(userId: string) {
-    await mongoose.connection.asPromise();
+    await getConnection();
     return LoginSession.find({
       userId: new mongoose.Types.ObjectId(userId),
       revokedAt: { $exists: false },
@@ -263,7 +290,7 @@ export class SessionService {
    * Get a session by jti.
    */
   static async getSessionByJti(jti: string) {
-    await mongoose.connection.asPromise();
+    await getConnection();
     return LoginSession.findOne({ jti }).lean();
   }
 
@@ -271,7 +298,7 @@ export class SessionService {
    * Delete expired and revoked sessions (cleanup job).
    */
   static async cleanupSessions(): Promise<{ expired: number; revoked: number }> {
-    await mongoose.connection.asPromise();
+    await getConnection();
 
     const expiredResult = await LoginSession.deleteMany({
       expiresAt: { $lt: new Date() },

@@ -7,7 +7,8 @@ import {
   getCookieConsentStatus, 
   setCookieConsentStatus, 
   initializeAnalytics, 
-  initializeMarketing 
+  initializeMarketing,
+  revokeConsent
 } from '@/lib/utils/cookieUtils';
 
 interface CookieConsentProps {
@@ -26,6 +27,10 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
     if (!currentConsent) {
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
+    } else if (currentConsent === 'accepted') {
+      // Re-initialize tracking on session start if previously accepted
+      initializeAnalytics();
+      initializeMarketing();
     }
   }, []);
 
@@ -39,6 +44,7 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
 
   const handleDeclineAll = () => {
     setCookieConsentStatus('declined');
+    revokeConsent();
     setIsVisible(false);
     onDecline?.();
   };

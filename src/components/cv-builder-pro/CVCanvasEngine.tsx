@@ -1320,7 +1320,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     window.setTimeout(() => {
       isInternalLayoutChange.current = false;
       layoutWriteLock.current = false;
-    }, 800);
+    }, 250);
     zonesRef.current = nextZones;
     setZones(nextZones);
     onDataChange({
@@ -1340,7 +1340,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     layoutWriteLock.current = true;
 
     const addContext = replacingSnippet;
-    setReplacingSnippet(null);
+    const isTabletOrBigger = typeof window !== 'undefined' && window.innerWidth >= 768;
+
+    if (!isTabletOrBigger) {
+      setReplacingSnippet(null);
+    }
 
     const snippetDef = SNIPPETS[newType];
     const targetZoneId = bareCanvasZoneId(addContext.zoneId);
@@ -1360,8 +1364,20 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         ? Math.max(0, Math.min(addContext.insertIndex, list.length))
         : list.length;
       list.splice(insertAt, 0, newBlock);
+      if (isTabletOrBigger) {
+        setReplacingSnippet({
+          zoneId: targetZoneId,
+          index: insertAt,
+          currentType: newType,
+          category: snippetDef?.category,
+          isAdd: false,
+        });
+      }
     } else if (typeof addContext.index === 'number' && list[addContext.index]) {
       list[addContext.index] = newBlock;
+      if (isTabletOrBigger) {
+        setReplacingSnippet((prev: any) => (prev ? { ...prev, currentType: newType } : null));
+      }
     } else {
       layoutWriteLock.current = false;
       return;
