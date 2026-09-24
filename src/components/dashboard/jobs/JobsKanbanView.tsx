@@ -660,6 +660,15 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                             );
                           })()}
                   </div>
+                  {/* Per-column empty state — an empty stage used to render a
+                      blank drop zone with no explanation. */}
+                  {!loading && stageJobs.length === 0 && (
+                    <div className="flex items-center justify-center py-6">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        No jobs in this stage
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             );

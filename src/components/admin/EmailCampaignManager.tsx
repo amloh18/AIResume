@@ -46,6 +46,8 @@ export default function EmailCampaignManager() {
   const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showEditor, setShowEditor] = useState(false);
@@ -80,10 +82,14 @@ export default function EmailCampaignManager() {
       if (data.success) {
         setCampaigns(data.campaigns);
         setMetrics(prev => ({ ...prev, totalCampaigns: data.campaigns.length }));
+        setLoadError(null);
+      } else {
+        setLoadError("Couldn't load campaigns. Try again.");
       }
     } catch (error) {
       console.error('Failed to fetch campaigns:', error);
       setCampaigns([]);
+      setLoadError("Couldn't load campaigns. Try again.");
     } finally {
       setLoading(false);
     }
@@ -99,8 +105,14 @@ export default function EmailCampaignManager() {
           totalUsers: data.totalUsers || 0,
           activeRecipients: typeof data.activeUsers === 'number' ? data.activeUsers : 0
         }));
+        setMetricsError(null);
+      } else {
+        setMetricsError("Couldn't load metrics. Try again.");
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+      setMetricsError("Couldn't load metrics. Try again.");
+    }
   };
 
   const handleEditCampaign = (campaign: Campaign) => {
@@ -291,6 +303,19 @@ export default function EmailCampaignManager() {
         </div>
       </div>
 
+      {/* Metrics load error (inline, with retry) */}
+      {metricsError && (
+        <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-2xl px-4 py-2.5">
+          <span className="text-xs text-red-400 font-medium">{metricsError}</span>
+          <button
+            onClick={() => fetchMetrics()}
+            className="px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Quick Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -331,6 +356,20 @@ export default function EmailCampaignManager() {
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">Loading Campaigns...</td></tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center">
+                    <div role="alert" className="flex flex-col items-center gap-2.5">
+                      <p className="text-red-400 font-medium text-xs">{loadError}</p>
+                      <button
+                        onClick={() => fetchCampaigns()}
+                        className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredCampaigns.length === 0 ? (
                 <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">No active campaigns found</td></tr>
               ) : (

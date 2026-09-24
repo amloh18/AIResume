@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { useToast } from '@/hooks/use-toast';
+import { toast as hotToast } from '@/lib/hot-toast';
 import { useRouter } from 'next/navigation';
 
 interface UserActivityData {
@@ -244,8 +245,14 @@ export default function UserActivityModal({
     }
   };
 
-  const handleCopy = (text: string, type: 'id' | 'email') => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string, type: 'id' | 'email') => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Clipboard copy failed:', err);
+      hotToast.error("Couldn't copy");
+      return;
+    }
     if (type === 'id') {
       setCopiedId(true);
       setTimeout(() => setCopiedId(false), 2000);

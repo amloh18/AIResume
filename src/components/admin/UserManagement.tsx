@@ -6,7 +6,7 @@ import { AdminUserManagementSkeleton } from './AdminSkeletons';
 import {
   Users, Search, Filter, MoreVertical, Trash2, Eye, Mail, CreditCard,
   CheckCircle, XCircle, Clock, Download, ChevronRight, UserCheck, Sparkles,
-  ArrowUpRight, SlidersHorizontal
+  ArrowUpRight, SlidersHorizontal, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
@@ -14,6 +14,7 @@ import UserActivityModal from './UserActivityModal';
 import { USER_ROLES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS } from '@/lib/config/adminConstants';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { format } from 'date-fns';
+import { toast } from '@/lib/hot-toast';
 
 interface User {
   _id: string;
@@ -67,6 +68,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
   const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
   const [activeMenuUserId, setActiveMenuUserId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
     activeUsers: 0,
@@ -151,8 +154,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
           jobsLanded: typeof data.jobsLanded === 'number' ? data.jobsLanded : 0,
           successRate: typeof data.successRate === 'number' ? data.successRate : 0
         });
+        setMetricsError(null);
+      } else {
+        setMetricsError("Couldn't load metrics. Try again.");
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Failed to load metrics:', error);
+      setMetricsError("Couldn't load metrics. Try again.");
+    }
   };
 
   const fetchUsers = async (reset: boolean = false) => {
@@ -205,9 +214,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
   };
 
   const handleDeleteUser = async (user: User) => {
-    if (confirm(`Permanently delete user ${user.email} and all data?`)) {
-      await fetch(`/api/admin/users/${user._id}`, { method: 'DELETE' });
+    if (deletingId) return;
+    if (!confirm(`Permanently delete user ${user.email} and all data?`)) return;
+    try {
+      setDeletingId(user._id);
+      const res = await fetch(`/api/admin/users/${user._id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || body.message || `Request failed (${res.status})`);
+      }
+      toast.success('User deleted');
       fetchUsers(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : null;
+      toast.error(message || "Couldn't delete the user. Try again.");
+    } finally {
+      setDeletingId(null);
+      setActiveMenuUserId(null);
     }
   };
 
@@ -322,6 +345,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
           </button>
         </div>
       </div>
+
+      {/* Metrics load error (inline, with retry) */}
+      {metricsError && (
+        <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-2xl px-4 py-2.5">
+          <span className="text-xs text-red-400 font-medium">{metricsError}</span>
+          <button
+            onClick={() => fetchMetrics()}
+            className="px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* 3. High-Density Users Table (FlowMate Layout) */}
       <div className="bg-[#111216] border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
@@ -478,14 +514,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ searchQuery }) => {
                                 </div>
                                 <div className="pt-1">
                                   <button
-                                    onClick={() => {
-                                      setActiveMenuUserId(null);
-                                      handleDeleteUser(user);
-                                    }}
-                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left"
+                                    onClick={() => handleDeleteUser(user)}
+                                    disabled={deletingId === user._id}
+                                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    <Trash2 size={13} />
-                                    <span>Delete User</span>
+                                    {deletingId === user._id ? (
+                                      <RefreshCw size={13} className="animate-spin" />
+                                    ) : (
+                                      <Trash2 size={13} />
+                                    )}
+                                    <span>{deletingId === user._id ? 'Deleting...' : 'Delete User'}</span>
                                   </button>
                                 </div>
                               </motion.div>

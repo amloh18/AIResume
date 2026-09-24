@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { MessageSquare, LayoutTemplate, ArrowUpRight, Globe, Zap, Shield, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from '@/lib/hot-toast';
 
 export default function ContentAnalytics() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -89,27 +91,37 @@ export default function ContentAnalytics() {
                     </div>
                     <button
                         onClick={async () => {
+                          if (isBroadcasting) return;
                           const title = (document.getElementById('alert-title') as HTMLInputElement)?.value || 'System Update';
                           const msg = (document.getElementById('alert-message') as HTMLTextAreaElement)?.value || 'AIResume platform performance optimizations are undergoing live maintenance.';
                           try {
+                            setIsBroadcasting(true);
                             const res = await fetch('/api/notifications/send-all-types', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ title, message: msg, type: 'system_update', actionType: 'dismiss' })
                             });
                             if (res.ok) {
-                              alert('✅ System-wide notification successfully queued for delivery!');
+                              toast.success('System-wide notification queued for delivery');
                             } else {
-                              alert('❌ Failed to broadcast alert.');
+                              const body = await res.json().catch(() => ({}));
+                              toast.error(body.error || "Couldn't dispatch the broadcast. Try again.");
                             }
                           } catch (err) {
-                            alert('❌ Network connection error dispatching alert.');
+                            toast.error("Couldn't dispatch the broadcast. Check your connection and try again.");
+                          } finally {
+                            setIsBroadcasting(false);
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all shadow-md"
+                        disabled={isBroadcasting}
+                        className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs px-4 py-2 rounded-xl transition-all shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        <Zap className="w-3.5 h-3.5" />
-                        Dispatch Broadcast
+                        {isBroadcasting ? (
+                            <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                        ) : (
+                            <Zap className="w-3.5 h-3.5" />
+                        )}
+                        {isBroadcasting ? 'Dispatching...' : 'Dispatch Broadcast'}
                     </button>
                 </div>
             </motion.div>

@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import CampaignPerformancePanel from './CampaignPerformancePanel';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
+import { toast } from '@/lib/hot-toast';
 
 interface RecipientPayload {
     id: string;
@@ -141,7 +142,7 @@ function CampaignDetailViewBody({ campaign, onClose }: CampaignDetailViewProps) 
             // Reload the list
             fetchRecipients(page);
         } catch (err: any) {
-            alert(err.message || 'Failed to remove recipient');
+            toast.error(err.message || "Couldn't remove the recipient. Try again.");
         }
     };
 

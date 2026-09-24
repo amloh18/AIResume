@@ -6,6 +6,7 @@ import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import Step1Dashboard from '@/components/resume-enhancer/steps/Step1Dashboard';
 import { generateCVTitle } from '@/lib/utils/cv-title-generator';
 import { extractCvIdFromResponse } from '@/lib/resume-metrics';
+import toast from '@/lib/hot-toast';
 
 /**
  * DocumentsDashboardView — the step-1 documents workspace embedded as a tab in
@@ -58,10 +59,13 @@ export default function DocumentsDashboardView() {
           router.push(`/editor?mode=edit&cvId=${savedCvId}`);
           return;
         }
-        // Fall back to the editor create flow if persistence failed
-        router.push('/editor?mode=create&step=1');
+        // Save failed — stay on the page so the user can retry instead of
+        // silently rerouting to the editor create flow.
+        toast.error("Couldn't save your document. Please try again.");
+        return;
       } catch {
-        router.push('/editor?mode=create&step=1');
+        toast.error("Couldn't save your document. Please try again.");
+        return;
       }
     },
     [router]

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, CheckCircle, XCircle, Clock, RefreshCw, ChevronLeft, ChevronRight, Square, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
+import { toast } from '@/lib/hot-toast';
 
 interface SourceProgress {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -94,6 +95,7 @@ function SourceProgressRow({ name, progress }: { name: string; progress: SourceP
 export default function RunsExplorer() {
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -107,9 +109,13 @@ export default function RunsExplorer() {
         const data = await res.json();
         setRuns(data.runs || []);
         setTotalPages(data.pagination?.totalPages || 1);
+        setLoadError(null);
+      } else {
+        setLoadError("Couldn't load ingestion runs. Try again.");
       }
     } catch (err) {
       console.error('Fetch runs error:', err);
+      setLoadError("Couldn't load ingestion runs. Try again.");
     } finally {
       setLoading(false);
     }
@@ -144,7 +150,12 @@ export default function RunsExplorer() {
             r.runId === runId ? { ...r, status: 'cancelled' as const, finishedAt: new Date().toISOString() } : r
           )
         );
+      } else {
+        toast.error("Couldn't cancel the run. Try again.");
       }
+    } catch (err) {
+      console.error('Cancel run error:', err);
+      toast.error("Couldn't cancel the run. Try again.");
     } finally {
       setCancelling(null);
     }
@@ -234,8 +245,22 @@ export default function RunsExplorer() {
             <tbody className="divide-y divide-white/5 font-mono">
               {runs.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-white/40 font-sans">
-                    {loading ? 'Loading ingestion logs...' : 'No ingestion runs recorded yet.'}
+                  <td colSpan={11} className="py-8 text-center font-sans">
+                    {loading ? (
+                      <span className="text-white/40">Loading ingestion logs...</span>
+                    ) : loadError ? (
+                      <div role="alert" className="flex flex-col items-center gap-2.5">
+                        <span className="text-red-400 font-semibold">{loadError}</span>
+                        <button
+                          onClick={() => fetchRuns(page)}
+                          className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-bold transition-all"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-white/40">No ingestion runs recorded yet.</span>
+                    )}
                   </td>
                 </tr>
               ) : (

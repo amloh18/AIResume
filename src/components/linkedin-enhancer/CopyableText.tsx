@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check } from 'lucide-react';
+import toast from '@/lib/hot-toast';
 
 interface CopyableTextProps {
     text: string;
@@ -23,6 +24,12 @@ export default function CopyableText({
 }: CopyableTextProps) {
     const [copied, setCopied] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const resetTimerRef = useRef<number | null>(null);
+
+    // Clear the pending "reset copied" timer on unmount to avoid setState after unmount
+    useEffect(() => () => {
+        if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
+    }, []);
 
     const handleCopy = useCallback(async () => {
         try {
@@ -42,9 +49,11 @@ export default function CopyableText({
             }
 
             setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
+            resetTimerRef.current = window.setTimeout(() => setCopied(false), 2000);
         } catch (error) {
             console.error('Failed to copy:', error);
+            toast.error("Couldn't copy to clipboard");
         }
     }, [text]);
 

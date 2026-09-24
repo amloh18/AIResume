@@ -26,6 +26,7 @@ import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSug
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import { SnippetGravitySidebar } from '@/components/forms/SnippetGravitySidebar';
+import toast from '@/lib/hot-toast';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -329,6 +330,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
       updateWorkItem(index, 'summary', result.description);
     } catch (error) {
       console.error('Error generating AI description:', error);
+      toast.error("Couldn't generate an AI description. Try again.");
     } finally {
       setGeneratingIndex(null);
     }

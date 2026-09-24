@@ -14,6 +14,7 @@ import {
   Percent,
   Euro
 } from 'lucide-react';
+import { toast } from '@/lib/hot-toast';
 
 interface DiscountCode {
   _id: string;
@@ -67,6 +68,8 @@ const DiscountCodeManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [formData, setFormData] = useState<DiscountCodeFormData>({
     code: '',
@@ -151,8 +154,10 @@ const DiscountCodeManager: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     try {
+      setIsSubmitting(true);
       const url = editingCode
         ? `/api/admin/discount-codes/${editingCode._id}`
         : '/api/admin/discount-codes';
@@ -170,22 +175,25 @@ const DiscountCodeManager: React.FC = () => {
       if (response.ok) {
         await fetchDiscountCodes();
         resetForm();
+        toast.success(editingCode ? 'Discount code updated' : 'Discount code created');
       } else {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           try {
             const error = await response.json();
-            alert(error.error || 'Failed to save discount code');
+            toast.error(error.error || "Couldn't save the discount code. Try again.");
           } catch {
-            alert('Failed to save discount code');
+            toast.error("Couldn't save the discount code. Try again.");
           }
         } else {
-          alert('Failed to save discount code');
+          toast.error("Couldn't save the discount code. Try again.");
         }
       }
     } catch (error) {
       console.error('Error saving discount code:', error);
-      alert('Failed to save discount code');
+      toast.error("Couldn't save the discount code. Try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -210,31 +218,36 @@ const DiscountCodeManager: React.FC = () => {
   };
 
   const handleDelete = async (codeId: string) => {
+    if (deletingId) return;
     if (!confirm('Are you sure you want to delete this discount code?')) return;
 
     try {
+      setDeletingId(codeId);
       const response = await fetch(`/api/admin/discount-codes/${codeId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         await fetchDiscountCodes();
+        toast.success('Discount code deleted');
       } else {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           try {
             const error = await response.json();
-            alert(error.error || 'Failed to delete discount code');
+            toast.error(error.error || "Couldn't delete the discount code. Try again.");
           } catch {
-            alert('Failed to delete discount code');
+            toast.error("Couldn't delete the discount code. Try again.");
           }
         } else {
-          alert('Failed to delete discount code');
+          toast.error("Couldn't delete the discount code. Try again.");
         }
       }
     } catch (error) {
       console.error('Error deleting discount code:', error);
-      alert('Failed to delete discount code');
+      toast.error("Couldn't delete the discount code. Try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -391,9 +404,15 @@ const DiscountCodeManager: React.FC = () => {
               </button>
               <button
                 onClick={() => handleDelete(code._id)}
-                className="flex items-center justify-center px-2.5 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors border border-red-500/20"
+                disabled={deletingId === code._id}
+                title="Delete discount code"
+                className="flex items-center justify-center px-2.5 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors border border-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Trash2 size={12} />
+                {deletingId === code._id ? (
+                  <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400" />
+                ) : (
+                  <Trash2 size={12} />
+                )}
               </button>
             </div>
           </div>
@@ -567,9 +586,14 @@ const DiscountCodeManager: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all shadow-sm"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <Save size={14} />
+                    {isSubmitting ? (
+                      <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                    ) : (
+                      <Save size={14} />
+                    )}
                     {editingCode ? 'Update Code' : 'Create Code'}
                   </button>
                 </div>

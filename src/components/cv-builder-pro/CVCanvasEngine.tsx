@@ -21,6 +21,7 @@ import { getCanvasSnippetPreviewData } from '@/lib/templates/canvas-initial-data
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useCanvasFit } from '@/hooks/useCanvasFit';
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
+import toast from '@/lib/hot-toast';
 import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
 import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
 import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
@@ -137,11 +138,15 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
     };
   }, [pointSuggestion?.node]);
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!pointSuggestion?.text) return;
-    navigator.clipboard.writeText(pointSuggestion.text.replace(/<\/?[^>]+(>|$)/g, ""));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(pointSuggestion.text.replace(/<\/?[^>]+(>|$)/g, ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
   if (!pointSuggestion) return null;
@@ -1834,10 +1839,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Reset so the same file can be re-picked (e.g. after a size rejection)
+    e.target.value = '';
 
     // Check if the file size is larger than 1MB (1,048,576 bytes)
     if (file.size > 1024 * 1024) {
-      alert('Please upload an image smaller than 1MB.');
+      toast.error('Please choose an image smaller than 1 MB.');
       return;
     }
 

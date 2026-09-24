@@ -1388,7 +1388,7 @@ export default function Step1Dashboard({
   const handleDuplicatePrimary = async () => {
     const masterCV = existingCVs.find(cv => cv.cvType === 'master');
     if (!masterCV) {
-      alert("No Primary (Master) CV found to duplicate.");
+      toast.error("No Primary (Master) CV found to duplicate.");
       return;
     }
     
@@ -1415,7 +1415,7 @@ export default function Step1Dashboard({
       }
     } catch (error) {
       console.error('Error duplicating master CV:', error);
-      alert('Error duplicating CV. Please try again.');
+      toast.error('Error duplicating CV. Please try again.');
     } finally {
       setIsDuplicating(false);
     }
@@ -2125,9 +2125,12 @@ export default function Step1Dashboard({
                                       setDraftCV(null);
                                       cachedDraftCV = null;
                                       toast.success('Draft deleted');
+                                    } else {
+                                      toast.error("Couldn't delete the draft. Try again.");
                                     }
                                   } catch (err) {
                                     console.error('Failed to delete draft:', err);
+                                    toast.error("Couldn't delete the draft. Try again.");
                                   }
                                 }
                               }}
@@ -2351,9 +2354,13 @@ export default function Step1Dashboard({
                                           if (response.ok) {
                                             setDraftCV(null);
                                             cachedDraftCV = null;
+                                            toast.success('Draft deleted');
+                                          } else {
+                                            toast.error("Couldn't delete the draft. Try again.");
                                           }
                                         } catch (err) {
                                           console.error('Failed to delete draft:', err);
+                                          toast.error("Couldn't delete the draft. Try again.");
                                         }
                                       }
                                     }}
@@ -2823,7 +2830,7 @@ export default function Step1Dashboard({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* Tailor to Job */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2844,7 +2851,7 @@ export default function Step1Dashboard({
 
                   {/* Blank CV */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2866,7 +2873,7 @@ export default function Step1Dashboard({
 
                   {/* Duplicate Profile */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2893,7 +2900,7 @@ export default function Step1Dashboard({
 
                   {/* Upload a CV */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2930,7 +2937,7 @@ export default function Step1Dashboard({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {/* Write with AI */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2951,7 +2958,7 @@ export default function Step1Dashboard({
 
                   {/* Start Fresh */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);

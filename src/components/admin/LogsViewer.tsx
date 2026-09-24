@@ -36,6 +36,8 @@ interface LogMetrics {
 export default function LogsViewer() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<LogMetrics | null>(null);
   const [totalLogs, setTotalLogs] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,9 +77,13 @@ export default function LogsViewer() {
       if (data.success) {
         setLogs(data.logs || []);
         setTotalLogs(data.total || 0);
+        setLoadError(null);
+      } else {
+        setLoadError("Couldn't load logs. Try again.");
       }
     } catch (error) {
       console.error('Fetch error:', error);
+      setLoadError("Couldn't load logs. Try again.");
     } finally {
       setLoading(false);
     }
@@ -87,8 +93,16 @@ export default function LogsViewer() {
     try {
       const response = await fetch(`/api/admin/logs/metrics?range=${timeRange}`);
       const data = await response.json();
-      if (data.success) setMetrics(data.metrics);
-    } catch (error) {}
+      if (data.success) {
+        setMetrics(data.metrics);
+        setMetricsError(null);
+      } else {
+        setMetricsError("Couldn't load metrics. Try again.");
+      }
+    } catch (error) {
+      console.error('Fetch metrics error:', error);
+      setMetricsError("Couldn't load metrics. Try again.");
+    }
   };
 
   useEffect(() => {
@@ -131,6 +145,19 @@ export default function LogsViewer() {
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Load error (inline, with retry) */}
+      {(loadError || metricsError) && (
+        <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-2xl px-4 py-2.5">
+          <span className="text-xs text-red-400 font-medium">{loadError || metricsError}</span>
+          <button
+            onClick={() => { fetchLogs(); fetchMetrics(); }}
+            className="px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Metrics Bento */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

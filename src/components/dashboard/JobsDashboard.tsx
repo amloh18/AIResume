@@ -1155,9 +1155,24 @@ export default function JobsDashboard() {
       const response = await fetch(`/api/jobs/discover?${queryString}`, {});
 
       if (!response.ok) {
+        /*
+          A non-OK response used to `return` silently, so an outage rendered
+          the plain "No jobs found" empty state — indistinguishable from a
+          genuinely empty result. Surface a friendly error instead, but only
+          where the view would otherwise be empty: cached results (first page
+          with a cache hit) and already-loaded pages (page > 1) are kept as-is,
+          so a background refresh failing never wipes what the user sees.
+        */
+        console.error('Job discovery request failed with status:', response.status);
         if (isFirstPage && !getCachedJobs(params)) {
+          const message =
+            response.status >= 500
+              ? `The job service didn't respond (error ${response.status}). Please try again in a moment.`
+              : response.status === 429
+              ? 'Too many requests — please wait a moment and try again.'
+              : `We couldn't load jobs right now (error ${response.status}). Please try again.`;
           setJobs([]);
-          setLoading(false);
+          setError(message);
         }
         return;
       }
@@ -1494,7 +1509,7 @@ export default function JobsDashboard() {
         )}
 
         {activeTab === 'discover' && (
-          error && !metrics ? (
+          error && jobs.length === 0 ? (
             <JobsErrorState message={error} onRetry={handleRetry} />
           ) : (
           <div className="space-y-4">
@@ -1573,6 +1588,22 @@ export default function JobsDashboard() {
                 >
                   <ArrowUp className="w-4 h-4" />
                   {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+
+            {/* Slim inline error banner — a fetch failure while cached jobs are
+                still displayed must not be silently swallowed, but the grid is
+                kept so the outage doesn't wipe usable content. */}
+            {error && jobs.length > 0 && (
+              <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-amber-300/70 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-800 dark:text-amber-200">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="font-bold underline shrink-0 hover:no-underline"
+                >
+                  Retry
                 </button>
               </div>
             )}
