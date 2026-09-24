@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 // ============================================================================
 // STATIC IMPORTS - Must be at top level for bundler to include them
 // ============================================================================

@@ -78,11 +78,11 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
           <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 text-xs text-gray-700 dark:text-gray-300 space-y-1.5">
             {isStarter ? (
               <p className="leading-relaxed">
-                You've used all <strong>10 applications</strong> included with your Starter plan this month.
+                You&apos;ve used all <strong>10 applications</strong> included with your Starter plan this month.
               </p>
             ) : (
               <p className="leading-relaxed">
-                You've used all <strong>50 automated applications</strong> available today. Your daily auto-apply limit resets tomorrow at midnight.
+                You&apos;ve used all <strong>50 automated applications</strong> available today. Your daily auto-apply limit resets tomorrow at midnight.
               </p>
             )}
           </div>

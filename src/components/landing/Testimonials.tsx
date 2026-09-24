@@ -168,7 +168,7 @@ export const TestimonialSnippet = ({ index: initialIndex }: { index: number }) =
 
         <div className="flex-1 flex flex-col justify-center min-h-[120px]">
           <p className="text-body sm:text-h3 font-medium italic leading-relaxed tracking-tight text-white/90">
-            "{typedMessage}"<span className={`inline-block ml-0.5 w-1 h-4 bg-[#36D39B] ${isTyping ? 'animate-pulse' : ''}`} style={{ verticalAlign: 'middle' }} />
+            &quot;{typedMessage}&quot;<span className={`inline-block ml-0.5 w-1 h-4 bg-[#36D39B] ${isTyping ? 'animate-pulse' : ''}`} style={{ verticalAlign: 'middle' }} />
           </p>
           <div className="flex items-center gap-2 mt-4 leading-none">
             <p className="text-small tablet:text-small font-black text-[#36D39B] uppercase tracking-widest">
@@ -274,7 +274,7 @@ const Testimonials = () => {
                     ))}
                   </div>
                   <p className="text-white/90 text-body tablet:text-h3 leading-relaxed mb-8 italic font-medium">
-                    "{testimonial.message}"
+                    &quot;{testimonial.message}&quot;
                   </p>
                 </div>
                 <div className="flex items-center gap-4">

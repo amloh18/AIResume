@@ -1699,7 +1699,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 64) : 0;
             const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
 
-            let neededH = gapBefore() + headerH + firstEntryH;
+            const neededH = gapBefore() + headerH + firstEntryH;
             let pUsable = getUsableHeightForPage(currentPage);
 
             if (currentHeight + neededH > pUsable && currentHeight > 0) {
@@ -1716,7 +1716,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               const entryH = unitHeights[entryUnitId] || 64;
 
               if (entryIdx > 0) {
-                let pUsableInner = getUsableHeightForPage(currentPage);
+                const pUsableInner = getUsableHeightForPage(currentPage);
                 if (currentHeight + entryGap + entryH > pUsableInner && currentHeight > 0) {
                   currentPage++;
                   currentHeight = 0;
@@ -1788,13 +1788,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     };
 
     // Run adjust layout loop on requestAnimationFrame
-    let rafId: number;
     const runMeasure = () => {
       measureAndPaginate();
     };
 
     // Initial measurement
-    rafId = requestAnimationFrame(runMeasure);
+    const rafId = requestAnimationFrame(runMeasure);
 
     // Watch for mutations (user typing or editing content)
     let debounceTimer: any;

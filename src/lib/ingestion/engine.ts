@@ -12,6 +12,7 @@ import { getConnection } from '@/lib/database';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { spawn, ChildProcess } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { resolveRoleFamily, getFamilySearchTerms, ROLE_TAXONOMY } from '@/lib/taxonomy/roleTaxonomy';
 import { loadIngestionSettings } from '@/models/WorkerSettings';
@@ -70,7 +71,6 @@ async function withRetry<T>(
 // so we pick up packages like jobspy without touching the system python.
 
 function resolvePython(): string {
-  const fs = require('fs');
   const venvPython = path.join(process.cwd(), 'scripts', '.venv', 'bin', 'python3');
   try {
     fs.accessSync(venvPython, fs.constants.X_OK);
@@ -603,7 +603,7 @@ export function checkSourceConfig(source: string): ConfigCheck {
     if (!isWorkerGatewayEnabled()) {
       try {
         const workerPath = path.join(process.cwd(), 'scripts', 'jobspy-worker.py');
-        require('fs').accessSync(workerPath);
+        fs.accessSync(workerPath);
       } catch {
         return { ready: false, reason: 'scripts/jobspy-worker.py not found' };
       }
@@ -620,7 +620,7 @@ export function checkSourceConfig(source: string): ConfigCheck {
     if (!isWorkerGatewayEnabled()) {
       try {
         const workerPath = path.join(process.cwd(), 'scripts', 'linkedin-worker', 'worker.py');
-        require('fs').accessSync(workerPath);
+        fs.accessSync(workerPath);
       } catch {
         return { ready: false, reason: 'scripts/linkedin-worker/worker.py not found' };
       }
@@ -1835,10 +1835,55 @@ function normalize(raw: RawJob): NormalizedJob {
 
 // ── Batch Upsert (source-agnostic) ─────────────────────────────────────
 
+// ── Index bootstrap ─────────────────────────────────────────────────────
+
+/**
+ * Idempotent index bootstrap for the raw `jobs` collection. Called from `batchUpsert`, guarded to
+ * once per process.
+ *
+ * Why it exists:
+ * - `batchUpsert` dedups via `canonicalId: { $in: … }` (see the batching below), but the only index
+ *   creator for that key was the operator-run scripts/create-job-indexes.ts, which no deploy step
+ *   executes: a database that never ran it manually (including a freshly provisioned one, and the
+ *   e2e target) has no canonical identity index, so every dedup pass is a full collection scan —
+ *   the e2e preflight assertion fails on exactly such a database.
+ * - `source.primary` is filtered by the job-discovery and recommended-jobs read paths.
+ *
+ * Spec sync: the `{ canonicalId: 1 }` key + name here MUST match the `jobs_canonicalId` entry in
+ * scripts/create-job-indexes.ts — MongoDB rejects creating the same key pattern under different
+ * name/options (IndexKeySpecsConflict), so a drift between the two would break whichever runs
+ * second. The operator script creates the wider set (facets, text search, lifecycle …); this
+ * bootstrap creates only what live code paths query.
+ *
+ * Both indexes are non-unique on purpose: a unique build could fail on legacy duplicates and take
+ * ingestion down, and uniqueness would race concurrent upserts of the same canonicalId (E11000);
+ * duplicate prevention belongs to the upsert filter, not to DDL. Failures are logged but never
+ * thrown — an index is an optimisation, and a permission/conflict problem must not abort a source
+ * run (the failure is not cached either, so the next batch retries).
+ */
+const jobsIndexEnsured = new Set<string>();
+
+export async function ensureJobIndexes(db: NonNullable<mongoose.Connection['db']>): Promise<void> {
+  const dbName = db.databaseName;
+  if (jobsIndexEnsured.has(dbName)) return;
+  try {
+    await Promise.all([
+      db.collection('jobs').createIndex({ canonicalId: 1 }, { name: 'jobs_canonicalId' }),
+      db.collection('jobs').createIndex({ 'source.primary': 1 }),
+    ]);
+  } catch (error) {
+    log('INDEX', `ensureJobIndexes failed for ${dbName}: ${error instanceof Error ? error.message : String(error)}`);
+    return;
+  }
+  jobsIndexEnsured.add(dbName);
+}
+
 export async function batchUpsert(db: mongoose.Connection['db'], jobs: NormalizedJob[], sourceName: string) {
   const coll = db!.collection('jobs');
   const eventsColl = db!.collection('jobEvents');
   const now = new Date();
+
+  if (db) await ensureJobIndexes(db);
 
   log('UPSERT', `batchUpsert: ${jobs.length} jobs for source=${sourceName}`);
 
@@ -2432,7 +2477,7 @@ export async function executeSourceRun(
 
     // Classify error type for better diagnostics
     let errorCode = 'UNKNOWN';
-    let errorMessage = err.message || 'Unknown error';
+    const errorMessage = err.message || 'Unknown error';
 
     if (err.message?.includes('NOT_CONFIGURED') || err.message?.includes('Missing')) {
       errorCode = 'CONFIG_ERROR';

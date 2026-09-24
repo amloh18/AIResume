@@ -4,7 +4,7 @@
  * Tests the full search pipeline:
  * query normalization → candidate retrieval → scoring → feed building
  *
- * Run: npx tsx src/tests/intelligent-discovery/pipeline.test.ts
+ * Run: npx tsx src/tests/intelligent-discovery/pipeline.manual.ts
  */
 
 import dotenv from 'dotenv';

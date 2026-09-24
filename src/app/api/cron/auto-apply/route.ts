@@ -25,6 +25,8 @@
 //   */5 * * * *   curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
 //                   https://buildairesume.com/api/cron/auto-apply
 
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   claimNextApplication,
@@ -34,8 +36,6 @@ import {
 } from '@/lib/worker/claimNext';
 import { processApplication } from '@/lib/worker/processApplication';
 import { ensureConnection } from '@/lib/database';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
-import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,14 +99,14 @@ async function runQueue(batchSize: number) {
       else if (result.stage === 'staging') needsReview++;
       else failed++;
 
-      console.log(
+      log.info(
         `[Cron AutoApply] ${applicationId}: ${result.status} — ${result.message}`
       );
     } catch (err: any) {
       failed++;
       errors.push(`${applicationId}: ${err?.message || 'unknown error'}`);
       await failQueueItem(queueItem._id, err?.message || 'unknown error', true).catch(() => {});
-      console.error(`[Cron AutoApply] ${applicationId} threw:`, err?.message);
+      log.error(`[Cron AutoApply] ${applicationId} threw:`, err?.message);
     }
   }
 
@@ -127,26 +127,19 @@ async function runQueue(batchSize: number) {
 export async function GET(request: NextRequest) {
   // Fail closed. This used to let the request through when no secret was configured, on the theory that
   // the proxy would reject it — which made the proxy a single point of failure and contradicted the
-  // defence-in-depth intent of having a check here at all.
-  const denied = cronAuthFailure(request.headers);
-  if (denied) return denied;
-
   // Overlap guard: claiming is atomic so two runs cannot take the same item, but a concurrent run
   // would still double the browser load and burn the batch budget twice (AGENTS.md §28, §46).
-  const lock = acquireCronLock('auto-apply');
-  if (!lock) return cronBusyResponse('auto-apply');
-
-  try {
-    return NextResponse.json(await runQueue(resolveBatchSize(request)));
-  } catch (err: any) {
-    console.error('[Cron AutoApply] Fatal error:', err);
-    return NextResponse.json(
-      { success: false, error: err?.message || 'Failed to process the application queue', timestamp: new Date().toISOString() },
-      { status: 500 }
-    );
-  } finally {
-    lock.release();
-  }
+  return runCron('auto-apply', request, async () => {
+    try {
+      return NextResponse.json(await runQueue(resolveBatchSize(request)));
+    } catch (err: any) {
+      log.error('[Cron AutoApply] Fatal error:', err);
+      return NextResponse.json(
+        { success: false, error: err?.message || 'Failed to process the application queue', timestamp: new Date().toISOString() },
+        { status: 500 }
+      );
+    }
+  });
 }
 
 // Many cron services (and `curl -X POST`) use POST; behave identically.

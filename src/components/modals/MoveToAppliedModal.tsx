@@ -140,7 +140,7 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
               <AlertTriangle className="h-5 w-5 text-gray-600 dark:text-white/60 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
                 <p className="font-medium text-gray-900 dark:text-white">
-                  This will mark the job as "Applied"
+                  This will mark the job as &quot;Applied&quot;
                 </p>
                 <p className="text-gray-700 dark:text-white/80 mt-1">
                   The journey will be completed and moved to your completed journeys list.

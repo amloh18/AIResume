@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NOTIFICATION_TEMPLATES, TemplateVariables, getExpiryDate } from './templates';
 import { globalFrequencyManager } from './frequency';
 import notificationService from '@/lib/services/notificationService';

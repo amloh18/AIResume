@@ -97,7 +97,7 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
           {isJourneyCV && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-full">
               <Shield className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium text-green-500">For job applications, choose templates marked "ATS Excellent" for best results</span>
+              <span className="text-sm font-medium text-green-500">For job applications, choose templates marked &quot;ATS Excellent&quot; for best results</span>
             </motion.div>
           )}
         </motion.div>
@@ -135,7 +135,7 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
                     <span className="text-sm text-[color:var(--text-secondary)]">Maximum ATS Score:</span>
                     <span className="text-lg font-bold text-yellow-500">{getTemplateATSScoreCap(pendingTemplate)}%</span>
                   </div>
-                  <p className="text-xs text-[color:var(--text-tertiary)]">Your CV's ATS optimization score will be capped at this level regardless of content quality.</p>
+                  <p className="text-xs text-[color:var(--text-tertiary)]">Your CV&apos;s ATS optimization score will be capped at this level regardless of content quality.</p>
                 </div>
                 <div className="flex gap-3">
                   <button onClick={cancelLowATSTemplate} className="flex-1 px-4 py-2.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-xl font-medium transition-colors">Choose Another</button>

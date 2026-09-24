@@ -225,7 +225,7 @@ export default function SharedCandidatePage() {
                     <h3 className="text-lg font-bold capitalize">Candidate {metadata.clientFeedback.status}</h3>
                     {metadata.clientFeedback.notes && (
                       <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded-md text-left">
-                        "{metadata.clientFeedback.notes}"
+                        &quot;{metadata.clientFeedback.notes}&quot;
                       </div>
                     )}
                     <p className="text-xs text-gray-400">Feedback recorded on {new Date(metadata.clientFeedback.date).toLocaleDateString()}</p>

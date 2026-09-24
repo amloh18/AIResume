@@ -1103,7 +1103,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         ))}
                       </div>
                       <p className="text-xs text-gray-700 dark:text-gray-300 italic leading-relaxed">
-                        "AIResume completely modernized my application flow. The ATS scoring was spot-on, and I secured 3 callbacks within the first week of upgrading."
+                        &quot;AIResume completely modernized my application flow. The ATS scoring was spot-on, and I secured 3 callbacks within the first week of upgrading.&quot;
                       </p>
                       <div className="flex items-center gap-3 mt-3">
                         <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-lime-400 to-lime-600 flex items-center justify-center text-[10px] font-black text-black">

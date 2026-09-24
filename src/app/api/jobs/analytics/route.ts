@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const dateRange = searchParams.get('dateRange') || 'all'; // 'all' | '7days' | '30days' | '90days'
 
     // Build date filter
-    let dateFilter: any = {};
+    const dateFilter: any = {};
     if (dateRange !== 'all') {
       const days = dateRange === '7days' ? 7 : dateRange === '30days' ? 30 : 90;
       const startDate = new Date();

@@ -132,7 +132,7 @@ export default function JDInputPanel({
               Paste Job Description
             </h3>
             <p className="text-sm text-gray-600 dark:text-white/70">
-              We'll analyze and tailor your CV to match
+              We&apos;ll analyze and tailor your CV to match
             </p>
           </div>
         </div>

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
                     if (country === 'uk') {
                         controller.enqueue(encoder.encode('Company Name,Licence Number,Status,Expiry Date,Last Updated\n'));
                         
-                        // @ts-ignore
+                        // @ts-ignore pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
                         const cursor = UKSponsor.find({}).cursor();
                         
                         for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
                     } else {
                         controller.enqueue(encoder.encode('Employer Name,FEIN,Last Filed Year,Last Updated\n'));
                         
-                        // @ts-ignore
+                        // @ts-ignore pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
                         const cursor = USH1BEmployer.find({}).cursor();
                         
                         for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {

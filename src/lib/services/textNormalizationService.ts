@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 /**
  * Text Normalization Service
  * 
@@ -105,7 +105,7 @@ export class TextNormalizationService {
     if (!phone) return '';
 
     // Remove common phone icons and labels
-    let normalized = phone
+    const normalized = phone
       .replace(/[📞📱☎️]/g, '')
       .replace(/phone[:]?\s*/gi, '')
       .replace(/tel[:]?\s*/gi, '')

@@ -1,6 +1,6 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
-import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { SessionService } from '@/lib/services/session-service';
 
 /**
@@ -15,26 +15,20 @@ import { SessionService } from '@/lib/services/session-service';
  */
 export async function GET(request: NextRequest) {
   // Overlap guard: two concurrent cleanups would both try to purge the same sessions.
-  const lock = acquireCronLock('sessions:cleanup');
-  if (!lock) return cronBusyResponse('sessions:cleanup');
+  return runCron('sessions:cleanup', request, async () => {
+    try {
+      const result = await SessionService.cleanupSessions();
 
-  try {
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
+      log.info(`🧹 Session cleanup: removed ${result.expired} expired, ${result.revoked} old revoked sessions`);
 
-    const result = await SessionService.cleanupSessions();
-
-    console.log(`🧹 Session cleanup: removed ${result.expired} expired, ${result.revoked} old revoked sessions`);
-
-    return NextResponse.json({
-      success: true,
-      expired: result.expired,
-      revoked: result.revoked,
-    });
-  } catch (error) {
-    console.error('Session cleanup error:', error);
-    return NextResponse.json({ success: false, error: 'Cleanup failed' }, { status: 500 });
-  } finally {
-    lock.release();
-  }
+      return NextResponse.json({
+        success: true,
+        expired: result.expired,
+        revoked: result.revoked,
+      });
+    } catch (error) {
+      log.error('Session cleanup error:', error as Error);
+      return NextResponse.json({ success: false, error: 'Cleanup failed' }, { status: 500 });
+    }
+  });
 }

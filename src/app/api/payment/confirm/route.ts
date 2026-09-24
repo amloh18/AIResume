@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate subscription end date
     const startDate = new Date();
-    let endDate = new Date();
+    const endDate = new Date();
 
     if (plan.billingCycle === 'monthly') {
       endDate.setMonth(endDate.getMonth() + 1);

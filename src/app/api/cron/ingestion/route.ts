@@ -17,76 +17,70 @@
 //   }]
 // }
 
+import { runCron } from '@/lib/cron/runCron';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
-import { acquireCronLock, cronBusyResponse } from '@/lib/cron/runCron';
 import { BackgroundScheduler } from '@/lib/ingestion/backgroundScheduler';
 import { BaselineScheduler } from '@/lib/ingestion/baselineSchedule';
+import { log } from '@/lib/structured-logger';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  // Fail closed — a missing CRON_SECRET must never make this endpoint public.
-  const denied = cronAuthFailure(request.headers);
-  if (denied) return denied;
+  // runCron: fail-closed auth (a missing CRON_SECRET must never make this endpoint public) + overlap
+  // guard — a 5-minute tick must not start a second scheduler cycle while the previous one still
+  // holds segment locks, since the stale-recovery step would otherwise free them mid-flight.
+  return runCron('ingestion:get', request, async () => {
+    try {
+      // Run the complete scheduler cycle
+      const result = await BackgroundScheduler.run();
 
-  // Overlap guard: a 5-minute tick must not start a second scheduler cycle while the previous one
-  // still holds segment locks — the stale-recovery step would otherwise free them mid-flight.
-  const lock = acquireCronLock('ingestion:get');
-  if (!lock) return cronBusyResponse('ingestion:get');
+      // Log summary for monitoring
+      log.info('[Cron Ingestion]', {
+        timestamp: result.timestamp,
+        durationMs: result.duration,
+        demandProcessed: result.steps.demandProcessing.processed,
+        demandSucceeded: result.steps.demandProcessing.succeeded,
+        baselineRan: result.steps.baselineSchedule.ran.length,
+        baselineSkipped: result.steps.baselineSchedule.skipped.length,
+        baselineFailed: result.steps.baselineSchedule.failed.length,
+        errors: result.errors.length,
+      });
 
-  try {
-    // Run the complete scheduler cycle
-    const result = await BackgroundScheduler.run();
-
-    // Log summary for monitoring
-    console.log('[Cron Ingestion]', JSON.stringify({
-      timestamp: result.timestamp,
-      durationMs: result.duration,
-      demandProcessed: result.steps.demandProcessing.processed,
-      demandSucceeded: result.steps.demandProcessing.succeeded,
-      baselineRan: result.steps.baselineSchedule.ran.length,
-      baselineSkipped: result.steps.baselineSchedule.skipped.length,
-      baselineFailed: result.steps.baselineSchedule.failed.length,
-      errors: result.errors.length,
-    }));
-
-    // Return response
-    return NextResponse.json({
-      success: result.errors.length === 0,
-      timestamp: result.timestamp,
-      duration: result.duration,
-      steps: {
-        lockCleanup: result.steps.lockCleanup.cleaned,
-        staleRecovery: result.steps.staleRecovery.recovered,
-        demandProcessing: {
-          processed: result.steps.demandProcessing.processed,
-          succeeded: result.steps.demandProcessing.succeeded,
-          failed: result.steps.demandProcessing.failed,
-          skipped: result.steps.demandProcessing.skipped,
+      // Return response
+      return NextResponse.json({
+        success: result.errors.length === 0,
+        timestamp: result.timestamp,
+        duration: result.duration,
+        steps: {
+          lockCleanup: result.steps.lockCleanup.cleaned,
+          staleRecovery: result.steps.staleRecovery.recovered,
+          demandProcessing: {
+            processed: result.steps.demandProcessing.processed,
+            succeeded: result.steps.demandProcessing.succeeded,
+            failed: result.steps.demandProcessing.failed,
+            skipped: result.steps.demandProcessing.skipped,
+          },
+          baselineSchedule: {
+            ran: result.steps.baselineSchedule.ran,
+            skipped: result.steps.baselineSchedule.skipped.length,
+            failed: result.steps.baselineSchedule.failed,
+          },
         },
-        baselineSchedule: {
-          ran: result.steps.baselineSchedule.ran,
-          skipped: result.steps.baselineSchedule.skipped.length,
-          failed: result.steps.baselineSchedule.failed,
+        errors: result.errors,
+      });
+    } catch (err: any) {
+      log.error('[Cron Ingestion] Fatal error', err);
+      return NextResponse.json(
+        {
+          success: false,
+          error: err.message,
+          timestamp: new Date().toISOString(),
         },
-      },
-      errors: result.errors,
-    });
-  } catch (err: any) {
-    console.error('[Cron Ingestion] Fatal error:', err);
-    return NextResponse.json(
-      {
-        success: false,
-        error: err.message,
-        timestamp: new Date().toISOString(),
-      },
-      { status: 500 }
-    );
-  } finally {
-    lock.release();
-  }
+        { status: 500 }
+      );
+    }
+  });
 }
 
 /**
@@ -94,49 +88,43 @@ export async function GET(request: NextRequest) {
  * Accepts optional body with { action: 'baseline' | 'demand' | 'health' }.
  */
 export async function POST(request: NextRequest) {
-  // Fail closed — a missing CRON_SECRET must never make this endpoint public.
-  const denied = cronAuthFailure(request.headers);
-  if (denied) return denied;
+  // runCron: fail-closed auth + overlap guard (an overlapping manual trigger would fight the
+  // scheduled cycle) + per-tick correlation.
+  return runCron('ingestion:post', request, async () => {
+    const body = await request.json().catch(() => ({}));
+    const action = body.action || 'full';
 
-  const body = await request.json().catch(() => ({}));
-  const action = body.action || 'full';
+    try {
+      switch (action) {
+        case 'baseline': {
+          const result = await BaselineScheduler.runBaselineCycle();
+          return NextResponse.json({ success: true, action, result });
+        }
 
-  // Overlap guard — same reason as GET: an overlapping manual trigger would fight the scheduled cycle.
-  const lock = acquireCronLock('ingestion:post');
-  if (!lock) return cronBusyResponse('ingestion:post');
+        case 'demand': {
+          const { IngestionScheduler } = await import('@/lib/ingestion/scheduler');
+          const maxSegments = body.maxSegments || 3;
+          const result = await IngestionScheduler.processDemandQueue(maxSegments);
+          return NextResponse.json({ success: true, action, result });
+        }
 
-  try {
-    switch (action) {
-      case 'baseline': {
-        const result = await BaselineScheduler.runBaselineCycle();
-        return NextResponse.json({ success: true, action, result });
+        case 'health': {
+          const result = await BackgroundScheduler.healthCheck();
+          return NextResponse.json({ success: true, action, result });
+        }
+
+        case 'full':
+        default: {
+          const result = await BackgroundScheduler.run();
+          return NextResponse.json({ success: true, action, result });
+        }
       }
-
-      case 'demand': {
-        const { IngestionScheduler } = await import('@/lib/ingestion/scheduler');
-        const maxSegments = body.maxSegments || 3;
-        const result = await IngestionScheduler.processDemandQueue(maxSegments);
-        return NextResponse.json({ success: true, action, result });
-      }
-
-      case 'health': {
-        const result = await BackgroundScheduler.healthCheck();
-        return NextResponse.json({ success: true, action, result });
-      }
-
-      case 'full':
-      default: {
-        const result = await BackgroundScheduler.run();
-        return NextResponse.json({ success: true, action, result });
-      }
+    } catch (err: any) {
+      log.error(`[Cron Ingestion] ${action} error`, err);
+      return NextResponse.json(
+        { success: false, action, error: err.message },
+        { status: 500 }
+      );
     }
-  } catch (err: any) {
-    console.error(`[Cron Ingestion] ${action} error:`, err);
-    return NextResponse.json(
-      { success: false, action, error: err.message },
-      { status: 500 }
-    );
-  } finally {
-    lock.release();
-  }
+  });
 }

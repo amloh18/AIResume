@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
@@ -831,7 +831,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
                 <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-100 dark:text-gray-800" />
                 <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
                   strokeDasharray={276.46} strokeDashoffset={276.46 - (276.46 * ((primaryScore || 0) / 100))}
-                  className={`${getScoreColor(primaryScore)} transition-all duration-1000 ease-out`} strokeWidth="8" strokeLinecap="round" />
+                  className={`${getScoreColor(primaryScore)} transition-all duration-1000 ease-out`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
                 <span className="text-4xl font-black text-gray-900 dark:text-white">{primaryScore || 0}%</span>

@@ -77,8 +77,8 @@ export const GET = withAdminAuth(async (request: NextRequest) => {
     aiUsageLogs.forEach(log => {
       totalTokens += log.aiMetadata?.tokensUsed || 0;
       
-      let inputTokens = log.aiMetadata?.inputTokens || Math.ceil((log.aiMetadata?.tokensUsed || 0) * 0.8);
-      let outputTokens = log.aiMetadata?.outputTokens || ((log.aiMetadata?.tokensUsed || 0) - inputTokens);
+      const inputTokens = log.aiMetadata?.inputTokens || Math.ceil((log.aiMetadata?.tokensUsed || 0) * 0.8);
+      const outputTokens = log.aiMetadata?.outputTokens || ((log.aiMetadata?.tokensUsed || 0) - inputTokens);
       
       const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M;
       const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;

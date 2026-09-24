@@ -352,7 +352,7 @@ function calculateCompletionPercentage(coverLetter: any): number {
   if (coverLetter.status === 'archived') return 0;
 
   let score = 0;
-  let maxScore = 5;
+  const maxScore = 5;
 
   if (coverLetter.title && coverLetter.title.trim()) score += 1;
   if (coverLetter.content && coverLetter.content.trim()) score += 1;

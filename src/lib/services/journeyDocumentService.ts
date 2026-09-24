@@ -1,3 +1,4 @@
+import { log } from '@/lib/structured-logger';
 import mongoose from 'mongoose';
 import { ApplicationJourney, CV, CoverLetter, JobApplication } from '@/models';
 import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
@@ -122,7 +123,7 @@ export async function createJourneyDocuments(
     const journey = await ApplicationJourney.findById(journeyId);
 
     if (!journey) {
-      console.error('❌ Journey Document Service - Journey not found:', journeyId);
+      log.error('❌ Journey Document Service - Journey not found:', undefined, { journeyId });
       return {
         success: false,
         cvId: null,
@@ -134,7 +135,7 @@ export async function createJourneyDocuments(
     // Verify ownership
     const journeyUserId = journey.userId?.toString();
     if (journeyUserId !== userId) {
-      console.error('❌ Journey Document Service - Ownership mismatch:', { journeyUserId, userId });
+      log.error('❌ Journey Document Service - Ownership mismatch:', undefined, { journeyUserId, userId });
       return {
         success: false,
         cvId: null,
@@ -233,7 +234,7 @@ export async function createJourneyDocuments(
             mode: tailoringMode,
           });
 
-          console.log('📊 Journey Document Service - Intelligence layer built:\n' +
+          log.info('📊 Journey Document Service - Intelligence layer built:\n' +
             summarizeGenerationContext(generationContext));
 
           // Persist intelligence on journey for future reference
@@ -250,7 +251,7 @@ export async function createJourneyDocuments(
           });
         }
       } catch (intelError) {
-        console.warn('⚠️ Journey Document Service - Intelligence layer failed, continuing without:', intelError);
+        log.warn('⚠️ Journey Document Service - Intelligence layer failed, continuing without:', { intelError: String(intelError) });
         generationContext = null;
       }
     }
@@ -261,7 +262,7 @@ export async function createJourneyDocuments(
     const latestJourney = await ApplicationJourney.findById(currentJourney._id);
     if (latestJourney && latestJourney.cvId) {
       cvId = latestJourney.cvId.toString();
-      console.log('✅ Journey Document Service - CV already linked to journey (race condition handled):', cvId);
+      log.info('✅ Journey Document Service - CV already linked to journey (race condition handled):', { cvId });
     }
 
     // Create CV if not exists
@@ -274,7 +275,7 @@ export async function createJourneyDocuments(
 
       if (existingJourneyCV) {
         cvId = existingJourneyCV._id.toString();
-        console.log('✅ Journey Document Service - Found existing CV for journey:', cvId);
+        log.info('✅ Journey Document Service - Found existing CV for journey:', { cvId });
       }
     }
 
@@ -301,7 +302,7 @@ export async function createJourneyDocuments(
 
         if (finalCheck) {
           cvId = finalCheck._id.toString();
-          console.log('✅ Journey Document Service - CV found in final check (race condition prevented):', cvId);
+          log.info('✅ Journey Document Service - CV found in final check (race condition prevented):', { cvId });
         } else {
           // Duplicate master CV
           const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
@@ -327,12 +328,12 @@ export async function createJourneyDocuments(
           }
 
           if (templateResolution.pinnedFrom) {
-            console.log(
+            log.info(
               `📐 Journey Document Service - Pinned ATS-safe template '${templateId}' ` +
               `(Master used '${templateResolution.pinnedFrom}', ${templateResolution.profile.reason})`
             );
           } else {
-            console.log(
+            log.info(
               `📐 Journey Document Service - Master template '${templateId}' is ATS-safe ` +
               `(${templateResolution.profile.layoutType})`
             );
@@ -347,7 +348,7 @@ export async function createJourneyDocuments(
           // journey's CV — every job still gets its own tailored document.
           const refinementSeed = generationContext?.reuseEvaluation?.refinementSeed || null;
           if (refinementSeed) {
-            console.log(
+            log.info(
               `🌱 Journey Document Service - Refining from prior CV "${refinementSeed.seedCVTitle}" ` +
               `(${Math.round(refinementSeed.confidence * 100)}% comparable): ` +
               `${refinementSeed.alreadyEvidencedKeywords.length} keywords already evidenced, ` +
@@ -360,7 +361,7 @@ export async function createJourneyDocuments(
 
           if (shouldTailorDocuments) {
             try {
-              console.log('🚀 Journey Document Service - Tailoring CV content for job...');
+              log.info('🚀 Journey Document Service - Tailoring CV content for job...');
               const tailoringResult = await tailorCVContent(
                 duplicatedCvData,
                 job,
@@ -372,25 +373,25 @@ export async function createJourneyDocuments(
                 pinnedKeywords = tailoringResult.pinnedKeywords;
                 skippedKeywords = tailoringResult.skippedKeywords;
                 cvWasTailored = true;
-                console.log(
+                log.info(
                   `✅ Journey Document Service - CV content tailored successfully ` +
                   `(${pinnedKeywords.length} keywords pinned from evidence, ` +
                   `${skippedKeywords.length} skipped as unevidenced)`
                 );
                 if (pinnedKeywords.length > 0) {
-                  console.log(`📌 Pinned keywords: ${pinnedKeywords.join(', ')}`);
+                  log.info(`📌 Pinned keywords: ${pinnedKeywords.join(', ')}`);
                 }
               }
             } catch (tailorError) {
-              console.error('⚠️ Journey Document Service - Failed to tailor CV content, using master CV content:', tailorError);
+              log.error('⚠️ Journey Document Service - Failed to tailor CV content, using master CV content:', tailorError as Error);
               usedFallbackContent = true;
             }
           } else {
-            console.log('ℹ️ Journey Document Service - Creating non-tailored CV fallback from master CV');
+            log.info('ℹ️ Journey Document Service - Creating non-tailored CV fallback from master CV');
           }
 
           if (duplicatedCvData && !duplicatedCvData.structure) {
-            console.log('⚠️ Journey Document Service - Master CV missing structure, will be initialized in studio');
+            log.info('⚠️ Journey Document Service - Master CV missing structure, will be initialized in studio');
           }
 
           const duplicatedCV = new CV({
@@ -436,7 +437,7 @@ export async function createJourneyDocuments(
           const savedCV = await duplicatedCV.save();
           cvId = savedCV._id.toString();
 
-          console.log('✅ Journey Document Service - CV created with preserved structure:', {
+          log.info('✅ Journey Document Service - CV created with preserved structure:', {
             cvId,
             hasStructure: !!(savedCV.cvData?.structure),
             hasContent: !!(savedCV.cvData?.content),
@@ -447,7 +448,7 @@ export async function createJourneyDocuments(
         }
       } else {
         // EDGE CASE 5: No Master CV - Fallback to standalone CV or create basic structure
-        console.warn('⚠️ Journey Document Service - Master CV not found, checking for standalone CVs...');
+        log.warn('⚠️ Journey Document Service - Master CV not found, checking for standalone CVs...');
 
         // Check for standalone CVs (most recently modified)
         const standaloneCVs = await CV.find({
@@ -459,7 +460,7 @@ export async function createJourneyDocuments(
         if (standaloneCVs.length > 0) {
           // EDGE CASE 4: Multiple Standalone CVs - Use most recently modified
           const standaloneCV = standaloneCVs[0];
-          console.log('✅ Journey Document Service - Using standalone CV as source:', standaloneCV._id);
+          log.info('✅ Journey Document Service - Using standalone CV as source:', { cvId: standaloneCV._id });
 
           // Link standalone CV to journey instead of creating new one
           standaloneCV.cvType = 'journey';
@@ -477,7 +478,7 @@ export async function createJourneyDocuments(
             standaloneCV.templateId = standaloneTemplateResolution.templateId;
             standaloneCV.templateName = resolvedTemplate?.name || 'Modern Minimal';
             standaloneCV.templateData = undefined;
-            console.log(
+            log.info(
               `📐 Journey Document Service - Pinned standalone CV to ATS-safe template ` +
               `'${standaloneTemplateResolution.templateId}' (was '${standaloneTemplateResolution.pinnedFrom}')`
             );
@@ -501,12 +502,12 @@ export async function createJourneyDocuments(
           currentJourney.cvId = cvId;
           await currentJourney.save();
 
-          console.log('✅ Journey Document Service - Standalone CV linked to journey:', cvId);
+          log.info('✅ Journey Document Service - Standalone CV linked to journey:', { cvId });
           usedFallbackContent = true;
         } else {
           // EDGE CASE 5: No source CV exists - Create basic CV structure
-          console.error('❌ Journey Document Service - No master CV or standalone CV found');
-          console.error('❌ Journey Document Service - Creating basic CV structure as fallback');
+          log.error('❌ Journey Document Service - No master CV or standalone CV found');
+          log.error('❌ Journey Document Service - Creating basic CV structure as fallback');
 
           const basicTemplateResolution = resolveAtsSafeTemplateId(null);
           const basicTemplate = getTemplateById(basicTemplateResolution.templateId);
@@ -559,7 +560,7 @@ export async function createJourneyDocuments(
           const savedCV = await basicCV.save();
           cvId = savedCV._id.toString();
           usedFallbackContent = true;
-          console.log('⚠️ Journey Document Service - Basic CV structure created as fallback:', cvId);
+          log.info('⚠️ Journey Document Service - Basic CV structure created as fallback:', { cvId });
         }
       }
     }
@@ -574,21 +575,21 @@ export async function createJourneyDocuments(
 
       if (existingJourneyCoverLetter) {
         coverLetterId = existingJourneyCoverLetter._id.toString();
-        console.log('✅ Journey Document Service - Found existing cover letter for journey:', coverLetterId);
+        log.info('✅ Journey Document Service - Found existing cover letter for journey:', { coverLetterId });
       }
     }
 
     if (!coverLetterId) {
       // CRITICAL: Ensure CV exists and has data before generating cover letter
       if (!cvId) {
-        console.error('❌ Journey Document Service - Cannot create cover letter: CV must be created first');
+        log.error('❌ Journey Document Service - Cannot create cover letter: CV must be created first');
         throw new Error('CV must be created before cover letter');
       }
 
       // Fetch CV to get cvData and ensure it has content
       const cvDocument = await CV.findById(cvId);
       if (!cvDocument || !cvDocument.cvData) {
-        console.error('❌ Journey Document Service - CV not found or has no data:', cvId);
+        log.error('❌ Journey Document Service - CV not found or has no data:', undefined, { cvId });
         throw new Error('CV not found or has no data');
       }
 
@@ -620,14 +621,14 @@ export async function createJourneyDocuments(
         // Generate footer
         footer = formatCoverLetterFooter(cvDataWithAnalysis);
 
-        console.log('✅ Journey Document Service - Generated header and footer from CV/job data');
+        log.info('✅ Journey Document Service - Generated header and footer from CV/job data');
       } catch (headerFooterError) {
-        console.error('⚠️ Journey Document Service - Failed to generate header/footer:', headerFooterError);
+        log.error('⚠️ Journey Document Service - Failed to generate header/footer:', headerFooterError as Error);
       }
 
       if (shouldTailorDocuments) {
         try {
-          console.log('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
+          log.info('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
           const jobDescText = jobAny?.jobDescription || jobAny?.description || '';
 
           // Build enhanced prompt with intelligence context
@@ -674,9 +675,9 @@ export async function createJourneyDocuments(
 
           body = generatedCoverLetter.legacyBody;
           coverLetterWasTailored = true;
-          console.log('✅ Journey Document Service - Tailored cover letter body generated successfully');
+          log.info('✅ Journey Document Service - Tailored cover letter body generated successfully');
         } catch (generateError) {
-          console.error('⚠️ Journey Document Service - Failed to generate tailored cover letter body, using fallback:', generateError);
+          log.error('⚠️ Journey Document Service - Failed to generate tailored cover letter body, using fallback:', generateError as Error);
           usedFallbackContent = true;
         }
       }
@@ -684,7 +685,7 @@ export async function createJourneyDocuments(
       if (!body) {
         if (!shouldTailorDocuments) {
           body = '';
-          console.log('✅ Journey Document Service - Using header-only cover letter fallback for non-tailored generation');
+          log.info('✅ Journey Document Service - Using header-only cover letter fallback for non-tailored generation');
         } else {
           usedFallbackContent = true;
           const recipientName = job?.contactDetails?.name || currentJourney.contactPerson || 'Hiring Manager';
@@ -695,7 +696,7 @@ I am writing to express my interest in the ${currentJourney.jobTitle} position a
 My background includes relevant experience and strengths that I can bring to the role, and I would welcome the opportunity to explain how that experience could support your team.
 
 Thank you for your time and consideration. I would welcome the opportunity to discuss my fit for the role.`;
-          console.log('✅ Journey Document Service - Using default cover letter body fallback');
+          log.info('✅ Journey Document Service - Using default cover letter body fallback');
         }
       }
 
@@ -712,7 +713,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 
       if (finalCheck) {
         coverLetterId = finalCheck._id.toString();
-        console.log('✅ Journey Document Service - Cover letter found in final check (race condition prevented):', coverLetterId);
+        log.info('✅ Journey Document Service - Cover letter found in final check (race condition prevented):', { coverLetterId });
       } else {
         // Merge header, body, footer for the content field (required by schema)
         const mergedContent = mergeCoverLetterContent(header || '', body || '', footer || '');
@@ -743,7 +744,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
         const savedCoverLetter = await duplicatedCoverLetter.save();
         coverLetterId = savedCoverLetter._id.toString();
 
-        console.log('✅ Journey Document Service - Cover letter created:', coverLetterId);
+        log.info('✅ Journey Document Service - Cover letter created:', { coverLetterId });
       }
     }
 
@@ -795,7 +796,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 
     // Save journey and verify it was saved correctly
     const savedJourney = await currentJourney.save();
-    console.log('✅ Journey Document Service - Journey updated:', {
+    log.info('✅ Journey Document Service - Journey updated:', {
       journeyId: savedJourney._id,
       cvId: savedJourney.cvId,
       coverLetterId: savedJourney.coverLetterId,
@@ -804,14 +805,14 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 
     // Verify the save
     if (!savedJourney.cvId || !savedJourney.coverLetterId) {
-      console.error('❌ Journey Document Service - Journey not properly updated:', {
+      log.error('❌ Journey Document Service - Journey not properly updated:', undefined, {
         cvId: savedJourney.cvId,
         coverLetterId: savedJourney.coverLetterId
       });
       throw new Error('Journey documents were created but not properly linked');
     }
 
-    console.log('✅ Journey Document Service - Documents created successfully for journey:', journeyId);
+    log.info('✅ Journey Document Service - Documents created successfully for journey:', { journeyId });
 
     // Send notification that documents are ready
     try {
@@ -852,10 +853,10 @@ Thank you for your time and consideration. I would welcome the opportunity to di
             generationStatus: currentJourney.generationState?.status,
           },
         });
-        console.log('✅ Journey Document Service - Notification sent for documents ready');
+        log.info('✅ Journey Document Service - Notification sent for documents ready');
       }
     } catch (notificationError) {
-      console.error('⚠️ Journey Document Service - Failed to send notification (non-critical):', notificationError);
+      log.error('⚠️ Journey Document Service - Failed to send notification (non-critical):', notificationError as Error);
       // Don't fail document creation if notification fails
     }
 
@@ -867,7 +868,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
     };
 
   } catch (error) {
-    console.error('❌ Journey Document Service - Error creating documents:', error);
+    log.error('❌ Journey Document Service - Error creating documents:', error as Error);
 
     // Update journey status to failed
     try {
@@ -888,7 +889,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
         await journey.save();
       }
     } catch (updateError) {
-      console.error('❌ Journey Document Service - Failed to update journey status:', updateError);
+      log.error('❌ Journey Document Service - Failed to update journey status:', updateError as Error);
     }
 
     return {
@@ -964,7 +965,7 @@ async function tailorCVContent(
         repair.restoredShapeKeys.length > 0 ||
         repair.restoredEntries > 0
       ) {
-        console.log(
+        log.info(
           `🔧 Journey Document Service - Tailoring repair (${mode}): restored sections [${repair.restoredSections.join(', ') || 'none'}], shape [${repair.restoredShapeKeys.join(', ') || 'none'}], entries ${repair.restoredEntries}`
         );
       }
@@ -978,7 +979,7 @@ async function tailorCVContent(
 
     return null;
   } catch (error) {
-    console.error('Error tailoring CV content:', error);
+    log.error('Error tailoring CV content:', error as Error);
     return null;
   }
 }

@@ -101,8 +101,8 @@ export const calculateOptimalColumnDistribution = (
   // Sort by height (largest first) for greedy bin packing
   movableSections.sort((a, b) => b.estimatedHeight - a.estimatedHeight);
 
-  let sidebarColumn: SectionWithHeight[] = [...fixedSections];
-  let mainColumn: SectionWithHeight[] = [];
+  const sidebarColumn: SectionWithHeight[] = [...fixedSections];
+  const mainColumn: SectionWithHeight[] = [];
   let sidebarHeight = fixedSections.reduce((sum, s) => sum + s.estimatedHeight, 0);
   let mainHeight = 0;
 

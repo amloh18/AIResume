@@ -114,7 +114,7 @@ const DuplicateJobWarningModal: React.FC<DuplicateJobWarningModalProps> = ({
                                 {/* New Job Being Added */}
                                 <div className="mb-6">
                                     <h3 className="text-small font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                        Job You're Adding:
+                                        Job You&apos;re Adding:
                                     </h3>
                                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
                                         <div className="flex items-start gap-3">
