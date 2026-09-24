@@ -22,8 +22,9 @@ Sentry.init({
   // Add optional integrations for additional features
   integrations: [Sentry.replayIntegration()],
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
+  // 100% tracing sampled every request in production — expensive, and it shipped with user PII
+  // attached. Sample errors fully and traces lightly instead; development keeps full tracing.
+  tracesSampleRate: process.env.NODE_ENV === 'development' ? 1 : 0.1,
   // Enable logs to be sent to Sentry
   enableLogs: true,
 
@@ -35,9 +36,10 @@ Sentry.init({
   // Define how likely Replay events are sampled when an error occurs.
   replaysOnErrorSampleRate: 1.0,
 
-  // Enable sending user PII (Personally Identifiable Information)
+  // PII (IPs, request body, cookies, URLs with query params) is NOT sent by default. Resume and
+  // application data is sensitive; Sentry receives the error, not the user's personal details.
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
+  sendDefaultPii: false,
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

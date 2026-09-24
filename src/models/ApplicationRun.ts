@@ -1,3 +1,10 @@
+/**
+ * DEAD CODE INVENTORY (audit 2026-09-24, fix-tasks R8.1) — **do not extend**.
+ *
+ * No file in the repository imports `models/ApplicationRun` (verified by grep 2026-09-24). Run-level
+ * evidence is recorded through `ApplicationEvent` instead (see `applicationStateMachine.transition`).
+ * Kept as a removal candidate for the out-of-scope GAP-12 consolidation (fix-tasks Q4).
+ */
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IApplicationRunStep {

@@ -44,17 +44,35 @@ export function tokensMatch(presented: string, expected: string): boolean {
 }
 
 /**
- * True when the request carries a valid cron bearer token.
+ * True when the request carries a valid cron credential.
+ *
+ * Two header forms are accepted, both compared in constant time against every configured secret:
+ *
+ *   Authorization: Bearer <secret>   — the form the proxy authenticates (src/proxy.ts);
+ *   X-Api-Key: <secret>              — the form `/api/cron/billing` and `/api/cron/sessions/cleanup`
+ *                                      used historically. Kept as an alias so migrating those routes
+ *                                      to this shared check does not break an existing scheduler entry
+ *                                      that only sets the header.
  *
  * Returns false when no secret is configured. That is not an accident: the proxy rejected these routes
  * unconditionally before this module existed, and failing closed means a missing `CRON_SECRET` can never
  * silently turn every cron endpoint into a public one.
  */
 export function isAuthorizedCronRequest(headers: HeaderReader): boolean {
+  const secrets = getCronSecrets();
+  if (secrets.length === 0) return false;
+
   const header = (headers.get('authorization') || '').trim();
   const match = /^Bearer\s+(.+)$/i.exec(header);
-  if (!match) return false;
+  if (match) {
+    const presented = match[1].trim();
+    return secrets.some((secret) => tokensMatch(presented, secret));
+  }
 
-  const presented = match[1].trim();
-  return getCronSecrets().some((secret) => tokensMatch(presented, secret));
+  const apiKey = (headers.get('x-api-key') || '').trim();
+  if (apiKey) {
+    return secrets.some((secret) => tokensMatch(apiKey, secret));
+  }
+
+  return false;
 }

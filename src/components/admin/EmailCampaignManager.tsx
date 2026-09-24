@@ -414,7 +414,7 @@ export default function EmailCampaignManager() {
               ERASE SIGNAL
             </DialogTitle>
             <DialogDescription className="text-white/40">
-              Are you sure you want to permanently erase "{campaignToDelete?.campaignName}"? This action cannot be reversed.
+              Are you sure you want to permanently erase &quot;{campaignToDelete?.campaignName}&quot;? This action cannot be reversed.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6 gap-2">
@@ -434,7 +434,7 @@ export default function EmailCampaignManager() {
               ARCHIVE SIGNAL
             </DialogTitle>
             <DialogDescription className="text-white/40">
-              Move "{campaignToArchive?.campaignName}" to long-term storage? Telemetry data will be preserved.
+              Move &quot;{campaignToArchive?.campaignName}&quot; to long-term storage? Telemetry data will be preserved.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6 gap-2">

@@ -38,6 +38,11 @@ export class ApplicationWatchdog {
     const reports: StuckApplicationReport[] = [];
 
     // 1. Stuck in 'submitting' or 'verification' > 5 mins (CRITICAL CRASH DANGER)
+    //
+    // Note: no production writer currently sets these two states (only the golden-path runner test
+    // does) — the branch is kept deliberately. They are valid `InternalApplicationStatus` values, the
+    // crash it guards against is the worst case in the system (submitted-but-unverified), and the scan
+    // costs one indexed query.
     const submittingThreshold = new Date(now.getTime() - config.maxSubmittingMinutes * 60 * 1000);
     const stuckSubmitting = await appsColl
       .find({
@@ -82,6 +87,12 @@ export class ApplicationWatchdog {
     }
 
     // 3. Stuck in 'queued' > 30 mins (stale queue items)
+    //
+    // A queued application is only recoverable while its ApplicationQueue item still exists. If the
+    // queue item is gone (already completed/dead-lettered, or the app was re-queued by a previous
+    // recovery pass), "retry" has nothing to retry and the old behaviour — setting `internalStatus`
+    // back to `queued` — re-matched this same branch forever without ever escalating. Orphans route
+    // to review instead; live queue items keep the retry hint (the worker may simply be down).
     const queuedThreshold = new Date(now.getTime() - config.maxQueuedMinutes * 60 * 1000);
     const stuckQueued = await appsColl
       .find({
@@ -90,16 +101,38 @@ export class ApplicationWatchdog {
       })
       .toArray();
 
+    let withPendingQueueItem = new Set<string>();
+    if (stuckQueued.length > 0) {
+      try {
+        // Mongoose's default collection name for the `ApplicationQueue` model.
+        const queueColl = db.collection('applicationqueues');
+        const pending = await queueColl
+          .find({
+            applicationId: { $in: stuckQueued.map((a) => a._id) },
+            status: { $in: ['queued', 'processing'] },
+          })
+          .project({ applicationId: 1 })
+          .toArray();
+        withPendingQueueItem = new Set(pending.map((q) => String(q.applicationId)));
+      } catch {
+        // If the queue collection cannot be read, treat everything as orphaned (safe: review > loop).
+        withPendingQueueItem = new Set();
+      }
+    }
+
     for (const app of stuckQueued) {
       const durationMins = Math.round((now.getTime() - new Date(app.updatedAt).getTime()) / 60000);
+      const orphaned = !withPendingQueueItem.has(String(app._id));
       reports.push({
         applicationId: String(app._id),
         userId: String(app.userId),
         jobId: String(app.jobId || ''),
         currentStatus: app.internalStatus,
         stuckDurationMinutes: durationMins,
-        recommendedAction: 'retry_transient',
-        reason: `Application stuck in queue for ${durationMins}m. Worker may have missed it.`,
+        recommendedAction: orphaned ? 'route_review_required' : 'retry_transient',
+        reason: orphaned
+          ? `Application has been queued ${durationMins}m with no live queue item to claim it. Route to manual review.`
+          : `Application stuck in queue for ${durationMins}m. Worker may have missed it.`,
       });
     }
 

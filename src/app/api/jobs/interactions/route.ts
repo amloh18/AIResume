@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const userId = new ObjectId(auth.userId);
 
-    let query: any = { userId };
+    const query: any = { userId };
     if (jobId && ObjectId.isValid(jobId)) {
       query.jobId = new ObjectId(jobId);
     } else if (jobIdsParam) {

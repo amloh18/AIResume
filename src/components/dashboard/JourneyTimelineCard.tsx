@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React from 'react';
@@ -30,7 +30,7 @@ import {
   DollarSign,
   Target
 } from 'lucide-react';
-// @ts-ignore
+// @ts-ignore pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import Play from 'lucide-react/dist/esm/icons/play';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';

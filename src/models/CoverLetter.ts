@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { mergeCoverLetterContent } from '@/lib/utils/coverLetterUtils';
 
 export interface ICoverLetter extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema - touched to force recompile
@@ -193,7 +194,6 @@ coverLetterSchema.pre('save', function (next) {
 
   // Merge header + body + footer into content so search/previews are always in sync
   if (this.header || this.body || this.footer) {
-    const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
     const mergedContent = mergeCoverLetterContent(
       this.header || '',
       this.body || '',

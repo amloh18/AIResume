@@ -58,9 +58,24 @@ export interface SessionCredentials {
 export class UnifiedApplyService {
   /**
    * Main entry point: apply to a job based on its ATS type
+   *
+   * `options.mode` is the execution gate carried from the decision engine via the queue item:
+   *   - `auto`   → full pipeline, Playwright submits;
+   *   - `review` → documents are prepared and the application is held for approval; the browser is
+   *                 never launched (there is no resumable browser session to come back to, so a
+   *                 half-filled form could not be handed to the user anyway);
+   *   - `manual` → same hold, and the caller must not have attempted automation at all (defence in
+   *                 depth: this method refuses to submit regardless).
+   * Absent/`auto` preserves the previous behaviour for callers that have not adopted the gate yet.
    */
-  static async apply(userId: string, context: ApplyJobContext): Promise<ApplyResult> {
+  static async apply(
+    userId: string,
+    context: ApplyJobContext,
+    options?: { mode?: 'auto' | 'review' | 'manual' | 'skip' }
+  ): Promise<ApplyResult> {
     await getConnection();
+
+    const executionMode = options?.mode ?? 'auto';
 
     // 1. Validate user exists
     const user = await User.findById(userId).lean();
@@ -154,6 +169,47 @@ export class UnifiedApplyService {
     }
 
     // 7. Route to the appropriate ATS submission handler
+    /*
+      Execution gate: `review`/`manual` stop here, after the documents are prepared and staged but
+      before any browser is launched. The alternative — filling the live form and pausing before
+      submit — would need a resumable browser session, which this system does not have: the Playwright
+      context is created and closed inside one call, so a paused form could never be handed back.
+      Holding at "documents ready + awaiting approval" gives the user the same control point, and
+      re-queueing with `mode: 'auto'` performs the submission once they approve.
+    */
+    if (executionMode !== 'auto') {
+      if (docResult.journeyId) {
+        await ApplicationJourney.findByIdAndUpdate(docResult.journeyId, { status: 'ready' });
+      }
+
+      await JobApplication.findByIdAndUpdate(jobApp._id, {
+        status: 'created',
+        $push: {
+          statusHistory: {
+            status: 'created',
+            date: new Date(),
+            notes:
+              executionMode === 'manual'
+                ? 'Manual mode: documents prepared, automation withheld. Submit yourself or approve automated submission.'
+                : 'Review mode: documents prepared and held for your approval before submission.',
+          },
+        },
+      });
+
+      return {
+        success: true,
+        atsType: context.atsType,
+        applicationId: jobApp._id.toString(),
+        status: 'action_required',
+        message:
+          executionMode === 'manual'
+            ? `Documents prepared for ${context.company}. Manual mode: no automated submission was attempted.`
+            : `Documents prepared for ${context.company}. Awaiting your approval before submission.`,
+        screeningAnswers,
+        nextStep: `Review the prepared documents, then submit at ${context.jobUrl}`,
+      };
+    }
+
     try {
       let applyResult: ApplyResult;
       switch (context.atsType) {
@@ -519,18 +575,25 @@ export class UnifiedApplyService {
     try {
       const { detectGreenhouseFields, fillGreenhouseFields, submitGreenhouseForm, detectCAPTCHA } = await import('./atsPlaywrightService');
 
+      /*
+        The Playwright context used to be named `context` here, shadowing the `ApplyJobContext`
+        parameter of the same name. Consequences: `page.goto(context.jobUrl)` read `.jobUrl` off the
+        *BrowserContext* (always undefined, so goto threw and every Greenhouse run fell through to
+        `automationUnavailable`), and the message templates below rendered "at undefined". Renamed to
+        `ctx` to match the lever/ashby/workable handlers.
+      */
       let browser: any = null;
-      let context: any = null;
+      let ctx: any = null;
       let page: any = null;
 
       try {
         // Browser isolation: one context per application, whether the browser is remote (VPS CDP) or
         // local. `acquirePlaywrightBrowser()` never launches a browser inside a production container.
         browser = (await acquirePlaywrightBrowser()).browser;
-        context = await browser.newContext({
+        ctx = await browser.newContext({
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         });
-        page = await context.newPage();
+        page = await ctx.newPage();
 
         // Navigate to application URL
         await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -615,7 +678,7 @@ export class UnifiedApplyService {
       } finally {
         // Always clean up browser context
         if (page) await page.close().catch(() => {});
-        if (context) await context.close().catch(() => {});
+        if (ctx) await ctx.close().catch(() => {});
         if (browser) await browser.close().catch(() => {});
       }
     } catch (playwrightError: any) {

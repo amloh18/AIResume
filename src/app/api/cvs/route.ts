@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV, Template } from '@/models';
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const journeyId = searchParams.get('journeyId'); // Filter by journeyId
 
     // Build query conditions
-    let baseQuery: Record<string, any> = {
+    const baseQuery: Record<string, any> = {
       userId: new mongoose.Types.ObjectId(userId)
     };
 
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Handle count queries efficiently
-    let countBaseQuery = {
+    const countBaseQuery = {
       userId: new mongoose.Types.ObjectId(userId)
     };
 
@@ -533,7 +533,7 @@ export async function POST(request: NextRequest) {
 
     // Override: If first CV, force master CV type
     // Create a new metadata object to avoid reassigning const
-    let finalMetadata = metadata ? { ...metadata } : {};
+    const finalMetadata = metadata ? { ...metadata } : {};
     if (isFirstCV) {
       finalCvType = 'master';
       // Also set isMaster flag

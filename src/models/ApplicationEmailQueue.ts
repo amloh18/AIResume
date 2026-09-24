@@ -25,6 +25,8 @@ export interface IApplicationEmailQueue extends Document {
   lastError?: string;
   retryCount: number;
   nextRetryAt?: Date;
+  /** Trace id from the request that enqueued this email — see `ApplicationQueue.correlationId`. */
+  correlationId?: string;
   emailData: {
     applicationId: string;
     jobId: string;
@@ -70,6 +72,7 @@ const ApplicationEmailQueueSchema = new Schema<IApplicationEmailQueue>(
     lastError: { type: String },
     retryCount: { type: Number, default: 0 },
     nextRetryAt: { type: Date },
+    correlationId: { type: String },
     emailData: {
       applicationId: { type: String, required: true },
       jobId: { type: String, required: true },

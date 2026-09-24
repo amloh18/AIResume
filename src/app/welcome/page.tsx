@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
@@ -1048,8 +1048,8 @@ function WelcomePageContent() {
       }
 
       const rec = getRecommendedTier(overrideState);
-      let primary_goal: 'cv' | 'tracker' | 'auto_apply' = intent === 'cv' ? 'cv' : 'tracker';
-      let recommended_plan = intent === 'cv' ? 'starter_monthly' : 'focused_monthly';
+      const primary_goal: 'cv' | 'tracker' | 'auto_apply' = intent === 'cv' ? 'cv' : 'tracker';
+      const recommended_plan = intent === 'cv' ? 'starter_monthly' : 'focused_monthly';
 
       const dashboard_layout_type: 'cv' | 'tracker' | 'auto_apply' =
         intent === 'cv' ? 'cv' : 'tracker';
@@ -1328,7 +1328,7 @@ function WelcomePageContent() {
                     What are you trying to accomplish?
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
-                    Select your primary objective today. We'll configure our tools and layout to match your journey.
+                    Select your primary objective today. We&apos;ll configure our tools and layout to match your journey.
                   </p>
                 </div>
 
@@ -1413,7 +1413,7 @@ function WelcomePageContent() {
                     {candidateName ? `${candidateName}, let's build your profile` : `Let's build your career profile`}
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
-                    We'll build your <strong>Profile</strong> — the central source of truth from which all tailored applications and interview prep will be generated.
+                    We&apos;ll build your <strong>Profile</strong> — the central source of truth from which all tailored applications and interview prep will be generated.
                   </p>
                 </div>
 
@@ -1652,7 +1652,7 @@ function WelcomePageContent() {
                     {candidateName ? `What AIResume discovered about your career, ${candidateName}` : 'What AIResume discovered about your background'}
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-2xl mx-auto">
-                    We've scanned your experience and identified key strengths, keyword gaps, and readiness metrics.
+                    We&apos;ve scanned your experience and identified key strengths, keyword gaps, and readiness metrics.
                   </p>
                 </div>
 
@@ -1757,7 +1757,7 @@ function WelcomePageContent() {
                     {candidateName ? `${candidateName}, your Profile is ready! 🎉` : 'Your Profile is ready! 🎉'}
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-md mx-auto">
-                    Your Profile is finalized and ready to power your career. Select how you'd like to proceed:
+                    Your Profile is finalized and ready to power your career. Select how you&apos;d like to proceed:
                   </p>
                 </div>
 
@@ -2303,7 +2303,7 @@ function WelcomePageContent() {
                     How many applications per month?
                   </h1>
                   <p className="onboarding-copy text-gray-500 max-w-xl mx-auto">
-                    Set your target volume and we'll help you reach it.
+                    Set your target volume and we&apos;ll help you reach it.
                   </p>
                 </div>
 

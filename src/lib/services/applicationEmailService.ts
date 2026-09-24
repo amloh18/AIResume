@@ -10,6 +10,9 @@
 
 import nodemailer from 'nodemailer';
 import mongoose from 'mongoose';
+import { log } from '@/lib/structured-logger';
+import Communication from '@/models/Communication';
+import ApplicationEmailQueue from '@/models/ApplicationEmailQueue';
 
 // ============================================================================
 // Types
@@ -68,20 +71,22 @@ export interface EmailQueueItem {
  * Create Stalwart SMTP transporter
  */
 function createStalwartTransporter() {
-  const host = process.env.STALWART_SMTP_HOST || process.env.EMAIL_SERVER_HOST || '192.168.1.8';
-  const port = parseInt(process.env.STALWART_SMTP_PORT || process.env.EMAIL_SERVER_PORT || '587');
+  /*
+    No silent fallbacks here. This used to default to a specific private LAN address and a third-party
+    relay account when the environment was not configured, so a deployment with missing SMTP vars would
+    quietly start sending through an unrelated infrastructure endpoint instead of failing visibly.
+    Configuration is now required, and `getTransporter()` reports the absence.
+  */
+  const host = process.env.STALWART_SMTP_HOST || process.env.EMAIL_SERVER_HOST;
+  const port = parseInt(process.env.STALWART_SMTP_PORT || process.env.EMAIL_SERVER_PORT || '587', 10);
   const secure = process.env.STALWART_SMTP_SECURE === 'true' || port === 465;
-  const user = process.env.STALWART_SMTP_USER || process.env.EMAIL_SERVER_USER || 'b9c9d3001@smtp-brevo.com';
+  const user = process.env.STALWART_SMTP_USER || process.env.EMAIL_SERVER_USER;
   const pass = process.env.STALWART_SMTP_PASSWORD || process.env.EMAIL_SERVER_PASSWORD || '';
 
-  const config = {
+  const config: nodemailer.TransportOptions & Record<string, any> = {
     host,
     port,
     secure,
-    auth: {
-      user,
-      pass,
-    },
     // Connection pooling for performance
     pool: true,
     maxConnections: 5,
@@ -89,6 +94,12 @@ function createStalwartTransporter() {
     rateDelta: 1000,
     rateLimit: 10, // 10 emails per second max
   };
+
+  // Only attach credentials when they are actually configured: an empty `auth.user` makes nodemailer
+  // attempt a LOGIN with a blank username, which some servers reject even for unauthenticated relays.
+  if (user) {
+    config.auth = { user, pass };
+  }
 
   return nodemailer.createTransport(config);
 }
@@ -100,7 +111,7 @@ function getTransporter() {
   if (process.env.STALWART_SMTP_HOST || process.env.EMAIL_SERVER_HOST) {
     return createStalwartTransporter();
   }
-  console.warn('⚠️ Neither STALWART_SMTP_HOST nor EMAIL_SERVER_HOST configured');
+  log.warn('⚠️ Neither STALWART_SMTP_HOST nor EMAIL_SERVER_HOST configured');
   return null;
 }
 
@@ -112,8 +123,17 @@ function getTransporter() {
  * Compose application email from data
  */
 function composeApplicationEmail(data: ApplicationEmailData) {
-  const defaultSenderEmail = process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
+  /*
+    The sending identity is configured, never defaulted. The previous fallback was a personal-domain
+    address baked into source: without `APPLICATION_SENDER_EMAIL` set, every deployment silently sent
+    from that address, which also breaks SPF/DKIM alignment for buildairesume.com mail.
+  */
+  const defaultSenderEmail = process.env.APPLICATION_SENDER_EMAIL;
   const defaultSenderName = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
+
+  if (!defaultSenderEmail) {
+    throw new Error('APPLICATION_SENDER_EMAIL is not configured');
+  }
 
   const domain = defaultSenderEmail.includes('@') ? defaultSenderEmail.split('@')[1] : 'morigrid.com';
   const isCandidateEmailOnDomain = data.candidateEmail && data.candidateEmail.toLowerCase().endsWith(`@${domain}`);
@@ -226,6 +246,16 @@ export async function sendApplicationEmail(
     };
   }
 
+  if (!process.env.APPLICATION_SENDER_EMAIL) {
+    // Checked before the send attempt so the failure is explicit rather than surfacing as a
+    // generic composition error that would be classified as retryable.
+    return {
+      success: false,
+      error: 'APPLICATION_SENDER_EMAIL is not configured',
+      retryable: false,
+    };
+  }
+
   try {
     const mailOptions = composeApplicationEmail(data);
 
@@ -244,14 +274,14 @@ export async function sendApplicationEmail(
       status: 'sent',
     });
 
-    console.log(`✅ Application email sent successfully: ${result.messageId}`);
+    log.info(`✅ Application email sent successfully: ${result.messageId}`);
 
     return {
       success: true,
       messageId: result.messageId,
     };
   } catch (error: any) {
-    console.error('❌ Failed to send application email:', error);
+    log.error('❌ Failed to send application email:', error);
 
     // Track failure in MongoDB
     await trackApplicationEmail({
@@ -330,7 +360,6 @@ async function trackApplicationEmail(params: TrackEmailParams): Promise<void> {
     // Mirror into Communication collection for unified Comms tab and Journey sidebar display
     if (params.status === 'sent') {
       try {
-        const { Communication } = require('@/models/Communication');
         if (Communication) {
           await Communication.create({
             userId: params.userId,
@@ -354,11 +383,11 @@ async function trackApplicationEmail(params: TrackEmailParams): Promise<void> {
           });
         }
       } catch (commErr) {
-        console.warn('Failed to mirror application email to Communication collection:', commErr);
+        log.warn('Failed to mirror application email to Communication collection:', commErr as Error);
       }
     }
   } catch (error) {
-    console.error('Failed to track application email:', error);
+    log.error('Failed to track application email:', error as Error);
     // Don't throw - tracking failure shouldn't break email sending
   }
 }
@@ -376,9 +405,13 @@ export async function queueApplicationEmail(
   scheduledAt: Date = new Date()
 ): Promise<{ success: boolean; queueItemId?: string; error?: string }> {
   try {
+    // Pick up the ambient trace (request → queue → worker). Empty when called outside a tracked
+    // context (e.g. a script); the worker then starts a fresh trace at claim time.
+    const { getCorrelationId } = await import('@/lib/observability/correlation');
+
     // Create queue item
-    const queueItem = new (mongoose.models.ApplicationEmailQueue || 
-      require('@/models/ApplicationEmailQueue').default)({
+    const queueItem = new (mongoose.models.ApplicationEmailQueue ||
+      ApplicationEmailQueue)({
       applicationId: data.applicationId,
       jobId: data.jobId,
       userId: data.userId,
@@ -387,19 +420,35 @@ export async function queueApplicationEmail(
       attempts: 0,
       maxAttempts: 3,
       scheduledAt,
+      correlationId: getCorrelationId(),
       emailData: data,
     });
 
     await queueItem.save();
 
-    console.log(`📧 Application email queued: ${queueItem._id}`);
+    log.info(`📧 Application email queued: ${queueItem._id}`);
 
     return {
       success: true,
       queueItemId: queueItem._id?.toString(),
     };
   } catch (error: any) {
-    console.error('Failed to queue application email:', error);
+    // Duplicate key on the `email_idempotency` index (applicationId + subject) means this exact email
+    // was already enqueued — report success against the existing item instead of failing the caller,
+    // so a retried request cannot create a second send.
+    if (error?.code === 11000) {
+      const existing = await mongoose.models.ApplicationEmailQueue.findOne({
+        applicationId: data.applicationId,
+        'emailData.subject': data.subject,
+      });
+      return {
+        success: true,
+        queueItemId: existing?._id?.toString(),
+        error: undefined,
+      };
+    }
+
+    log.error('Failed to queue application email:', error);
     return {
       success: false,
       error: error.message,
@@ -412,22 +461,30 @@ export async function queueApplicationEmail(
 // ============================================================================
 
 /**
- * Check if application email was already sent
+ * Check if this specific application email was already sent.
+ *
+ * Scoped by **subject as well as application**: the previous version ignored both `emailType` and the
+ * subject and matched on `applicationId` alone, so *any* sent email for an application made every
+ * later one look "already sent" — a follow-up or a second contact on the same application would be
+ * marked sent by the worker without ever being transmitted.
+ *
+ * `emailType` is retained for call-site readability but is not a stored field; the subject is the
+ * logical email identity (it is also half of the queue's unique `email_idempotency` index).
  */
 export async function wasApplicationEmailSent(
   applicationId: string,
-  emailType: string = 'application'
+  emailType: string = 'application',
+  subject?: string
 ): Promise<boolean> {
   try {
-    // Check ApplicationEmailQueue for sent status
-    const existing = await mongoose.models.ApplicationEmailQueue.findOne({
-      applicationId,
-      status: 'sent',
-    });
+    const query: Record<string, unknown> = { applicationId, status: 'sent' };
+    if (subject) query['emailData.subject'] = subject;
+
+    const existing = await mongoose.models.ApplicationEmailQueue.findOne(query);
 
     return !!existing;
   } catch (error) {
-    console.error('Failed to check email idempotency:', error);
+    log.error('Failed to check email idempotency:', error as Error);
     return false; // Assume not sent on error
   }
 }

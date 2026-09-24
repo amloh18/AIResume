@@ -1,5 +1,6 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { importUKSponsors } from '@/lib/services/sponsorshipRegistryService';
 import { importUSH1BEmployers } from '@/lib/services/sponsorshipRegistryService';
 import dailySummaryEmailService from '@/lib/services/dailySummaryEmailService';
@@ -31,131 +32,131 @@ import { cleanupGuestUsers } from '@/lib/services/guestCleanupService';
  * }
  */
 export async function GET(request: NextRequest) {
-  try {
-    // Fail closed — a missing CRON_SECRET must never make this endpoint public.
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
-
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayOfMonth = now.getDate();
-    
-    const results: Record<string, any> = {
-      timestamp: now.toISOString(),
-      executed: [] as string[],
-      skipped: [] as string[],
-    };
-
-    // Daily Summary - runs every day at 8 AM
+  // Overlap guard: this endpoint both emails users and deletes guest accounts — running two at once
+  // would duplicate the first and race the second.
+  return runCron('unified', request, async () => {
     try {
-      console.log('📧 Running daily summary email job...');
-      const summaryResult = await dailySummaryEmailService.sendDailySummariesToAllUsers();
-      results.dailySummary = {
-        success: true,
-        sent: summaryResult.sent,
-        skipped: summaryResult.skipped,
-        failed: summaryResult.failed,
-        errors: summaryResult.errors.slice(0, 10),
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dayOfMonth = now.getDate();
+      
+      const results: Record<string, any> = {
+        timestamp: now.toISOString(),
+        executed: [] as string[],
+        skipped: [] as string[],
       };
-      results.executed.push('daily-summary');
-    } catch (error: any) {
-      console.error('❌ Error in daily summary:', error);
-      results.dailySummary = {
-        success: false,
-        error: error.message,
-      };
-    }
 
-    // Guest User Cleanup - runs every day at 8 AM
-    try {
-      console.log('🧹 Running guest user cleanup job...');
-      const deletedCount = await cleanupGuestUsers();
-      results.guestCleanup = {
-        success: true,
-        deletedCount,
-      };
-      results.executed.push('guest-cleanup');
-    } catch (error: any) {
-      console.error('❌ Error in guest user cleanup:', error);
-      results.guestCleanup = {
-        success: false,
-        error: error.message,
-      };
-    }
-
-    // UK Registry Update - runs every Monday at 8 AM (consolidated from 2 AM)
-    if (dayOfWeek === 1) {
+      // Daily Summary - runs every day at 8 AM
       try {
-        console.log('🔄 Running UK sponsor registry update...');
-        const ukResult = await importUKSponsors();
-        results.ukRegistry = {
+        log.info('📧 Running daily summary email job...');
+        const summaryResult = await dailySummaryEmailService.sendDailySummariesToAllUsers();
+        results.dailySummary = {
           success: true,
-          imported: ukResult.imported,
-          updated: ukResult.updated,
-          errors: ukResult.errors,
-          expiredMarked: ukResult.expiredMarked,
+          sent: summaryResult.sent,
+          skipped: summaryResult.skipped,
+          failed: summaryResult.failed,
+          errors: summaryResult.errors.slice(0, 10),
         };
-        results.executed.push('uk-registry');
+        results.executed.push('daily-summary');
       } catch (error: any) {
-        console.error('❌ Error in UK registry update:', error);
-        results.ukRegistry = {
+        log.error('❌ Error in daily summary:', error);
+        results.dailySummary = {
           success: false,
           error: error.message,
         };
       }
-    } else {
-      results.skipped.push('uk-registry (not Monday)');
-    }
 
-    // US Registry Update - runs on 1st of month at 8 AM (consolidated from 3 AM)
-    if (dayOfMonth === 1) {
+      // Guest User Cleanup - runs every day at 8 AM
       try {
-        console.log('🔄 Running US H-1B employer registry update...');
-        const usResult = await importUSH1BEmployers();
-        results.usRegistry = {
+        log.info('🧹 Running guest user cleanup job...');
+        const deletedCount = await cleanupGuestUsers();
+        results.guestCleanup = {
           success: true,
-          imported: usResult.imported,
-          updated: usResult.updated,
-          errors: usResult.errors,
-          deleted: usResult.deleted,
+          deletedCount,
         };
-        results.executed.push('us-registry');
+        results.executed.push('guest-cleanup');
       } catch (error: any) {
-        console.error('❌ Error in US registry update:', error);
-        results.usRegistry = {
+        log.error('❌ Error in guest user cleanup:', error);
+        results.guestCleanup = {
           success: false,
           error: error.message,
         };
       }
-    } else {
-      results.skipped.push('us-registry (not 1st of month)');
-    }
 
-    // If no tasks were executed, return a message
-    if (results.executed.length === 0) {
+      // UK Registry Update - runs every Monday at 8 AM (consolidated from 2 AM)
+      if (dayOfWeek === 1) {
+        try {
+          log.info('🔄 Running UK sponsor registry update...');
+          const ukResult = await importUKSponsors();
+          results.ukRegistry = {
+            success: true,
+            imported: ukResult.imported,
+            updated: ukResult.updated,
+            errors: ukResult.errors,
+            expiredMarked: ukResult.expiredMarked,
+          };
+          results.executed.push('uk-registry');
+        } catch (error: any) {
+          log.error('❌ Error in UK registry update:', error);
+          results.ukRegistry = {
+            success: false,
+            error: error.message,
+          };
+        }
+      } else {
+        results.skipped.push('uk-registry (not Monday)');
+      }
+
+      // US Registry Update - runs on 1st of month at 8 AM (consolidated from 3 AM)
+      if (dayOfMonth === 1) {
+        try {
+          log.info('🔄 Running US H-1B employer registry update...');
+          const usResult = await importUSH1BEmployers();
+          results.usRegistry = {
+            success: true,
+            imported: usResult.imported,
+            updated: usResult.updated,
+            errors: usResult.errors,
+            deleted: usResult.deleted,
+          };
+          results.executed.push('us-registry');
+        } catch (error: any) {
+          log.error('❌ Error in US registry update:', error);
+          results.usRegistry = {
+            success: false,
+            error: error.message,
+          };
+        }
+      } else {
+        results.skipped.push('us-registry (not 1st of month)');
+      }
+
+      // If no tasks were executed, return a message
+      if (results.executed.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: 'No scheduled tasks to run at this time',
+          ...results,
+        });
+      }
+
       return NextResponse.json({
         success: true,
-        message: 'No scheduled tasks to run at this time',
+        message: `Executed ${results.executed.length} task(s)`,
         ...results,
       });
+    } catch (error: any) {
+      log.error('❌ Error in unified cron endpoint:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to execute cron tasks',
+          message: error.message,
+        },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({
-      success: true,
-      message: `Executed ${results.executed.length} task(s)`,
-      ...results,
-    });
-  } catch (error: any) {
-    console.error('❌ Error in unified cron endpoint:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to execute cron tasks',
-        message: error.message,
-      },
-      { status: 500 }
-    );
-  }
+  });
 }
 
 // Also support POST for cron services that use POST

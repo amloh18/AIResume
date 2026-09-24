@@ -229,7 +229,7 @@ export default function CodeVerificationScreen({
         </div>
       ) : error ? null : (
         <p className="text-gray-600 dark:text-gray-300 text-h3 mb-2">
-          We've sent a 6-digit verification code to your email address.
+          We&apos;ve sent a 6-digit verification code to your email address.
         </p>
       )}
       {sendingCode ? (
@@ -280,7 +280,7 @@ export default function CodeVerificationScreen({
       {/* Resend Link */}
       <div className="mt-8">
         <p className="text-gray-300 text-small">
-          Didn't receive the code?{' '}
+          Didn&apos;t receive the code?{' '}
           <button
             onClick={handleResend}
             disabled={!canResend || isLoading}

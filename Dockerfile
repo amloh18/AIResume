@@ -44,6 +44,14 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=true
 RUN npm ci --legacy-peer-deps
 
+# Fail here — loudly and immediately — if a package the image cannot run without is missing.
+# `npm ci` treats a failed fetch of an *optional* dependency as non-fatal: it warns, skips it, and
+# still exits 0. That is how a missing `tesseract.js` slipped through and resurfaced ~3.5 minutes
+# later inside the bundler as `Module not found: Can't resolve 'tesseract.js'` — an error naming
+# neither the install nor the network. `tesseract.js` is now a real dependency, so this check is
+# belt-and-braces against any future silent skip.
+RUN node -e "const req=['next','react','mongoose','mammoth','tesseract.js'];const missing=req.filter(p=>{try{require.resolve(p);return false}catch{return true}});if(missing.length){console.error('FATAL: required dependencies missing after npm ci: '+missing.join(', '));process.exit(1)}console.log('OK required dependencies present: '+req.join(', '))"
+
 # ── builder ────────────────────────────────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
@@ -53,6 +61,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=true
+# Version truth: `/api/health` reports this, so an operator can confirm which commit is actually
+# running instead of inferring it from an image build timestamp. Passed by the build, not baked from
+# `.git` (the context is `.dockerignore`-filtered and may not contain history at all).
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
 RUN npm run build
 
 # ── worker bundle ──────────────────────────────────────────────────────────────
@@ -101,6 +114,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+
+# Carried from the builder stage so `/api/health` can report the running commit.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
 
 # Create user and group FIRST (needed for chown later)
 RUN groupadd --system --gid 1001 nodejs && \

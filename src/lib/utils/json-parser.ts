@@ -50,7 +50,7 @@ export function parseRobustJson(input: string, options: JsonParseOptions = {}): 
         throw new Error('Could not find JSON structure (object or array) in input text');
     }
 
-    let jsonString = jsonMatch[0];
+    const jsonString = jsonMatch[0];
     const originalJsonString = jsonString;
 
     // Fix common JSON issues - multiple attempts
@@ -71,7 +71,7 @@ export function parseRobustJson(input: string, options: JsonParseOptions = {}): 
 
         // Attempt 3: More aggressive - use state machine to fix quotes and newlines in strings
         (str: string) => {
-            let fixed = str.replace(/,\s*([}\]])/g, '$1');
+            const fixed = str.replace(/,\s*([}\]])/g, '$1');
             let result = '';
             let inString = false;
             let escapeNext = false;

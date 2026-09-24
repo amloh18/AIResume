@@ -1,7 +1,8 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
-import { JobService } from '@/lib/services/jobService';
+import { loadJobContext } from '@/lib/jobs/serverJobContext';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 
@@ -120,7 +121,11 @@ export async function POST(req: NextRequest) {
 
     if (jobId) {
       try {
-        const jobData = await JobService.getJob(jobId);
+        // `JobService` is a browser-only HTTP client (relative `fetch`), so importing it
+        // here meant this always threw and the job was silently ignored. Read the job
+        // straight from MongoDB instead.
+        const auth = await getAuthenticatedUser(req).catch(() => null);
+        const jobData = await loadJobContext(jobId, auth?.userId);
         resolvedRole = jobData?.title || jobData?.jobTitle || resolvedRole;
         const suggestions = await AIAssistantService.mapSkillsAndKeywords(cvData, jobData);
         categories = convertAISuggestionsToCategories(suggestions);

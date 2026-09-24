@@ -1,6 +1,6 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { Job } from '@/lib/stores/jobStore';
+import { JobPromptContext } from '@/types/job-prompt-context';
 import { AISuggestion } from '@/lib/stores/aiStore';
 import { TextNormalizationService } from './textNormalizationService';
 import { getStandardSectionName, isStandardSection } from '@/lib/data/sectionSynonyms';
@@ -192,7 +192,7 @@ export class AIAssistantService {
    */
   private static calculateHardKeywordsScore(
     cvData: UnifiedCVDataStructure,
-    jobData: Job,
+    jobData: JobPromptContext,
     cvTextWithContext: { text: string; section: string }[]
   ): { score: number; matched: number; total: number; missing: string[] } {
     const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`;
@@ -291,7 +291,7 @@ export class AIAssistantService {
    */
   private static calculateJobTitleScore(
     cvData: UnifiedCVDataStructure,
-    jobData: Job
+    jobData: JobPromptContext
   ): { score: number; matched: boolean } {
     if (!jobData.title) {
       return { score: 50, matched: false };
@@ -487,7 +487,7 @@ export class AIAssistantService {
    */
   private static calculateSoftSkillsScore(
     cvData: UnifiedCVDataStructure,
-    jobData: Job
+    jobData: JobPromptContext
   ): { score: number; matched: number; total: number } {
     const softSkillsKeywords = [
       'leadership', 'communication', 'teamwork', 'collaboration', 'problem-solving',
@@ -664,7 +664,7 @@ export class AIAssistantService {
     return sections;
   }
 
-  static async optimizeContent(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async optimizeContent(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -729,7 +729,7 @@ export class AIAssistantService {
     }
   }
 
-  static async quantifyAchievements(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async quantifyAchievements(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -778,7 +778,7 @@ export class AIAssistantService {
     }
   }
 
-  static async mapSkillsAndKeywords(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async mapSkillsAndKeywords(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -858,7 +858,7 @@ export class AIAssistantService {
     }
   }
 
-  static async analyzeGaps(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async analyzeGaps(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -915,7 +915,7 @@ List the most critical missing experiences, skills, or qualifications. Format as
     }
   }
 
-  static async generateAchievements(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async generateAchievements(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -970,7 +970,7 @@ Format as a simple bulleted list with no introduction or conclusion. Use strong 
     }
   }
 
-  static async buildTailoredSummary(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async buildTailoredSummary(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -1028,7 +1028,7 @@ Do not include greetings, bullet points, or concluding remarks. Just write the s
     }
   }
 
-  static async draftCoverLetter(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async draftCoverLetter(cvData: UnifiedCVDataStructure, jobData: JobPromptContext | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -1269,7 +1269,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
     return text;
   }
 
-  static async performComprehensiveAnalysis(cvData: UnifiedCVDataStructure, jobData: Job): Promise<any> {
+  static async performComprehensiveAnalysis(cvData: UnifiedCVDataStructure, jobData: JobPromptContext): Promise<any> {
     try {
       const cacheKey = this.generateCacheKey('comprehensiveAnalysis', cvData, jobData, {
         cvContent: this.extractCVText(cvData),
@@ -1451,7 +1451,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
   static async generateSectionSuggestions(
     section: keyof typeof AIAssistantService.SECTION_GUIDELINES,
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null
+    jobData: JobPromptContext | null
   ): Promise<AISuggestion[]> {
     const guidelines = this.SECTION_GUIDELINES[section];
     const suggestions: AISuggestion[] = [];
@@ -1485,7 +1485,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateSummarySuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
@@ -1526,7 +1526,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateWorkExperienceSuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
@@ -1571,7 +1571,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateSkillsSuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
@@ -1620,7 +1620,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateProjectsSuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
@@ -1660,7 +1660,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateEducationSuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
@@ -1690,7 +1690,7 @@ Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g
    */
   private static async generateCertificatesSuggestions(
     cvData: UnifiedCVDataStructure,
-    jobData: Job | null,
+    jobData: JobPromptContext | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];

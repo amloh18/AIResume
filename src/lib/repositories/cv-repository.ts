@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import 'server-only';
 import CV, { ICV } from '@/models/CV';
 import { BaseRepository } from './base-repository';

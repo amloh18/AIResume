@@ -79,7 +79,7 @@ export default function BlogSection() {
         {/* What's Trending */}
         <div className="mb-16">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white tracking-tight">What's trending</h3>
+            <h3 className="text-xl font-bold text-white tracking-tight">What&apos;s trending</h3>
             <div className="flex items-center gap-3">
               <button
                 onClick={prevTrending}

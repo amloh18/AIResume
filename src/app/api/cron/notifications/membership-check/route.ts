@@ -1,29 +1,29 @@
+import { runCron } from '@/lib/cron/runCron';
+import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import { cronAuthFailure } from '@/lib/auth/cron-guard';
 import { getConnection } from '@/lib/database';
 import membershipNotificationService from '@/lib/services/membershipNotificationService';
 
 export async function POST(request: NextRequest) {
-  try {
-    // Fail closed, and accept CRON_API_KEY as well as CRON_SECRET so this cannot disagree with the proxy.
-    const denied = cronAuthFailure(request.headers);
-    if (denied) return denied;
+  // Overlap guard: a second concurrent check would enqueue the same membership reminders again.
+  return runCron('notifications:membership-check', request, async () => {
+    try {
+      await getConnection();
 
-    await getConnection();
+      const result = await membershipNotificationService.checkAndEnqueue();
 
-    const result = await membershipNotificationService.checkAndEnqueue();
-
-    return NextResponse.json({
-      success: true,
-      message: 'Membership check completed',
-      enqueued: result.enqueued,
-    });
-  } catch (error: any) {
-    console.error('Error in membership check cron:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', message: error.message },
-      { status: 500 }
-    );
-  }
+      return NextResponse.json({
+        success: true,
+        message: 'Membership check completed',
+        enqueued: result.enqueued,
+      });
+    } catch (error: any) {
+      log.error('Error in membership check cron:', error);
+      return NextResponse.json(
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
+      );
+    }
+  });
 }
 

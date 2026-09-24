@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useCallback } from 'react';
@@ -395,7 +395,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         (cat: any) => cat.category?.toLowerCase() === 'general' || cat.category?.toLowerCase() === 'keywords'
       );
 
-      let updatedSkills = [...currentSkills];
+      const updatedSkills = [...currentSkills];
       if (generalSkillsIndex >= 0) {
         const targetCat = updatedSkills[generalSkillsIndex];
         const existingSkillsList = Array.isArray(targetCat.skills) ? targetCat.skills : [];

@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
         if (entry.externalId && ObjectId.isValid(entry.externalId)) jobIdsToLookup.add(entry.externalId);
       }
 
-      let jobsMap = new Map<string, any>();
+      const jobsMap = new Map<string, any>();
       if (jobIdsToLookup.size > 0) {
         const objectIds = Array.from(jobIdsToLookup).map(id => new ObjectId(id));
         const jobsDocs = await db.collection('jobs')
@@ -732,7 +732,6 @@ export async function GET(request: NextRequest) {
     }
 
     // ── Candidate Retrieval (Recommended / Role-targeted Mode) ────────────
-    let candidates;
     const effectiveSearch: string | string[] = hasSearchQuery
       ? effectiveQuery
       : (userProfile?.targetRoles && userProfile.targetRoles.length > 0
@@ -752,7 +751,7 @@ export async function GET(request: NextRequest) {
 
     const targetCount = page * limit;
     const retrievalPoolLimit = Math.max(targetCount + limit * 4, limit <= 20 ? 100 : 250);
-    candidates = await retrieveCandidates(effectiveSearch, {
+    const candidates = await retrieveCandidates(effectiveSearch, {
       limit: retrievalPoolLimit, // Adaptive pool size that scales with page
       remoteOnly: poolRemoteOnly,
       countryFilter: countryList.length > 0 ? countryList : undefined,

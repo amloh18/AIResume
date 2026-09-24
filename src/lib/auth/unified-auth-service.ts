@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import 'server-only';
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
@@ -308,7 +308,7 @@ export class UnifiedAuthService {
               console.log('✅ Passwordless login: Code verified successfully');
 
               // Find or create user
-              let user = await User.findOne({
+              const user = await User.findOne({
                 email: credentials.email.toLowerCase(),
               }).lean().exec();
 
@@ -786,7 +786,7 @@ export class UnifiedAuthService {
       debug: false, // Explicitly disable debug mode to prevent leaking secrets in logs
 
       // trustHost is primarily for NextAuth v5 but included here for better proxy support
-      // @ts-ignore
+      // @ts-ignore pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
       trustHost: true,
 
       events: {

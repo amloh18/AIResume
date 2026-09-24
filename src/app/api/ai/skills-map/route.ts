@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
-import { JobService } from '@/lib/services/jobService';
+import { loadJobContext } from '@/lib/jobs/serverJobContext';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,14 +27,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load job data if provided
+    // Load job data if provided.
+    // Previously this called `JobService.getJob(jobId)` — a browser-only HTTP client
+    // whose relative `fetch('/api/...')` throws in Node, and whose `userId` argument
+    // was never supplied. It threw on every request, so `jobData` was always null and
+    // the result was never actually tailored to the job.
     let jobData = null;
     if (jobId) {
-      try {
-        jobData = await JobService.getJob(jobId);
-      } catch (error) {
-        console.warn('Job not found, proceeding with general skills analysis:', error);
-      }
+      const auth = await getAuthenticatedUser(req).catch(() => null);
+      jobData = await loadJobContext(jobId, auth?.userId);
     }
 
     // Generate skills mapping suggestions
