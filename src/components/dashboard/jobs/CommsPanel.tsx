@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
+import toast from '@/lib/hot-toast';
 import {
   commsCacheUserId,
   commsListCacheKey,
@@ -447,6 +448,15 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
           });
           setTimeout(() => setActionNotice(null), 5000);
         }
+      } else {
+        const errBody: any = await res.json().catch(() => null);
+        const serverMessage =
+          (typeof errBody?.error === 'string' && errBody.error) ||
+          errBody?.error?.message ||
+          (typeof errBody?.message === 'string' && errBody.message) ||
+          "Couldn't generate the email. Try again.";
+        setActionNotice({ type: 'error', message: serverMessage });
+        setTimeout(() => setActionNotice(null), 4000);
       }
     } catch (error) {
       console.error('Failed to generate application email:', error);
@@ -458,11 +468,16 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
   };
 
   // Copy email to clipboard
-  const handleCopyEmail = () => {
+  const handleCopyEmail = async () => {
     if (!assignedEmail) return;
-    navigator.clipboard.writeText(assignedEmail);
-    setCopiedEmail(true);
-    setTimeout(() => setCopiedEmail(false), 2000);
+    try {
+      await navigator.clipboard.writeText(assignedEmail);
+      setCopiedEmail(true);
+      setTimeout(() => setCopiedEmail(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
   // Sync emails
@@ -474,6 +489,15 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
         await fetchCommunications();
         await fetchUnreadCounts();
         setActionNotice({ type: 'success', message: 'Synced inbox with mail server' });
+        setTimeout(() => setActionNotice(null), 4000);
+      } else {
+        const errBody: any = await res.json().catch(() => null);
+        const serverMessage =
+          (typeof errBody?.error === 'string' && errBody.error) ||
+          errBody?.error?.message ||
+          (typeof errBody?.message === 'string' && errBody.message) ||
+          "Couldn't sync the inbox. Try again.";
+        setActionNotice({ type: 'error', message: serverMessage });
         setTimeout(() => setActionNotice(null), 4000);
       }
     } catch (error) {
@@ -522,39 +546,65 @@ export default function CommsPanel({ metrics }: { metrics?: any }) {
     // Guard the unread counter — only move it when the state actually changes.
     const current = communications.find((c) => c._id === commId);
     if (current && current.isRead === isRead) return;
+    const previousRead = current?.isRead;
+
+    // Optimistic apply so the row flips instantly.
+    setCommunications((prev) =>
+      prev.map((c) => (c._id === commId ? { ...c, isRead } : c))
+    );
+    setSelectedComm((prev) => (prev?._id === commId ? { ...prev, isRead } : prev));
+    setTotalUnread((prev) => (isRead ? Math.max(0, prev - 1) : prev + 1));
 
     try {
-      await fetch(`/api/communications/${commId}`, {
+      const res = await fetch(`/api/communications/${commId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isRead }),
       });
-      setCommunications((prev) =>
-        prev.map((c) => (c._id === commId ? { ...c, isRead } : c))
-      );
-      setSelectedComm((prev) => (prev?._id === commId ? { ...prev, isRead } : prev));
-      setTotalUnread((prev) => (isRead ? Math.max(0, prev - 1) : prev + 1));
+      if (!res.ok) throw new Error(`PATCH failed with status ${res.status}`);
       setLocalMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to update read state:', error);
+      // Roll back the optimistic flip so the UI matches the server again.
+      if (typeof previousRead === 'boolean') {
+        setCommunications((prev) =>
+          prev.map((c) => (c._id === commId ? { ...c, isRead: previousRead } : c))
+        );
+        setSelectedComm((prev) => (prev?._id === commId ? { ...prev, isRead: previousRead } : prev));
+        setTotalUnread((prev) => (previousRead ? prev + 1 : Math.max(0, prev - 1)));
+      }
+      toast.error("Couldn't update the message");
     }
   };
 
 
   // Toggle star
   const handleToggleStar = async (commId: string, currentStarred: boolean) => {
+    const current = communications.find((c) => c._id === commId);
+    const previousStarred = current?.isStarred;
+
+    // Optimistic apply so the star flips instantly.
+    setCommunications((prev) =>
+      prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
+    );
+
     try {
-      await fetch(`/api/communications/${commId}`, {
+      const res = await fetch(`/api/communications/${commId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isStarred: !currentStarred }),
       });
-      setCommunications((prev) =>
-        prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
-      );
+      if (!res.ok) throw new Error(`PATCH failed with status ${res.status}`);
       setLocalMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to toggle star:', error);
+      // Roll back the optimistic star so the UI matches the server again.
+      if (typeof previousStarred === 'boolean') {
+        setCommunications((prev) =>
+          prev.map((c) => (c._id === commId ? { ...c, isStarred: previousStarred } : c))
+        );
+      }
+      toast.error("Couldn't update the message");
     }
   };
 
@@ -1718,28 +1768,48 @@ export function EmailDetail({
     setSendError(null);
   };
 
-  const handleCopySubject = () => {
-    navigator.clipboard.writeText(draftSubject);
-    setCopiedSubject(true);
-    setTimeout(() => setCopiedSubject(false), 2000);
+  const handleCopySubject = async () => {
+    try {
+      await navigator.clipboard.writeText(draftSubject);
+      setCopiedSubject(true);
+      setTimeout(() => setCopiedSubject(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy subject:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
-  const handleCopyDraft = () => {
-    navigator.clipboard.writeText(draftBody);
-    setCopiedDraft(true);
-    setTimeout(() => setCopiedDraft(false), 2000);
+  const handleCopyDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(draftBody);
+      setCopiedDraft(true);
+      setTimeout(() => setCopiedDraft(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy draft:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
-  const copyAddress = () => {
-    navigator.clipboard.writeText(comm.senderEmail);
-    setCopiedAddress(true);
-    setTimeout(() => setCopiedAddress(false), 2000);
+  const copyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(comm.senderEmail);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy address:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
-  const copyMessage = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedMessageId(id);
-    setTimeout(() => setCopiedMessageId(null), 2000);
+  const copyMessage = async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMessageId(id);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
   const recipients = comm.recipients || [];

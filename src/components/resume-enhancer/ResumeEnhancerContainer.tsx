@@ -893,14 +893,14 @@ export default function ResumeEnhancerContainer({
             } else {
               const errorMsg = result.error || 'Unknown error occurred';
               // Only alert on standard errors, not expected "not found" flows
-              alert(`Failed to transfer your draft: ${errorMsg}. Please try refreshing the page or contact support.`);
+              toast.error(`Failed to transfer your draft: ${errorMsg}. Please try refreshing the page or contact support.`);
             }
             setIsTransferringDraft(false);
           }
         } catch (error: any) {
           console.error('❌ Error transferring draft:', error);
           const errorMsg = error?.message || 'Network error';
-          alert(`Error transferring your draft: ${errorMsg}. Please try refreshing the page.`);
+          toast.error(`Error transferring your draft: ${errorMsg}. Please try refreshing the page.`);
           setIsTransferringDraft(false);
         }
       };
@@ -1952,7 +1952,7 @@ export default function ResumeEnhancerContainer({
             }
           } catch (saveError: any) {
             console.error('Failed to save CV before creating job:', saveError);
-            alert(`Failed to save CV: ${saveError.message || 'Unknown error'}. Please try again.`);
+            toast.error(`Failed to save CV: ${saveError.message || 'Unknown error'}. Please try again.`);
             return;
           }
 
@@ -2089,9 +2089,9 @@ export default function ResumeEnhancerContainer({
 
               // EDGE CASE 9: Check for tier/plan errors
               if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-                alert('This feature requires a Focused plan. Please upgrade your plan to continue.');
+                toast.error('This feature requires a Focused plan. Please upgrade your plan to continue.', { duration: 8000 });
               } else {
-                alert(`Failed to create job: ${errorMessage}`);
+                toast.error(`Failed to create job: ${errorMessage}`);
               }
 
               // Keep CV as standalone if job creation fails
@@ -2113,7 +2113,7 @@ export default function ResumeEnhancerContainer({
 
             // EDGE CASE 10: Handle network timeout
             if (fetchError.name === 'AbortError') {
-              alert('Request timed out. Please check your connection and try again.');
+              toast.error('Request timed out. Please check your connection and try again.');
             } else {
               throw fetchError;
             }
@@ -2121,7 +2121,7 @@ export default function ResumeEnhancerContainer({
         } catch (error) {
           // EDGE CASE 3: Job creation failure - keep CV standalone
           console.error('Failed to convert standalone to journey:', error);
-          alert(`Failed to create job: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          toast.error(`Failed to create job: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
           // Fallback: just update jobData, keep CV standalone
           dispatch({
@@ -2246,7 +2246,7 @@ export default function ResumeEnhancerContainer({
     } catch (error) {
       // EDGE CASE 3 & 6: Job/journey creation failure
       console.error('Failed to create journey from parsed job:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create job. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to create job. Please try again.');
       // Continue as standalone
       dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
       setTemplateOverlayOpen(true);
@@ -2589,6 +2589,30 @@ export default function ResumeEnhancerContainer({
       throw error;
     }
   };
+
+  // Step-3 content autosave reports its progress here so the header indicator
+  // reflects the real save state (the debounced autosave runs inside Step3CV).
+  // Memoized with an empty dep list: Step3CV's autosave effect depends on it.
+  const handleStep3SaveStatus = useCallback(
+    (status: 'saving' | 'success' | 'error', savedCvDataJson?: string) => {
+      if (status === 'success') {
+        if (savedCvDataJson) {
+          try {
+            initialCVDataRef.current = JSON.parse(savedCvDataJson);
+          } catch {
+            // Snapshot is advisory — keep the previous one if parsing fails
+          }
+        }
+        setSaveStatus('success');
+        // Mirror handleSmartSave: show "Saved" briefly, then fall back to the
+        // idle label (which reports dirty state).
+        setTimeout(() => setSaveStatus((s) => (s === 'success' ? 'idle' : s)), 1200);
+        return;
+      }
+      setSaveStatus(status);
+    },
+    []
+  );
 
   const handleSmartSave = async (isManualClick = false) => {
     if (saveStatus === 'saving') return;
@@ -3589,10 +3613,11 @@ export default function ResumeEnhancerContainer({
                     <Edit2 className="w-3 h-3 text-gray-400 dark:text-gray-500 group-hover:text-lime-600 dark:group-hover:text-lime-400 shrink-0" />
                   </button>
                 )}
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" aria-live="polite">
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                     saveStatus === 'error' ? 'bg-red-500' :
                     saveStatus === 'saving' ? 'bg-amber-500 animate-pulse' :
+                    saveStatus === 'idle' && hasUnsavedChanges ? 'bg-amber-500' :
                     'bg-lime-500 dark:bg-[#013f2e]'
                   }`} />
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">
@@ -3600,6 +3625,7 @@ export default function ResumeEnhancerContainer({
                      saveStatus === 'success' ? 'Saved' :
                      saveStatus === 'offline' ? 'Saved offline' :
                      saveStatus === 'error' ? 'Failed' :
+                     hasUnsavedChanges ? 'Unsaved changes' :
                      'Saved'}
                   </span>
                 </div>
@@ -3824,6 +3850,7 @@ export default function ResumeEnhancerContainer({
                         ref={step3Ref}
                         onComplete={handleStep3Complete}
                         onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
+                        onSaveStatus={handleStep3SaveStatus}
                       />
                     </ErrorBoundary>
                   </motion.div>

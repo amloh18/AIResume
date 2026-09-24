@@ -5,6 +5,7 @@ import { Plus, Trash2, Copy } from 'lucide-react';
 import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
+import toast from '@/lib/hot-toast';
 
 interface AwardsSectionProps {
   data: any[];
@@ -75,6 +76,7 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
       setSuggestions({ ...suggestions, [index]: result.suggestions });
     } catch (error) {
       console.error('Error generating AI suggestions:', error);
+      toast.error("Couldn't generate AI suggestions. Try again.");
       setShowSuggestions({ ...showSuggestions, [index]: false });
     } finally {
       setLoadingSuggestions({ ...loadingSuggestions, [index]: false });

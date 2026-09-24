@@ -328,10 +328,14 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
     return [];
   }, [state.cvData?.skills, missingSkills]);
 
-  const handleShareLink = () => {
+  const handleShareLink = async () => {
     const shareUrl = `${window.location.origin}/share/${state.cvId || 'draft'}`;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success('Share link copied to clipboard!');
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Share link copied to clipboard!');
+    } catch {
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
   useEffect(() => {
@@ -589,7 +593,7 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
     }
 
     if (docType === 'cv' && !state.selectedTemplate && !state.cvData?.metadata?.canvasTemplate) {
-      alert('Please select a template before downloading');
+      toast.error('Please select a template before downloading');
       return;
     }
 

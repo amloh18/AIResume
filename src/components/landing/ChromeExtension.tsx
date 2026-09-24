@@ -100,7 +100,7 @@ const ChromeExtension = () => {
               <motion.div
                 key={site.name}
                 className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-small tablet:text-small font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={{ scale: 1.05 }}
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">
                   <img
@@ -122,7 +122,7 @@ const ChromeExtension = () => {
               <motion.div
                 key={`${site.name}-duplicate`}
                 className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-small tablet:text-small font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={{ scale: 1.05 }}
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">
                   <img

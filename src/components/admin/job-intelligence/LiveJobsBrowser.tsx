@@ -14,13 +14,14 @@ export default function LiveJobsBrowser() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const res = await fetch(
         `/api/admin/job-intelligence?view=jobs&page=${page}&limit=20&q=${encodeURIComponent(
           search
-        )}&status=${status}`
+        )}&status=${status}`,
+        { signal }
       );
       if (res.ok) {
         const data = await res.json();
@@ -28,14 +29,18 @@ export default function LiveJobsBrowser() {
         setTotalPages(data.pagination?.totalPages || 1);
       }
     } catch (err) {
-      console.error('Fetch live jobs error:', err);
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        console.error('Fetch live jobs error:', err);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchJobs();
+    const controller = new AbortController();
+    fetchJobs(controller.signal);
+    return () => controller.abort();
   }, [page, status]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -58,7 +63,7 @@ export default function LiveJobsBrowser() {
         </div>
 
         {/* Search & Filter Bar */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 w-full sm:w-auto">
+        <form onSubmit={handleSearchSubmit} aria-busy={loading} className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-white/40" />
             <input
@@ -86,9 +91,11 @@ export default function LiveJobsBrowser() {
 
           <button
             type="submit"
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-sm shrink-0"
+            disabled={loading}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-sm shrink-0 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
-            Search
+            {loading && <RefreshCw className="w-3 h-3 animate-spin" />}
+            {loading ? 'Searching...' : 'Search'}
           </button>
         </form>
       </div>

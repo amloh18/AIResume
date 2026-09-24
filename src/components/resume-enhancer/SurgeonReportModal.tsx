@@ -3,7 +3,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, X, Eye, EyeOff, TrendingUp, Users, CheckCircle } from 'lucide-react';
+import toast from '@/lib/hot-toast';
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Sparkles, X, Eye, EyeOff, TrendingUp, Users, CheckCircle, Loader2 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import CVOverlayDocument from '@/components/cv-builder-pro/CVOverlayDocument';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
@@ -122,6 +123,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
   const [isImprovementsExpanded, setIsImprovementsExpanded] = useState(true);
   const [isGoodExpanded, setIsGoodExpanded] = useState(false);
   const [recruiterView, setRecruiterView] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
 
   const docScrollRef = useRef<HTMLDivElement>(null);
 
@@ -791,75 +793,96 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                 <InfoTooltip content={openFixes.length === 0 ? "Refresh to run a new analysis scan" : "Apply all suggested fixes to your CV automatically and save in background."}>
                   <button
                     onClick={async () => {
-                      if (openFixes.length === 0) {
-                        // Refresh analysis - clear cache and trigger re-analysis
-                        if (state.cvId && state.targetRole && state.seniorityLevel) {
-                          try {
-                            // Clear the cache to force fresh analysis
-                            await CVSurgeonService.clearAnalysisCache(state.cvId, state.cvId);
-                            // Trigger new analysis
-                            const result = await CVSurgeonService.analyzeCVWithCache(
-                              state.cvData,
-                              state.targetRole,
-                              state.seniorityLevel,
-                              state.cvId,
-                              undefined,
-                              state.jobData
-                            );
-                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes, scoreReport: result.scoreReport } });
-                            dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
+                      if (actionBusy) return;
+                      setActionBusy(true);
+                      try {
+                        if (openFixes.length === 0) {
+                          // Refresh analysis - clear cache and trigger re-analysis
+                          if (state.cvId && state.targetRole && state.seniorityLevel) {
+                            try {
+                              // Clear the cache to force fresh analysis
+                              await CVSurgeonService.clearAnalysisCache(state.cvId, state.cvId);
+                              // Trigger new analysis
+                              const result = await CVSurgeonService.analyzeCVWithCache(
+                                state.cvData,
+                                state.targetRole,
+                                state.seniorityLevel,
+                                state.cvId,
+                                undefined,
+                                state.jobData
+                              );
+                              dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes, scoreReport: result.scoreReport } });
+                              dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
 
-                            // Update ATS Context
-                            if (state.cvId) {
-                              updateSurgeonAnalysis({
-                                score: result.score,
-                                fixes: result.fixes,
-                                annotations: result.annotations,
-                                targetRole: state.targetRole || '',
-                                seniorityLevel: state.seniorityLevel || '',
-                                analyzedAt: new Date(),
-                                scoreReport: result.scoreReport,
-                              }, state.cvId).catch(err => {
-                                console.warn('Failed to update surgeon analysis in context:', err);
+                              // Update ATS Context
+                              if (state.cvId) {
+                                updateSurgeonAnalysis({
+                                  score: result.score,
+                                  fixes: result.fixes,
+                                  annotations: result.annotations,
+                                  targetRole: state.targetRole || '',
+                                  seniorityLevel: state.seniorityLevel || '',
+                                  analyzedAt: new Date(),
+                                  scoreReport: result.scoreReport,
+                                }, state.cvId).catch(err => {
+                                  console.warn('Failed to update surgeon analysis in context:', err);
+                                });
+                              }
+
+                              const firstOpen = result.annotations.find((f) => f.status === 'open');
+                              if (firstOpen) {
+                                dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
+                              }
+                            } catch (error) {
+                              console.error('Failed to refresh analysis:', error);
+                              toast.error("Couldn't refresh the analysis. Try again.");
+                            }
+                          }
+                        } else {
+                          // Apply all open fixes sequentially
+                          for (const fix of openFixes) {
+                            await handleApplyFix(fix);
+                          }
+
+                          // Save CV in background after applying all fixes
+                          if (state.cvId && state.cvId !== 'guest-draft' && state.cvData) {
+                            try {
+                              const saveRes = await fetch(`/api/cvs/${state.cvId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  cvData: state.cvData,
+                                  title: state.cvTitle,
+                                  templateId: state.selectedTemplate?.id
+                                })
                               });
+                              if (saveRes.ok) {
+                                console.log('✅ CV saved in background after applying all fixes');
+                                toast.success('All fixes applied and your CV was saved');
+                              } else {
+                                toast.error("Fixes applied, but saving failed — press Save to keep them.");
+                              }
+                            } catch (error) {
+                              console.error('Failed to save CV in background:', error);
+                              toast.error("Fixes applied, but saving failed — press Save to keep them.");
                             }
-
-                            const firstOpen = result.annotations.find((f) => f.status === 'open');
-                            if (firstOpen) {
-                              dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
-                            }
-                          } catch (error) {
-                            console.error('Failed to refresh analysis:', error);
                           }
                         }
-                      } else {
-                        // Apply all open fixes sequentially
-                        for (const fix of openFixes) {
-                          await handleApplyFix(fix);
-                        }
-
-                        // Save CV in background after applying all fixes
-                        if (state.cvId && state.cvId !== 'guest-draft' && state.cvData) {
-                          try {
-                            await fetch(`/api/cvs/${state.cvId}`, {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                cvData: state.cvData,
-                                title: state.cvTitle,
-                                templateId: state.selectedTemplate?.id
-                              })
-                            });
-                            console.log('✅ CV saved in background after applying all fixes');
-                          } catch (error) {
-                            console.error('Failed to save CV in background:', error);
-                          }
-                        }
+                      } finally {
+                        setActionBusy(false);
                       }
                     }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-white transition-colors"
+                    disabled={actionBusy}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#013f2e] hover:bg-[#02523c] text-white transition-colors ${actionBusy ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
+                    {actionBusy ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin inline-block mr-1" />
+                        {openFixes.length === 0 ? 'Refreshing...' : 'Applying fixes...'}
+                      </>
+                    ) : (
+                      openFixes.length === 0 ? 'Refresh' : 'Fix All'
+                    )}
                   </button>
                 </InfoTooltip>
 

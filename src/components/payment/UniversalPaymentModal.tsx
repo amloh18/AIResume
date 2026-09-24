@@ -8,6 +8,7 @@ import Logo from '@/components/ui/Logo';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp, Info, Sparkles } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
+import toast from '@/lib/hot-toast';
 
 interface UniversalPaymentModalProps {
   isOpen: boolean;
@@ -722,25 +723,25 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             if (data.success) {
               onSuccess?.(data.subscription);
               onClose();
-              alert(`Plan ${selectedPlan.name} granted successfully!`);
+              toast.success(`Plan ${selectedPlan.name} granted successfully!`);
             } else {
-              alert(`Error: ${data.error || 'Failed to grant plan'}`);
+              toast.error(data.error || 'Failed to grant plan');
             }
           } else {
             // Try to parse JSON error, fallback to text if it's HTML
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
               const errorData = await response.json();
-              alert(`Error: ${errorData.error || 'Failed to grant plan'}`);
+              toast.error(errorData.error || 'Failed to grant plan');
             } else {
               const errorText = await response.text();
               console.error('Non-JSON error response:', errorText);
-              alert(`Error: Failed to grant plan (Status: ${response.status}). Please check the console for details.`);
+              toast.error(`Failed to grant plan (error ${response.status}). Please try again.`);
             }
           }
         } catch (fetchError) {
           console.error('Error granting plan:', fetchError);
-          alert(`Error: Network error while granting plan. Please try again.`);
+          toast.error('Network error while granting plan. Please try again.');
         }
       } else {
         // Regular payment flow — redirect to provider checkout
@@ -848,7 +849,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         errorMsg = error.message;
       }
 
-      alert(`Payment Error: ${errorMsg}`);
+      toast.error(errorMsg, { id: 'payment-error' });
     } finally {
       setLoading(false);
     }

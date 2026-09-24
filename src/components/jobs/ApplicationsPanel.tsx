@@ -138,6 +138,14 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
+  /** In-flight guard + loading flag for the bulk status/delete controls. */
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+  /**
+   * Re-entry guard for bulk operations. React batches same-tick state updates,
+   * so two fast clicks both read the pre-update `bulkUpdating`; a ref sees the
+   * first click synchronously (same pattern as `creatingJourneysRef` below).
+   */
+  const bulkUpdatingRef = useRef(false);
   const [draggedJob, setDraggedJob] = useState<string | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [showJobParserDialog, setShowJobParserDialog] = useState(false);
@@ -991,20 +999,40 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
                   onChange={async (e) => {
                     const status = e.target.value;
                     if (!status) return;
-                    const promises = Array.from(selectedJobs).map(jobId =>
-                      authenticatedFetch(`/api/jobs/${jobId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status }),
-                      })
-                    );
-                    await Promise.all(promises);
-                    loadData();
-                    setSelectedJobs(new Set());
-                    setShowBulkActions(false);
-                    toast.success('Updated status for selected jobs');
+                    if (bulkUpdatingRef.current) return;
+                    bulkUpdatingRef.current = true;
+                    setBulkUpdating(true);
+                    const ids = Array.from(selectedJobs);
+                    try {
+                      const results = await Promise.all(
+                        ids.map(jobId =>
+                          authenticatedFetch(`/api/jobs/${jobId}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status }),
+                          })
+                        )
+                      );
+                      const failed = results.filter((r) => !r.ok).length;
+                      if (failed === 0) {
+                        toast.success('Updated status for selected jobs');
+                        // Only clear the selection on full success so failed
+                        // rows stay selected and can be retried.
+                        setSelectedJobs(new Set());
+                        setShowBulkActions(false);
+                      } else {
+                        toast.error(`Couldn't update ${failed} of ${ids.length} jobs`);
+                      }
+                      loadData();
+                    } catch {
+                      toast.error(`Couldn't update ${ids.length} jobs`);
+                    } finally {
+                      bulkUpdatingRef.current = false;
+                      setBulkUpdating(false);
+                    }
                   }}
-                  className="px-3 py-1 text-xs border border-gray-300 dark:border-lime-500/20 rounded-xl bg-gray-100 dark:bg-[#232f1c] text-gray-900 dark:text-white"
+                  disabled={bulkUpdating}
+                  className="px-3 py-1 text-xs border border-gray-300 dark:border-lime-500/20 rounded-xl bg-gray-100 dark:bg-[#232f1c] text-gray-900 dark:text-white disabled:opacity-60"
                   defaultValue=""
                 >
                   <option value="" disabled>Update Status</option>
@@ -1015,22 +1043,47 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
                   <option value="offer">Offer</option>
                   <option value="rejected">Rejected</option>
                 </select>
+                {bulkUpdating && (
+                  <span className="text-xs font-medium text-blue-200 animate-pulse">
+                    Updating...
+                  </span>
+                )}
                 <button
                   onClick={async () => {
+                    if (bulkUpdatingRef.current) return;
                     if (!confirm(`Are you sure you want to delete ${selectedJobs.size} jobs?`)) return;
-                    const promises = Array.from(selectedJobs).map(jobId =>
-                      authenticatedFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
-                    );
-                    await Promise.all(promises);
-                    loadData();
-                    setSelectedJobs(new Set());
-                    setShowBulkActions(false);
-                    toast.success('Selected jobs deleted');
+                    bulkUpdatingRef.current = true;
+                    setBulkUpdating(true);
+                    const ids = Array.from(selectedJobs);
+                    try {
+                      const results = await Promise.all(
+                        ids.map(jobId =>
+                          authenticatedFetch(`/api/jobs/${jobId}`, { method: 'DELETE' })
+                        )
+                      );
+                      const failed = results.filter((r) => !r.ok).length;
+                      if (failed === 0) {
+                        toast.success('Selected jobs deleted');
+                        // Only clear the selection on full success so failed
+                        // rows stay selected and can be retried.
+                        setSelectedJobs(new Set());
+                        setShowBulkActions(false);
+                      } else {
+                        toast.error(`Couldn't delete ${failed} of ${ids.length} jobs`);
+                      }
+                      loadData();
+                    } catch {
+                      toast.error(`Couldn't delete ${ids.length} jobs`);
+                    } finally {
+                      bulkUpdatingRef.current = false;
+                      setBulkUpdating(false);
+                    }
                   }}
-                  className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1"
+                  disabled={bulkUpdating}
+                  className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={13} />
-                  <span>Delete</span>
+                  <span>{bulkUpdating ? 'Deleting...' : 'Delete'}</span>
                 </button>
               </div>
             </div>

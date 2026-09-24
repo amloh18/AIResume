@@ -5,6 +5,7 @@ import { Plus, Trash2, Copy } from 'lucide-react';
 import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
+import toast from '@/lib/hot-toast';
 
 interface CertificatesSectionProps {
   data: any[];
@@ -76,6 +77,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       updateCertificate(index, 'description', result.description);
     } catch (error) {
       console.error('Error generating AI description:', error);
+      toast.error("Couldn't generate an AI description. Try again.");
     } finally {
       setGeneratingIndex(null);
     }

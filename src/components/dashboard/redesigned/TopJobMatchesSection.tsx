@@ -76,6 +76,15 @@ export default function TopJobMatchesSection() {
   const applyProgress = useApplyProgress();
   const { statuses, clearStatus } = useJobLiveStatusStore();
   const queryClient = useQueryClient();
+  /*
+    Apply re-entry guard (pattern from JobsDashboard `handleApplyJob`): the CTA
+    is disabled while a run is in flight, but a double-click can land both
+    events before React re-renders, and `POST /api/jobs/auto-apply` enqueues a
+    NEW ApplicationQueue row per call — two calls meant two submissions.
+    The ref is the only thing that sees the first click synchronously.
+  */
+  const applyingRef = useRef(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   const [jobs, setJobs] = useState<TopMatchJob[]>(() => {
     // 1. Check memory cache first (instant 0ms on tab switches)
@@ -441,6 +450,17 @@ export default function TopJobMatchesSection() {
     const targetJob = 'rawJob' in job ? job.rawJob : job;
     const jobId = targetJob._id || targetJob.id || '';
 
+    // Re-entry guard — see `applyingRef` above.
+    if (applyingRef.current) {
+      toast({
+        title: 'Already in progress',
+        description: 'Please wait — an application is already being submitted.',
+      });
+      return;
+    }
+    applyingRef.current = true;
+    setIsApplying(true);
+
     // Start progress — saving stage
     applyProgress.startApplyProgress(targetJob.title, targetJob.company, jobId);
 
@@ -587,6 +607,9 @@ export default function TopJobMatchesSection() {
         message: err.message || 'Network error occurred during submission.',
       });
       setEntitlementNoticeOpen(true);
+    } finally {
+      applyingRef.current = false;
+      setIsApplying(false);
     }
   };
 
@@ -868,8 +891,8 @@ export default function TopJobMatchesSection() {
                     <button
                       type="button"
                       onClick={(e) => handleApply(job, e)}
-                      disabled={isApplied || applicationMode === 'find_only'}
-                      className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs ${
+                      disabled={isApplied || applicationMode === 'find_only' || isApplying}
+                      className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs disabled:cursor-not-allowed ${
                         isApplied
                           ? 'bg-emerald-600 text-white cursor-default'
                           : applicationMode === 'find_only'
@@ -879,6 +902,11 @@ export default function TopJobMatchesSection() {
                     >
                       {isApplied ? (
                         <span>Applied</span>
+                      ) : isApplying ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Applying...</span>
+                        </>
                       ) : applicationMode === 'automatic' ? (
                         <>
                           <Zap className="w-3 h-3" />
