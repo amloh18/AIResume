@@ -522,7 +522,7 @@ export default function JobsDashboard() {
     if (userPreferences?.targetRoles && userPreferences.targetRoles.length > 0) {
       return userPreferences.targetRoles.join(' · ');
     }
-    return 'your target roles';
+    return 'target roles';
   }, [userPreferences, filters.roles]);
 
   // Only criteria that actually shape the feed belong in this summary:
@@ -1544,7 +1544,7 @@ export default function JobsDashboard() {
                     ? (displayedJobs.length === 1 ? 'available job' : 'available jobs')
                     : filters.sortBy === 'postedDate'
                     ? (displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
-                    : (displayedJobs.length === 1 ? 'matching job' : 'matching jobs')}
+                    : `${displayedJobs.length === 1 ? 'matching job' : 'matching jobs'}${total > displayedJobs.length ? ` of ${total.toLocaleString()}` : ''}`}
                 </span>
 
                 <span className="text-gray-500 dark:text-gray-400">

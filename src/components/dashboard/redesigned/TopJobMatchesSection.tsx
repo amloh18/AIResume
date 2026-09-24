@@ -4,18 +4,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Briefcase,
   Sparkles,
-  Loader2,
-  X,
-  Bookmark,
-  ExternalLink,
-  Zap,
-  MapPin,
-  Clock,
   AlertCircle,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Flame,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -25,11 +17,9 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
 import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { EntitlementNotice, EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
-import CompanyLogo from '@/components/ui/CompanyLogo';
-import { metricTone, CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
+import { JobCard } from '@/components/jobs/JobCard';
 import type { JobListing } from '@/types/automation-schema';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
-import { JobCardProgressBar } from '@/components/jobs/JobCardProgressBar';
 
 export interface TopMatchJob {
   _id: string;
@@ -772,193 +762,43 @@ export default function TopJobMatchesSection() {
             ref={scrollContainerRef}
             className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {displayJobs.map((job) => {
-            const isApplied = appliedIds.has(job._id);
-            const isSaved = savedIds.has(job._id);
-            const isSaving = savingId === job._id;
-            const liveStatus = statuses[job._id];
-            const isThisJobApplying = applyingJobId === job._id;
-            const isOtherJobApplying = applyingJobId !== null && !isThisJobApplying;
-
-            return (
+            {displayJobs.map((job, index) => (
+              // Same card the jobs-page Explore feed renders — this carousel
+              // is a horizontal strip of it, not a second card design.
+              // `[&>*]:h-full` stretches JobCard's root to the tallest card so
+              // the row keeps an even baseline (it is not a direct flex child).
               <div
                 key={job._id}
-                onClick={() => handleOpenDetail(job)}
-                className="group relative rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white dark:bg-[#141810] p-4 transition-all hover:shadow-lg hover:border-[#013f2e]/40 dark:hover:border-[#36D39B]/40 cursor-pointer flex flex-col justify-between min-h-[240px] min-w-[290px] max-w-[290px] shrink-0"
+                className="min-w-[280px] max-w-[280px] shrink-0 [&>*]:h-full"
               >
-                {/* Dismiss / Close Button (top right) */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (liveStatus) {
+                <JobCard
+                  job={{ ...job.rawJob, matchScore: job.matchScore }}
+                  isSaved={savedIds.has(job._id)}
+                  isApplied={appliedIds.has(job._id)}
+                  applicationMode={applicationMode}
+                  saving={savingId === job._id}
+                  onOpen={() => handleOpenDetail(job)}
+                  onSave={() => handleSaveToggle(job, { stopPropagation: () => {} } as any)}
+                  onApply={() => handleApply(job)}
+                  onPass={() => {
+                    // Preserve the old dual behaviour of the ✕: while a live
+                    // progress bar is showing it dismisses the progress; in
+                    // any other state it hides the match.
+                    if (statuses[job._id]) {
                       clearStatus(job._id);
                     } else {
-                      handlePass(job._id, e, job);
+                      handlePass(job._id, { stopPropagation: () => {} } as any, job);
                     }
                   }}
-                  title={liveStatus ? 'Dismiss progress' : 'Dismiss job'}
-                  className={`absolute top-3 right-3 p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all z-10 ${
-                    liveStatus ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                  }`}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Live status pulse */}
-                {liveStatus && (
-                  <div className="absolute top-3 left-3 z-10 pointer-events-none">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                    </span>
-                  </div>
-                )}
-
-                {/* Top Row: Match Gauge + Location */}
-                <div>
-                  <div className={`flex items-center justify-between gap-2 mb-2.5 ${liveStatus ? 'pl-4' : ''}`}>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className={metricTone(
-                          job.matchScore >= 90
-                            ? 'emerald'
-                            : job.matchScore >= 80
-                            ? 'green'
-                            : 'blue'
-                        )}
-                      >
-                        <Sparkles className="w-2.5 h-2.5" />
-                        <span>{job.matchScore}% Match</span>
-                      </span>
-
-                      {/* Freshness badge */}
-                      {job.isFresh && job.freshness && (
-                        <span
-                          className={`${CHIP_INLINE} ${CHIP_TONES[job.freshness.score >= 90 ? 'orange' : 'amber']} font-bold tracking-tight`}
-                        >
-                          <Flame className="w-2.5 h-2.5" />
-                          <span>{job.freshness.ageHours < 1 ? 'Just posted' : `${Math.round(job.freshness.ageHours)}h ago`}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                      {job.postedAgo}
-                    </span>
-                  </div>
-
-                  {/* Title & Company */}
-                  <div className="space-y-1 mb-2">
-                    <h3 className="text-xs font-bold text-gray-900 dark:text-white leading-snug line-clamp-2 group-hover:text-[#013f2e] dark:group-hover:text-[#36D39B] transition-colors">
-                      {job.title}
-                    </h3>
-
-                    <div className="flex items-center gap-2">
-                      <CompanyLogo
-                        company={job.company}
-                        size={18}
-                        logoUrl={job.companyLogo}
-                        jobId={job._id}
-                      />
-                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">
-                        {job.company}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Metadata Chips */}
-                  <div className="space-y-1.5 text-[11px] text-gray-500 dark:text-gray-400 mb-3">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <MapPin className="w-3 h-3 shrink-0 text-gray-400" />
-                      <span className="truncate">{job.location}</span>
-                    </div>
-
-                    {job.salary && (
-                      <div className="font-semibold text-gray-900 dark:text-gray-200 truncate">
-                        {job.salary}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Live Status OR Normal Actions */}
-                {liveStatus ? (
-                  <div
-                    className="mt-auto pt-3 border-t border-gray-100 dark:border-white/5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <JobCardProgressBar
-                      currentStep={liveStatus.step}
-                      progress={liveStatus.progress}
-                      success={liveStatus.success}
-                      description={liveStatus.description}
-                      jobTitle={liveStatus.jobTitle}
-                      company={liveStatus.company}
-                      jobId={job._id}
-                      autoCloseSeconds={liveStatus.autoCloseSeconds}
-                      autoClosePaused={liveStatus.autoClosePaused}
-                    />
-                  </div>
-                ) : (
-                  /* Bottom Actions: Save + Apply */
-                  <div className="pt-2.5 border-t border-gray-100 dark:border-white/5 flex items-center justify-between gap-1.5 mt-auto">
-                    <button
-                      type="button"
-                      onClick={(e) => handleSaveToggle(job, e)}
-                      disabled={isSaving}
-                      title={isSaved ? 'Remove from saved' : 'Save to shortlist'}
-                      className={`p-2 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center ${
-                        isSaved
-                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-700 dark:text-amber-300'
-                          : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'fill-amber-500 text-amber-500' : ''}`} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleApply(job, e)}
-                      disabled={isApplied || applicationMode === 'find_only' || isThisJobApplying || isOtherJobApplying}
-                      className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 shadow-xs disabled:cursor-not-allowed ${
-                        isApplied
-                          ? 'bg-emerald-600 text-white cursor-default'
-                          : applicationMode === 'find_only'
-                            ? 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                            : isThisJobApplying
-                              ? 'bg-[#013f2e] text-white opacity-90'
-                              : isOtherJobApplying
-                                ? 'bg-[#013f2e]/60 text-white/80 cursor-not-allowed'
-                                : 'bg-[#013f2e] hover:bg-[#025c43] text-white'
-                      }`}
-                    >
-                      {isApplied ? (
-                        <span>Applied</span>
-                      ) : isThisJobApplying ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Applying...</span>
-                        </>
-                      ) : applicationMode === 'automatic' ? (
-                        <>
-                          <Zap className="w-3 h-3" />
-                          <span>Auto Apply</span>
-                        </>
-                      ) : applicationMode === 'find_only' ? (
-                        <span>Find Only</span>
-                      ) : (
-                        <>
-                          <Zap className="w-3 h-3" />
-                          <span>Apply</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
+                  colorIndex={index}
+                  // Per-job, not section-wide: JobCard's `applying` renders a
+                  // spinner, so setting it for every card during one apply
+                  // would show "Working…" across the row. Concurrent submits
+                  // stay blocked by the applyingRef guard in handleApply.
+                  applying={applyingJobId === job._id}
+                />
               </div>
-            );
-          })}
+            ))}
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { chipState, type ChipSize } from "./chip-styles"
+import { chipState, chipStateDark, type ChipSize } from "./chip-styles"
 
 export interface PillProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   selected?: boolean
@@ -13,6 +13,13 @@ export interface PillProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   leftIcon?: React.ReactNode
   badgeCount?: number | string
   size?: ChipSize
+  /**
+   * Surface the pill sits on. `"theme"` (default) uses the theme-aware chip
+   * tokens; `"dark"` uses `chipStateDark` for surfaces that are dark
+   * unconditionally (e.g. the job-search gradient panel) — `var(--color-primary)`
+   * resolves to forest green there in light mode and becomes invisible.
+   */
+  surface?: "theme" | "dark"
   /**
    * @deprecated Every pill now renders the one unified outlined treatment
    * (`chip-styles.ts`). Kept only so existing call sites type-check; it no
@@ -39,6 +46,7 @@ export const Pill = React.forwardRef<HTMLButtonElement, PillProps>(
       leftIcon,
       badgeCount,
       size = "md",
+      surface = "theme",
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       variant: _variant,
       children,
@@ -66,7 +74,11 @@ export const Pill = React.forwardRef<HTMLButtonElement, PillProps>(
         onClick={handleClick}
         disabled={disabled}
         aria-pressed={disabled ? undefined : selected}
-        className={cn("cursor-pointer", chipState(state, size), className)}
+        className={cn(
+          "cursor-pointer",
+          surface === "dark" ? chipStateDark(state, size) : chipState(state, size),
+          className
+        )}
         {...props}
       >
         {leftIcon && <span className="inline-flex shrink-0">{leftIcon}</span>}

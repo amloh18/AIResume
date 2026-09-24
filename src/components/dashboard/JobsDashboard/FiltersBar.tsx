@@ -20,7 +20,7 @@ import { CountrySelector } from '@/components/jobs/CountrySelector';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { Pill, SearchInput } from '@/components/ui';
-import { chipState } from '@/components/ui/chip-styles';
+import { chipStateDark } from '@/components/ui/chip-styles';
 
 interface FiltersBarProps {
   filters: JobsFilter;
@@ -348,7 +348,7 @@ export default function FiltersBar({
         {/* ================================================================= */}
         <div className="relative z-20 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 text-xs">
           {/* Row 2a: Segment Navigation Switcher — full width on mobile */}
-          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 h-9 shadow-2xs w-full sm:w-auto">
+          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-white/10 shrink-0 h-9 shadow-2xs w-full sm:w-auto">
             <button
               type="button"
               onClick={() =>
@@ -363,10 +363,10 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'recommended'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
-              <Target className={`w-3.5 h-3.5 ${currentView === 'recommended' ? 'text-white dark:text-black' : 'text-[#013f2e] dark:text-[#36D39B]'}`} />
+              <Target className={`w-3.5 h-3.5 ${currentView === 'recommended' ? 'text-white dark:text-black' : 'text-[#36D39B]'}`} />
               <span className="hidden sm:inline">Recommended</span>
             </button>
 
@@ -384,7 +384,7 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'all'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
               <Globe className={`w-3.5 h-3.5 ${currentView === 'all' ? 'text-white dark:text-black' : 'text-sky-500'}`} />
@@ -397,13 +397,13 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'saved'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${currentView === 'saved' ? 'text-white dark:text-black' : 'text-amber-500'}`} />
               <span className="hidden sm:inline">Saved</span>
               {savedCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-black">
                   {savedCount}
                 </span>
               )}
@@ -422,7 +422,7 @@ export default function FiltersBar({
                     type="button"
                     onClick={() => handleToggleWorkplace(wp.id)}
                     aria-pressed={active}
-                    className={chipState(active ? 'active' : 'idle', 'md')}
+                    className={chipStateDark(active ? 'active' : 'idle', 'md')}
                   >
                     {wp.label}
                   </button>
@@ -432,6 +432,7 @@ export default function FiltersBar({
 
             {/* Visa Sponsorship Chip */}
             <Pill
+              surface="dark"
               selected={Boolean(filters.sponsorsVisa)}
               onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
               leftIcon={<Shield className="w-3.5 h-3.5 opacity-70" />}
@@ -449,7 +450,7 @@ export default function FiltersBar({
                   toggleDropdown('exp');
                 }}
                 aria-expanded={activeDropdown === 'exp'}
-                className={chipState(
+                className={chipStateDark(
                   Boolean(filters.experienceLevel?.length) ? 'active' : 'idle',
                   'md'
                 )}
@@ -457,13 +458,7 @@ export default function FiltersBar({
                 <Briefcase className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>Experience</span>
                 {Boolean(filters.experienceLevel?.length) && (
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums ${
-                      filters.experienceLevel?.length
-                        ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
-                        : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
-                    }`}
-                  >
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums bg-lime-400/15 text-lime-300">
                     {filters.experienceLevel?.length}
                   </span>
                 )}
@@ -509,7 +504,7 @@ export default function FiltersBar({
                   toggleDropdown('date');
                 }}
                 aria-expanded={activeDropdown === 'date'}
-                className={chipState(
+                className={chipStateDark(
                   filters.datePosted && filters.datePosted !== 'all'
                     ? 'active'
                     : 'idle',
@@ -560,6 +555,7 @@ export default function FiltersBar({
 
             {/* Auto-Apply Supported Chip */}
             <Pill
+              surface="dark"
               selected={Boolean(filters.easyApplyOnly)}
               onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
               leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
@@ -574,7 +570,7 @@ export default function FiltersBar({
             <button
               type="button"
               onClick={onReset}
-              className="text-xs font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline shrink-0 transition-colors"
+              className="text-xs font-semibold text-white/50 hover:text-white underline shrink-0 transition-colors"
             >
               Reset filters ({activeFilterCount})
             </button>

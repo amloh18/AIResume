@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, forwardRef } from 'react';
 import CVCanvasEngine, { CVCanvasBuilderRef } from './CVCanvasEngine';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
-import { normalizeCvDataForCanvas, normalizeSkillsText } from '@/lib/utils/cv-canvas-normalizer';
+import { normalizeCvDataForCanvas, normalizeSkillsText, extractHighlightsFromHtml, extractSummaryFromHtml } from '@/lib/utils/cv-canvas-normalizer';
 import { clampLevel, fluencyToLevel, levelToFluency, serializeLanguagesForStorage } from '@/lib/utils/cv-snippet-data';
 
 interface CVBuilderProAdapterProps {
@@ -21,39 +21,10 @@ interface CVBuilderProAdapterProps {
 
 const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
 
-/**
- * Extract highlights (bullet points) from HTML description.
- * Preserves inline formatting (<strong>, <em>, <a>, <u>) within each highlight.
- */
-const extractHighlightsFromHtml = (html: string): string[] => {
-  const liMatches = html.match(/<li[^>]*>[\s\S]*?<\/li>/g);
-  if (!liMatches) return [];
-  return liMatches.map((li: string) =>
-    li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim()
-  ).filter(Boolean);
-};
-
-/**
- * Extract summary (paragraph text) from HTML description.
- * Supports multiple <p> blocks (joined with double newlines).
- * Preserves inline formatting (<strong>, <em>, <a>, <u>) within paragraphs.
- * Falls back to stripping all tags if no <p> found.
- */
-const extractSummaryFromHtml = (html: string): string => {
-  // Extract all <p>...</p> blocks (global match)
-  const pMatches = html.match(/<p[^>]*>[\s\S]*?<\/p>/g);
-  if (pMatches && pMatches.length > 0) {
-    const paragraphs = pMatches
-      .map((p: string) => p.replace(/<p[^>]*>/, '').replace(/<\/p>/, '').trim())
-      .filter(Boolean);
-    return paragraphs.join('\n\n');
-  }
-  // Fallback: strip <ul>/<li> blocks and structural tags, preserve inline formatting
-  return html
-    .replace(/<ul>[\s\S]*?<\/ul>/g, '')
-    .replace(/<\/?(?:span|div|font|label|section|article|header|footer|nav|main|aside)[^>]*>/gi, '')
-    .trim();
-};
+// extractHighlightsFromHtml / extractSummaryFromHtml live in
+// @/lib/utils/cv-canvas-normalizer — they are the reverse of the forward
+// builders used there, and keeping both sides in one module stops the
+// canvas ↔ Unified round trip from drifting apart.
 
 const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }: CVBuilderProAdapterProps, ref) => {
   const canvasData = useMemo(() => normalizeCvDataForCanvas(cvData), [cvData]);
@@ -246,7 +217,8 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
           studyType = edu.degree;
         }
 
-        const descriptionText = extractSummaryFromHtml(edu.description || '');
+        const descriptionHtml = edu.description || '';
+        const descriptionText = extractSummaryFromHtml(descriptionHtml);
         const descriptionLines = descriptionText
           .split(/\n+/)
           .map((line: string) => line.trim())
@@ -264,7 +236,12 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
           startDate: edu.startDate || '',
           endDate: edu.endDate || '',
           score: scoreLine ? scoreLine.replace(/^score:\s*/i, '').trim() : '',
-          description: remainingDescription
+          description: remainingDescription,
+          // The canvas keeps education coursework as <li> bullets inside
+          // `description`; the Unified schema stores it in `courses`. Writing
+          // it back is what this reverse map was missing — without it, the
+          // first save permanently dropped the education bullet points.
+          courses: extractHighlightsFromHtml(descriptionHtml),
         };
       });
       delete newCvData.education_temp; // Clean up temp key if used

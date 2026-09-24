@@ -9,7 +9,11 @@ const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
     : [];
 
   if (trimmedSummary) {
-    parts.push(`<p>${trimmedSummary}</p>`);
+    // Summaries are plain text whose line breaks were reverse-mapped to '\n'
+    // (see extractSummaryFromHtml). Inside <p>, HTML collapses '\n' to a
+    // space — carry the breaks as <br> so saved line breaks survive the
+    // canvas → Unified → canvas round trip instead of merging into one line.
+    parts.push(`<p>${trimmedSummary.replace(/\r\n?|\n/g, '<br>')}</p>`);
   }
 
   if (normalizedHighlights.length > 0) {
@@ -17,6 +21,63 @@ const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
   }
 
   return parts.join('');
+};
+
+/**
+ * Detects whether a description value is already rich HTML.
+ *
+ * Plain text can legitimately contain `<` (e.g. "GPA < 3.5 and >= 3.0"), so a
+ * naive `includes('<')` check misclassifies it as HTML — the old education
+ * branch then took the "keep as-is" path, dropped `courses` and leaked raw
+ * markup into the renderer. Only a real structural/inline tag counts.
+ */
+const richTextTagPattern = /<\/?(?:p|div|ul|ol|li|br|strong|em|b|i|u|s|strike|small|sub|sup|span|h[1-6]|a|mark|font|label|blockquote|code|pre)(?:\s|\/|>|:)/i;
+const looksLikeRichText = (value: string): boolean => richTextTagPattern.test(value);
+
+/**
+ * Extract highlights (bullet points) from HTML description — the reverse of
+ * what `buildRichTextDescription` produces. Preserves inline formatting
+ * (<strong>, <em>, <a>, <u>) within each highlight.
+ *
+ * Lives next to the forward builders so the canvas → Unified reverse map
+ * (CVBuilderProAdapter) and the normalizer can never drift apart.
+ */
+export const extractHighlightsFromHtml = (html: string): string[] => {
+  const liMatches = html.match(/<li[^>]*>[\s\S]*?<\/li>/g);
+  if (!liMatches) return [];
+  return liMatches.map((li: string) =>
+    li.replace(/<li[^>]*>/, '').replace(/<\/li>/, '').trim()
+  ).filter(Boolean);
+};
+
+/**
+ * Extract summary (plain text with line breaks) from HTML description — the
+ * reverse of `buildRichTextDescription`.
+ *
+ * Block boundaries become newlines so multi-line entries survive the round
+ * trip: contentEditable Enter produces <div> lines, which the previous
+ * implementation either dropped entirely (when a <p> existed — it only
+ * returned the <p> blocks) or concatenated with no separator (fallback
+ * branch). Lists are stripped here because they are extracted separately as
+ * highlights, and inline formatting (<strong>, <em>, <a>, <u>) is preserved.
+ */
+export const extractSummaryFromHtml = (html: string): string => {
+  if (!html) return '';
+  return html
+    // Lists belong to the highlights (bullets) — keep them out of the summary.
+    .replace(/<ul[^>]*>[\s\S]*?<\/ul>/gi, '')
+    .replace(/<ol[^>]*>[\s\S]*?<\/ol>/gi, '')
+    // Carry block line breaks into the plain-text summary.
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/(?:div|h[1-6]|blockquote)>/gi, '\n')
+    .replace(/<\/?li[^>]*>/gi, '\n')
+    // Drop remaining structural wrappers; inline formatting tags stay.
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<\/?(?:div|span|font|label|section|article|header|footer|nav|main|aside|h[1-6]|blockquote)[^>]*>/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim();
 };
 
 export const normalizeSkillsText = (value: any): string => {
@@ -106,18 +167,33 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       }
 
       /*
-        Education carries structured coursework in `courses`, and the canvas
-        renders `description` as HTML (CoreUI assigns it to innerHTML, same as
-        work/projects). The previous implementation joined score+description
-        with a literal '\n', which both dropped `courses` entirely and produced
-        a string the renderer collapses onto one line — the "education is
-        missing the bullet points" symptom. Reuse the shared rich-text builder
-        so coursework becomes real <li> bullets.
+        Education renders `description` as HTML (CoreUI assigns it to
+        innerHTML, same as work/projects) and carries structured coursework in
+        `courses`. Every path must keep both:
+
+        - rich HTML descriptions are kept as-is and get their coursework
+          appended as a real <ul> when the bullets are not already inline —
+          the old HTML branch returned early and dropped `courses`, so the
+          first edit permanently lost the education bullet points;
+        - plain-text descriptions (including ones that merely contain `<`,
+          like "GPA < 3.5") go through the shared rich-text builder so
+          coursework becomes real <li> bullets instead of vanishing.
       */
-      const descriptionHtml =
-        e.description && String(e.description).includes('<')
-          ? String(e.description)
-          : buildRichTextDescription(e.description, e.courses);
+      const courses: string[] = Array.isArray(e.courses)
+        ? e.courses.filter((c: unknown): c is string => typeof c === 'string' && c.trim().length > 0)
+        : [];
+      const rawDescription = typeof e.description === 'string' ? e.description : '';
+
+      let descriptionBody: string;
+      if (looksLikeRichText(rawDescription)) {
+        const richDescription = rawDescription.trim();
+        const hasInlineBullets = /<li(?=[\s>])/i.test(richDescription);
+        descriptionBody = !hasInlineBullets && courses.length > 0
+          ? `${richDescription}<ul>${courses.map((course, courseIndex) => `<li data-highlight-index="${courseIndex}">${course.trim()}</li>`).join('')}</ul>`
+          : richDescription;
+      } else {
+        descriptionBody = buildRichTextDescription(rawDescription, courses);
+      }
 
       return {
         id: e.id || `edu-${index}`,
@@ -127,7 +203,7 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
         endDate: e.endDate || '',
         description: [
           e.score ? `<p>Score: ${e.score}</p>` : '',
-          descriptionHtml,
+          descriptionBody,
         ].filter(Boolean).join(''),
       };
     });
