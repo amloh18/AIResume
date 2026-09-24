@@ -23,6 +23,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import RecentAppliedJobsHeader from '@/components/layout/RecentAppliedJobsHeader';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import OptimizedNavigation from '@/components/dashboard/OptimizedNavigation';
@@ -3789,6 +3790,11 @@ export default function ResumeEnhancerContainer({
           {/* Theme Toggle */}
           <div className="shrink-0">
             <ThemeToggle variant="pill" />
+          </div>
+
+          {/* Recent Applied Jobs */}
+          <div className="shrink-0">
+            <RecentAppliedJobsHeader />
           </div>
 
           {/* Notification Center */}

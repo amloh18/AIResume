@@ -531,16 +531,19 @@ export class UnifiedAuthService {
 
             // Record login session in MongoDB
             try {
-              const headersList = await headers();
-              const ip = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || 'unknown';
-              const userAgent = headersList.get('user-agent') || '';
-
-              // Detect region from IP
+              let ip = 'unknown';
+              let userAgent = '';
               let location: string | undefined;
+
               try {
+                const headersList = await headers();
+                ip = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || 'unknown';
+                userAgent = headersList.get('user-agent') || '';
                 const regionInfo = await detectUserRegion(ip);
                 if (regionInfo) location = regionInfo.countryName;
-              } catch {}
+              } catch {
+                // headers() may fail outside a request scope
+              }
 
               await SessionService.createSession({
                 userId: String(user.id),
@@ -685,11 +688,27 @@ export class UnifiedAuthService {
                   // `ensureSession` is idempotent: parallel requests that all observed
                   // `missing` before any of them wrote converge on one row instead of
                   // losing a race on the `jti_1` unique index. See SessionService.
-                  SessionService.ensureSession({
-                    userId: String(token.id),
-                    jti: token.jti,
-                    provider: 'recovered',
-                  }).catch((e) => console.error('Failed to re-record session:', e));
+                  (async () => {
+                    let ip = 'unknown';
+                    let userAgent = '';
+                    let location: string | undefined;
+                    try {
+                      const headersList = await headers();
+                      ip = headersList.get('x-forwarded-for')?.split(',')[0] || headersList.get('x-real-ip') || 'unknown';
+                      userAgent = headersList.get('user-agent') || '';
+                      const regionInfo = await detectUserRegion(ip);
+                      if (regionInfo) location = regionInfo.countryName;
+                    } catch {}
+
+                    await SessionService.ensureSession({
+                      userId: String(token.id),
+                      jti: token.jti,
+                      ip,
+                      userAgent,
+                      location,
+                      provider: 'credentials',
+                    });
+                  })().catch((e) => console.error('Failed to re-record session:', e));
                 } else {
                   SessionService.touchSession(token.jti).catch(() => {});
                 }

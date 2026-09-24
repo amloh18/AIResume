@@ -79,9 +79,20 @@ export default function NotificationCenter({ variant = 'default' }: Notification
   const [activeTab, setActiveTab] = useState<'notifications' | 'activities'>('notifications');
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMorphAbsorbing, setIsMorphAbsorbing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Listen for job morphed into notification icon event
+  useEffect(() => {
+    const handleMorph = () => {
+      setIsMorphAbsorbing(true);
+      setTimeout(() => setIsMorphAbsorbing(false), 850);
+    };
+    window.addEventListener('job-morphed-into-bell', handleMorph);
+    return () => window.removeEventListener('job-morphed-into-bell', handleMorph);
   }, []);
   
   // Convert progressEvents Map to Array for rendering
@@ -166,16 +177,32 @@ export default function NotificationCenter({ variant = 'default' }: Notification
           </svg>
         )}
 
-        <Bell
-          size={16}
-          className={`transition-colors ${
-            activeProgress
-              ? 'text-emerald-600 dark:text-[#013f2e] animate-pulse'
-              : isOpen
-                ? 'text-emerald-600 dark:text-[#013f2e]'
-                : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-[#013f2e]'
-          }`}
-        />
+        {/* Expanding Ring around Bell button when absorbing morphed applied job */}
+        {isMorphAbsorbing && (
+          <motion.div
+            initial={{ scale: 0.8, opacity: 1 }}
+            animate={{ scale: [0.8, 1.35, 1.6], opacity: [1, 0.85, 0] }}
+            transition={{ duration: 0.85, ease: 'easeOut' }}
+            className="absolute -inset-1 rounded-full border-2 border-emerald-500 pointer-events-none drop-shadow-[0_0_8px_rgba(16,185,129,0.9)] z-10"
+          />
+        )}
+
+        <motion.div
+          animate={isMorphAbsorbing ? { scale: [1, 1.35, 0.85, 1.15, 1], rotate: [0, -12, 12, -6, 0] } : {}}
+          transition={{ duration: 0.65, ease: 'easeInOut' }}
+          className="flex items-center justify-center"
+        >
+          <Bell
+            size={16}
+            className={`transition-colors ${
+              activeProgress || isMorphAbsorbing
+                ? 'text-emerald-600 dark:text-[#013f2e] animate-pulse'
+                : isOpen
+                  ? 'text-emerald-600 dark:text-[#013f2e]'
+                  : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 dark:group-hover:text-[#013f2e]'
+            }`}
+          />
+        </motion.div>
 
         {unreadCount > 0 && !activeProgress && (
           <span className="absolute -top-1 -right-1 bg-emerald-500 dark:bg-[#013f2e] text-white text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-[#141810] shadow-[0_0_8px_rgba(1, 63, 46,0.8)]">

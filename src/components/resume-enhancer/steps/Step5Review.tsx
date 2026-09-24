@@ -20,7 +20,7 @@ import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
-import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
+import { downloadCanvasAsPDF, downloadCanvasAsSVG } from '@/lib/utils/downloadCanvas';
 import AuthPromptModal from '../AuthPromptModal';
 import toast from '@/lib/hot-toast';
 import {
@@ -611,6 +611,11 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
             await downloadCanvasAsPDF(`${baseName}.pdf`, {
               paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
             });
+          } else if (format === 'svg') {
+            // ── Pure Vector SVG: 100% vector scalability with 0 pixelation on zoom ───
+            await downloadCanvasAsSVG(`${baseName}.svg`, {
+              paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+            });
           } else {
             // DOCX: server-side export generates a content-faithful Word doc
             const userId = session?.user?.id;
@@ -650,10 +655,6 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
 
           if (format === 'pdf') {
             // ── WYSIWYG cover-letter PDF: capture the live review preview ──
-            // So the exported file is a pixel-perfect match of what the user
-            // sees (the old server jsPDF renderer reflowed content and could
-            // not match templates). Falls back to the server renderer when the
-            // preview DOM isn't currently mounted (e.g. on another tab).
             const previewEl = document.querySelector('[data-cl-document]') as HTMLElement | null;
             if (previewEl) {
               await downloadCanvasAsPDF(`${baseName}_CoverLetter.pdf`, {
@@ -674,6 +675,14 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
+            }
+          } else if (format === 'svg') {
+            const previewEl = document.querySelector('[data-cl-document]') as HTMLElement | null;
+            if (previewEl) {
+              await downloadCanvasAsSVG(`${baseName}_CoverLetter.svg`, {
+                element: previewEl,
+                paperSize: resolvedPaperSize,
+              });
             }
           } else {
             if (!clId) throw new Error('No cover letter ID available.');

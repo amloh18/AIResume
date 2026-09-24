@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
-import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
+import { downloadCanvasAsPDF, downloadCanvasAsSVG } from '@/lib/utils/downloadCanvas';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -149,12 +149,17 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         if (format === 'pdf') {
           // ── WYSIWYG PDF: capture the live .cv-document DOM element ──────────
           // This ensures the exported PDF is a pixel-perfect match of the canvas
-          // preview. The server-side export uses the old TemplateRenderer and
-          // does NOT know about CANVAS_TEMPLATES, SNIPPETS, or CSS variables.
+          // preview. High-DPI 300 DPI SVG-backed rendering prevents pixelation on zoom.
           await downloadCanvasAsPDF(`${baseName}.pdf`, {
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
           });
           toast.success('Downloaded successfully!');
+        } else if (format === 'svg') {
+          // ── Pure Vector SVG: 100% vector scalability with 0 pixelation on zoom ──
+          await downloadCanvasAsSVG(`${baseName}.svg`, {
+            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+          });
+          toast.success('Downloaded Vector SVG successfully!');
         } else if (format === 'docx') {
           // DOCX: use the server export API which generates a content-faithful
           // Word document from cvData (all sections present, visual styling differs).
