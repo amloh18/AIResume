@@ -119,6 +119,7 @@
     "stripe": "^22.2.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
+    "tesseract.js": "6.0.1",
     "typescript": "^5.6.3",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5",
@@ -127,8 +128,7 @@
   },
   "optionalDependencies": {
     "@napi-rs/canvas": "^0.1.99",
-    "puppeteer": "^24.15.0",
-    "tesseract.js": "6.0.1"
+    "puppeteer": "^24.15.0"
   },
   "devDependencies": {
     "@tailwindcss/container-queries": "^0.1.1",
