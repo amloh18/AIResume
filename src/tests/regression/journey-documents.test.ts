@@ -6,7 +6,7 @@
  * Master CV counting as a tailored CV, a retry split across two journey rows,
  * and an index keyed on the wrong id.
  *
- * Run: node .verify/run-test.mjs .verify/journey-documents.test.ts
+ * Run: npx vitest run src/tests/regression/journey-documents.test.ts
  */
 import { describe, it, expect } from 'vitest';
 import {
