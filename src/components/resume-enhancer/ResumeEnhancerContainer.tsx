@@ -1,6 +1,7 @@
 // @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 import toast from '@/lib/hot-toast';
+import { humanizeSaveApiError } from '@/lib/api/save-error-messages';
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -2541,13 +2542,13 @@ export default function ResumeEnhancerContainer({
         
         const retryResult = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(retryResult?.error || 'Failed to save CV after retry');
+          throw new Error(humanizeSaveApiError(response.status, retryResult?.error));
         }
         
         // Copy the successful retry result back to the main result object
         Object.assign(result, retryResult);
       } else if (!response.ok) {
-        throw new Error(result?.error || 'Failed to save CV');
+        throw new Error(humanizeSaveApiError(response.status, result?.error));
       }
 
       const savedCvId = extractCvIdFromResponse(result);
@@ -2766,13 +2767,13 @@ export default function ResumeEnhancerContainer({
         
         const retryResult = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(retryResult?.error || 'Failed to save CV after retry');
+          throw new Error(humanizeSaveApiError(response.status, retryResult?.error));
         }
         
         // Copy the successful retry result back to the main result object
         Object.assign(result, retryResult);
       } else if (!response.ok) {
-        throw new Error(result?.error || 'Failed to save CV');
+        throw new Error(humanizeSaveApiError(response.status, result?.error));
       }
 
       const savedCvId = extractCvIdFromResponse(result);

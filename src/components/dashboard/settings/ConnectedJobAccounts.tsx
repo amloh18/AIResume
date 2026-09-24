@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Loader2,
   Settings2,
+  Puzzle,
 } from 'lucide-react';
 import toast from '@/lib/hot-toast';
 import {
@@ -120,9 +121,9 @@ export function ConnectedJobAccounts({ variant = 'settings' }: ConnectedJobAccou
       )}
 
       {/* ── AIResume Job Network ───────────────────────────────────────── */}
-      {/* Shown as an always-connected indicator rather than a fourth card: it is
-          not an external account the user connects, and giving it a card would
-          imply it can be disconnected. */}
+      {/* Shown as an always-connected indicator rather than an account card: it
+          is not an external account the user connects, and giving it a card
+          would imply it can be disconnected. */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-lime-500/25 bg-lime-50/40 dark:bg-lime-900/10">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2.5 rounded-xl bg-lime-100 dark:bg-lime-900/30 text-emerald-700 dark:text-lime-400 shrink-0">
@@ -158,9 +159,9 @@ export function ConnectedJobAccounts({ variant = 'settings' }: ConnectedJobAccou
 
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {JOB_SOURCE_PROVIDERS.map((provider) => (
+            {[...JOB_SOURCE_PROVIDERS, 'extension'].map((key) => (
               <div
-                key={provider}
+                key={key}
                 className="h-44 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01] animate-pulse"
               />
             ))}
@@ -196,6 +197,7 @@ export function ConnectedJobAccounts({ variant = 'settings' }: ConnectedJobAccou
                 onSync={() => handleSync(provider)}
               />
             ))}
+            <ExtensionCard key="extension" />
           </div>
         )}
       </div>
@@ -237,6 +239,55 @@ export function ConnectedJobAccounts({ variant = 'settings' }: ConnectedJobAccou
 // ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
+
+const EXTENSION_URL =
+  'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=connected-accounts';
+
+/**
+ * Fourth grid tile — a promo for the browser extension, not an account (so it
+ * has no connected state and wraps into the second row on `lg:grid-cols-3`).
+ *
+ * The copy is deliberately narrower than the landing page's "100+ job sites"
+ * claim: it promises exactly what the extension does — copy one job, with its
+ * core fields, into the app — so the card cannot oversell the integration.
+ */
+const ExtensionCard: React.FC = () => (
+  <div className="p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01] flex flex-col justify-between space-y-4">
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-lime-100 dark:bg-lime-900/30 text-emerald-700 dark:text-lime-400 shrink-0">
+          <Puzzle className="w-5 h-5" />
+        </div>
+        <div className="min-w-0">
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate">
+            Copy any job with one click
+          </h4>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Free browser extension
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+        Found a role on a job site we don&apos;t track? Copy it into AIResume in one
+        click — title, company, location and description included — so it gets
+        matched, tailored and tracked right beside your other jobs.
+      </p>
+    </div>
+
+    <a
+      href={EXTENSION_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-[#013f2e] hover:bg-[#025c43] text-white transition-colors text-center"
+    >
+      Get the Chrome extension
+    </a>
+  </div>
+);
 
 interface SourceCardProps {
   provider: JobSourceProvider;
