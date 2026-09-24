@@ -13,7 +13,7 @@
  *  3. The sidebar's Comms tab really renders the shared pane, and the old synthesised thread
  *     (which told every applied job "your application has been received") is gone.
  *
- * Run: node .verify/run-test.mjs .verify/comms-thread-reuse.test.tsx
+ * Run: npx vitest run src/tests/regression/comms-thread-reuse.test.tsx
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

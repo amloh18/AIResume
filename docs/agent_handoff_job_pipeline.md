@@ -453,7 +453,7 @@ Run in order. Do not mark a step done without its evidence.
 - **Read `AGENTS.md` before non-trivial work.** Preserve before replacing; do not create parallel auth,
   workspace or permission systems; do not migrate MongoDB to Postgres.
 - **Verification recipes** live in `.workbuddy-ai/memory/OPS-NOTES.md` §"How to verify a change". Summary:
-  `npx vitest run` dies in this sandbox (exit 137) — use `node .verify/run-test.mjs <test.ts>`;
+  `npx vitest run` dies in this sandbox (exit 137) — use a scoped `npx vitest run <test.ts>`;
   `npx tsc -p tsconfig.pipeline.json` for a scoped typecheck (repo-wide `tsc --noEmit` OOMs);
   `python3 scripts/audit-api-routes.py .` for route contracts.
 - **Migration scripts** live in `scripts/migrate-*.mjs` and take `--dry-run` / `--apply`; they refuse to

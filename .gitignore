@@ -117,5 +117,3 @@ venv/
 .e2e-entry.ts
 .e2e-bundle.mjs
 
-# Throwaway bundles emitted by .verify/run-test.mjs
-.verify/build/
