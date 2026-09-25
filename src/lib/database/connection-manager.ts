@@ -182,8 +182,11 @@ class DatabaseConnectionManager {
 
   /**
    * Internal connection method
+   *
+   * `isRetry` is set by the split-database guard below so a reconnect that
+   * STILL lands on the wrong database fails loudly instead of looping.
    */
-  private async connect(): Promise<typeof mongoose> {
+  private async connect(isRetry = false): Promise<typeof mongoose> {
     // TLS is required for Atlas/cloud URIs (mongodb+srv:// or .mongodb.net) or when tls/ssl is requested.
     const isTlsUri =
       this.config.uri.startsWith('mongodb+srv://') ||
@@ -267,6 +270,39 @@ class DatabaseConnectionManager {
       }
     } catch (pingError) {
       throw new Error(`MongoDB connection ping failed: ${pingError}`);
+    }
+
+    /*
+      Split-database guard.
+
+      mongoose.connect() on an already-open connection with the SAME URI is a
+      silent no-op — the new options (including `dbName`) are dropped. So if any
+      other code connected the shared default connection first (a raw
+      mongoose.connect(process.env.MONGODB_URI) without dbName), our MONGODB_DB
+      override above never took effect and this process would read AND write a
+      different database than MONGODB_DB names. Data then "disappears" without
+      any error: the user's documents exist in one database while the app
+      queries another.
+
+      Verify the database we actually landed on, and reconnect once with the
+      correct dbName if it is wrong.
+    */
+    const expectedDb = this.config.options?.dbName || process.env.MONGODB_DB || null;
+    const actualDb = mongooseInstance.connection.db?.databaseName || null;
+    if (expectedDb && actualDb && actualDb !== expectedDb) {
+      if (isRetry) {
+        throw new Error(
+          `Split-database guard: connected to database "${actualDb}" but expected "${expectedDb}" after a reconnect. ` +
+            'Refusing to serve queries against the wrong database. ' +
+            'A raw mongoose.connect() outside the connection manager is likely bypassing the MONGODB_DB override.'
+        );
+      }
+      console.error(
+        `🛑 Split-database guard: mongoose is connected to database "${actualDb}" but MONGODB_DB="${expectedDb}". ` +
+          'An earlier raw mongoose.connect() bound the shared connection first. Reconnecting with the correct database...'
+      );
+      await mongoose.disconnect();
+      return this.connect(true);
     }
 
     return mongooseInstance;
