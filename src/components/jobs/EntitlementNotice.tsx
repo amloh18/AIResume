@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import type { UserEntitlements, UpgradeRecommendation } from '@/lib/services/entitlement-service';
 import { formatResetLabel } from '@/lib/utils/reset-countdown';
+import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 
 export type EntitlementOutcomeCode =
   | 'AUTO_APPLY_NOT_INCLUDED'
@@ -54,7 +55,15 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
 }) => {
   if (!isOpen || !data) return null;
 
-  const { code, jobTitle, company, applyUrl, message } = data;
+  const { code, jobTitle, company, applyUrl, message: rawMessage } = data;
+
+  /*
+    Last line of defence: whatever a caller passes in, internal infrastructure
+    errors (database/network/quota detail) are dropped to '' so each branch
+    below falls back to its own friendly default copy instead of showing
+    raw server logs to the user.
+  */
+  const message = toUserFacingMessage(rawMessage, '');
 
   /*
     When the server blocks an apply it returns the quota's reset time. Show the
