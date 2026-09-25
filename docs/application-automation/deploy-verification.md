@@ -123,7 +123,7 @@ curl -s -D - -o /dev/null https://resume.morigrid.com/api/jobs/auto-apply -X POS
 
 ## 9. Secrets & permissions (V4)
 
-- [ ] `grep -R "AKIA\|mongodb+srv://.*:.*@" docs/ tests/ env.example` → no live values
+- [ ] `grep -R "AKIA\|mongodb+srv://.*:<REDACTED>@" docs/ tests/ env.example` → no live values
       (placeholders only). **History still contains them → rotation is the real control** (see
       `vps-worker-fixes.md` §2).
 - [ ] `ls -l /etc/cron.d/buildairesume` → `0600` (was `0644` with a bearer token).

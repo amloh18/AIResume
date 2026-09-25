@@ -191,7 +191,7 @@ umask 077
 mkdir -p /home/amloh/mongodb/backups/precut
 # Atlas credentials in a mode-600 file — never on the command line / in history:
 cat > /home/amloh/mongodb/.atlas.env <<'EOF'
-ATLAS_URI='mongodb+srv://<user>:<pass>@cluster0.ta7jxv7.mongodb.net/?appName=Cluster0'
+ATLAS_URI='mongodb+srv://<user>:<REDACTED>@cluster0.ta7jxv7.mongodb.net/?appName=Cluster0'
 EOF
 chmod 600 /home/amloh/mongodb/.atlas.env
 set -a; . /home/amloh/mongodb/.atlas.env; . /home/amloh/mongodb/.env; set +a   # ATLAS_URI + APP_DB_PASSWORD
