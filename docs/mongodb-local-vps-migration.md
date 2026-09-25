@@ -20,7 +20,7 @@ Measured against the live Atlas cluster (read-only `collStats`, 2026-09-25):
 
 Atlas M0 caps at **512 MB** → logical data+indexes measured **~415 MB ≈ 80% of the cap** (the Atlas UI may show a lower compression-adjusted number; either way we are well over half and `jobs` alone is ~80% of the dataset). `jobs` grows with every ingestion cycle. Self-hosting on the VPS removes the cap (disk becomes the only limit), removes cross-internet latency (app ↔ DB over the private Docker network), and removes Atlas's connection/data-transfer rate limits.
 
-**What you take on in exchange** (accepted consciously): backups become self-managed (Phase 5 automates them), the VPS becomes a single point of failure, and you own upgrades/monitoring. Atlas stays alive and untouched as the rollback target until the rollback window closes.
+**What you take on in exchange** (accepted consciously): backups become self-managed (Phase 5 automates them), the VPS becomes a single point of failure, and you own upgrades/monitoring. The rollback window has since closed — the app is fully detached from Atlas and the VPS MongoDB is the only database (§13).
 
 ### Constraints found in the codebase (these shape the plan)
 
@@ -389,7 +389,7 @@ Restore drill (do this **once** after go-live, per rule 62): restore the nightli
    ⚠ This replaces the Atlas contents — re-verify counts first, and know that anything written to Atlas between cutover and rollback (there should be nothing — writers point only at local) is irrelevant.
 4. Flip env back to `MONGODB_URI=mongodb+srv://...` (each of the three services) + restart, and re-run verification.
 
-**Keep the Atlas cluster alive (M0 may be paused only after the rollback window)** — recommend ≥ 2 weeks, then pause/delete and cancel nothing you still need for R2/Stalwart.
+**Atlas retention rule superseded — see §13.** The rollback window has closed and no code path reaches Atlas anymore: rotate the Atlas database password and delete the M0 cluster (owner steps in §13). R2/Stalwart are unrelated to Atlas — cancel nothing there.
 
 ---
 
@@ -403,7 +403,7 @@ Restore drill (do this **once** after go-live, per rule 62): restore the nightli
 
 - **Database engine stays MongoDB** (no PostgreSQL — rule 61.2 is about engine migrations; this is only hosting).
 - R2 for files, Stalwart for email, Dokploy/Cloudflare for deploy/edge — untouched.
-- Local dev `.env.local` keeps pointing at Atlas initially (dev writes are tiny and stay inside the rollback story). Optional follow-up: a laptop Docker Mongo + `mongorestore` of a sanitized dump; not needed for this migration.
+- Local dev `.env.local` now points at the VPS MongoDB through an SSH tunnel (`ssh -N -L 27017:127.0.0.1:27017 amloh@192.168.1.8`, URI in §13) — there is no Atlas endpoint left to point at. A laptop-local Mongo remains an optional follow-up; not needed.
 - The `test` split-brain database migrates along (it's small) — schedule its cleanup separately after go-live.
 
 ## 11. Follow-ups
@@ -415,7 +415,7 @@ Restore drill (do this **once** after go-live, per rule 62): restore the nightli
 - [ ] Phase 0 V-tasks overlap (V6 UFW, V10 resources) — the same SSH session covers both; see `docs/application-automation/vps-worker-fixes.md`.
 - [ ] Add `jobEvents` / `activitylogs` TTL indexes (they are 19 MB+ of pure telemetry and grow forever).
 - [ ] Update any deployment docs that still show an Atlas `MONGODB_URI` example.
-- [ ] ≥ 2 weeks after go-live: decide Atlas fate (pause/delete — but only after the rollback window *and* once rollback is no longer needed).
+- [x] Decide Atlas fate — decided 2026-09-25: **decommission**. App-side detach verified (§13); the owner's final steps (rotate database password, delete Cluster0) are tracked in §13.
 
 ---
 
@@ -437,3 +437,49 @@ What ran, in order:
 10. **Phase 5** — `backup.sh` test green (43 MB, 133/133, gzip clean) + nightly cron at **03:17** installed; offsite `r2` push still pending credentials (§7).
 
 Deviations from the original plan (all folded into the sections above): image `mongo:8.2.12` (not 8.0.32), stack at `/home/amloh/mongodb` (not `/opt`, no sudo), `MONGO_INITDB_ROOT_PASSWORD` (not `MONGO_ROOT_PASSWORD`), keyFile required, tools via tarball (not apt), custom dumper (not `mongodump`) for the Atlas side, recovery ran post-restore against local (Atlas write-blocked), no cutover-window resync (Atlas frozen), env flip via `docker service update --env-add` (not the Dokploy UI).
+
+---
+
+## 13. Atlas decommission (2026-09-25/26)
+
+**Decision: self-hosted VPS MongoDB is the only database. Atlas M0 is decommissioned — the app has no code path, env var, or stored config that can reach it.** (Trigger: one Atlas credential appeared in an operator session transcript during a read-back redaction bug, so the password must be rotated — at which point the cluster has no remaining consumer and gets deleted.)
+
+### Detach surface (every row verified)
+
+| Surface | State | Evidence |
+|---|---|---|
+| Dokploy stored env (encrypted `application.env`) | Atlas URI replaced **in place** with the local URI — this was the durable fix for the §5 revert incident (the stored env re-applied Atlas on every deploy until then) | read-back `ATLAS_GONE` (134 lines preserved); re-verified after the 15:33 / 17:46 / 18:17 UTC deploys: spec stayed local, 0 quota errors; backup `dokploy-app-env.enc.bak` |
+| App + worker service specs | `MONGODB_URI=mongodb://…@mongodb:27017/airesume?authSource=admin&replicaSet=rs0&appName=buildairesume` | post-deploy check (§5) run after each deploy |
+| VPS filesystem (`/home/amloh/mongodb`) | `.atlas.env` deleted; zero Atlas references left; `dump.sh` / `counts.sh` now inert (they sourced the deleted file) | detach script 2026-09-25 |
+| Container envs (app, worker, ingestion) | no `mongodb+srv` / `cluster0` / Atlas URIs | env scan 2026-09-25 |
+| Repo (git-tracked files) | credentials redacted to `<REDACTED>` in docs; only `${APP_DB_PASSWORD}` placeholders remain; `dist/worker.mjs` rebuilt clean | `git grep` credential-pattern scan 2026-09-25 |
+| Local dev `.env.local` | repointed to VPS Mongo through an SSH tunnel (below) | verified by tunnel connectivity test 2026-09-26 |
+
+### Local development access (no Atlas endpoint exists anymore)
+
+The Mac has no local mongod — connect through a tunnel to the VPS Mongo, which is published on loopback only (`127.0.0.1:27017`, never public):
+
+```bash
+# terminal 1: keep the tunnel open while developing
+ssh -N -L 27017:127.0.0.1:27017 amloh@192.168.1.8
+```
+
+`.env.local` (value lives only in the untracked file, never in git):
+
+```
+mongodb://buildai:<password>@127.0.0.1:27017/airesume?authSource=admin&directConnection=true
+```
+
+`directConnection=true` is required: without it the driver tries to resolve the replica-set host `mongodb`, which only exists inside the VPS Docker network.
+
+### Owner steps (final, outside this repo)
+
+1. **Rotate the Atlas database password** in Atlas Cloud UI (rotation is mandatory regardless of anything else — the credential leaked once).
+2. **App keeps running** while Atlas is still alive but poisoned — it cannot touch Atlas anymore; the post-deploy check (§5) stays green.
+3. **Delete Cluster0** and cancel the M0 plan if billing continues.
+
+### Safety net after deletion
+
+On-VPS copies (`backups/`, nightly cron 03:17) plus the weekly offsite push (Google Drive + Telegram, §7) are now the **only** restore paths — the restore-drill follow-up in §11 is therefore mandatory rather than nice-to-have. Run it once after the cluster is deleted and record the result here:
+
+- [ ] Restore drill against a fresh MongoDB from the nightly backup (record date + duration + doc counts).

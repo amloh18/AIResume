@@ -31,8 +31,10 @@ const TEST_USER_EMAIL = `e2e-job-test-${Date.now()}@cvcircle.local`;
  * Two hard safety rules:
  *
  * 1. Credentials must never be hard-coded here — this file is tracked by git, so a literal URI would
- *    put the Atlas username and password into the repository history forever.
- * 2. The suite deliberately does NOT read MONGODB_URI (which .env.local points at production): it
+ *    put a database username and password into the repository history forever (this is how an Atlas
+ *    credential leaked once — Atlas is gone now, the rule still stands for the VPS MongoDB).
+ * 2. The suite deliberately does NOT read MONGODB_URI (which .env.local points at the production
+ *    VPS MongoDB over an SSH tunnel): it
  *    inserts and deletes documents in phases 3-40, and an accidental run against the production
  *    database would mutate live data. Only the dedicated E2E_MONGODB_URI is honoured, and without it
  *    the whole suite is skipped instead of throwing, so the default test run stays green/offline.
