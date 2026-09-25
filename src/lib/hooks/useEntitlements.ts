@@ -78,6 +78,18 @@ export interface UseEntitlementsReturn {
   getLimit: (limitKey: LimitKey) => { limit: number; used: number; remaining: number | null; period: string; resetAt?: Date } | null;
   /** Get remaining quota for a limit key */
   getRemaining: (limitKey: LimitKey) => number | null;
+  /**
+   * The auto-apply usage as the USER should see it: the binding cap for their
+   * plan and the matching reset time.
+   *
+   * The raw buckets split auto-apply into daily and monthly keys, but only one
+   * of them is the operative limit per plan (free → lifetime/monthly 10,
+   * starter → monthly 10, focused → daily 50). Surfaces that show a single
+   * "used / limit · resets in …" meter must use this, or a Focused user sees
+   * "13/Infinity" and a Starter user sees the monthly bucket where the daily
+   * one binds.
+   */
+  getAutoApplyUsage: () => { used: number; limit: number; remaining: number | null; resetAt?: Date; isUnlimited: boolean };
   /** Get the upgrade plan needed for a feature */
   getUpgradePlan: (feature: FeatureKey) => PlanKey;
   /** Get customer-facing feature name */
@@ -256,6 +268,49 @@ export function useEntitlements(): UseEntitlementsReturn {
     return entitlements.limits?.[limitKey]?.remaining ?? null;
   }, [entitlements.limits]);
 
+  const getAutoApplyUsage = useCallback((): {
+    used: number;
+    limit: number;
+    remaining: number | null;
+    resetAt?: Date;
+    isUnlimited: boolean;
+  } => {
+    /*
+      Pick the bucket that actually binds for the current plan. Keep the
+      precedence identical to AutoApplyQuotaService.resolveBindingCap — that is
+      what the enforcement layer blocks on, and these two must never disagree.
+    */
+    const daily = entitlements.limits?.auto_apply_daily;
+    const monthly = entitlements.limits?.auto_apply_monthly;
+
+    if (plan === 'focused' && daily) {
+      // Focused: the daily cap is the operative limit; monthly is uncapped.
+      return {
+        used: daily.used,
+        limit: daily.limit,
+        remaining: daily.remaining,
+        resetAt: daily.resetAt ? new Date(daily.resetAt) : undefined,
+        isUnlimited: daily.remaining === null,
+      };
+    }
+
+    if (monthly) {
+      // Starter/Free: the monthly (or lifetime) cap binds.
+      return {
+        used: monthly.used,
+        limit: monthly.limit,
+        remaining: monthly.remaining,
+        resetAt: monthly.resetAt ? new Date(monthly.resetAt) : undefined,
+        isUnlimited: monthly.remaining === null,
+      };
+    }
+
+    // Entitlements not loaded yet — assume a full allowance at plan defaults
+    // rather than rendering a fake exhausted state.
+    const fallbackLimit = plan === 'focused' ? 50 : 10;
+    return { used: 0, limit: fallbackLimit, remaining: fallbackLimit, isUnlimited: false };
+  }, [entitlements.limits, plan]);
+
   const getUpgradePlan = useCallback((feature: FeatureKey): PlanKey => {
     return FEATURE_CATALOG[feature]?.requiredPlan ?? getRequiredPlan(feature);
   }, []);
@@ -273,6 +328,7 @@ export function useEntitlements(): UseEntitlementsReturn {
     getFeature,
     getLimit,
     getRemaining,
+    getAutoApplyUsage,
     getUpgradePlan,
     getFeatureName: (f: FeatureKey) => getFeatureName(f),
     getFeatureDescription: (f: FeatureKey) => getFeatureDescription(f),
