@@ -1,7 +1,7 @@
 import { runCron } from '@/lib/cron/runCron';
 import { log } from '@/lib/structured-logger';
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import { getConnection } from '@/lib/database';
 import EmailCampaign, { IEmailCampaign } from '@/models/admin/EmailCampaign';
 import campaignEmailService from '@/lib/services/campaignEmailService';
 import { addDays, addWeeks, addMonths } from 'date-fns';
@@ -13,10 +13,13 @@ export async function GET(request: NextRequest) {
     // Overlap guard: a concurrent run would clone the same recurring child campaign twice.
     return runCron('process-campaigns', request, async () => {
       try {
-          // Connect to DB if not connected (handled by model import side-effects usually, but good to ensure)
-          if (mongoose.connection.readyState === 0) {
-              await mongoose.connect(process.env.MONGODB_URI!);
-          }
+          /*
+            Connect through the unified connection manager — a raw
+            mongoose.connect() here can bind the shared default connection
+            without the MONGODB_DB override and poison every later query in
+            this process (see the split-database guard in connection-manager).
+          */
+          await getConnection();
 
           const now = new Date();
           const results = {
