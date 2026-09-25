@@ -341,16 +341,15 @@ crontab -l | { grep -v 'mongodb/backup.sh'; cat; echo '17 3 * * * /home/amloh/mo
 
 **Test run (2026-09-25): green** — 43 MB, 133/133 collections, all `gzip -t` clean, full dump in ~1 min locally (local mongodump is *fast*; only the Atlas side was the bottleneck).
 
-**Offsite push — still pending (needs a decision/credentials):** `rclone` is already installed, but the only configured remote is a personal `gdrive:`; the app's `AWS_*`/`S3_BASE_URL` env is a stale `cvcircle` bucket on AWS S3 (`NoSuchBucket`) — not usable. Configure a `r2` remote with real R2 keys before relying on offsite (one-time):
+**Offsite push — DONE (as executed, via the same Drive/Hermes path as the Obsidian vault):** instead of an R2 remote, the weekly offsite copy reuses the existing `gdrive:` rclone remote and the house delivery pattern:
 
-```bash
-rclone config   # remote "r2" → s3 → provider Cloudflare R2 →
-                # endpoint https://<ACCOUNT_ID>.r2.cloudflarestorage.com →
-                # access key id / secret from R2 API → region "auto" → leave root blank
-rclone lsd r2:  # verify
-```
+- **Script:** `~/.hermes/scripts/mongodb_weekly_backup.sh` (lock + self-heal: freshens the nightly if it's stale, `gzip -t` verifies, uploads to `gdrive:MongoDB-Backup/dump-<stamp>`, prunes Drive to the newest **4** weeklies, prints a summary).
+- **Schedule:** Hermes cron job **`fa84eaf209ff`** — `0 4 * * 0` (Sundays 04:00, right after the 03:17 nightly), `--no-agent`, **`--deliver telegram`** — run status *and* failures are reported in Telegram.
+- **Tested 2026-09-25:** manual run → `last_status: ok`, delivery clean, `gdrive:MongoDB-Backup/dump-20260925-150954` = 266 objects / 41.4 MiB (upload took ~30 min — VPS uplink is the bottleneck; harmless at weekly cadence).
 
-> ⚠ Do **not** point backups at a bucket/object-URL that serves files publicly — dumps contain candidate PII. Use a private bucket (or confirm listing+access require keys) and an unguessable prefix.
+The `r2:`-remote block in `backup.sh` above remains as a no-op fallback if an R2 remote is ever configured; the weekly Drive push does not depend on it.
+
+> ⚠ Do **not** point backups at a bucket/object-URL that serves files publicly — dumps contain candidate PII. `gdrive:MongoDB-Backup` sits in your own Drive behind the existing OAuth token; any future R2 remote must be a private bucket (or confirm listing+access require keys) with an unguessable prefix.
 
 Restore drill (do this **once** after go-live, per rule 62): restore the nightlies dump into a scratch container and diff counts — a backup that has never been restored is not a backup. (The Phase 2 `backups/precut` dump *was* fully restore-verified — 258,030 docs, 0 failures, indexes present — but the nightly path itself still needs its own drill.)
 
@@ -388,7 +387,7 @@ Restore drill (do this **once** after go-live, per rule 62): restore the nightli
 
 ## 11. Follow-ups
 
-- [ ] **Offsite backup push** — configure the rclone `r2` remote (§7) with real R2 keys; local 7-day rotation runs nightly at 03:17 already.
+- [x] **Offsite backup push** — done: weekly push to `gdrive:MongoDB-Backup` + Telegram report via Hermes cron job `fa84eaf209ff` (§7, tested 2026-09-25).
 - [ ] **Restore-drill the nightly backup** once (§7) and record the result.
 - [ ] **User verification pass with a real login:** docs page master CV, CV save + template switch, jobs feed + job detail, Admin → System Health (Phase 4 unchecked boxes).
 - [ ] Watch the first ingestion cycle land in the local DB (`airesume.jobs` climbs above 30,103).
