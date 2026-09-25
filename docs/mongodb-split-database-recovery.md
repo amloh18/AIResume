@@ -103,3 +103,14 @@ Ownership fields pointing at the duplicate account are rewritten to `6a100dfb36a
 - [ ] **One-off `scripts/*.ts`** — many older scripts call `mongoose.connect(MONGODB_URI)` without `dbName` and will operate on `test`. Pass `dbName: process.env.MONGODB_DB` when running any of them.
 - [ ] **VPS/prod check (SSH, see `docs/application-automation/vps-worker-fixes.md`)** — confirm the Dokploy env sets `MONGODB_DB=airesume` (evidence says prod is healthy: the account's Sep 22–23 applications are correctly in `airesume`), and confirm no other service connects without it.
 - [ ] Push `fix/fe-be-integration` and merge to `refactor/simple` per convention.
+
+---
+
+## 5. Execution outcome (2026-09-25, during the Atlas → VPS migration)
+
+The script ran **against the local replica set** (SSH tunnel to the VPS, temporary `.env.local` swap — Atlas itself was write-blocked by the M0 quota, so `--apply` there fails by design). See `docs/mongodb-local-vps-migration.md` §4/§12.
+
+- **9/9 planned documents verified** in `airesume` (master CV `status=published`, tailored CV, cover letter, application, journey, 3 events, job).
+- The one ✅-failing item — `jobs/6aaa61fe…` — was **already present** in `airesume` under its canonical `_id` `6a8ef7b2b7001f8d4a9be97a` (same `canonicalId`; the unique index correctly refused the duplicate). Fix: `jobapplications.jobId` + the 3 `applicationevents.jobId` were re-pointed at that canonical job (same posting — title/company match exactly); post-check **0 dangling references**. Original ids remain in the script's backup JSON.
+- `counts.sh` deltas after recovery were exactly the +8 copied docs and nothing else.
+- **Docs-page verification (Resumes: 1, template save)** still needs a logged-in session — listed as a user follow-up in the migration runbook §11.

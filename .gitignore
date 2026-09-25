@@ -88,6 +88,7 @@ venv/
 *.tmp
 *.bak
 *.backup
+/split-db-recovery-backup-*.json
 *.orig
 *.rej
 *.temp
