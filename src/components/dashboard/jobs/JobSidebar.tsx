@@ -55,6 +55,7 @@ import {
   type TrackerSidebarOpenContext,
 } from './trackerSidebarConfig';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { formatResetCountdown } from '@/lib/utils/reset-countdown';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
@@ -1489,8 +1490,31 @@ ${userName}`
 
       const applyData = await applyRes.json();
 
+      /*
+        Quota / entitlement blocks arrive as HTTP 403 with a JSON body — the
+        server refuses to enqueue, so nothing is in flight. Surface the real
+        reason (with the reset countdown) instead of the generic
+        "Auto-apply failed" toast this used to fall into.
+      */
+      if (applyRes.status === 403) {
+        const blockMessage: string =
+          applyData?.message || applyData?.error || 'Auto-Apply limit reached';
+        const resetClause = applyData?.resetAt
+          ? ` Quota ${formatResetCountdown(applyData.resetAt) !== null ? `resets in ${formatResetCountdown(applyData.resetAt)}` : `resets ${new Date(applyData.resetAt).toLocaleDateString()}`}.`
+          : '';
+        toast.error(`${blockMessage}${resetClause}`, { duration: 8000 });
+        return;
+      }
+      // Per-source daily cap returns 429 with its own message.
+      if (applyRes.status === 429) {
+        toast.error(applyData?.error || 'Daily application limit reached. Try again tomorrow.', {
+          duration: 8000,
+        });
+        return;
+      }
+
       if (!applyRes.ok) {
-        throw new Error(applyData?.error?.message || 'Auto-apply failed');
+        throw new Error(applyData?.error?.message || applyData?.error || applyData?.message || 'Auto-apply failed');
       }
 
       /*

@@ -19,6 +19,7 @@ import {
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 import { Pill, SearchInput } from '@/components/ui';
 import { chipStateDark } from '@/components/ui/chip-styles';
 
@@ -173,31 +174,35 @@ export default function FiltersBar({
     });
   };
 
-  // Auto-Apply quota computation using the unified entitlement engine
-  const { getLimit, plan: hookPlan } = useEntitlements();
+  // Auto-Apply quota computation using the unified entitlement engine.
+  // Uses the BINDING limit for the plan (starter → monthly, focused → daily) —
+  // the raw `auto_apply_monthly` bucket is uncapped (-1) on Focused and would
+  // render as "13/Infinity".
+  const { getAutoApplyUsage, plan: hookPlan } = useEntitlements();
   const autoApplyQuota = useMemo(() => {
-    const autoApplyLimit = getLimit('auto_apply_monthly');
-    if (autoApplyLimit) {
-      const isUnlimited = autoApplyLimit.remaining === null;
-      return {
-        used: autoApplyLimit.used,
-        limit: isUnlimited ? Infinity : autoApplyLimit.limit,
-        enabled: autoApplyEnabled,
-      };
-    }
-    // Fallback to legacy entitlements if hook not ready
-    const isStarter = entitlements?.plan === 'starter' || !isPaidUser;
-    if (isStarter) {
-      const limit = entitlements?.application?.limit ?? 10;
-      const remaining = entitlements?.application?.remaining ?? 10;
-      const used = Math.max(0, limit - remaining);
-      return { used, limit, enabled: autoApplyEnabled };
-    }
-    const limit = entitlements?.autoApply?.limit ?? 50;
-    const remaining = entitlements?.autoApply?.remaining ?? 50;
-    const used = Math.max(0, limit - remaining);
-    return { used, limit, enabled: autoApplyEnabled };
-  }, [getLimit, entitlements, isPaidUser, autoApplyEnabled]);
+    const usage = getAutoApplyUsage();
+    return {
+      used: usage.used,
+      limit: usage.isUnlimited ? Infinity : usage.limit,
+      remaining: usage.remaining,
+      resetAt: usage.resetAt,
+      enabled: autoApplyEnabled,
+    };
+  }, [getAutoApplyUsage, autoApplyEnabled]);
+
+  /*
+    Live countdown to the quota reset, re-rendered every 30s so "Resets in 5h"
+    actually ticks down. The label intentionally only counts down while quota
+    REMAINS; at zero remaining the pill's number itself says the limit is hit
+    and the modals carry the full reset story.
+  */
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!autoApplyQuota.resetAt) return;
+    const t = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, [autoApplyQuota.resetAt]);
+  const resetCountdown = formatResetLabel(autoApplyQuota.resetAt, 'Resets');
 
   const handleAutoApplyClick = () => {
     onToggleAutoApply?.();
@@ -256,8 +261,7 @@ export default function FiltersBar({
                 ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600/50'
                 : 'bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-300 border-[var(--border-primary)]'
             }`}
-          >
-            <button
+          >            <button
               type="button"
               onClick={handleAutoApplyClick}
               className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 hover:opacity-80 transition-opacity cursor-pointer"
@@ -277,13 +281,24 @@ export default function FiltersBar({
               <span className="font-extrabold tracking-tight">Auto-Apply</span>
               <span
                 className={`px-1.5 py-0.5 rounded-md text-[11px] font-black tracking-tight ${
-                  autoApplyQuota.enabled
-                    ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
-                    : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
-                }`}
+                  autoApplyQuota.remaining !== null && autoApplyQuota.remaining <= 0
+                    ? 'bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-300'
+                    : autoApplyQuota.enabled
+                      ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
+                      : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
+                }`
+              }
               >
-                {autoApplyQuota.used}/{autoApplyQuota.limit}
+                {autoApplyQuota.used}/{autoApplyQuota.limit === Infinity ? '∞' : autoApplyQuota.limit}
               </span>
+              {resetCountdown && autoApplyQuota.limit !== Infinity && (
+                <span
+                  className="hidden lg:inline text-[10px] font-bold text-white/50 dark:text-lime-200/50 whitespace-nowrap"
+                  title={`Quota ${resetCountdown.toLowerCase()}`}
+                >
+                  · {resetCountdown}
+                </span>
+              )}
             </button>
 
             <span className="h-4 w-px bg-gray-200 dark:bg-white/10" />

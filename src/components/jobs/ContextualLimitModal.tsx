@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { UserEntitlements, UpgradeRecommendation } from '@/lib/services/entitlement-service';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 
 interface ContextualLimitModalProps {
   isOpen: boolean;
@@ -35,13 +36,23 @@ export const ContextualLimitModal: React.FC<ContextualLimitModalProps> = ({
   if (!isOpen || !entitlements) return null;
 
   const isStarter = entitlements.plan === 'starter';
-  const resetDateStr = entitlements.application.resetAt
-    ? new Date(entitlements.application.resetAt).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : 'next billing cycle';
+  const resetAt = isStarter
+    ? entitlements.application.resetAt
+    : entitlements.autoApply.resetAt;
+  /*
+    Lead with the live countdown when one is available; the absolute date stays
+    as the fallback (and the tooltip). A user staring at a hit limit wants to
+    know HOW LONG, not which calendar day.
+  */
+  const resetCountdown = formatResetLabel(resetAt, 'Resets');
+  const resetDateStr = resetCountdown
+    ?? (resetAt
+      ? new Date(resetAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })
+      : 'next billing cycle');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
