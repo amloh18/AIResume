@@ -52,9 +52,16 @@ export const GET = withAdminAuth(async (request: NextRequest) => {
       measureApiHealth(`${baseUrl}/api/user/usage-limits`, '/api/user/usage-limits'),
     ]);
 
-    // Measure third-party API health (just check if they're reachable)
+    // Measure third-party API health (just check if they're reachable).
+    // The Atlas entry only applies while MONGODB_URI actually points at Atlas
+    // (mongodb+srv / .mongodb.net). After a move to self-hosted MongoDB it
+    // would otherwise show a dependency we no longer have as permanently
+    // degraded; the local deployment is covered by the database check above.
+    const configuredUri = process.env.MONGODB_URI || '';
+    const isAtlasUri =
+      configuredUri.startsWith('mongodb+srv://') || configuredUri.includes('.mongodb.net');
     const thirdPartyApis = await Promise.all([
-      measureApiHealth('https://cloud.mongodb.com', 'MongoDB Atlas'),
+      ...(isAtlasUri ? [measureApiHealth('https://cloud.mongodb.com', 'MongoDB Atlas')] : []),
       measureApiHealth('https://api.stripe.com', 'Stripe API'),
       measureApiHealth('https://api.polar.sh', 'Polar API'),
     ]);
