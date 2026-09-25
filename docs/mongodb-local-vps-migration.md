@@ -254,7 +254,7 @@ Everything below is scripted in **`/home/amloh/mongodb/cutover.sh`** (chmod 700)
    docker stop buildairesume-job-ingestion     # restart:unless-stopped stays down
    sleep 5
    ```
-3. **Flip env** — as executed, via the Docker CLI rather than the Dokploy UI (Dokploy holds no `MONGODB_*` entries for these services, so nothing reverts them; verified after the flip that each service spec contains exactly **one** `MONGODB_URI`):
+3. **Flip env** — as executed, via the Docker CLI rather than the Dokploy UI. **Correction (later the same day):** the original claim here — *"Dokploy holds no `MONGODB_*` entries for these services, so nothing reverts them"* — was **wrong**; see the incident note below. Verified after the flip that each service spec contains exactly **one** `MONGODB_URI`:
    ```bash
    docker service update --env-add "MONGODB_URI=$LOCAL_URI" buildairesume-app-vmvp35
    docker service update --env-add "MONGODB_URI=$LOCAL_URI" buildairesume-worker-daemon
@@ -274,6 +274,27 @@ Everything below is scripted in **`/home/amloh/mongodb/cutover.sh`** (chmod 700)
    ⚠ When `sed`-ing that URI into a file, escape `&` (`\&`) — otherwise sed expands it to the whole match and corrupts the URI.
 
    The db is in the URI path **and** in `MONGODB_DB` — deliberate belt-and-braces after the split-database incident. Services using `MONGODB_DATABASE`: keep `MONGODB_DATABASE=airesume`. The app connects over the Docker network as hostname `mongodb` (if any service runs on another network: `docker network connect dokploy-network mongodb`).
+
+   ### Incident: the CLI flip was reverted by Dokploy deploys (2026-09-25, fixed)
+
+   The flip above was **silently reverted twice** — by the Dokploy deploys that finished at 11:33 and 13:11 UTC. Root cause: Dokploy stores this application's env **encrypted** in `application.env` (value prefix `enc:v1:` — AES-256-GCM keyed by `HMAC-SHA256(BETTER_AUTH_SECRET, "dokploy:db-encryption:v1")`), so plain SQL greps for `MONGODB_URI` match nothing and the original "Dokploy holds no `MONGODB_*` entries" check gave a **false negative**. The row did contain `MONGODB_URI=mongodb+srv://…cluster0.ta7jxv7.mongodb.net…`, and every deploy of `resumebuiler` re-applied it to the swarm spec, overwriting the CLI flip. Symptom: the app went back to writing against the quota-blocked Atlas cluster → user-visible *"you are over your space quota … Writes are blocked"* errors in the Jobs Hub.
+
+   **Durable fix (applied & verified same day):**
+
+   1. Backup ciphertext → `/home/amloh/mongodb/dokploy-app-env.enc.bak` (10 056 bytes).
+   2. Decrypt in the Dokploy container (node, scheme above), replace the `MONGODB_URI` value with `$LOCAL_URI`, re-encrypt.
+   3. `UPDATE application SET env = … WHERE "applicationId"='oPUp7wDfZxKMv6SFV6hx_'` → `UPDATE 1`.
+   4. Read back + decrypt → `MONGODB_URI=mongodb://…@mongodb:27017/airesume?…`, `ATLAS_GONE`, all 134 env lines preserved; `buildArgs`/`buildSecrets`/`previewEnv`/`previewBuildArgs` checked empty (no second copy).
+
+   Deploys now apply the **local** URI themselves, so the flip survives every future redeploy. `buildairesume-worker-daemon` is not a Dokploy application (CLI-managed only) and job-ingestion is compose-managed (`.env` file) — neither needed this fix.
+
+   **Post-deploy verification (run after any Dokploy deploy):**
+
+   ```bash
+   docker service inspect buildairesume-app-vmvp35 \
+     --format '{{range .Spec.TaskTemplate.ContainerSpec.Env}}{{println .}}{{end}}' | grep '^MONGODB_URI='
+   # must be: mongodb://…@mongodb:27017/…   (never mongodb+srv / cluster0)
+   ```
 4. **Restart** writers (`docker service scale …=1` for app + worker; compose `up -d` already restarted job-ingestion).
 5. **Verify (Phase 4).**
 
@@ -412,7 +433,7 @@ What ran, in order:
 6. **`counts.sh` → `COUNTS_MATCH`** (every collection, both dbs, Atlas vs local).
 7. **Recovery on local** (tunnelled; `.env.local` swapped and restored) — 9/9 planned docs verified; the `jobs` doc was already present under its canonical `_id` (unique `canonicalId`), so the application's + 3 events' `jobId` were re-pointed at `6a8ef7b2…`; **0 dangling references** afterwards. Re-run of `counts.sh` showed exactly the **+8** explained delta and nothing else.
 8. **Cutover via `cutover.sh`** — sanity → stop writers → `docker service update --env-add` (app + worker) + job-ingestion `.env`/compose flip → restart → **app 200 / ingestion 200**; ingestion logged `Successfully connected to MongoDB [airesume]` + index verification; grep for mongo/auth/timeout errors clean.
-9. **Post-flip proof** — exactly one `MONGODB_URI` per service, all pointing at `mongodb:27017`, zero `mongodb+srv`/`cluster0` remnants anywhere; ~50 live connections on the local mongod; `opcounters.update` growing over a 75 s window; public `https://resume.morigrid.com` renders end-to-end.
+9. **Post-flip proof** — exactly one `MONGODB_URI` per service, all pointing at `mongodb:27017`, zero `mongodb+srv`/`cluster0` remnants in any **service env** (this held for the specs at flip time, but the *Dokploy-stored* env still contained Atlas and reverted the flip on the next deploys — see the incident in §5; durably fixed the same day); ~50 live connections on the local mongod; `opcounters.update` growing over a 75 s window; public `https://resume.morigrid.com` renders end-to-end.
 10. **Phase 5** — `backup.sh` test green (43 MB, 133/133, gzip clean) + nightly cron at **03:17** installed; offsite `r2` push still pending credentials (§7).
 
 Deviations from the original plan (all folded into the sections above): image `mongo:8.2.12` (not 8.0.32), stack at `/home/amloh/mongodb` (not `/opt`, no sudo), `MONGO_INITDB_ROOT_PASSWORD` (not `MONGO_ROOT_PASSWORD`), keyFile required, tools via tarball (not apt), custom dumper (not `mongodump`) for the Atlas side, recovery ran post-restore against local (Atlas write-blocked), no cutover-window resync (Atlas frozen), env flip via `docker service update --env-add` (not the Dokploy UI).

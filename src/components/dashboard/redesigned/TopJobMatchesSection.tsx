@@ -19,6 +19,7 @@ import { JobDetailModal } from '@/components/jobs/JobDetailModal';
 import { EntitlementNotice, EntitlementNoticeData } from '@/components/jobs/EntitlementNotice';
 import { JobCard } from '@/components/jobs/JobCard';
 import type { JobListing } from '@/types/automation-schema';
+import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 
 export interface TopMatchJob {
@@ -576,25 +577,31 @@ export default function TopJobMatchesSection() {
           );
         }
       } else {
-        // Genuine submission failure
-        applyProgress.completeApply(targetJob.title, targetJob.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", jobId);
+        // Genuine submission failure. Sanitize: raw infra errors (DB/network)
+        // must never be shown to the user.
+        const failureMessage = toUserFacingMessage(
+          resData.error || resData.message,
+          "We couldn't complete the application on the employer's site."
+        );
+        applyProgress.completeApply(targetJob.title, targetJob.company, false, failureMessage, jobId);
         setEntitlementNoticeData({
           code: 'APPLICATION_FAILED',
           jobTitle: targetJob.title,
           company: targetJob.company,
           applyUrl: targetJob.applyUrl,
-          message: resData.error || resData.message || "We couldn't complete the application on the employer's site.",
+          message: failureMessage,
         });
         setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      applyProgress.completeApply(targetJob.title, targetJob.company, false, err.message || 'Network error occurred during submission.', jobId);
+      const failureMessage = toUserFacingMessage(err, 'Network error occurred during submission.');
+      applyProgress.completeApply(targetJob.title, targetJob.company, false, failureMessage, jobId);
       setEntitlementNoticeData({
         code: 'APPLICATION_FAILED',
         jobTitle: targetJob.title,
         company: targetJob.company,
         applyUrl: targetJob.applyUrl,
-        message: err.message || 'Network error occurred during submission.',
+        message: failureMessage,
       });
       setEntitlementNoticeOpen(true);
     } finally {
