@@ -405,11 +405,15 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
     return !isNaN(posted) && now - posted < 24 * 60 * 60 * 1000;
   }).length;
 
-  // Count jobs needing user attention (needs_user_action, failed, etc.)
+  // Count jobs needing user attention — real pipeline states (parked for
+  // approval / manual takeover, failed, dead-lettered), not the fictional
+  // `automationStatus` field that never existed on JobApplication.
   const needsAttention = jobs.filter((j: any) =>
-    j.status === 'needs_input' || 
-    j.automationStatus === 'needs_user_action' ||
-    j.automationStatus === 'failed' ||
+    j.status === 'needs_input' ||
+    j.internalStatus === 'review_required' ||
+    j.internalStatus === 'automation_failed' ||
+    j.internalStatus === 'automation_unknown' ||
+    j.deadLetter ||
     j.skipReason
   ).length;
 

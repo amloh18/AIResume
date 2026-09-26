@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { startApplicationWorker, stopApplicationWorker } from './applicationWorker';
 import { claimNextApplication, completeQueueItem, failQueueItem, releaseStuckItems } from '@/lib/worker/claimNext';
 import { processApplication } from '@/lib/worker/processApplication';
+import { notifyApplicationNeedsAction } from '@/lib/worker/applicationActionNotifier';
 import { getCorrelationId } from '@/lib/observability/correlation';
 
 vi.mock('@/lib/worker/claimNext', () => ({
@@ -32,12 +33,16 @@ vi.mock('@/lib/structured-logger', () => ({
     performance: vi.fn(),
   },
 }));
+vi.mock('@/lib/worker/applicationActionNotifier', () => ({
+  classifyApplicationAlert: vi.fn(),
+  notifyApplicationNeedsAction: vi.fn().mockResolvedValue(undefined),
+}));
 
 const claimMock = claimNextApplication as ReturnType<typeof vi.fn>;
 const processMock = processApplication as ReturnType<typeof vi.fn>;
 const completeMock = completeQueueItem as ReturnType<typeof vi.fn>;
 const failMock = failQueueItem as ReturnType<typeof vi.fn>;
-
+const notifyMock = notifyApplicationNeedsAction as ReturnType<typeof vi.fn>;
 const QUEUE_ITEM = {
   _id: 'q1',
   attempts: 1,
@@ -100,6 +105,10 @@ describe('applicationWorker — correlation handoff', () => {
 
     expect(seenDuringProcessing).toBeTruthy();
     expect(seenDuringProcessing).not.toBe('trace-from-request');
+    // A parked application must alert the user inside the same traced context.
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ applicationId: JOB_APP._id, status: 'review_required', reason: 'held' })
+    );
   });
 
   it('fails the queue item (and keeps the trace) when processing throws', async () => {
@@ -117,6 +126,10 @@ describe('applicationWorker — correlation handoff', () => {
     // The thrown error is caught by processApplication's own handler in production; here the tick's
     // catch path runs, which must not mark the item complete.
     expect(completeMock).not.toHaveBeenCalled();
+    // …and the user hears about the failure even on the escaping-exception path.
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'automation_failed', reason: expect.stringContaining('playwright exploded') })
+    );
   });
 
   it('does nothing when the queue is empty', async () => {

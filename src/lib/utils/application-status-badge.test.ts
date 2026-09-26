@@ -65,10 +65,71 @@ describe('deriveApplicationStatusBadge', () => {
     ).toBe('Needs your action');
   });
 
-  it('shows Failed for automation_failed', () => {
-    expect(
-      deriveApplicationStatusBadge({ status: 'created', internalStatus: 'automation_failed' })
-    ).toMatchObject({ label: 'Failed', tone: 'rose' });
+  it('shows Failed for automation_failed with a retry control', () => {
+    const badge = deriveApplicationStatusBadge({ status: 'created', internalStatus: 'automation_failed' });
+    expect(badge).toMatchObject({ label: 'Failed', tone: 'rose', action: { id: 'retry', label: 'Retry' } });
+  });
+
+  it('offers Approve & submit only on approval holds', () => {
+    const approve = deriveApplicationStatusBadge({
+      status: 'created',
+      internalStatus: 'review_required',
+      reviewReason: 'Review mode: documents prepared and held for your approval before submission.',
+    });
+    expect(approve.action).toEqual({ id: 'approve', label: 'Approve & submit' });
+
+    const manual = deriveApplicationStatusBadge({
+      status: 'staging',
+      internalStatus: 'review_required',
+      reviewReason: 'ATS type "naukri" is not automatable. Manual submission required.',
+    });
+    expect(manual.action).toEqual({ id: 'dismiss', label: 'Apply manually' });
+  });
+
+  it('never offers a one-click submit for an unverified submission', () => {
+    const badge = deriveApplicationStatusBadge({
+      status: 'created',
+      internalStatus: 'review_required',
+      reviewReason: 'Application submitted but no confirmation evidence captured. Needs manual verification.',
+    });
+    expect(badge.label).toBe('Needs your action');
+    expect(badge.action).toBeUndefined();
+  });
+
+  it('offers no retry for automation_unknown (outcome unconfirmed — could double-submit)', () => {
+    const badge = deriveApplicationStatusBadge({ status: 'created', internalStatus: 'automation_unknown' });
+    expect(badge).toMatchObject({ label: 'Needs your action', tone: 'rose' });
+    expect(badge.action).toBeUndefined();
+  });
+
+  it('renders dismissed rows as a stable "Apply manually" state', () => {
+    const badge = deriveApplicationStatusBadge({ status: 'created', internalStatus: 'automation_dismissed' });
+    expect(badge).toMatchObject({ label: 'Apply manually', tone: 'orange' });
+    expect(badge.action).toBeUndefined();
+  });
+
+  it('appends the queue ETA to in-flight rows and keeps it out of terminal ones', () => {
+    const inflight = deriveApplicationStatusBadge({
+      status: 'created',
+      internalStatus: 'queued',
+      queueEtaSeconds: 150,
+      queuePosition: 3,
+    });
+    expect(inflight.label).toBe('Submitting');
+    expect(inflight.eta).toBe('~3 min');
+    expect(inflight.title).toContain('Estimated completion ~3 min');
+    expect(inflight.title).toContain('Position 3 in queue');
+
+    const applied = deriveApplicationStatusBadge({ status: 'applied', queueEtaSeconds: 150 });
+    expect(applied.eta).toBeUndefined();
+
+    const parked = deriveApplicationStatusBadge({
+      status: 'created',
+      internalStatus: 'review_required',
+      reviewReason: 'Review mode: documents prepared and held for your approval before submission.',
+      queueEtaSeconds: 150,
+    });
+    expect(parked.eta).toBeUndefined();
   });
 
   it('falls back to Draft for unknown statuses', () => {

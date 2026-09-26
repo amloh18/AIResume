@@ -41,6 +41,11 @@ import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
 import { getJobCardColorClass } from "@/lib/config/job-constants";
 import { metricTone, CHIP_TONES, chipTone } from "@/components/ui/chip-styles";
+import JobStatusActionChip from "@/components/jobs/JobStatusActionChip";
+import {
+  deriveApplicationStatusBadge,
+  type BadgeActionId,
+} from "@/lib/utils/application-status-badge";
 
 interface JobApplication {
   id: string;
@@ -94,6 +99,12 @@ interface JobApplication {
   };
   source?: string;
   priority: "low" | "medium" | "high";
+  internalStatus?: string;
+  reviewReason?: string;
+  queueEtaSeconds?: number;
+  queuePosition?: number;
+  applyUrl?: string;
+  sourceUrl?: string;
 }
 
 interface JobKanbanCardProps {
@@ -113,6 +124,8 @@ interface JobKanbanCardProps {
   onDragOver: (e: React.DragEvent) => void;
   onRefresh?: () => void;
   onAction?: (action: string, job: JobApplication, e: React.MouseEvent) => void;
+  /** Approve / retry / dismiss a parked application (shared with the list view). */
+  onAutomationAction?: (job: any, actionId: BadgeActionId) => void;
 }
 
 // Global set to track analyzed jobs across component remounts
@@ -136,6 +149,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   onDragOver,
   onRefresh,
   onAction,
+  onAutomationAction,
 }) => {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
@@ -959,6 +973,23 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             <span>{nudge}</span>
           </div>
         )}
+
+        {/*
+          Application status + its one required action, same derivation and
+          same component as the list view — a card parked for approval offers
+          "Approve & submit" exactly like the table row does. Rendered only
+          when the state is in-flight or demands action, so terminal cards
+          (Applied/Interview/…) don't repeat their column header.
+        */}
+        {(() => {
+          const badge = deriveApplicationStatusBadge(job);
+          if (!badge.action && !badge.eta) return null;
+          return (
+            <div className="mb-2">
+              <JobStatusActionChip job={job} onAutomationAction={onAutomationAction} variant="inline" />
+            </div>
+          );
+        })()}
 
         {/* Visual Anchor: Logo & Title */}
         <div className="flex gap-2.5">

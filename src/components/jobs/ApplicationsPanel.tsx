@@ -22,6 +22,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, IconButton, Pill, SearchInput, Dropdown } from '@/components/ui';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import type { BadgeActionId } from '@/lib/utils/application-status-badge';
+import { formatQueueEta } from '@/lib/utils/queue-eta';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
@@ -598,6 +600,51 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   };
 
+  /*
+    Shared control for a parked/failed application (list, kanban and sidebar
+    all route through here): approve lets the worker submit automatically,
+    retry re-runs a failed attempt, dismiss cancels the queue item and hands
+    the application to the user — opening the posting so they can apply.
+
+    A rejected call usually means the state moved under us (the worker picked
+    the item up, or the row is no longer parked): reload so the chip and its
+    action re-derive instead of going stale.
+  */
+  const handleAutomationAction = async (job: any, actionId: BadgeActionId) => {
+    const jobId = job.id || job._id;
+    if (!jobId) return;
+    const busy =
+      actionId === 'approve' ? 'Approving submission…'
+      : actionId === 'retry' ? 'Retrying submission…'
+      : 'Stopping automation…';
+    const toastId = `automation-${jobId}`;
+    toast.loading(busy, { id: toastId });
+    try {
+      const res = await authenticatedFetch(`/api/applications/${jobId}/automation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+
+      const eta =
+        typeof data.etaSeconds === 'number'
+          ? ` Estimated completion ${formatQueueEta(data.etaSeconds)}.`
+          : '';
+      toast.success(`${data.message || 'Done'}${eta}`, { id: toastId });
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId } }));
+      loadData();
+      if (actionId === 'dismiss') {
+        const url = job.jobUrl || job.applyUrl || job.sourceUrl;
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Request failed', { id: toastId });
+      loadData();
+    }
+  };
+
   const handleDragStart = (e: React.DragEvent, jobId: string) => {
     setDraggedJob(jobId);
     e.dataTransfer.setData('text/plain', jobId);
@@ -1101,6 +1148,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
           onJobClick={handleJobClick}
           onEditJob={handleEditJob}
           onDeleteJob={handleDeleteJob}
+          onAutomationAction={handleAutomationAction}
           getJobJourneys={getJobJourneys}
           getJourneyProgress={getJourneyProgress}
           getJourneyStatusText={getJourneyStatusText}
@@ -1135,6 +1183,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
             pendingJourneyJobIds={creatingJourneys}
             onImproveATS={handleImproveATS}
             onDownload={handleDownload}
+            onAutomationAction={handleAutomationAction}
           />
         </div>
       )}

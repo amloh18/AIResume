@@ -68,6 +68,13 @@ class NotificationService {
       document_saved: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       feature_discovery: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       extension_download: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+
+      // Pipeline needs-your-action alerts — in-app only by default, always enabled:
+      // these are the notifications that carry a working control for a parked or
+      // failed application (approve / retry / apply manually).
+      application_approval_required: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      application_action_required: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      application_automation_failed: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
     };
 
     return defaults[type] || { enabled: true, channels: { 'in-app': true, email: false, push: false } };
