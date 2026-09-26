@@ -54,7 +54,18 @@ async function workerTick(): Promise<void> {
       async () => {
         log.info(`[ApplicationWorker] Processing ${applicationId} (attempt ${queueItem.attempts}/${queueItem.maxAttempts})`);
 
-        const result = await processApplication({ queueItem, jobApplication });
+        let result;
+        try {
+          result = await processApplication({ queueItem, jobApplication });
+        } catch (err: any) {
+          // processApplication's first state transition runs outside its own try/catch;
+          // an exception escaping there used to strand the item in `processing` until the
+          // 30-minute release cycle — a path that never checked maxAttempts (queue items
+          // were observed at attempts=55 against maxAttempts=3). Count the attempt now so
+          // the retry/dead-letter gate applies immediately; rethrow for the tick logger.
+          await failQueueItem(queueItemId, `Unhandled worker error: ${err.message}`, true).catch(() => {});
+          throw err;
+        }
 
         if (result.success) {
           await completeQueueItem(queueItemId);
