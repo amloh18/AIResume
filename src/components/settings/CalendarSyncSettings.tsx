@@ -1,8 +1,9 @@
 // @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, CheckCircle, AlertCircle, RefreshCw, Settings, Bell, Palette, Clock } from 'lucide-react';
+import toast from '@/lib/hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -21,6 +22,12 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const popupPollRef = useRef<number | null>(null);
+
+  // Stop popup polling if the component unmounts while the OAuth window is open
+  useEffect(() => () => {
+    if (popupPollRef.current) clearInterval(popupPollRef.current);
+  }, []);
 
   const calendarSettings = userSettings?.advanced?.integrations?.calendar || {
     connected: false,
@@ -50,7 +57,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
         );
 
         // Listen for the popup to close
-        const checkClosed = setInterval(() => {
+        const checkClosed = window.setInterval(() => {
           if (popup?.closed) {
             clearInterval(checkClosed);
             setIsConnecting(false);
@@ -58,11 +65,13 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
             window.location.reload();
           }
         }, 1000);
+        popupPollRef.current = checkClosed;
       } else {
         throw new Error(data.error || 'Failed to initiate calendar connection');
       }
     } catch (error) {
       console.error('Error connecting calendar:', error);
+      toast.error("Couldn't start the calendar connection. Try again.");
       setIsConnecting(false);
     }
   };
@@ -85,11 +94,13 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       
       if (data.success) {
         setLastSyncTime(new Date());
+        toast.success('Calendar synced');
       } else {
         throw new Error(data.error || 'Failed to sync to calendar');
       }
     } catch (error) {
       console.error('Error syncing calendar:', error);
+      toast.error(error instanceof Error ? error.message : "Couldn't sync with your calendar. Try again.");
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +128,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       onUpdateSettings(updatedSettings);
     } catch (error) {
       console.error('Error disconnecting calendar:', error);
+      toast.error("Couldn't disconnect the calendar. Try again.");
     }
   };
 

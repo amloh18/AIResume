@@ -34,6 +34,8 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Ignore repeat submits while the first one is still in flight
+    if (isLoading) return;
     onSubmit({ title, experienceLevel, jobDescription });
   };
 

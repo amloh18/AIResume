@@ -45,9 +45,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         displayValue = formatCVDate(value, dateFormat);
       }
       
-      // Fix pasted white text issues by removing bad tags and inline styles, while preserving text alignments
+      // Fix pasted white text issues by removing bad tags and inline styles, while preserving text alignments.
+      // Multiline fields must keep their block tags: contentEditable Enter
+      // produces <div>/<br> line breaks, and stripping them here made every
+      // non-editing render (blur, prop change) concatenate the lines back
+      // into one — the next keystroke then saved the merged text.
       if (displayValue) {
-        displayValue = displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
+        displayValue = multiline
+          ? displayValue.replace(/<\/?(?:span|font|label)[^>]*>/gi, '')
+          : displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
         displayValue = displayValue.replace(/style=(["'])(.*?)\1/gi, (match, quote, styleContent) => {
           const alignMatch = styleContent.match(/text-align\s*:\s*(left|center|right|justify)/i);
           return alignMatch ? `style="text-align: ${alignMatch[1].toLowerCase()};"` : '';

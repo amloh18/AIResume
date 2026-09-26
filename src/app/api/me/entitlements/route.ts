@@ -50,11 +50,21 @@ export async function GET(request: NextRequest) {
     const sub = user.subscription;
     let subscriptionState: SubscriptionState;
 
-    if (!sub || sub.planKey === 'free' || !sub.provider || sub.provider === 'none') {
+    /*
+      Provider-less Starter subscriptions (e.g. the $0 launch promo granted
+      without a payment provider) used to fall into FREE_SUBSCRIPTION here,
+      because the guard only looked at `provider`. The plan key is the product
+      truth for WHICH plan a user is on; `provider` only says how they pay.
+      A Starter user whose entitlements resolved to 'free' saw free-plan limits
+      in the UI while the enforcement layer treated them as Starter — one more
+      source of the "12 of 10" mismatch.
+    */
+    const storedPlanKey = (sub?.planKey || user.currentPlanKey || 'free').toString();
+    if (!sub || storedPlanKey === 'free') {
       subscriptionState = FREE_SUBSCRIPTION;
     } else {
       // Determine plan from stored plan key
-      const planKey = resolvePlanKey(sub.planKey || user.currentPlanKey || 'free');
+      const planKey = resolvePlanKey(storedPlanKey || user.currentPlanKey || 'free');
 
       // Determine status
       let status: SubscriptionState['status'] = 'active';

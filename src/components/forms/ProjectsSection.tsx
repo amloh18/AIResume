@@ -23,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import toast from '@/lib/hot-toast';
 
 interface ProjectsSectionProps {
   data: any[];
@@ -303,6 +304,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
       updateProject(index, 'description', result.description);
     } catch (error) {
       console.error('Error generating AI description:', error);
+      toast.error("Couldn't generate an AI description. Try again.");
     } finally {
       setGeneratingIndex(null);
     }

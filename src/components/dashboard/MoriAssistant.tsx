@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Minus, Send, Mail, CreditCard, HelpCircle, Copy, Check, ExternalLink, Star } from 'lucide-react';
+import toast from '@/lib/hot-toast';
 
 interface Message {
   id: string;
@@ -91,10 +92,15 @@ export default function MoriAssistant() {
     }, 600);
   };
 
-  const handleCopyEmail = (email: string) => {
-    navigator.clipboard.writeText(email);
-    setCopiedEmail(email);
-    setTimeout(() => setCopiedEmail(null), 2000);
+  const handleCopyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopiedEmail(email);
+      setTimeout(() => setCopiedEmail(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy email:', error);
+      toast.error("Couldn't copy to clipboard");
+    }
   };
 
   const getEmailDetails = (dept: 'finance' | 'help' | 'support' | 'hello' | 'feedback') => {

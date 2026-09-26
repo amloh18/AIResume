@@ -661,6 +661,9 @@ export default function Step1Dashboard({
   const [showJDInput, setShowJDInput] = useState(false);
   const [existingCVs, setExistingCVs] = useState<ExistingCV[]>([]);
   const [isLoadingCVs, setIsLoadingCVs] = useState(false);
+  // True when GET /api/cvs failed after a retry — without this, a failed list
+  // fetch rendered as the "No Documents" empty state and every CV looked deleted.
+  const [cvListError, setCvListError] = useState(false);
   const [draftCV, setDraftCV] = useState<any>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLinkedInImporting, setIsLinkedInImporting] = useState(false);
@@ -1183,12 +1186,26 @@ export default function Step1Dashboard({
     const cacheScope = user?.id ?? 'guest';
     if (cacheUserId === cacheScope && cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCVs(cachedExistingCVs);
+      setCvListError(false);
       return;
     }
     setIsLoadingCVs(true);
+    setCvListError(false);
     try {
-      const response = await fetch('/api/cvs');
-      if (response.ok) {
+      // Previously a single failed request (401/400/500/network) left this list
+      // untouched — i.e. silently empty — so every CV appeared to vanish with no
+      // error and no way to retry. Retry once, then surface the failure instead
+      // of faking an empty library. Failures are never written to the cache.
+      let response: Response | undefined;
+      for (let attempt = 0; attempt < 2 && !response?.ok; attempt++) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+          response = await fetch('/api/cvs');
+        } catch (networkError) {
+          console.error('Failed to fetch existing CVs (network):', networkError);
+        }
+      }
+      if (response?.ok) {
         const data = await response.json();
         const cvs = data.cvs || data.data?.cvs || [];
         cachedExistingCVs = cvs;
@@ -1201,9 +1218,16 @@ export default function Step1Dashboard({
             setCvJourneysMap(map);
           });
         }
+      } else {
+        console.error(
+          'Failed to fetch existing CVs:',
+          response ? `HTTP ${response.status}` : 'no response'
+        );
+        setCvListError(true);
       }
     } catch (error) {
       console.error('Failed to fetch existing CVs:', error);
+      setCvListError(true);
     } finally {
       setIsLoadingCVs(false);
     }
@@ -1388,7 +1412,7 @@ export default function Step1Dashboard({
   const handleDuplicatePrimary = async () => {
     const masterCV = existingCVs.find(cv => cv.cvType === 'master');
     if (!masterCV) {
-      alert("No Primary (Master) CV found to duplicate.");
+      toast.error("No Primary (Master) CV found to duplicate.");
       return;
     }
     
@@ -1415,7 +1439,7 @@ export default function Step1Dashboard({
       }
     } catch (error) {
       console.error('Error duplicating master CV:', error);
-      alert('Error duplicating CV. Please try again.');
+      toast.error('Error duplicating CV. Please try again.');
     } finally {
       setIsDuplicating(false);
     }
@@ -1799,7 +1823,7 @@ export default function Step1Dashboard({
                       isLast ? 'rounded-br-xl md:rounded-br-xl lg:rounded-r-xl' : ''
                     } ${
                       m.active
-                        ? 'bg-lime-500/10 dark:bg-lime-500/15 ring-2 ring-inset ring-lime-500/40 dark:ring-lime-400/40'
+                        ? 'bg-[#013f2e]/10 dark:bg-[#36D39B]/10 ring-2 ring-inset ring-[#013f2e]/40 dark:ring-[#36D39B]/40'
                         : 'hover:bg-gray-50/70 dark:hover:bg-white/[0.03]'
                     }`}
                     title={m.active ? `Filtering by ${m.label} (click to show all)` : `Filter by ${m.label}`}
@@ -1807,7 +1831,7 @@ export default function Step1Dashboard({
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors ${
                       m.active
-                        ? 'bg-lime-500 text-white dark:bg-lime-400 dark:text-black shadow-sm'
+                        ? 'bg-[#013f2e] text-white dark:bg-[#36D39B] dark:text-[#013f2e] shadow-sm'
                         : 'bg-[var(--bg-tertiary)] dark:bg-white/5 text-[var(--text-secondary)]'
                     }`}
                   >
@@ -1825,10 +1849,10 @@ export default function Step1Dashboard({
                         <div className="text-xl font-semibold tracking-tight text-[var(--text-primary)] leading-none tabular-nums flex items-center gap-1.5">
                           <span>{m.value}</span>
                           {m.active && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-lime-500 dark:bg-lime-400 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#013f2e] dark:bg-[#36D39B] animate-pulse" />
                           )}
                         </div>
-                        <div className={`mt-1 text-xs font-medium truncate ${m.active ? 'text-lime-700 dark:text-lime-300 font-bold' : 'text-[var(--text-secondary)]'}`}>
+                        <div className={`mt-1 text-xs font-medium truncate ${m.active ? 'text-[#013f2e] dark:text-[#36D39B] font-bold' : 'text-[var(--text-secondary)]'}`}>
                           {m.label}
                         </div>
                         <div className={`mt-0.5 text-[11px] font-medium truncate ${m.trendUp ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--text-tertiary)] text-gray-500 dark:text-gray-400'}`}>
@@ -1941,7 +1965,7 @@ export default function Step1Dashboard({
                         onClick={() => handleViewLayoutChange('grid')}
                         className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'grid'
-                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-[#013f2e] text-white dark:bg-[#36D39B] dark:text-[#013f2e] shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1952,7 +1976,7 @@ export default function Step1Dashboard({
                         onClick={() => handleViewLayoutChange('compact')}
                         className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'compact'
-                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-[#013f2e] text-white dark:bg-[#36D39B] dark:text-[#013f2e] shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -1963,7 +1987,7 @@ export default function Step1Dashboard({
                         onClick={() => handleViewLayoutChange('list')}
                         className={`flex items-center gap-1 px-4 h-full rounded-lg text-xs font-bold transition-all ${
                           viewLayout === 'list'
-                            ? 'bg-lime-500 text-white dark:bg-[#0d100a] dark:text-[#013f2e] dark:border dark:border-[#013f2e]/25 shadow-md'
+                            ? 'bg-[#013f2e] text-white dark:bg-[#36D39B] dark:text-[#013f2e] shadow-md'
                             : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
@@ -2125,9 +2149,12 @@ export default function Step1Dashboard({
                                       setDraftCV(null);
                                       cachedDraftCV = null;
                                       toast.success('Draft deleted');
+                                    } else {
+                                      toast.error("Couldn't delete the draft. Try again.");
                                     }
                                   } catch (err) {
                                     console.error('Failed to delete draft:', err);
+                                    toast.error("Couldn't delete the draft. Try again.");
                                   }
                                 }
                               }}
@@ -2351,9 +2378,13 @@ export default function Step1Dashboard({
                                           if (response.ok) {
                                             setDraftCV(null);
                                             cachedDraftCV = null;
+                                            toast.success('Draft deleted');
+                                          } else {
+                                            toast.error("Couldn't delete the draft. Try again.");
                                           }
                                         } catch (err) {
                                           console.error('Failed to delete draft:', err);
+                                          toast.error("Couldn't delete the draft. Try again.");
                                         }
                                       }
                                     }}
@@ -2543,6 +2574,23 @@ export default function Step1Dashboard({
                   </div>
                 )
 
+              ) : cvListError ? (
+                <div className="text-center py-16 sm:py-32 bg-red-50/60 dark:bg-red-500/[0.04] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-red-300 dark:border-red-500/30 mx-1">
+                  <AlertTriangle className="w-12 h-12 sm:w-20 sm:h-20 text-red-400 dark:text-red-400/80 mx-auto mb-6 sm:mb-8" />
+                  <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">
+                    Couldn&rsquo;t load your documents
+                  </h4>
+                  <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-md mx-auto px-4 mb-5">
+                    Your CVs are still safe &mdash; we just failed to fetch the list. Check your connection and try again.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => fetchExistingCVs()}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-black font-bold text-xs hover:scale-105 transition-all shadow-md cursor-pointer"
+                  >
+                    Try again
+                  </button>
+                </div>
               ) : (
                 <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
                   <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-200 dark:text-gray-800 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
@@ -2823,7 +2871,7 @@ export default function Step1Dashboard({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* Tailor to Job */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2844,7 +2892,7 @@ export default function Step1Dashboard({
 
                   {/* Blank CV */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2866,7 +2914,7 @@ export default function Step1Dashboard({
 
                   {/* Duplicate Profile */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2893,7 +2941,7 @@ export default function Step1Dashboard({
 
                   {/* Upload a CV */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2930,7 +2978,7 @@ export default function Step1Dashboard({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {/* Write with AI */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);
@@ -2951,7 +2999,7 @@ export default function Step1Dashboard({
 
                   {/* Start Fresh */}
                   <motion.button
-                    whileHover={{ y: -3, scale: 1.02 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsCreateModalOpen(false);

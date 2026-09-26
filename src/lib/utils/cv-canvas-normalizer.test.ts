@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeCvDataForCanvas } from './cv-canvas-normalizer';
+import {
+  normalizeCvDataForCanvas,
+  extractHighlightsFromHtml,
+  extractSummaryFromHtml,
+} from './cv-canvas-normalizer';
 
 /**
  * Regression guard for the documents-panel thumbnails.
@@ -229,5 +233,148 @@ describe('full document renders what the canvas renders', () => {
 
     expect(bullets(full.experience[0].description)).toBe(2);
     expect(bullets(summary.experience[0].description)).toBe(0);
+  });
+});
+
+/*
+  Regression guards for the education edit round trip (fix: "education bullet
+  points are messed up or not linked properly"). Three defects broke it:
+
+  A. the adapter's canvas → Unified reverse map never wrote `courses` back, so
+     the first edit permanently dropped the coursework bullets;
+  B. the normalizer classified any description containing `<` as HTML, so
+     plain text like "GPA < 3.5" skipped the rich-text builder and lost
+     `courses`;
+  C. the canvas display effect stripped <div> line breaks on every
+     non-editing render, concatenating Enter-created lines (CoreUI — covered
+     by reasoning, this file only exercises the pure string layer).
+*/
+describe('education description round trip', () => {
+  const educationCv = (education: Record<string, unknown>) => ({
+    ...fullCvData,
+    education: [education],
+  });
+
+  it('appends coursework bullets when the description is already HTML', () => {
+    const normalized = normalizeCvDataForCanvas(educationCv({
+      institution: 'Nirma University',
+      studyType: 'B.Tech',
+      area: 'Computer Science',
+      description: '<p>Graduated with distinction.</p>',
+      courses: ['Distributed Systems', 'Compiler Design'],
+    }) as any) as any;
+    const description = normalized.education[0].description;
+
+    // The HTML branch used to return early and drop `courses` entirely.
+    expect(description).toContain('<p>Graduated with distinction.</p>');
+    expect(description).toContain('<li');
+    expect(description).toContain('Distributed Systems');
+    expect(description).toContain('Compiler Design');
+  });
+
+  it('treats plain text containing "<" as plain text and keeps coursework', () => {
+    const normalized = normalizeCvDataForCanvas(educationCv({
+      institution: 'Nirma University',
+      studyType: 'B.Tech',
+      area: 'Computer Science',
+      description: 'Graduated with GPA < 3.5 and >= 3.0.',
+      courses: ['Compiler Design'],
+    }) as any) as any;
+    const description = normalized.education[0].description;
+
+    expect(description).toContain('GPA < 3.5 and >= 3.0.');
+    expect(description).toContain('<li');
+    expect(description).toContain('Compiler Design');
+  });
+
+  it('does not duplicate coursework when the HTML already has bullets', () => {
+    const normalized = normalizeCvDataForCanvas(educationCv({
+      institution: 'Nirma University',
+      studyType: 'B.Tech',
+      area: 'Computer Science',
+      description: '<p>Coursework:</p><ul><li>Distributed Systems</li></ul>',
+      courses: ['Distributed Systems', 'Compiler Design'],
+    }) as any) as any;
+    const description = normalized.education[0].description;
+
+    expect((description.match(/<ul/g) || []).length).toBe(1);
+  });
+
+  it('round-trips through the adapter save algorithm without drift or loss', () => {
+    const source = {
+      institution: 'Nirma University',
+      studyType: 'B.Tech',
+      area: 'Computer Science',
+      score: '8.4 CGPA',
+      description: 'Graduated with distinction.',
+      courses: ['Distributed Systems'],
+    };
+    const first = normalizeCvDataForCanvas(educationCv(source) as any) as any;
+    const rendered = first.education[0].description;
+
+    // On save the adapter (CVBuilderProAdapter) rebuilds the Unified entry
+    // from the rendered HTML: courses come from the <li> bullets, and the
+    // score line is split back out of the summary. Mirror that algorithm
+    // here — if either side drifts, the second render differs.
+    const courses = extractHighlightsFromHtml(rendered);
+    expect(courses).toEqual(['Distributed Systems']);
+
+    const lines = extractSummaryFromHtml(rendered)
+      .split(/\n+/)
+      .map((line: string) => line.trim())
+      .filter(Boolean);
+    const scoreLine = lines.find((line: string) => /^score:/i.test(line)) || '';
+    const remaining = lines.filter((line: string) => line !== scoreLine).join('\n');
+
+    const second = normalizeCvDataForCanvas(educationCv({
+      ...source,
+      score: scoreLine.replace(/^score:\s*/i, '').trim(),
+      description: remaining,
+      courses,
+    }) as any) as any;
+
+    expect(second.education[0].description).toBe(rendered);
+  });
+
+  it('keeps line breaks of a multi-line description through the builder', () => {
+    const normalized = normalizeCvDataForCanvas(educationCv({
+      institution: 'Nirma University',
+      studyType: 'B.Tech',
+      area: 'Computer Science',
+      description: 'First line\nSecond line',
+      courses: [],
+    }) as any) as any;
+
+    expect(normalized.education[0].description).toContain('First line<br>Second line');
+  });
+});
+
+describe('extractSummaryFromHtml / extractHighlightsFromHtml', () => {
+  it('returns paragraphs joined by a blank line, without list content', () => {
+    const summary = extractSummaryFromHtml('<p>First.</p><p>Second.</p><ul><li>Bullet</li></ul>');
+
+    expect(summary).toBe('First.\n\nSecond.');
+  });
+
+  it('converts <div> lines to newlines instead of dropping or merging them', () => {
+    // The old version dropped <div> content whenever a <p> existed, and
+    // concatenated it with no separator on the fallback path.
+    expect(extractSummaryFromHtml('<div>line one</div><div>line two</div>')).toBe('line one\nline two');
+    expect(extractSummaryFromHtml('<p>para</p><div>line one</div>')).toBe('para\n\nline one');
+  });
+
+  it('preserves inline formatting inside paragraphs', () => {
+    expect(extractSummaryFromHtml('<p>Led the <strong>design-system</strong> migration.</p>'))
+      .toBe('Led the <strong>design-system</strong> migration.');
+  });
+
+  it('extracts coursework bullets from an education description', () => {
+    expect(extractHighlightsFromHtml('<p>Coursework:</p><ul><li>Distributed Systems</li><li>Compiler Design</li></ul>'))
+      .toEqual(['Distributed Systems', 'Compiler Design']);
+  });
+
+  it('handles empty input', () => {
+    expect(extractSummaryFromHtml('')).toBe('');
+    expect(extractHighlightsFromHtml('')).toEqual([]);
   });
 });

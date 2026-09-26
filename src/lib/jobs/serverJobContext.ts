@@ -2,8 +2,9 @@
  * Server-side job context loader.
  *
  * ── Why this file exists ──────────────────────────────────────────────────────
- * `JobService` (src/lib/services/jobService.ts) is a **browser** HTTP client: every
- * one of its methods calls `fetch('/api/...')` with a *relative* URL. Relative URLs
+ * `JobService` (src/lib/services/jobService.ts — deleted 2026-09-24) **was** a
+ * **browser** HTTP client: every
+ * one of its methods called `fetch('/api/...')` with a *relative* URL. Relative URLs
  * only resolve in a browser. In Node they throw immediately:
  *
  *     TypeError: Failed to parse URL from /api/jobs?userId=1
@@ -23,8 +24,8 @@
  *
  * ── The shape mismatch this adapter also fixes ────────────────────────────────
  * `AIAssistantService` reads `jobData.title`, `jobData.description` and
- * `jobData.company`. Those names come from the client-side `Job` DTO in
- * `src/lib/stores/jobStore.ts`. Neither Mongo model uses them:
+ * `jobData.company`. Those names came from the client-side `Job` DTO in
+ * `src/lib/stores/jobStore.ts` (deleted 2026-09-24). Neither Mongo model uses them:
  *
  *   - `JobApplication` stores `jobTitle` / `jobDescription` / `company`
  *   - `Job` (deprecated) stores `jobTitle` / `jobDescription` / `company`

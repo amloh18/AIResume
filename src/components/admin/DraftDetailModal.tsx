@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ADMIN_THEME } from '@/lib/config/adminTheme';
+import { toast } from '@/lib/hot-toast';
 
 interface DraftDetail {
   id: string;
@@ -50,6 +51,7 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (isOpen && draftId) {
@@ -85,6 +87,7 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
   };
 
   const handleConvert = async () => {
+    if (converting) return;
     if (!confirm('Are you sure you want to convert this draft to a Master CV?')) {
       return;
     }
@@ -103,25 +106,27 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
       const data = await response.json();
 
       if (data.success) {
-        alert('Master CV created/updated successfully!');
+        toast.success('Draft converted to Master CV');
         onClose();
       } else {
-        alert(data.error || 'Failed to convert draft');
+        toast.error(data.error || "Couldn't convert the draft. Try again.");
       }
     } catch (err: any) {
       console.error('Error converting draft:', err);
-      alert('Failed to convert draft');
+      toast.error("Couldn't convert the draft. Try again.");
     } finally {
       setConverting(false);
     }
   };
 
   const handleDelete = async () => {
+    if (deleting) return;
     if (!confirm('Are you sure you want to delete this draft? This action cannot be undone.')) {
       return;
     }
 
     try {
+      setDeleting(true);
       const response = await fetch(`/api/admin/drafts/${draftId}`, {
         method: 'DELETE'
       });
@@ -134,14 +139,16 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
       const data = await response.json();
 
       if (data.success) {
-        alert('Draft deleted successfully!');
+        toast.success('Draft deleted');
         onClose();
       } else {
-        alert(data.error || 'Failed to delete draft');
+        toast.error(data.error || "Couldn't delete the draft. Try again.");
       }
     } catch (err: any) {
       console.error('Error deleting draft:', err);
-      alert('Failed to delete draft');
+      toast.error("Couldn't delete the draft. Try again.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -164,7 +171,10 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
 
         <div className={`p-6 space-y-6 ${ADMIN_THEME.background.primary}`}>
           {loading && (
-            <div className={`text-center py-8 ${ADMIN_THEME.text.muted}`}>Loading...</div>
+            <div role="status" className={`flex items-center justify-center gap-2 text-center py-8 ${ADMIN_THEME.text.muted}`}>
+              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+              Loading draft...
+            </div>
           )}
 
           {error && (
@@ -344,10 +354,11 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
+                  disabled={deleting}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Draft
+                  {deleting ? 'Deleting...' : 'Delete Draft'}
                 </Button>
                 <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50">
                   Close

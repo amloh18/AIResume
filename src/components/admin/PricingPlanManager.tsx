@@ -38,6 +38,9 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
   const [selectedPlanForDetails, setSelectedPlanForDetails] = useState<any>(null);
   const [promotionalOffersState, setPromotionalOffersState] = useState<any[]>([]);
   const [loadingOffersState, setLoadingOffersState] = useState(false);
+  const [offersError, setOffersError] = useState<string | null>(null);
+  const [pricingError, setPricingError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
   const [countryPricing, setCountryPricing] = useState<any[]>([]);
   const [loadingPricing, setLoadingPricing] = useState(true);
   const [isAddCountryModalOpen, setIsAddCountryModalOpen] = useState(false);
@@ -62,10 +65,14 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
         const response = await fetch('/api/admin/promotional-offers');
         const data = await response.json();
         setPromotionalOffersState(data);
-      } catch (error) {} finally { setLoadingOffersState(false); }
+        setOffersError(null);
+      } catch (error) {
+        console.error('Failed to load promotional offers:', error);
+        setOffersError("Couldn't load promotional offers. Try again.");
+      } finally { setLoadingOffersState(false); }
     };
     if (mounted) fetchAllOffers();
-  }, [mounted]);
+  }, [mounted, retryTick]);
 
   useEffect(() => {
     const fetchPricingData = async () => {
@@ -75,11 +82,17 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
         const data = await response.json();
         if (data.success) {
           setCountryPricing(data.data?.countryPricing || data.countryPricing || []);
+          setPricingError(null);
+        } else {
+          setPricingError("Couldn't load regional pricing. Try again.");
         }
-      } catch (error) {} finally { setLoadingPricing(false); }
+      } catch (error) {
+        console.error('Failed to load country pricing:', error);
+        setPricingError("Couldn't load regional pricing. Try again.");
+      } finally { setLoadingPricing(false); }
     };
     if (mounted) fetchPricingData();
-  }, [mounted]);
+  }, [mounted, retryTick]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -92,6 +105,12 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
   };
 
   if (!mounted) return null;
+
+  const retryLoad = () => {
+    setOffersError(null);
+    setPricingError(null);
+    setRetryTick(t => t + 1);
+  };
 
   const pricingTabs = [
     { id: 'plans', label: 'Plans & Tiers', icon: Zap },
@@ -136,6 +155,19 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
           </button>
         )}
       </div>
+
+      {/* Load error (inline, with retry) */}
+      {(offersError || pricingError) && (
+        <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-2xl px-4 py-2.5">
+          <span className="text-xs text-red-400 font-medium">{offersError || pricingError}</span>
+          <button
+            onClick={retryLoad}
+            className="px-3 py-1 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all shrink-0"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <Tabs value={currentTab} onValueChange={onSubTabChange} className="w-full">
         <TabsContent value="plans" className="mt-4 space-y-4">
@@ -311,8 +343,14 @@ const PricingPlanManager: React.FC<PricingPlanManagerProps> = ({ activeSubTab, o
               const data = await response.json();
               if (data.success) {
                 setCountryPricing(data.data?.countryPricing || data.countryPricing || []);
+                setPricingError(null);
+              } else {
+                setPricingError("Couldn't refresh regional pricing. Try again.");
               }
-            } catch (error) {} finally { setLoadingPricing(false); }
+            } catch (error) {
+              console.error('Failed to refresh country pricing:', error);
+              setPricingError("Couldn't refresh regional pricing. Try again.");
+            } finally { setLoadingPricing(false); }
           };
           fetchPricingData();
         }}

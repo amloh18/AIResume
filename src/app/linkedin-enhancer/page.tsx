@@ -112,8 +112,12 @@ import OptimizedDashboardLayout from '@/components/dashboard/OptimizedDashboardL
 function LinkedInEnhancerPageContent() {
     const { loading, can } = useEntitlements();
 
-    // Show nothing while loading (avoids flash of wrong content)
-    if (loading) return null;
+    // Brief loader while the entitlement check resolves (avoids flash of the wrong view)
+    if (loading) return (
+        <div className="flex items-center justify-center min-h-[40vh]" role="status" aria-label="Checking your plan">
+            <div className="w-8 h-8 border-2 border-gray-200 border-t-lime-500 rounded-full animate-spin" />
+        </div>
+    );
 
     // Gate: LinkedIn Enhancer requires Focused plan or higher
     const hasAccess = can('tailor.linkedin_tone');

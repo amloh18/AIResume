@@ -157,17 +157,26 @@ export default function UnifiedAuthForm({
     return isValid;
   };
 
+  const isSubmittingRef = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (isLoading || isSubmittingRef.current) {
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
 
     try {
+      isSubmittingRef.current = true;
       await onSubmit(formData);
     } catch (error) {
       console.error('Form submission error:', error);
+    } finally {
+      isSubmittingRef.current = false;
     }
   };
 

@@ -22,6 +22,7 @@ import {
   Star
 } from 'lucide-react';
 import { CHIP_INLINE, CHIP_TONES, type ChipTone } from '@/components/ui/chip-styles';
+import { toast } from '@/lib/hot-toast';
 
 interface PromotionalOffer {
   _id: string;
@@ -166,23 +167,23 @@ const PromotionalOfferManager: React.FC = () => {
       if (response.ok) {
         fetchOffers();
         resetForm();
-        alert(editingOffer ? 'Promotional offer updated!' : 'Promotional offer created!');
+        toast.success(editingOffer ? 'Promotional offer updated' : 'Promotional offer created');
       } else {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = await response.json();
-            alert(`Error: ${errorData.error || 'Failed to save offer'}`);
+            toast.error(errorData.error || "Couldn't save the offer. Try again.");
           } catch {
-            alert('Failed to save offer');
+            toast.error("Couldn't save the offer. Try again.");
           }
         } else {
-          alert('Failed to save offer');
+          toast.error("Couldn't save the offer. Try again.");
         }
       }
     } catch (error) {
       console.error('Error saving promotional offer:', error);
-      alert('Error saving promotional offer');
+      toast.error("Couldn't save the offer. Try again.");
     } finally {
       setLoading(false);
     }
@@ -219,13 +220,13 @@ const PromotionalOfferManager: React.FC = () => {
 
       if (response.ok) {
         fetchOffers();
-        alert('Promotional offer deleted!');
+        toast.success('Promotional offer deleted');
       } else {
-        alert('Error deleting promotional offer');
+        toast.error("Couldn't delete the offer. Try again.");
       }
     } catch (error) {
       console.error('Error deleting promotional offer:', error);
-      alert('Error deleting promotional offer');
+      toast.error("Couldn't delete the offer. Try again.");
     }
   };
 

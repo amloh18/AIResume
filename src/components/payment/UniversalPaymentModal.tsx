@@ -8,6 +8,7 @@ import Logo from '@/components/ui/Logo';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp, Info, Sparkles } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
+import toast from '@/lib/hot-toast';
 
 interface UniversalPaymentModalProps {
   isOpen: boolean;
@@ -65,7 +66,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 }) => {
   const session = null; // Session handling - using unified auth system
   const [step, setStep] = useState(1);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
+  /*
+    `billingCycle` previously drove a Monthly/Yearly toggle that split the plan
+    cards across two views. All cards now render together, so nothing consumes
+    the toggle; the state stays only as a pricing fallback inside
+    getBillingInterval().
+  */
+  const billingCycle: 'monthly' | 'yearly' = 'yearly';
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
@@ -722,25 +729,25 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             if (data.success) {
               onSuccess?.(data.subscription);
               onClose();
-              alert(`Plan ${selectedPlan.name} granted successfully!`);
+              toast.success(`Plan ${selectedPlan.name} granted successfully!`);
             } else {
-              alert(`Error: ${data.error || 'Failed to grant plan'}`);
+              toast.error(data.error || 'Failed to grant plan');
             }
           } else {
             // Try to parse JSON error, fallback to text if it's HTML
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
               const errorData = await response.json();
-              alert(`Error: ${errorData.error || 'Failed to grant plan'}`);
+              toast.error(errorData.error || 'Failed to grant plan');
             } else {
               const errorText = await response.text();
               console.error('Non-JSON error response:', errorText);
-              alert(`Error: Failed to grant plan (Status: ${response.status}). Please check the console for details.`);
+              toast.error(`Failed to grant plan (error ${response.status}). Please try again.`);
             }
           }
         } catch (fetchError) {
           console.error('Error granting plan:', fetchError);
-          alert(`Error: Network error while granting plan. Please try again.`);
+          toast.error('Network error while granting plan. Please try again.');
         }
       } else {
         // Regular payment flow — redirect to provider checkout
@@ -848,7 +855,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         errorMsg = error.message;
       }
 
-      alert(`Payment Error: ${errorMsg}`);
+      toast.error(errorMsg, { id: 'payment-error' });
     } finally {
       setLoading(false);
     }
@@ -1178,23 +1185,32 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           }
                         }
 
-                        // Filter plans based on selected billing cycle for the 4 canonical plans
+                        /*
+                          ALL plan cards in ONE view.
+
+                          This used to filter plans down to the selected billing
+                          cycle, so the paywall showed only two cards and hid the
+                          other interval behind the Monthly/Yearly toggle. Every
+                          canonical plan is now rendered together — Starter and
+                          Focused, monthly and yearly — so the whole price sheet is
+                          visible at once and comparing intervals needs no toggle.
+                        */
                         const subscriptionPlans = availablePlans.filter(plan => {
                           if (adminMode) return true;
                           const key = plan.key.toLowerCase();
-                          if (key.includes('smart')) return false;
-                          if (billingCycle === 'yearly') {
-                            return key === 'starter_yearly' || key === 'focused_yearly';
-                          } else {
-                            return key === 'starter_monthly' || key === 'focused_monthly';
-                          }
+                          return (
+                            key === 'starter_monthly' ||
+                            key === 'starter_yearly' ||
+                            key === 'focused_monthly' ||
+                            key === 'focused_yearly'
+                          );
                         }).sort((a, b) => {
                           if (a.key.includes('starter')) return -1;
                           if (b.key.includes('starter')) return 1;
                           return 0;
                         });
 
-                        // Fallback: if no plans for selected cycle, show all non-smart plans
+                        // Fallback: if canonical plans are missing, show all non-smart plans
                         const displayPlans = subscriptionPlans.length > 0
                           ? subscriptionPlans
                           : availablePlans.filter(p => !p.key.toLowerCase().includes('smart'));
@@ -1212,33 +1228,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   Review and complete payment
                                 </p>
                               </div>
-
-                              {/* Billing Cycle Toggle */}
-                              {!adminMode && !previewMode && (
-                                <div className="flex items-center p-1 bg-gray-200/50 dark:bg-white/5 rounded-xl self-start tablet:self-center">
-                                  <button
-                                    onClick={() => setBillingCycle('monthly')}
-                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                      billingCycle === 'monthly'
-                                        ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                                    }`}
-                                  >
-                                    Monthly
-                                  </button>
-                                  <button
-                                    onClick={() => setBillingCycle('yearly')}
-                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                                      billingCycle === 'yearly'
-                                        ? 'bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white shadow-sm'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                                    }`}
-                                  >
-                                    Yearly
-                                    <span className="bg-lime-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">SAVE 50%</span>
-                                  </button>
-                                </div>
-                              )}
+                              {/*
+                                No Monthly/Yearly toggle here any more: every
+                                plan card for every billing interval is rendered
+                                in one view below, so the toggle had nothing left
+                                to control.
+                              */}
                             </div>
 
                             {/* --- CURRENT PLAN MOVED INSIDE --- */}
@@ -1260,9 +1255,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               </div>
                             )}
 
-                            {/* Subscription Plans - Grid Layout */}
+                            {/* Subscription Plans — ALL cards in one 2×2 grid */}
                             {displayPlans.length > 0 && (
-                              <div className={`grid grid-cols-1 ${displayPlans.length === 2 ? 'tablet:grid-cols-2 max-w-[800px] mx-auto' : 'tablet:grid-cols-3'} gap-4 px-0 w-full`}>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 px-0 w-full max-w-[860px] mx-auto">
                                 {displayPlans.map((plan) => {
                                   const dbPlan = plan as unknown as DatabasePricingPlan;
                                   const regionalPrice = getRegionalPrice(dbPlan);
@@ -1301,8 +1296,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       </div>
 
                                       <div className="mb-6">
-                                        <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white">
+                                        <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                                           {plan.name.replace(' Monthly', '').replace(' Yearly', '').replace(' Quarterly', '')}
+                                          {/* Interval chip — with every cycle on one
+                                              screen the card must say which cycle
+                                              its price belongs to. */}
+                                          <span className="text-[9px] uppercase tracking-wider bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-md font-black">
+                                            {getBillingInterval(plan) === 'yearly' ? 'Yearly' : 'Monthly'}
+                                          </span>
                                         </h3>
                                         {isFocusedYearly && (
                                           <span className="text-[9px] bg-lime-500 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-wider mb-2 inline-block shadow-sm">

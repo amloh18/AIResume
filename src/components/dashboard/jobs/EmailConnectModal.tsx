@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Shield, AlertCircle, CheckCircle2, Server, Key, HelpCircle, ArrowRight, RefreshCw, Calendar } from 'lucide-react';
@@ -37,6 +37,13 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
 
   // Sync details state (for preview)
   const [successDetails, setSuccessDetails] = useState<{ provider: string; emailAddress: string }>({ provider: '', emailAddress: '' });
+
+  const popupPollRef = useRef<number | null>(null);
+
+  // Stop popup polling if the modal unmounts while the OAuth window is open
+  useEffect(() => () => {
+    if (popupPollRef.current) clearInterval(popupPollRef.current);
+  }, []);
 
   // Update default host values when custom domain email is typed (e.g. user@example.com -> imap.example.com / smtp.example.com)
   useEffect(() => {
@@ -90,12 +97,13 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
           `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
         );
 
-        const checkPopupClosed = setInterval(() => {
+        const checkPopupClosed = window.setInterval(() => {
           if (!popup || popup.closed) {
             clearInterval(checkPopupClosed);
             setLoading(false);
           }
         }, 1000);
+        popupPollRef.current = checkPopupClosed;
       } else {
         setError(data.error || `Failed to initiate real ${provider.toUpperCase()} integration.`);
         setLoading(false);
@@ -170,7 +178,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
           `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`
         );
 
-        const checkClosed = setInterval(() => {
+        const checkClosed = window.setInterval(() => {
           if (!popup || popup.closed) {
             clearInterval(checkClosed);
             setLoading(false);
@@ -182,6 +190,7 @@ export const EmailConnectModal: React.FC<EmailConnectModalProps> = ({
             toast.success('Google Calendar connected successfully!');
           }
         }, 1000);
+        popupPollRef.current = checkClosed;
       } else {
         setError('Failed to initiate calendar authentication.');
         setLoading(false);

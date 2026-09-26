@@ -359,6 +359,9 @@ export function JobCard({
               description={liveStatus.description}
               jobTitle={liveStatus.jobTitle}
               company={liveStatus.company}
+              jobId={jobId}
+              autoCloseSeconds={liveStatus.autoCloseSeconds}
+              autoClosePaused={liveStatus.autoClosePaused}
             />
           </div>
         ) : (

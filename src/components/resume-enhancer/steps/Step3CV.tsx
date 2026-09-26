@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
-import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
+import { downloadCanvasAsPDF, downloadCanvasAsSVG } from '@/lib/utils/downloadCanvas';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -69,6 +69,13 @@ const DEFAULT_SECTION_TITLES: Record<string, string> = {
 interface Step3CVProps {
   onComplete: () => void;
   onActiveSectionChange?: (sectionId: string) => void;
+  /**
+   * Reports the state of the debounced content autosave so the parent header
+   * indicator (Saving.../Saved/Failed) reflects reality. On success the exact
+   * JSON that was persisted is passed so the parent can refresh its
+   * unsaved-changes snapshot.
+   */
+  onSaveStatus?: (status: 'saving' | 'success' | 'error', savedCvDataJson?: string) => void;
 }
 
 export interface Step3CVRef {
@@ -81,7 +88,7 @@ export interface Step3CVRef {
 }
 
 const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
-  ({ onComplete, onActiveSectionChange }, ref) => {
+  ({ onComplete, onActiveSectionChange, onSaveStatus }, ref) => {
     const { data: session } = useSession();
     const isGuestMode = !session;
     const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap, goToStep } = useResumeEnhancer();
@@ -94,6 +101,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
 
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
+    const [isSavingJobProfile, setIsSavingJobProfile] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
     const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -141,12 +149,17 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         if (format === 'pdf') {
           // ── WYSIWYG PDF: capture the live .cv-document DOM element ──────────
           // This ensures the exported PDF is a pixel-perfect match of the canvas
-          // preview. The server-side export uses the old TemplateRenderer and
-          // does NOT know about CANVAS_TEMPLATES, SNIPPETS, or CSS variables.
+          // preview. High-DPI 300 DPI SVG-backed rendering prevents pixelation on zoom.
           await downloadCanvasAsPDF(`${baseName}.pdf`, {
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
           });
           toast.success('Downloaded successfully!');
+        } else if (format === 'svg') {
+          // ── Pure Vector SVG: 100% vector scalability with 0 pixelation on zoom ──
+          await downloadCanvasAsSVG(`${baseName}.svg`, {
+            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+          });
+          toast.success('Downloaded Vector SVG successfully!');
         } else if (format === 'docx') {
           // DOCX: use the server export API which generates a content-faithful
           // Word document from cvData (all sections present, visual styling differs).
@@ -249,6 +262,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         const controller = new AbortController();
         autoSaveAbortRef.current = controller;
 
+        onSaveStatus?.('saving');
+
         try {
           const response = await fetch(`/api/cvs/${state.cvId}`, {
             method: 'PUT',
@@ -271,14 +286,22 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
               lastSavedAtRef.current = result.updatedAt;
             }
             console.log('CV Auto-saved successfully (content only)');
+            onSaveStatus?.('success', currentSaveKey);
           } else if (response.status === 409) {
             // Conflict: server has a newer version. Discard local changes and reload.
             console.warn('CV Auto-save conflict — server has newer version');
             lastSavedCvDataStrRef.current = currentSaveKey;
+            onSaveStatus?.('error');
+            toast.error('This CV was updated elsewhere. Reload the page before editing further.', { id: 'cv-autosave-conflict' });
+          } else {
+            onSaveStatus?.('error');
+            toast.error("Couldn't auto-save your changes. Press Save to retry.", { id: 'cv-autosave-error' });
           }
         } catch (err: any) {
           if (err?.name === 'AbortError') return; // Cancelled — a new save superseded this one
           console.error('CV Auto-save failed:', err);
+          onSaveStatus?.('error');
+          toast.error("Couldn't auto-save your changes. Press Save to retry.", { id: 'cv-autosave-error' });
         }
       }, debounceMs);
 
@@ -287,7 +310,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           clearTimeout(autoSaveTimerRef.current);
         }
       };
-    }, [state.cvData, state.cvId, pillIssues, isPillAnalyzing]);
+    }, [state.cvData, state.cvId, pillIssues, isPillAnalyzing, onSaveStatus]);
 
     useEffect(() => {
       if (hasLoadedUserSectionTitlesRef.current) return;
@@ -757,7 +780,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         }
       } catch (error) {
         console.error('CV Surgeon analysis failed:', error);
-        alert('Failed to analyze CV. Please try again.');
+        toast.error("Couldn't analyze your CV. Try again.");
       } finally {
         setIsAnalyzing(false);
         dispatch({ type: 'SET_ANALYZING', payload: false });
@@ -785,7 +808,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           const limitCheck = await limitCheckResponse.json();
           if (!limitCheck.allowed) {
             // Show limit modal or paywall
-            alert(limitCheck.message || 'You have reached your Tailored Resume limit. Archive or delete an existing Tailored Resume to create a new one, or upgrade to Focused.');
+            toast.error(limitCheck.message || 'You have reached your Tailored Resume limit. Archive or delete an existing Tailored Resume to create a new one, or upgrade to Focused.', { duration: 9000 });
             return;
           }
         }
@@ -818,13 +841,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   description: text
                 }
               });
-              alert('Job description updated successfully!');
+              toast.success('Job description updated successfully!');
             } else {
               throw new Error('Failed to update job description');
             }
           } catch (error) {
             console.error('Failed to update job:', error);
-            alert('Failed to update job description. Please try again.');
+            toast.error('Failed to update job description. Please try again.');
           }
         }
         return;
@@ -929,7 +952,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         // Show success message - sanitize user input to prevent XSS
         const sanitizedRole = sanitizeErrorMessage(state.targetRole || 'position');
         const sanitizedCompany = sanitizeErrorMessage(companyName || 'company');
-        alert(`Job tracking created! Now tracking: ${sanitizedRole} at ${sanitizedCompany}`);
+        toast.success(`Job tracking created! Now tracking: ${sanitizedRole} at ${sanitizedCompany}`);
 
         // If we provided a text override for Master CV, enable JD input show
         if (typeof arg === 'string') {
@@ -939,7 +962,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       } catch (error) {
         console.error('Failed to convert to journey:', error);
         const message = sanitizeErrorMessage(error, 'Failed to create journey. Please try again.');
-        alert(message);
+        toast.error(message);
       }
     };
 
@@ -1184,6 +1207,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
       if (headerSectionTypes.includes(sectionId)) {
         toast.error('Cannot delete header section. This section is required for all CVs.');
+        return;
+      }
+
+      const sectionLabel = sectionId.replace(/_/g, ' ');
+      if (!window.confirm(`Remove the "${sectionLabel}" section and everything in it? You can undo this with Cmd/Ctrl+Z.`)) {
         return;
       }
 
@@ -1596,6 +1624,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         <SmartJDModal
           isOpen={showJobParserDialog}
           onClose={() => setShowJobParserDialog(false)}
+          isLoading={isSavingJobProfile}
           initialData={{
             title: state.targetRole || '',
             experienceLevel: state.seniorityLevel || '',
@@ -1606,7 +1635,10 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
               toast.error('Missing job description.');
               return;
             }
-            
+
+            setIsSavingJobProfile(true);
+            let submitFailed = false;
+
             setJdText(jobDescription);
             dispatch({
               type: 'SET_JOB_DATA',
@@ -1619,7 +1651,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                 jobDescription: jobDescription,
               }
             });
-            setShowJobParserDialog(false);
 
             if (state.cvType === 'standalone') {
               try {
@@ -1689,10 +1720,15 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   });
                 }
               } catch (error: any) {
+                submitFailed = true;
                 console.error('Failed to save and track:', error);
                 toast.error(error.message || 'Failed to save and track.');
               }
             }
+            if (!submitFailed) {
+              setShowJobParserDialog(false);
+            }
+            setIsSavingJobProfile(false);
           }}
         />
 

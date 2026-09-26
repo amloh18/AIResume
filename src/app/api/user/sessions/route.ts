@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { getToken, decode } from 'next-auth/jwt';
 import { authOptions } from '@/lib/auth';
 import { SessionService } from '@/lib/services/session-service';
+import {
+  getSessionCookieName,
+  SECURE_SESSION_COOKIE,
+  INSECURE_SESSION_COOKIE,
+} from '@/lib/auth/session-cookie';
 
 /**
  * GET /api/user/sessions
  * List all active sessions for the current user.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -17,8 +23,11 @@ export async function GET() {
     const sessions = await SessionService.getActiveSessions(session.user.id);
 
     // Get current session jti from the JWT token
-    // We need to decode the token to get the jti — use the session token cookie
-    const currentJti = await getCurrentJti();
+    const currentJti = await getCurrentJti(request);
+
+    // If currentJti could not be directly resolved and there is only 1 active session,
+    // that single session is guaranteed to be the current device
+    const effectiveCurrentJti = currentJti || (sessions.length === 1 ? sessions[0].jti : null);
 
     const sessionsWithCurrent = sessions.map((s) => ({
       id: s._id,
@@ -29,7 +38,7 @@ export async function GET() {
       ip: s.ip,
       location: s.location,
       provider: s.provider,
-      isCurrent: currentJti ? s.jti === currentJti : false,
+      isCurrent: effectiveCurrentJti ? s.jti === effectiveCurrentJti : false,
       createdAt: s.createdAt,
       lastActiveAt: s.lastActiveAt,
     }));
@@ -57,11 +66,26 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const currentJti = await getCurrentJti();
+    let currentJti = await getCurrentJti(request);
+
+    // If currentJti could not be decrypted, attempt fallback to most recent session
+    if (!currentJti) {
+      const activeSessions = await SessionService.getActiveSessions(session.user.id);
+      if (activeSessions.length > 0) {
+        currentJti = activeSessions[0].jti;
+      }
+    }
 
     if (body.revokeAll) {
-      // Revoke all sessions except current (if we can identify it)
-      const count = await SessionService.revokeAllOtherSessions(session.user.id, currentJti || '');
+      if (!currentJti) {
+        return NextResponse.json({
+          success: false,
+          error: 'Unable to identify active session. Action aborted to protect your active login.',
+        }, { status: 400 });
+      }
+
+      // Revoke all sessions except current (strictly protected)
+      const count = await SessionService.revokeAllOtherSessions(session.user.id, currentJti);
       return NextResponse.json({
         success: true,
         message: `Revoked ${count} session(s)`,
@@ -71,7 +95,7 @@ export async function DELETE(request: NextRequest) {
 
     if (body.jti) {
       // Revoke a specific session
-      if (body.jti === currentJti) {
+      if (currentJti && body.jti === currentJti) {
         return NextResponse.json({ success: false, error: 'Cannot revoke current session' }, { status: 400 });
       }
       const revoked = await SessionService.revokeSession(body.jti);
@@ -89,24 +113,73 @@ export async function DELETE(request: NextRequest) {
 }
 
 /**
- * Extract the current session's jti from the JWT cookie.
- * This is a best-effort extraction — if it fails, we just won't mark any session as "current".
+ * Extract the current session's jti from the JWT token.
+ * Uses getToken and decode to handle both encrypted JWE and signed JWS tokens reliably.
  */
-async function getCurrentJti(): Promise<string | null> {
+async function getCurrentJti(request?: NextRequest): Promise<string | null> {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return null;
+
+  // 1. Try getToken from NextRequest directly
+  if (request) {
+    try {
+      const token = await getToken({
+        req: request,
+        secret,
+        cookieName: getSessionCookieName(),
+      });
+      if (token?.jti && typeof token.jti === 'string') {
+        return token.jti;
+      }
+
+      // Try default cookie names as fallback
+      const tokenDefault = await getToken({
+        req: request,
+        secret,
+      });
+      if (tokenDefault?.jti && typeof tokenDefault.jti === 'string') {
+        return tokenDefault.jti;
+      }
+    } catch {
+      // proceed to cookie-based fallback
+    }
+  }
+
+  // 2. Fallback: inspect raw cookie values and decode with next-auth/jwt decode
   try {
     const { cookies } = await import('next/headers');
     const cookieStore = await cookies();
-    const token = cookieStore.get('next-auth.session-token')?.value
-      || cookieStore.get('__Secure-next-auth.session-token')?.value;
-    if (!token) return null;
+    const cookieNames = [
+      getSessionCookieName(),
+      SECURE_SESSION_COOKIE,
+      INSECURE_SESSION_COOKIE,
+    ];
 
-    // Decode the JWT payload (base64url) — don't verify signature here,
-    // NextAuth already validated it when creating the session.
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-    return payload.jti || null;
+    for (const name of cookieNames) {
+      const rawToken = cookieStore.get(name)?.value;
+      if (!rawToken) continue;
+
+      try {
+        const decoded = await decode({ token: rawToken, secret });
+        if (decoded?.jti && typeof decoded.jti === 'string') {
+          return decoded.jti;
+        }
+      } catch {
+        // If unencrypted 3-part JWS, try payload extraction
+        const parts = rawToken.split('.');
+        if (parts.length === 3) {
+          try {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+            if (payload?.jti && typeof payload.jti === 'string') {
+              return payload.jti;
+            }
+          } catch {}
+        }
+      }
+    }
   } catch {
-    return null;
+    // best-effort
   }
+
+  return null;
 }

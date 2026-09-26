@@ -111,35 +111,62 @@ export class EntitlementService {
     const monthlyStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const dailyStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-    // 3. Count Usage from jobapplications collection
+    // 3. Count usage from the AUTHORITATIVE quota source.
+    /*
+      This used to count rows in `jobapplications` directly, while the endpoint
+      that actually blocks an apply (`/api/jobs/auto-apply`) counts
+      `AutoApplyReservation` rows via AutoApplyQuotaService. Two counters,
+      two answers: the Settings card showed "12 of 10 used" while the
+      enforcement layer happily allowed more. Both surfaces now read the same
+      reservation-based numbers the enforcement uses.
+    */
+    const { AutoApplyQuotaService } = await import('@/lib/services/autoApplyQuotaService');
+    let quotaUsage: Awaited<ReturnType<typeof AutoApplyQuotaService.getUsage>> | null = null;
+    try {
+      quotaUsage = await AutoApplyQuotaService.getUsage(userId);
+    } catch {
+      // Fall back to the direct jobapplications counts below rather than
+      // failing the whole entitlements read — a broken counter must never
+      // take down the settings page.
+      quotaUsage = null;
+    }
+
     const appsCollection = db.collection('jobapplications');
     const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
 
-    // Monthly count (applications created or applied this month)
-    const monthlyUsed = await appsCollection.countDocuments({
-      $or: [{ userId: userObjectId }, { userId: userId.toString() }],
-      $and: [
-        {
-          $or: [
-            { createdAt: { $gte: monthlyStart } },
-            { appliedAt: { $gte: monthlyStart } },
-            { applicationDate: { $gte: monthlyStart } },
-          ],
-        },
-        { status: { $nin: ['saved', 'draft'] } }, // Exclude bookmarked/draft jobs from consumption count
-      ],
-    });
+    let monthlyUsed: number;
+    let dailyAutoApplyUsed: number;
+    if (quotaUsage) {
+      // Reservation-based counts (mirror of AutoApplyQuotaService.checkQuota)
+      monthlyUsed = quotaUsage.total;
+      dailyAutoApplyUsed = quotaUsage.dailyUsed;
+    } else {
+      // Monthly count (applications created or applied this month)
+      monthlyUsed = await appsCollection.countDocuments({
+        $or: [{ userId: userObjectId }, { userId: userId.toString() }],
+        $and: [
+          {
+            $or: [
+              { createdAt: { $gte: monthlyStart } },
+              { appliedAt: { $gte: monthlyStart } },
+              { applicationDate: { $gte: monthlyStart } },
+            ],
+          },
+          { status: { $nin: ['saved', 'draft'] } }, // Exclude bookmarked/draft jobs from consumption count
+        ],
+      });
 
-    // Daily Auto-Apply count (applications submitted via auto-apply today)
-    const dailyAutoApplyUsed = await appsCollection.countDocuments({
-      $or: [{ userId: userObjectId }, { userId: userId.toString() }],
-      appliedAt: { $gte: dailyStart },
-      applicationMethod: 'auto',
-    });
+      // Daily Auto-Apply count (applications submitted via auto-apply today)
+      dailyAutoApplyUsed = await appsCollection.countDocuments({
+        $or: [{ userId: userObjectId }, { userId: userId.toString() }],
+        appliedAt: { $gte: dailyStart },
+        applicationMethod: 'auto',
+      });
+    }
 
     // 4. Construct Entitlement Structures
     if (plan === 'starter') {
-      const limit = 10;
+      const limit = 10; // Canonical Starter cap — keep in sync with limits.ts & PLAN_CONFIGS
       const remaining = Math.max(0, limit - monthlyUsed);
 
       return {
@@ -258,11 +285,16 @@ export class EntitlementService {
         entitlements.autoApply.limit !== null &&
         entitlements.autoApply.used >= entitlements.autoApply.limit
       ) {
+        const { describeReset } = await import('@/lib/utils/reset-countdown');
+        const resetAt = entitlements.autoApply.resetAt;
+        const resetClause = resetAt
+          ? ` Resets ${describeReset(resetAt)}.`
+          : '';
         return {
           allowed: false,
           entitlements,
           recommendation: this.getUpgradeRecommendation(entitlements, 'auto_apply'),
-          errorReason: `You've reached your auto-apply limit of ${entitlements.autoApply.limit} applications this month. Your limit resets on the 1st.`,
+          errorReason: `You've reached your auto-apply limit of ${entitlements.autoApply.limit} applications.${resetClause}`,
         };
       }
 

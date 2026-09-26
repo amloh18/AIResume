@@ -19,8 +19,9 @@ import {
 import { CountrySelector } from '@/components/jobs/CountrySelector';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 import { Pill, SearchInput } from '@/components/ui';
-import { chipState } from '@/components/ui/chip-styles';
+import { chipStateDark } from '@/components/ui/chip-styles';
 
 interface FiltersBarProps {
   filters: JobsFilter;
@@ -173,31 +174,35 @@ export default function FiltersBar({
     });
   };
 
-  // Auto-Apply quota computation using the unified entitlement engine
-  const { getLimit, plan: hookPlan } = useEntitlements();
+  // Auto-Apply quota computation using the unified entitlement engine.
+  // Uses the BINDING limit for the plan (starter → monthly, focused → daily) —
+  // the raw `auto_apply_monthly` bucket is uncapped (-1) on Focused and would
+  // render as "13/Infinity".
+  const { getAutoApplyUsage, plan: hookPlan } = useEntitlements();
   const autoApplyQuota = useMemo(() => {
-    const autoApplyLimit = getLimit('auto_apply_monthly');
-    if (autoApplyLimit) {
-      const isUnlimited = autoApplyLimit.remaining === null;
-      return {
-        used: autoApplyLimit.used,
-        limit: isUnlimited ? Infinity : autoApplyLimit.limit,
-        enabled: autoApplyEnabled,
-      };
-    }
-    // Fallback to legacy entitlements if hook not ready
-    const isStarter = entitlements?.plan === 'starter' || !isPaidUser;
-    if (isStarter) {
-      const limit = entitlements?.application?.limit ?? 10;
-      const remaining = entitlements?.application?.remaining ?? 10;
-      const used = Math.max(0, limit - remaining);
-      return { used, limit, enabled: autoApplyEnabled };
-    }
-    const limit = entitlements?.autoApply?.limit ?? 50;
-    const remaining = entitlements?.autoApply?.remaining ?? 50;
-    const used = Math.max(0, limit - remaining);
-    return { used, limit, enabled: autoApplyEnabled };
-  }, [getLimit, entitlements, isPaidUser, autoApplyEnabled]);
+    const usage = getAutoApplyUsage();
+    return {
+      used: usage.used,
+      limit: usage.isUnlimited ? Infinity : usage.limit,
+      remaining: usage.remaining,
+      resetAt: usage.resetAt,
+      enabled: autoApplyEnabled,
+    };
+  }, [getAutoApplyUsage, autoApplyEnabled]);
+
+  /*
+    Live countdown to the quota reset, re-rendered every 30s so "Resets in 5h"
+    actually ticks down. The label intentionally only counts down while quota
+    REMAINS; at zero remaining the pill's number itself says the limit is hit
+    and the modals carry the full reset story.
+  */
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!autoApplyQuota.resetAt) return;
+    const t = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, [autoApplyQuota.resetAt]);
+  const resetCountdown = formatResetLabel(autoApplyQuota.resetAt, 'Resets');
 
   const handleAutoApplyClick = () => {
     onToggleAutoApply?.();
@@ -256,8 +261,7 @@ export default function FiltersBar({
                 ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600/50'
                 : 'bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm text-gray-600 dark:text-gray-300 border-[var(--border-primary)]'
             }`}
-          >
-            <button
+          >            <button
               type="button"
               onClick={handleAutoApplyClick}
               className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 hover:opacity-80 transition-opacity cursor-pointer"
@@ -277,13 +281,24 @@ export default function FiltersBar({
               <span className="font-extrabold tracking-tight">Auto-Apply</span>
               <span
                 className={`px-1.5 py-0.5 rounded-md text-[11px] font-black tracking-tight ${
-                  autoApplyQuota.enabled
-                    ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
-                    : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
-                }`}
+                  autoApplyQuota.remaining !== null && autoApplyQuota.remaining <= 0
+                    ? 'bg-red-500/20 text-red-700 dark:bg-red-400/20 dark:text-red-300'
+                    : autoApplyQuota.enabled
+                      ? 'bg-emerald-200/70 dark:bg-emerald-400/20 text-emerald-950 dark:text-lime-300'
+                      : 'bg-gray-200/70 dark:bg-white/10 text-gray-700 dark:text-gray-300'
+                }`
+              }
               >
-                {autoApplyQuota.used}/{autoApplyQuota.limit}
+                {autoApplyQuota.used}/{autoApplyQuota.limit === Infinity ? '∞' : autoApplyQuota.limit}
               </span>
+              {resetCountdown && autoApplyQuota.limit !== Infinity && (
+                <span
+                  className="hidden lg:inline text-[10px] font-bold text-white/50 dark:text-lime-200/50 whitespace-nowrap"
+                  title={`Quota ${resetCountdown.toLowerCase()}`}
+                >
+                  · {resetCountdown}
+                </span>
+              )}
             </button>
 
             <span className="h-4 w-px bg-gray-200 dark:bg-white/10" />
@@ -348,7 +363,7 @@ export default function FiltersBar({
         {/* ================================================================= */}
         <div className="relative z-20 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 text-xs">
           {/* Row 2a: Segment Navigation Switcher — full width on mobile */}
-          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-[var(--bg-tertiary)] dark:bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-[var(--border-primary)] shrink-0 h-9 shadow-2xs w-full sm:w-auto">
+          <div className="flex items-center max-w-full overflow-x-auto scrollbar-hide bg-white/5 backdrop-blur-sm p-1 rounded-xl border border-white/10 shrink-0 h-9 shadow-2xs w-full sm:w-auto">
             <button
               type="button"
               onClick={() =>
@@ -363,10 +378,10 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'recommended'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
-              <Target className={`w-3.5 h-3.5 ${currentView === 'recommended' ? 'text-white dark:text-black' : 'text-[#013f2e] dark:text-[#36D39B]'}`} />
+              <Target className={`w-3.5 h-3.5 ${currentView === 'recommended' ? 'text-white dark:text-black' : 'text-[#36D39B]'}`} />
               <span className="hidden sm:inline">Recommended</span>
             </button>
 
@@ -384,7 +399,7 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'all'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
               <Globe className={`w-3.5 h-3.5 ${currentView === 'all' ? 'text-white dark:text-black' : 'text-sky-500'}`} />
@@ -397,13 +412,13 @@ export default function FiltersBar({
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
                 currentView === 'saved'
                   ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium'
+                  : 'text-white/70 hover:text-white font-medium'
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${currentView === 'saved' ? 'text-white dark:text-black' : 'text-amber-500'}`} />
               <span className="hidden sm:inline">Saved</span>
               {savedCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-black">
                   {savedCount}
                 </span>
               )}
@@ -422,7 +437,7 @@ export default function FiltersBar({
                     type="button"
                     onClick={() => handleToggleWorkplace(wp.id)}
                     aria-pressed={active}
-                    className={chipState(active ? 'active' : 'idle', 'md')}
+                    className={chipStateDark(active ? 'active' : 'idle', 'md')}
                   >
                     {wp.label}
                   </button>
@@ -432,6 +447,7 @@ export default function FiltersBar({
 
             {/* Visa Sponsorship Chip */}
             <Pill
+              surface="dark"
               selected={Boolean(filters.sponsorsVisa)}
               onClick={() => onChange({ sponsorsVisa: !filters.sponsorsVisa })}
               leftIcon={<Shield className="w-3.5 h-3.5 opacity-70" />}
@@ -449,7 +465,7 @@ export default function FiltersBar({
                   toggleDropdown('exp');
                 }}
                 aria-expanded={activeDropdown === 'exp'}
-                className={chipState(
+                className={chipStateDark(
                   Boolean(filters.experienceLevel?.length) ? 'active' : 'idle',
                   'md'
                 )}
@@ -457,13 +473,7 @@ export default function FiltersBar({
                 <Briefcase className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>Experience</span>
                 {Boolean(filters.experienceLevel?.length) && (
-                  <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums ${
-                      filters.experienceLevel?.length
-                        ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
-                        : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
-                    }`}
-                  >
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums bg-lime-400/15 text-lime-300">
                     {filters.experienceLevel?.length}
                   </span>
                 )}
@@ -509,7 +519,7 @@ export default function FiltersBar({
                   toggleDropdown('date');
                 }}
                 aria-expanded={activeDropdown === 'date'}
-                className={chipState(
+                className={chipStateDark(
                   filters.datePosted && filters.datePosted !== 'all'
                     ? 'active'
                     : 'idle',
@@ -560,6 +570,7 @@ export default function FiltersBar({
 
             {/* Auto-Apply Supported Chip */}
             <Pill
+              surface="dark"
               selected={Boolean(filters.easyApplyOnly)}
               onClick={() => onChange({ easyApplyOnly: !filters.easyApplyOnly })}
               leftIcon={<Zap className="w-3.5 h-3.5 text-current" />}
@@ -574,7 +585,7 @@ export default function FiltersBar({
             <button
               type="button"
               onClick={onReset}
-              className="text-xs font-semibold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline shrink-0 transition-colors"
+              className="text-xs font-semibold text-white/50 hover:text-white underline shrink-0 transition-colors"
             >
               Reset filters ({activeFilterCount})
             </button>

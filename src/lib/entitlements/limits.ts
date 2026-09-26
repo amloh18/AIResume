@@ -8,6 +8,11 @@
  *   daily   → resets at midnight UTC
  *   monthly → resets at billing cycle or 1st of month
  *   total   → lifetime cap (-1 = unlimited)
+ *
+ * ⚠️ SINGLE SOURCE OF TRUTH — keep in sync with the enforcement configs in
+ * `lib/services/autoApplyQuotaService.ts` (PLAN_CONFIGS) and the numbers shown
+ * in the paywall/legal copy. Mismatched limits here vs there are exactly how a
+ * user ends up at "12 of 10 used" with nothing blocking the next apply.
  */
 
 import { PlanKey } from './plans';
@@ -47,17 +52,17 @@ export const LIMITS: LimitDefinition[] = [
   {
     key: 'auto_apply_daily',
     period: 'daily',
-    defaults: { free: 10, starter: 25, focused: 50 },
+    defaults: { free: 10, starter: 10, focused: 50 },
   },
   {
     key: 'auto_apply_monthly',
     period: 'monthly',
-    defaults: { free: 10, starter: 25, focused: 50 },
+    defaults: { free: 10, starter: 10, focused: -1 },
   },
   {
     key: 'applications_monthly',
     period: 'monthly',
-    defaults: { free: 0, starter: 25, focused: 50 },
+    defaults: { free: 0, starter: 10, focused: -1 },
   },
   {
     key: 'ai_surgeon_runs_monthly',

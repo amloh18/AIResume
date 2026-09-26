@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { EmptyState } from './ui-primitives';
 import { CHIP_INLINE, CHIP_TONES_DARK, type ChipTone } from '@/components/ui/chip-styles';
+import { toast } from '@/lib/hot-toast';
 
 interface DemandSegment {
   _id: string;
@@ -69,16 +70,24 @@ export default function DemandQueueMonitor() {
   useEffect(() => { fetchData(); }, []);
 
   const triggerRefresh = async (segmentId: string) => {
+    if (triggeringId) return;
     setTriggeringId(segmentId);
     try {
-      await fetch('/api/admin/ingestion-monitor', {
+      const res = await fetch('/api/admin/ingestion-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'trigger_demand', segmentId }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      toast.success('Refresh triggered');
       setTimeout(fetchData, 1000);
     } catch (err) {
       console.error('Trigger error:', err);
+      const message = err instanceof Error ? err.message : null;
+      toast.error(message || "Couldn't trigger the refresh. Try again.");
     } finally {
       setTriggeringId(null);
     }

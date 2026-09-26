@@ -55,6 +55,7 @@ import {
   type TrackerSidebarOpenContext,
 } from './trackerSidebarConfig';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { formatResetCountdown } from '@/lib/utils/reset-countdown';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
@@ -134,6 +135,15 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [showUpgradePopupState, setShowUpgradePopupState] = useState(false);
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
   const [isMovingToCreated, setIsMovingToCreated] = useState(false);
+  /*
+    Apply re-entry guard (pattern from JobsDashboard `handleApplyJob`): the CTAs
+    are disabled while a run is in flight, but a double-click can land both
+    events before React re-renders, and `POST /api/jobs/auto-apply` enqueues a
+    NEW ApplicationQueue row per call — two calls meant two submissions.
+    The ref is the only thing that sees the first click synchronously.
+  */
+  const [isApplying, setIsApplying] = useState(false);
+  const applyingRef = useRef(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -263,32 +273,53 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const handleSetCommsReadState = async (commId: string, isRead: boolean) => {
     const current = commsThread.find((c) => c._id === commId);
     if (current && current.isRead === isRead) return;
+    const previousRead = current?.isRead;
+    // Optimistic apply so the row flips instantly.
+    setCommsThread((prev) => prev.map((c) => (c._id === commId ? { ...c, isRead } : c)));
     try {
-      await fetch(`/api/communications/${commId}`, {
+      const res = await fetch(`/api/communications/${commId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isRead }),
       });
-      setCommsThread((prev) => prev.map((c) => (c._id === commId ? { ...c, isRead } : c)));
+      if (!res.ok) throw new Error(`PATCH failed with status ${res.status}`);
       setCommsMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to update read state:', error);
+      // Roll back the optimistic flip so the UI matches the server again.
+      if (typeof previousRead === 'boolean') {
+        setCommsThread((prev) =>
+          prev.map((c) => (c._id === commId ? { ...c, isRead: previousRead } : c))
+        );
+      }
+      toast.error("Couldn't update the message");
     }
   };
 
   const handleToggleCommsStar = async (commId: string, currentStarred: boolean) => {
+    const current = commsThread.find((c) => c._id === commId);
+    const previousStarred = current?.isStarred;
+    // Optimistic apply so the star flips instantly.
+    setCommsThread((prev) =>
+      prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
+    );
     try {
-      await fetch(`/api/communications/${commId}`, {
+      const res = await fetch(`/api/communications/${commId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isStarred: !currentStarred }),
       });
-      setCommsThread((prev) =>
-        prev.map((c) => (c._id === commId ? { ...c, isStarred: !currentStarred } : c))
-      );
+      if (!res.ok) throw new Error(`PATCH failed with status ${res.status}`);
       setCommsMutationRevision((v) => v + 1);
     } catch (error) {
       console.error('Failed to toggle star:', error);
+      // Roll back the optimistic star so the UI matches the server again.
+      if (typeof previousStarred === 'boolean') {
+        setCommsThread((prev) =>
+          prev.map((c) => (c._id === commId ? { ...c, isStarred: previousStarred } : c))
+        );
+      }
+      toast.error("Couldn't update the message");
     }
   };
 
@@ -1421,7 +1452,20 @@ ${userName}`
     router.push(`/editor?${params.toString()}`);
   };
 
-  const handleApplyNow = async (journey: any) => {
+  const handleApplyNow = async (journey: any, preGuarded = false) => {
+    /*
+      Re-entry guard (see `applyingRef` above). `handleTailorAndApply` acquires
+      the same guard before it runs and passes `preGuarded` so the nested call
+      doesn't deadlock on a guard it already owns.
+    */
+    if (!preGuarded) {
+      if (applyingRef.current) {
+        toast('Please wait — an application is already being submitted.', { icon: 'ℹ️' });
+        return;
+      }
+      applyingRef.current = true;
+      setIsApplying(true);
+    }
     try {
       const jobId = job._id || job.id;
       const atsType = (job as any).atsType || 'unknown';
@@ -1446,8 +1490,31 @@ ${userName}`
 
       const applyData = await applyRes.json();
 
+      /*
+        Quota / entitlement blocks arrive as HTTP 403 with a JSON body — the
+        server refuses to enqueue, so nothing is in flight. Surface the real
+        reason (with the reset countdown) instead of the generic
+        "Auto-apply failed" toast this used to fall into.
+      */
+      if (applyRes.status === 403) {
+        const blockMessage: string =
+          applyData?.message || applyData?.error || 'Auto-Apply limit reached';
+        const resetClause = applyData?.resetAt
+          ? ` Quota ${formatResetCountdown(applyData.resetAt) !== null ? `resets in ${formatResetCountdown(applyData.resetAt)}` : `resets ${new Date(applyData.resetAt).toLocaleDateString()}`}.`
+          : '';
+        toast.error(`${blockMessage}${resetClause}`, { duration: 8000 });
+        return;
+      }
+      // Per-source daily cap returns 429 with its own message.
+      if (applyRes.status === 429) {
+        toast.error(applyData?.error || 'Daily application limit reached. Try again tomorrow.', {
+          duration: 8000,
+        });
+        return;
+      }
+
       if (!applyRes.ok) {
-        throw new Error(applyData?.error?.message || 'Auto-apply failed');
+        throw new Error(applyData?.error?.message || applyData?.error || applyData?.message || 'Auto-apply failed');
       }
 
       /*
@@ -1502,10 +1569,20 @@ ${userName}`
       onRefresh?.();
     } catch (err: any) {
       toast.error(err.message || 'Failed to apply');
+    } finally {
+      applyingRef.current = false;
+      setIsApplying(false);
     }
   };
 
   const handleTailorAndApply = async () => {
+    // Re-entry guard — see `applyingRef` above.
+    if (applyingRef.current) {
+      toast('Please wait — an application is already being submitted.', { icon: 'ℹ️' });
+      return;
+    }
+    applyingRef.current = true;
+    setIsApplying(true);
     try {
       const jobId = job._id || job.id;
 
@@ -1523,9 +1600,12 @@ ${userName}`
       }
 
       // Apply using the unified endpoint
-      await handleApplyNow(primaryJourney);
+      await handleApplyNow(primaryJourney, true);
     } catch (err: any) {
       toast.error(err.message || 'Failed to tailor & apply');
+    } finally {
+      applyingRef.current = false;
+      setIsApplying(false);
     }
   };
 
@@ -2087,6 +2167,8 @@ ${userName}`
     icon?: any;
     onClick: () => void;
     disabled?: boolean;
+    /** Renders a spinner + "Applying..." in place of the icon/label while true. */
+    loading?: boolean;
   }
 
   interface GuidanceHubData {
@@ -2115,7 +2197,8 @@ ${userName}`
           label: isAtsSupported ? 'Tailor & Auto-Apply' : 'Tailor Application',
           icon: Sparkles,
           onClick: () => void handleTailorAndApply(),
-          disabled: isCreatingJourney || isMovingToCreated,
+          disabled: isCreatingJourney || isMovingToCreated || isApplying,
+          loading: isApplying,
         },
         secondaryActions: [
           {
@@ -2147,7 +2230,8 @@ ${userName}`
                 label: 'Submit Auto-Apply',
                 icon: Sparkles,
                 onClick: () => void handleTailorAndApply(),
-                disabled: isCreatingJourney,
+                disabled: isCreatingJourney || isApplying,
+                loading: isApplying,
               }
             : job.jobUrl
             ? {
@@ -2200,7 +2284,8 @@ ${userName}`
           label: 'Generate Tailored Documents',
           icon: Sparkles,
           onClick: () => void handleTailorAndApply(),
-          disabled: isCreatingJourney,
+          disabled: isCreatingJourney || isApplying,
+          loading: isApplying,
         },
         secondaryActions: [
           {
@@ -2341,6 +2426,7 @@ ${userName}`
     hasCoverLetterReady,
     isCreatingJourney,
     isMovingToCreated,
+    isApplying,
     primaryJourney,
     handleTailorAndApply,
     handleMoveToCreated,
@@ -3101,10 +3187,10 @@ ${userName}`
                                 ) : (
                                   <button
                                     onClick={() => void handleTailorAndApply()}
-                                    disabled={isCreatingJourney}
+                                    disabled={isCreatingJourney || isApplying}
                                     className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap disabled:opacity-50"
                                   >
-                                    {isCreatingJourney ? 'Generating...' : 'Generate'}
+                                    {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Generate'}
                                   </button>
                                 )}
                               </div>
@@ -3131,10 +3217,10 @@ ${userName}`
                                 ) : (
                                   <button
                                     onClick={() => void handleTailorAndApply()}
-                                    disabled={isCreatingJourney}
+                                    disabled={isCreatingJourney || isApplying}
                                     className="text-[10px] font-bold text-gray-400 dark:text-gray-500 hover:text-[#013f2e] dark:hover:text-emerald-400 whitespace-nowrap disabled:opacity-50"
                                   >
-                                    {isCreatingJourney ? 'Generating...' : 'Optional'}
+                                    {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Optional'}
                                   </button>
                                 )}
                               </div>
@@ -3190,10 +3276,18 @@ ${userName}`
                             whileTap={{ scale: 0.97 }}
                             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#013f2e] text-white text-xs font-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
                           >
-                            {guidanceHub.primaryAction.icon && (
-                              <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
+                            {guidanceHub.primaryAction.loading ? (
+                              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                            ) : (
+                              guidanceHub.primaryAction.icon && (
+                                <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
+                              )
                             )}
-                            <span>{guidanceHub.primaryAction.label}</span>
+                            <span>
+                              {guidanceHub.primaryAction.loading
+                                ? 'Applying...'
+                                : guidanceHub.primaryAction.label}
+                            </span>
                           </motion.button>
                         )}
                         {guidanceHub.secondaryActions.map((action, idx) => (
@@ -3632,11 +3726,15 @@ ${userName}`
                             <button
                               type="button"
                               onClick={() => void handleTailorAndApply()}
-                              disabled={isCreatingJourney}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#013f2e] hover:brightness-95 text-white rounded-xl text-xs font-black shadow-sm"
+                              disabled={isCreatingJourney || isApplying}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#013f2e] hover:brightness-95 text-white rounded-xl text-xs font-black shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Sparkles className="w-3.5 h-3.5" />
-                              Generate Tailored CV
+                              {isApplying ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5" />
+                              )}
+                              {isApplying ? 'Applying...' : 'Generate Tailored CV'}
                             </button>
                           </div>
                         )}
@@ -3692,11 +3790,15 @@ ${userName}`
                             <button
                               type="button"
                               onClick={() => void handleTailorAndApply()}
-                              disabled={isCreatingJourney}
-                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-900 dark:text-white rounded-xl text-xs font-bold shadow-sm"
+                              disabled={isCreatingJourney || isApplying}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/10 hover:bg-gray-50 text-gray-900 dark:text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Sparkles className="w-3.5 h-3.5" />
-                              Generate Cover Letter
+                              {isApplying ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5" />
+                              )}
+                              {isApplying ? 'Applying...' : 'Generate Cover Letter'}
                             </button>
                           </div>
                         )}

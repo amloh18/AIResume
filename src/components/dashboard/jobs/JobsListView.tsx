@@ -22,6 +22,7 @@ import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
+import { deriveApplicationStatusBadge, type StatusIconKey } from '@/lib/utils/application-status-badge';
 import { CHIP_INLINE, CHIP_TONES, chipTone, type ChipTone } from '@/components/ui/chip-styles';
 
 interface JobApplication {
@@ -32,6 +33,10 @@ interface JobApplication {
   title?: string;
   company: string;
   status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  /** Live pipeline state — decides Submitting vs Awaiting approval vs Apply manually. */
+  internalStatus?: string;
+  /** Reason of the latest APPLICATION_REQUIRES_REVIEW event (hover text + label split). */
+  reviewReason?: string;
   jobDescription?: string;
   description?: string;
   location?: string;
@@ -121,37 +126,25 @@ function getSourceBadge(source?: string) {
 }
 
 /**
- * Status chips. Several raw statuses collapse onto one display group
- * (`screening`/`assessment`/`phone_screen`… all render as "Interview"), so this
- * stays a list-of-groups lookup rather than a flat record.
+ * Status chips — label/tone/icon come from the shared derivation, the only
+ * place that knows `review_required` rows must not read as "Submitting"
+ * (reason → label mapping lives in application-status-badge.ts).
  */
-const STATUS_GROUPS: Array<{
-  statuses: string[];
-  label: string;
-  tone: ChipTone;
-  icon?: LucideIcon;
-}> = [
-  { statuses: ['applied'], label: 'Applied', tone: 'blue', icon: Clock },
-  {
-    statuses: ['interview', 'screening', 'assessment', 'phone_screen', 'technical_test'],
-    label: 'Interview',
-    tone: 'purple',
-    icon: Sparkles,
-  },
-  { statuses: ['offer', 'accepted'], label: 'Offer', tone: 'emerald', icon: CheckCircle },
-  { statuses: ['rejected'], label: 'Rejected', tone: 'rose', icon: XCircle },
-  { statuses: ['created', 'staging'], label: 'Submitting', tone: 'amber', icon: Clock },
-  { statuses: ['draft'], label: 'Draft', tone: 'neutral' },
-]
+const STATUS_ICONS: Record<StatusIconKey, LucideIcon | null> = {
+  clock: Clock,
+  external: ExternalLink,
+  eye: Eye,
+  x: XCircle,
+  sparkles: Sparkles,
+  check: CheckCircle,
+  none: null,
+};
 
-function getStatusBadge(status?: string) {
-  const st = (status || 'draft').toLowerCase();
-  const group = STATUS_GROUPS.find((g) => g.statuses.includes(st));
-  const label = group?.label ?? 'Draft';
-  const tone = group?.tone ?? 'neutral';
-  const Icon = group?.icon;
+function getStatusBadge(job: { status?: string; internalStatus?: string; reviewReason?: string }) {
+  const { label, tone, icon, title } = deriveApplicationStatusBadge(job);
+  const Icon = STATUS_ICONS[icon];
   return (
-    <span className={`${chipTone(tone, 'md')} font-semibold`}>
+    <span className={`${chipTone(tone, 'md')} font-semibold`} title={title}>
       {Icon && <Icon className="w-3 h-3" />}
       {label}
     </span>
@@ -398,7 +391,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                             </span>
                           );
                         }
-                        return getStatusBadge(job.status);
+                        return getStatusBadge(job);
                       })()}
                     </td>
 

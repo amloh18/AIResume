@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Activity, CheckCircle2, XCircle, AlertTriangle,
@@ -11,6 +11,7 @@ import { CardSkeleton } from './ui-primitives';
 import RunsExplorer from './RunsExplorer';
 import PortalSettingsSidebar, { PortalSourceData } from './PortalSettingsSidebar';
 import { CHIP_INLINE, CHIP_TONES_DARK } from '@/components/ui/chip-styles';
+import { toast } from '@/lib/hot-toast';
 
 interface SourceHealth {
   source: string;
@@ -99,6 +100,15 @@ export default function SourceHealthPanel() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [runningAll, setRunningAll] = useState(false);
+  // Cancellable flag for the Run-All poll loop (checked every iteration, set on unmount).
+  const batchPollCancelled = useRef(false);
+
+  useEffect(() => {
+    batchPollCancelled.current = false;
+    return () => {
+      batchPollCancelled.current = true;
+    };
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -125,37 +135,74 @@ export default function SourceHealthPanel() {
   }, [autoRefresh, fetchData]);
 
   const triggerSource = async (sourceName: string) => {
+    if (triggeringSource) return;
     setTriggeringSource(sourceName);
     try {
-      await fetch('/api/admin/ingestion-monitor', {
+      const res = await fetch('/api/admin/ingestion-monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'trigger_source', sourceName }),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      toast.success('Refresh triggered');
       setTimeout(fetchData, 2000);
     } catch (err) {
       console.error('Trigger source error:', err);
+      const message = err instanceof Error ? err.message : null;
+      toast.error(message || "Couldn't trigger the source run. Try again.");
     } finally {
       setTriggeringSource(null);
     }
   };
 
   const triggerAllSources = async () => {
+    if (runningAll) return;
     setRunningAll(true);
+    batchPollCancelled.current = false;
     try {
       // POST with no source triggers all sources via /api/admin/ingest
-      await fetch('/api/admin/ingest', {
+      const res = await fetch('/api/admin/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      toast.success('Batch run queued for all sources');
+
+      // Snapshot last-run times so the final pass can report how many actually ran.
+      const before = new Map<string, string | null>(
+        (data?.sources || []).map((s): [string, string | null] => [s.source, s.lastRunAt])
+      );
+
       // Poll for results — runs take time, check every 5s for 2 min
       for (let i = 0; i < 24; i++) {
         await new Promise(r => setTimeout(r, 5000));
+        if (batchPollCancelled.current) return;
         fetchData();
+      }
+
+      // Surface the final result instead of ending silently.
+      const finalRes = await fetch('/api/admin/ingestion-monitor?view=health');
+      if (finalRes.ok && before.size > 0) {
+        const finalData: SourceHealthData = await finalRes.json();
+        setData(finalData);
+        setLastRefreshed(new Date());
+        const ran = finalData.sources.filter(s => before.get(s.source) !== s.lastRunAt).length;
+        const failed = finalData.sources.filter(s => before.get(s.source) !== s.lastRunAt && s.healthStatus === 'failed').length;
+        const summary = `Batch finished — ${ran} source${ran === 1 ? '' : 's'} started, ${failed} failed`;
+        if (failed > 0) toast.error(summary);
+        else toast.success(summary);
       }
     } catch (err) {
       console.error('Run all error:', err);
+      const message = err instanceof Error ? err.message : null;
+      toast.error(message || "Couldn't start the batch run. Try again.");
     } finally {
       setRunningAll(false);
     }

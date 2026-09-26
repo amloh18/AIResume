@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import mongoose from 'mongoose';
+import { getConnection } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,10 +28,16 @@ export async function GET(request: NextRequest) {
     const minScore = parseInt(searchParams.get('minScore') || '50');
     const sortBy = searchParams.get('sortBy') || 'freshness';
 
-    // Connect to MongoDB if not already connected
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(process.env.MONGODB_URI || '');
-    }
+    /*
+      Connect through the unified connection manager — never mongoose.connect()
+      directly. A raw connect here would bind the shared default connection
+      WITHOUT the MONGODB_DB override if it wins the first-connection race, and
+      mongoose silently ignores a same-URI reconnect, so the connection manager
+      could never correct it afterwards: every later query in the process would
+      go to the wrong database (this is how a user's documents "disappeared"
+      while still present in MongoDB).
+    */
+    await getConnection();
 
     // Query jobs with freshness scores
     const jobs = await mongoose.connection.collection('jobs').aggregate([
