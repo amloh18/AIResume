@@ -59,6 +59,8 @@ import { formatResetCountdown } from '@/lib/utils/reset-countdown';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
 import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
+import { formatQueueEta } from '@/lib/utils/queue-eta';
+import type { BadgeActionId } from '@/lib/utils/application-status-badge';
 
 interface JobApplication {
   id: string;
@@ -143,6 +145,8 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     The ref is the only thing that sees the first click synchronously.
   */
   const [isApplying, setIsApplying] = useState(false);
+  /** In flight against POST /api/applications/[id]/automation (approve/retry/dismiss). */
+  const [isAutomationAction, setIsAutomationAction] = useState(false);
   const applyingRef = useRef(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
@@ -1077,9 +1081,52 @@ ${userName}`
   }, [job.createdAt, job.status, job.statusHistory, job.updatedAt]);
   type StageStatus = 'completed' | 'current' | 'processing' | 'blocked' | 'failed' | 'upcoming';
 
+  /*
+    Pipeline fields as plain component-scope values.
+
+    Two jobs for these: (1) the three memos below (stage timeline, guidance
+    hub, flow stepper) all key off the same pipeline state, (2) hook
+    dependency arrays must be simple expressions — `(job as any).x` casts are
+    rejected by the react-hooks dependency rule, bare identifiers are not.
+  */
+  const pipelineInternal = String((job as any).internalStatus || '');
+  const pipelineReviewReason = String((job as any).reviewReason || '');
+  const pipelineQueueEta =
+    typeof (job as any).queueEtaSeconds === 'number' ? (job as any).queueEtaSeconds : undefined;
+  const pipelineQueuePosition =
+    typeof (job as any).queuePosition === 'number' ? (job as any).queuePosition : undefined;
+  const pipelineApplyUrl = (job as any).applyUrl || undefined;
+  const pipelineSourceUrl = (job as any).sourceUrl || undefined;
+
   const stageItems = useMemo(() => {
     const normalizedTimelineStatus = job.status === 'screening' ? 'applied' : job.status;
     const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
+
+    /*
+      Pipeline-state overlays.
+
+      The renderer already knew `blocked` (amber "!") and `failed` (rose X)
+      but nothing ever produced them — a parked or failed run still rendered
+      Tailored as a cheerful "Current" and Applied as merely "Upcoming",
+      which is exactly the wrong story. These four flags re-label the current
+      node so the timeline tells the truth about where submission stopped.
+    */
+    const stageIsOpen = !['applied', 'interview', 'offer', 'rejected', 'withdrawn'].includes(
+      job.status || ''
+    );
+    const isApprovalHold =
+      pipelineInternal === 'review_required' &&
+      /awaiting (your )?approval|approval before submission|held for your approval/i.test(
+        pipelineReviewReason
+      );
+    const isParked = stageIsOpen && pipelineInternal === 'review_required';
+    const isFailed = stageIsOpen && pipelineInternal === 'automation_failed';
+    const isRunning =
+      stageIsOpen &&
+      ['queued', 'processing', 'form_detected', 'submitting'].includes(pipelineInternal);
+    const isDismissed = stageIsOpen && pipelineInternal === 'automation_dismissed';
+    const pipelineEtaLabel =
+      typeof pipelineQueueEta === 'number' ? `${formatQueueEta(pipelineQueueEta)} left` : '';
 
     const items = [
       {
@@ -1170,6 +1217,31 @@ ${userName}`
         }
       }
 
+      /*
+        Pipeline-state overlay: only the CURRENT node moves (a parked/failed
+        run lives at the Tailored stage — nothing downstream has happened).
+        Live `liveStatus` wins only when both claim `processing`, which is
+        harmless: they say the same thing.
+      */
+      if (isCurrent && isRunning) {
+        status = 'processing';
+      } else if (isCurrent && isFailed) {
+        status = 'failed';
+      } else if (isCurrent && (isParked || isDismissed)) {
+        status = 'blocked';
+      }
+
+      let statusLabel: string | undefined;
+      if (status === 'processing' && isRunning) statusLabel = 'Submitting via automation…';
+      if (status === 'failed' && isFailed) statusLabel = 'Retry or apply manually';
+      if (status === 'blocked') {
+        statusLabel = isApprovalHold
+          ? 'Awaiting your approval'
+          : isDismissed
+            ? 'Applying manually'
+            : 'Automation paused';
+      }
+
       let dateLabel = 'Upcoming';
       if (status === 'completed' && stageDate) {
         dateLabel = formatStageDateTime(stageDate) || formatTimelineDate(stageDate);
@@ -1180,14 +1252,26 @@ ${userName}`
           dateLabel = 'In progress';
         }
       } else if (status === 'processing') {
-        dateLabel = 'In progress';
+        // Real queue ETA when known, generic text otherwise.
+        dateLabel = pipelineEtaLabel || 'In progress';
       } else if (status === 'failed') {
-        dateLabel = stageDate ? `Failed · ${formatStageDateTime(stageDate)}` : 'Failed';
+        dateLabel = isFailed
+          ? 'The run could not submit this application'
+          : stageDate
+            ? `Failed · ${formatStageDateTime(stageDate)}`
+            : 'Failed';
+      } else if (status === 'blocked') {
+        dateLabel = isApprovalHold
+          ? 'Approve to let it submit'
+          : isDismissed
+            ? 'Automation off — you submit'
+            : 'Needs your input to continue';
       }
 
       return {
         ...item,
         status,
+        statusLabel,
         isCurrent,
         isCompleted,
         isUpcoming,
@@ -1198,6 +1282,9 @@ ${userName}`
   }, [
     getStageTransitionDate,
     job.status,
+    pipelineInternal,
+    pipelineReviewReason,
+    pipelineQueueEta,
     jobId,
     // The 'Tailored' sub-label is document-driven, so it must recompute when
     // the journey's links arrive (the sidebar fetches them after first paint).
@@ -1451,6 +1538,42 @@ ${userName}`
 
     router.push(`/editor?${params.toString()}`);
   };
+
+  /*
+    The sidebar's control for a parked/failed application — same endpoint and
+    same semantics as the list row and kanban card buttons, so all three
+    surfaces behave identically. `dismiss` also opens the posting (the user
+    asked to apply manually, give them the page to do it on).
+  */
+  const handleAutomationAction = useCallback(async (actionId: BadgeActionId) => {
+    if (isAutomationAction) return;
+    setIsAutomationAction(true);
+    try {
+      const applicationId = (job as any)._id || (job as any).id;
+      const res = await authenticatedFetch(`/api/applications/${applicationId}/automation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: actionId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      const eta =
+        typeof data.etaSeconds === 'number'
+          ? ` Estimated completion ${formatQueueEta(data.etaSeconds)}.`
+          : '';
+      toast.success(`${data.message || 'Done'}${eta}`);
+      onRefresh?.();
+      if (actionId === 'dismiss') {
+        const url = (job as any).jobUrl || (job as any).applyUrl || (job as any).sourceUrl;
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Request failed');
+      onRefresh?.();
+    } finally {
+      setIsAutomationAction(false);
+    }
+  }, [isAutomationAction, job, onRefresh]);
 
   const handleApplyNow = async (journey: any, preGuarded = false) => {
     /*
@@ -2169,6 +2292,8 @@ ${userName}`
     disabled?: boolean;
     /** Renders a spinner + "Applying..." in place of the icon/label while true. */
     loading?: boolean;
+    /** Text shown next to the spinner while loading (defaults to "Applying..."). */
+    loadingLabel?: string;
   }
 
   interface GuidanceHubData {
@@ -2183,6 +2308,257 @@ ${userName}`
 
   const guidanceHub: GuidanceHubData = useMemo(() => {
     const stage = job.status as string;
+
+    /*
+      Pipeline-state overrides — checked BEFORE the stage branches below.
+
+      Whenever automation parked, failed or is running, the stage text
+      ("Tailored Docs Ready", "Draft Saved"…) is stale advice: the real next
+      step is the control for THAT state. Approve / retry / take-over / verify
+      all call the same endpoint the list and kanban buttons call
+      (POST /api/applications/[id]/automation).
+    */
+    {
+      const internal = String((job as any).internalStatus || '');
+      const reviewReason = String((job as any).reviewReason || '');
+      const stageIsOpen = !['applied', 'interview', 'offer', 'rejected'].includes(stage);
+      const etaSeconds = (job as any).queueEtaSeconds;
+      const queuePosition = (job as any).queuePosition;
+      const etaClause =
+        typeof etaSeconds === 'number'
+          ? ` Estimated completion ${formatQueueEta(etaSeconds)}${
+              typeof queuePosition === 'number' && queuePosition > 1
+                ? ` (position ${queuePosition} in queue)`
+                : ''
+            }.`
+          : '';
+
+      const openPosting = (job as any).jobUrl || (job as any).applyUrl || (job as any).sourceUrl;
+
+      if (stageIsOpen && internal === 'review_required') {
+        const isApprovalHold = /awaiting (your )?approval|approval before submission|held for your approval/i.test(reviewReason);
+        const isUnverified = /no confirmation evidence|needs manual verification/i.test(reviewReason);
+
+        if (isApprovalHold) {
+          return {
+            badgeText: 'Awaiting Approval',
+            badgeClasses: 'bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300 border border-violet-200 dark:border-violet-800/40',
+            toneClasses: 'border-violet-200/80 bg-gradient-to-b from-violet-50/30 to-white dark:border-violet-500/20 dark:from-violet-950/20 dark:to-[#131810]',
+            title: 'Documents Ready — Your Approval Needed',
+            description: `${reviewReason || 'Your tailored documents are prepared and waiting.'} Approve to let BuildAIResume submit this application automatically, or apply yourself — the choice is yours.`,
+            primaryAction: {
+              label: 'Approve & Submit',
+              icon: Send,
+              onClick: () => void handleAutomationAction('approve'),
+              disabled: isAutomationAction,
+              loading: isAutomationAction,
+              loadingLabel: 'Approving…',
+            },
+            secondaryActions: [
+              {
+                label: 'Apply Manually',
+                icon: ExternalLink,
+                onClick: () => void handleAutomationAction('dismiss'),
+                disabled: isAutomationAction,
+              },
+              {
+                label: 'View Documents',
+                icon: FileCheck,
+                onClick: () => setActiveTab('documents'),
+              },
+            ],
+          } satisfies GuidanceHubData;
+        }
+
+        if (isUnverified) {
+          // May already have gone out — never offer a one-click re-submit.
+          return {
+            badgeText: 'Needs Verification',
+            badgeClasses: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40',
+            toneClasses: 'border-rose-200/80 bg-gradient-to-b from-rose-50/30 to-white dark:border-rose-500/20 dark:from-rose-950/20 dark:to-[#131810]',
+            title: 'Confirm Whether It Was Submitted',
+            description: `${reviewReason} Open the posting to check your application status, then mark it applied so your tracker stays accurate.`,
+            primaryAction: openPosting
+              ? {
+                  label: 'Open Job Posting',
+                  icon: ExternalLink,
+                  onClick: () => window.open(openPosting, '_blank', 'noopener,noreferrer'),
+                }
+              : {
+                  label: 'Mark as Applied',
+                  icon: CheckCircle,
+                  onClick: () => void handleQuickStatusChange('applied'),
+                },
+            secondaryActions: [
+              ...(openPosting
+                ? [{
+                    label: 'Mark as Applied',
+                    icon: CheckCircle,
+                    onClick: () => void handleQuickStatusChange('applied'),
+                  }]
+                : []),
+              {
+                label: 'View Documents',
+                icon: FileCheck,
+                onClick: () => setActiveTab('documents'),
+              },
+            ],
+          } satisfies GuidanceHubData;
+        }
+
+        // Manual mode / CAPTCHA / non-automatable ATS / watchdog route:
+        // the user takes over — dismissal cancels the queue item so the
+        // worker can never submit behind their back.
+        return {
+          badgeText: /manual|not automatable|captcha|no application form/i.test(reviewReason)
+            ? 'Apply Manually'
+            : 'Needs Your Action',
+          badgeClasses: 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800/40',
+          toneClasses: 'border-orange-200/80 bg-gradient-to-b from-orange-50/30 to-white dark:border-orange-500/20 dark:from-orange-950/20 dark:to-[#131810]',
+          title: 'Automation Needs You',
+          description: `${reviewReason || 'Automation paused and needs your input.'} Open the posting to apply yourself, or take over to stop automation for this application.`,
+          primaryAction: {
+            label: 'Apply Manually',
+            icon: ExternalLink,
+            onClick: () => void handleAutomationAction('dismiss'),
+            disabled: isAutomationAction,
+          },
+          secondaryActions: [
+            {
+              label: 'Take Over (stop automation)',
+              icon: Eye,
+              onClick: () => void handleAutomationAction('dismiss'),
+              disabled: isAutomationAction,
+            },
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
+
+      if (
+        stageIsOpen &&
+        ['queued', 'processing', 'form_detected', 'submitting'].includes(internal)
+      ) {
+        return {
+          badgeText: 'Submitting…',
+          badgeClasses: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40',
+          toneClasses: 'border-amber-200/80 bg-gradient-to-b from-amber-50/30 to-white dark:border-amber-500/20 dark:from-amber-950/20 dark:to-[#131810]',
+          title: 'Application In Progress',
+          description: `The application worker is preparing and submitting this application right now.${etaClause} You don't need to do anything — you'll be notified when it finishes or needs you.`,
+          primaryAction: {
+            label: 'Refresh Status',
+            icon: RefreshCw,
+            onClick: () => onRefresh?.(),
+          },
+          secondaryActions: [
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
+
+      if (stageIsOpen && internal === 'automation_failed') {
+        return {
+          badgeText: 'Failed',
+          badgeClasses: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40',
+          toneClasses: 'border-rose-200/80 bg-gradient-to-b from-rose-50/30 to-white dark:border-rose-500/20 dark:from-rose-950/20 dark:to-[#131810]',
+          title: 'Automation Failed',
+          description: 'The last automation run could not complete. Retry to let it try again, or take over and apply manually — nothing is in flight either way.',
+          primaryAction: {
+            label: 'Retry Submission',
+            icon: RefreshCw,
+            onClick: () => void handleAutomationAction('retry'),
+            disabled: isAutomationAction,
+            loading: isAutomationAction,
+            loadingLabel: 'Retrying…',
+          },
+          secondaryActions: [
+            {
+              label: 'Apply Manually',
+              icon: ExternalLink,
+              onClick: () => void handleAutomationAction('dismiss'),
+              disabled: isAutomationAction,
+            },
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
+
+      if (stageIsOpen && internal === 'automation_unknown') {
+        return {
+          badgeText: 'Needs Your Action',
+          badgeClasses: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40',
+          toneClasses: 'border-rose-200/80 bg-gradient-to-b from-rose-50/30 to-white dark:border-rose-500/20 dark:from-rose-950/20 dark:to-[#131810]',
+          title: 'Confirm The Outcome',
+          description: 'The run ended without confirmation, so we cannot say whether the application went out. Check the posting, then mark it applied or archive it.',
+          primaryAction: openPosting
+            ? {
+                label: 'Open Job Posting',
+                icon: ExternalLink,
+                onClick: () => window.open(openPosting, '_blank', 'noopener,noreferrer'),
+              }
+            : {
+                label: 'Mark as Applied',
+                icon: CheckCircle,
+                onClick: () => void handleQuickStatusChange('applied'),
+              },
+          secondaryActions: [
+            ...(openPosting
+              ? [{
+                  label: 'Mark as Applied',
+                  icon: CheckCircle,
+                  onClick: () => void handleQuickStatusChange('applied'),
+                }]
+              : []),
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
+
+      if (stageIsOpen && internal === 'automation_dismissed') {
+        return {
+          badgeText: 'Applying Manually',
+          badgeClasses: 'bg-orange-100 text-orange-800 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800/40',
+          toneClasses: 'border-orange-200/80 bg-gradient-to-b from-orange-50/30 to-white dark:border-orange-500/20 dark:from-orange-950/20 dark:to-[#131810]',
+          title: 'You Are Applying Manually',
+          description: 'Automation is off for this application — it will never submit behind your back. Apply on the company site, then mark it applied so tracking stays accurate.',
+          primaryAction: openPosting
+            ? {
+                label: 'Open Job Posting',
+                icon: ExternalLink,
+                onClick: () => window.open(openPosting, '_blank', 'noopener,noreferrer'),
+              }
+            : undefined,
+          secondaryActions: [
+            {
+              label: 'Mark as Applied',
+              icon: CheckCircle,
+              onClick: () => void handleQuickStatusChange('applied'),
+            },
+            {
+              label: 'View Documents',
+              icon: FileCheck,
+              onClick: () => setActiveTab('documents'),
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
+    }
 
     if (stage === 'draft' || stage === 'saved') {
       return {
@@ -2420,6 +2796,13 @@ ${userName}`
     job.jobTitle,
     job.company,
     job.jobUrl,
+    pipelineInternal,
+    pipelineReviewReason,
+    pipelineQueueEta,
+    pipelineQueuePosition,
+    pipelineApplyUrl,
+    pipelineSourceUrl,
+    isAutomationAction,
     isAtsSupported,
     atsType,
     hasCvReady,
@@ -2433,6 +2816,106 @@ ${userName}`
     handleOpenEditModal,
     handleContinueJourney,
     handleOpenInterviewCoach,
+    handleAutomationAction,
+  ]);
+
+  /**
+   * Where THIS application sits in the BUILD → MATCH → TAILOR → SUBMIT → TRACK
+   * flow, rendered as the "Application Flow" stepper above Next Action.
+   *
+   * Honesty rules (same ones the timeline follows):
+   *   - Tailored documents imply Match ran (tailoring consumes the match), so
+   *     the early steps only show as done when there is evidence for them.
+   *   - SUBMIT's state mirrors `internalStatus` exactly — parked, running,
+   *     failed and manual positions are shown as such, never as a generic
+   *     "upcoming".
+   */
+  const applicationFlow = useMemo(() => {
+    const stageName = String(job.status || '');
+    const internal = String((job as any).internalStatus || '');
+    const eta =
+      typeof (job as any).queueEtaSeconds === 'number'
+        ? formatQueueEta((job as any).queueEtaSeconds as number)
+        : '';
+    const submitted = ['applied', 'screening', 'interview', 'offer', 'accepted', 'rejected'].includes(stageName);
+    const docsReady = journeyDocuments.ready;
+    const hasAnyCv = journeyDocuments.hasCV || Boolean(fallbackMasterCvId);
+
+    type StepStatus = 'done' | 'current' | 'upcoming';
+    interface FlowStep {
+      key: string;
+      label: string;
+      status: StepStatus;
+      tone?: 'emerald' | 'blue' | 'violet' | 'amber' | 'rose' | 'orange';
+    }
+
+    // Submit is where all the pipeline states live.
+    let submitStatus: FlowStep['status'] = 'upcoming';
+    let submitTone: FlowStep['tone'];
+    let positionNote: string;
+
+    if (submitted) {
+      submitStatus = 'done';
+      positionNote =
+        'Position: TRACK — the application is submitted. Status changes, responses and outcomes are tracked here and feed back into matching.';
+    } else if (!docsReady && !hasAnyCv) {
+      positionNote =
+        'Position: BUILD — create your Master CV once; every later step works from it. Nothing is ever invented about you.';
+    } else if (!docsReady) {
+      positionNote =
+        'Position: TAILOR — generate the tailored CV and cover letter for this job, then SUBMIT becomes available.';
+    } else {
+      submitStatus = 'current';
+      if (internal === 'review_required') {
+        submitTone = /awaiting (your )?approval|approval before submission|held for your approval/i.test(
+          String((job as any).reviewReason || '')
+        ) ? 'violet' : 'amber';
+        positionNote =
+          'Position: SUBMIT — paused for you. Approve and the worker submits automatically; apply yourself and mark it applied. Nothing is sent without your choice or the quality gate.';
+      } else if (['queued', 'processing', 'form_detected', 'submitting'].includes(internal)) {
+        submitTone = 'blue';
+        positionNote = `Position: SUBMIT — running now${eta ? `, about ${eta} to go` : ''}. You'll be notified when it finishes or needs you.`;
+      } else if (internal === 'automation_failed' || internal === 'automation_unknown') {
+        submitTone = 'rose';
+        positionNote =
+          'Position: SUBMIT — the run failed or could not confirm the outcome. Retry to submit automatically, or take over and apply manually.';
+      } else if (internal === 'automation_dismissed') {
+        submitTone = 'orange';
+        positionNote =
+          'Position: SUBMIT — manual mode: you submit on the company site, then mark it applied so TRACK stays accurate.';
+      } else {
+        submitTone = 'emerald';
+        positionNote =
+          'Position: SUBMIT — documents ready. Choose AUTO (submits for you on supported ATS), REVIEW (prepared, waits for your approval) or MANUAL (you submit). The queue shows an ETA while it runs.';
+      }
+    }
+
+    const steps: FlowStep[] = [
+      { key: 'build', label: 'Build', status: hasAnyCv ? 'done' : 'current', tone: hasAnyCv ? 'emerald' : undefined },
+      {
+        key: 'match',
+        label: 'Match',
+        status: docsReady || submitted ? 'done' : hasAnyCv ? 'current' : 'upcoming',
+        tone: docsReady || submitted ? 'emerald' : undefined,
+      },
+      { key: 'tailor', label: 'Tailor', status: submitted ? 'done' : docsReady ? 'done' : 'upcoming', tone: docsReady || submitted ? 'emerald' : undefined },
+      { key: 'submit', label: 'Submit', status: submitStatus, tone: submitTone },
+      { key: 'track', label: 'Track', status: submitted ? 'current' : 'upcoming', tone: submitted ? 'blue' : undefined },
+    ];
+
+    if (!positionNote) {
+      positionNote = 'The application moves left to right: build once, match, tailor, submit, track and learn.';
+    }
+
+    return { steps, note: positionNote };
+  }, [
+    job.status,
+    pipelineInternal,
+    pipelineReviewReason,
+    pipelineQueueEta,
+    journeyDocuments.ready,
+    journeyDocuments.hasCV,
+    fallbackMasterCvId,
   ]);
 
   const journeyCardData = sidebarConfig.journeyCard;
@@ -2670,9 +3153,9 @@ ${userName}`
                                 status === 'failed' ? 'text-rose-600 dark:text-rose-400' :
                                 'text-gray-500 dark:text-gray-400'
                               }`}>
-                                {status === 'blocked' ? 'Action required' :
-                                 status === 'failed' ? 'Submission failed' :
-                                 status === 'processing' ? 'In progress...' :
+                                {status === 'blocked' ? (stage.statusLabel || 'Action required') :
+                                 status === 'failed' ? (stage.statusLabel || 'Submission failed') :
+                                 status === 'processing' ? (stage.statusLabel || 'In progress...') :
                                  stage.subLabel}
                               </p>
                               <p className={`text-[10px] mt-0.5 font-medium ${
@@ -3259,6 +3742,52 @@ ${userName}`
                       </div>
                     )}
 
+                    {/* Application Flow — BUILD → MATCH → TAILOR → SUBMIT → TRACK */}
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">
+                        Application Flow
+                      </span>
+                      <ol className="flex items-start gap-2">
+                        {applicationFlow.steps.map((step) => (
+                          <li key={step.key} className="flex-1 min-w-0" title={step.label}>
+                            <div
+                              className={`h-1.5 rounded-full transition-colors ${
+                                step.status === 'done'
+                                  ? 'bg-emerald-500'
+                                  : step.status === 'current'
+                                    ? step.tone === 'rose'
+                                      ? 'bg-rose-500'
+                                      : step.tone === 'amber'
+                                        ? 'bg-amber-500'
+                                        : step.tone === 'blue'
+                                          ? 'bg-blue-500'
+                                          : step.tone === 'orange'
+                                            ? 'bg-orange-500'
+                                            : step.tone === 'violet'
+                                              ? 'bg-violet-500'
+                                              : 'bg-[#013f2e]'
+                                    : 'bg-gray-200 dark:bg-white/10'
+                              }`}
+                            />
+                            <p
+                              className={`mt-1 text-[9px] font-bold uppercase tracking-wide truncate ${
+                                step.status === 'done'
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : step.status === 'current'
+                                    ? 'text-gray-900 dark:text-white'
+                                    : 'text-gray-400 dark:text-gray-500'
+                              }`}
+                            >
+                              {step.label}
+                            </p>
+                          </li>
+                        ))}
+                      </ol>
+                      <p className="mt-2.5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                        {applicationFlow.note}
+                      </p>
+                    </div>
+
                     {/* Next Action */}
                     <div className={`rounded-2xl border p-4 shadow-sm ${guidanceHub.toneClasses}`}>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-2">Next Action</span>
@@ -3285,7 +3814,7 @@ ${userName}`
                             )}
                             <span>
                               {guidanceHub.primaryAction.loading
-                                ? 'Applying...'
+                                ? guidanceHub.primaryAction.loadingLabel || 'Applying...'
                                 : guidanceHub.primaryAction.label}
                             </span>
                           </motion.button>

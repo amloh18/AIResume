@@ -10,6 +10,8 @@ import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import ApplicationEvent from '@/models/ApplicationEvent';
+import ApplicationQueue from '@/models/ApplicationQueue';
+import { estimateQueueEta } from '@/lib/utils/queue-eta';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 import { checkForDuplicate } from '@/lib/jobs/deduplicate';
@@ -247,11 +249,35 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    /*
+      Position + estimated completion for rows with a live queue item, so an
+      in-flight application can say "~2 min" instead of an endless "Submitting".
+      One indexed query over the whole active queue — the worker claims
+      globally by (priority desc, scheduledAt asc), so positions are computed
+      against exactly that order by estimateQueueEta.
+    */
+    const queueEtaByApp = new Map<string, { position: number; etaSeconds: number }>();
+    if (applications.length > 0) {
+      const activeQueueItems = await ApplicationQueue.find({ status: { $in: ['queued', 'processing'] } })
+        .select({ applicationId: 1, status: 1, priority: 1, scheduledAt: 1 })
+        .lean();
+      if (activeQueueItems.length > 0) {
+        applications.forEach((a: any) => {
+          if (!a._id) return;
+          const eta = estimateQueueEta(activeQueueItems as any, String(a._id));
+          if (eta) queueEtaByApp.set(String(a._id), eta);
+        });
+      }
+    }
+
     const enrichedJobs = applications.map((job: any) => {
       const journey = journeyMap.get(job._id?.toString());
+      const eta = queueEtaByApp.get(job._id?.toString());
       return {
         ...job,
         reviewReason: reviewReasons.get(job._id?.toString()),
+        queuePosition: eta?.position,
+        queueEtaSeconds: eta?.etaSeconds,
         journey: journey
           ? {
               _id: journey._id,

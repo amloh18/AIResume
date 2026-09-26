@@ -64,7 +64,10 @@ export type NotificationType =
   | 'interview_prep_ready'
   | 'document_saved'
   | 'feature_discovery'
-  | 'extension_download';
+  | 'extension_download'
+  | 'application_approval_required'
+  | 'application_action_required'
+  | 'application_automation_failed';
 
 export type NotificationChannel = 'in-app' | 'email' | 'push';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
@@ -200,6 +203,9 @@ const notificationSchema = new Schema<INotification>(
         'document_saved',
         'feature_discovery',
         'extension_download',
+        'application_approval_required',
+        'application_action_required',
+        'application_automation_failed',
       ],
       required: true
       // Note: Index defined in compound index below

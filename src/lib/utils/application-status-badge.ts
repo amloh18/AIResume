@@ -1,4 +1,5 @@
 import type { ChipTone } from '@/components/ui/chip-styles';
+import { formatQueueEta } from '@/lib/utils/queue-eta';
 
 /**
  * Application-table badge derivation.
@@ -10,9 +11,24 @@ import type { ChipTone } from '@/components/ui/chip-styles';
  * "Submitting" made a reviewable backlog look like an in-flight one.
  *
  * `reviewReason` is that event's `metadata.reason`, attached by GET /api/jobs.
+ * `queueEtaSeconds`/`queuePosition` come from the same route's active-queue
+ * join (src/lib/utils/queue-eta.ts).
+ *
+ * The badge also carries the ONE control the row needs right now (`action`),
+ * so list, kanban, sidebar and notification all offer the same verb:
+ *   approve → POST /api/applications/[id]/automation {action:'approve'}
+ *   dismiss → …{action:'dismiss'} (cancel automation, apply manually)
+ *   retry   → …{action:'retry'}
  */
 
 export type StatusIconKey = 'clock' | 'external' | 'eye' | 'x' | 'sparkles' | 'check' | 'none';
+
+export type BadgeActionId = 'approve' | 'dismiss' | 'retry';
+
+export interface BadgeAction {
+  id: BadgeActionId;
+  label: string;
+}
 
 export interface ApplicationStatusBadge {
   label: string;
@@ -20,12 +36,20 @@ export interface ApplicationStatusBadge {
   icon: StatusIconKey;
   /** Hover text — usually the raw reason the run parked. */
   title?: string;
+  /** Formatted queue ETA ("~2 min") for rows with a live queue item. */
+  eta?: string;
+  /** The single control this row needs right now, if any. */
+  action?: BadgeAction;
 }
 
 export interface StatusBadgeInput {
   status?: string;
   internalStatus?: string;
   reviewReason?: string;
+  /** Seconds until this application's run is expected to finish. */
+  queueEtaSeconds?: number;
+  /** 1-based position in the active queue (1 = running / next to run). */
+  queuePosition?: number;
 }
 
 type BaseGroup = Pick<ApplicationStatusBadge, 'label' | 'tone' | 'icon'>;
@@ -56,16 +80,60 @@ const BASE_GROUPS: Array<{ statuses: string[] } & BaseGroup> = [
  *   manual-ish     → "Apply manually"     (manual mode, no automatable ATS, CAPTCHA,
  *                                          missing form, automation unavailable)
  *   anything else  → "Needs your action"  (watchdog routes, unknown/legacy halts)
+ *
+ * Every review row gets a control: approval-hold rows can approve automated
+ * submission directly; everything else resolves by the user taking over
+ * (dismiss cancels the queued item so the worker can never submit behind
+ * their back). The one halt without a control is handled below — the
+ * unverified-submission case, which must never be re-submitted.
  */
 function reviewBadge(reason: string): ApplicationStatusBadge {
   const title = reason || undefined;
-  if (/awaiting (your )?approval|approval before submission/i.test(reason)) {
-    return { label: 'Awaiting approval', tone: 'violet', icon: 'clock', title };
+  if (/no confirmation evidence|needs manual verification/i.test(reason)) {
+    // May already be out there — only "handle it manually" is safe, and the
+    // badge offers no one-click verb that could double-submit.
+    return { label: 'Needs your action', tone: 'rose', icon: 'eye', title };
+  }
+  if (/awaiting (your )?approval|approval before submission|held for your approval/i.test(reason)) {
+    return {
+      label: 'Awaiting approval',
+      tone: 'violet',
+      icon: 'clock',
+      title,
+      action: { id: 'approve', label: 'Approve & submit' },
+    };
   }
   if (/manual|not automatable|captcha|no application form/i.test(reason)) {
-    return { label: 'Apply manually', tone: 'orange', icon: 'external', title };
+    return {
+      label: 'Apply manually',
+      tone: 'orange',
+      icon: 'external',
+      title,
+      action: { id: 'dismiss', label: 'Apply manually' },
+    };
   }
-  return { label: 'Needs your action', tone: 'rose', icon: 'eye', title };
+  return {
+    label: 'Needs your action',
+    tone: 'rose',
+    icon: 'eye',
+    title,
+    action: { id: 'dismiss', label: 'Take over' },
+  };
+}
+
+/** ETA suffix + hover copy for rows with a live queue item. */
+function withEta(badge: ApplicationStatusBadge, input: StatusBadgeInput): ApplicationStatusBadge {
+  if (typeof input.queueEtaSeconds !== 'number') return badge;
+  const eta = formatQueueEta(input.queueEtaSeconds);
+  const position =
+    typeof input.queuePosition === 'number' && input.queuePosition > 1
+      ? ` Position ${input.queuePosition} in queue.`
+      : '';
+  return {
+    ...badge,
+    eta,
+    title: `${badge.title ? `${badge.title} ` : ''}Estimated completion ${eta}.${position}`,
+  };
 }
 
 export function deriveApplicationStatusBadge(input: StatusBadgeInput): ApplicationStatusBadge {
@@ -75,7 +143,33 @@ export function deriveApplicationStatusBadge(input: StatusBadgeInput): Applicati
 
   if (status === 'created' || status === 'staging') {
     if (internal === 'review_required') return reviewBadge(reason);
-    if (internal === 'automation_failed') return { label: 'Failed', tone: 'rose', icon: 'x' };
+    if (internal === 'automation_dismissed') {
+      return {
+        label: 'Apply manually',
+        tone: 'orange',
+        icon: 'external',
+        title: 'Automation stopped — apply manually and mark the application applied when done.',
+      };
+    }
+    if (internal === 'automation_failed') {
+      return {
+        label: 'Failed',
+        tone: 'rose',
+        icon: 'x',
+        title: 'The automation run failed — retry it, or take over and apply manually.',
+        action: { id: 'retry', label: 'Retry' },
+      };
+    }
+    if (internal === 'automation_unknown') {
+      // Outcome never confirmed — a blind retry could double-submit.
+      return {
+        label: 'Needs your action',
+        tone: 'rose',
+        icon: 'eye',
+        title:
+          'The run ended without confirmation — check whether the application went out, then mark it applied or archive it.',
+      };
+    }
     if (!internal) {
       // Pre-state-machine rows: no live run, no queue item — nothing will ever
       // move them, so they must not masquerade as submitting either.
@@ -86,10 +180,14 @@ export function deriveApplicationStatusBadge(input: StatusBadgeInput): Applicati
         title: 'Created before state tracking existed — no live run or queue item. Review or archive it.',
       };
     }
-    return { label: 'Submitting', tone: 'amber', icon: 'clock' };
+    // queued / processing / form_detected / staging_* — a run is (or will be) live.
+    return withEta({ label: 'Submitting', tone: 'amber', icon: 'clock' }, input);
   }
 
   const group = BASE_GROUPS.find((g) => g.statuses.includes(status));
-  if (group) return { label: group.label, tone: group.tone, icon: group.icon };
+  if (group) {
+    if (group.label === 'Submitting') return withEta({ ...group }, input);
+    return { label: group.label, tone: group.tone, icon: group.icon };
+  }
   return { label: 'Draft', tone: 'neutral', icon: 'none' };
 }
