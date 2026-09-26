@@ -1,6 +1,6 @@
 // @ts-nocheck pre-existing type escape — this suite only exercises rendering
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, screen } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import RecentAppliedJobsHeader from './RecentAppliedJobsHeader';
 import { DashboardDataContext } from '@/contexts/DashboardDataContext';
@@ -79,5 +79,21 @@ describe('RecentAppliedJobsHeader', () => {
     );
     const { container } = renderWithJobs([]);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('anchors the hover tooltip to the strip right edge so it cannot overflow the viewport', async () => {
+    renderWithJobs([{ _id: 'j1', status: 'applied', company: 'Stripe', jobTitle: 'SWE' }]);
+
+    const icon = await screen.findByLabelText('Applied to Stripe');
+    fireEvent.mouseOver(icon);
+
+    // jobTitle is only rendered inside the tooltip, so this identifies it.
+    const title = await screen.findByText('SWE');
+    const tooltip = title.closest('.absolute');
+    expect(tooltip).toBeTruthy();
+    // Right-anchored + viewport-clamped: grows leftward from the header's right edge.
+    expect(tooltip!.className).toContain('right-0');
+    expect(tooltip!.className).toContain('max-w-[calc(100vw-1.5rem)]');
+    expect(screen.getByText(/m left in header/)).toBeTruthy();
   });
 });
