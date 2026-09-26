@@ -9,6 +9,7 @@ import { scoreJobForCandidate } from '@/matching/deterministicScoring';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
+import ApplicationEvent from '@/models/ApplicationEvent';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 import { checkForDuplicate } from '@/lib/jobs/deduplicate';
@@ -223,10 +224,34 @@ export async function GET(req: NextRequest) {
       if (j.jobId) journeyMap.set(j.jobId.toString(), j);
     });
 
+    /*
+      Latest safe-halt reason for rows the pipeline parked in `review_required`.
+      The table needs it to tell "Awaiting approval" / "Apply manually" /
+      "Needs your action" apart — without it every parked row renders as an
+      eternal "Submitting". One grouped query on the {applicationId, createdAt}
+      index; skipped entirely when nothing is parked.
+    */
+    const reviewIds = applications
+      .filter((a: any) => a.internalStatus === 'review_required')
+      .map((a: any) => a._id)
+      .filter(Boolean);
+    const reviewReasons = new Map<string, string>();
+    if (reviewIds.length > 0) {
+      const latestReviews = await ApplicationEvent.aggregate([
+        { $match: { applicationId: { $in: reviewIds }, type: 'APPLICATION_REQUIRES_REVIEW' } },
+        { $sort: { createdAt: -1 } },
+        { $group: { _id: '$applicationId', reason: { $first: '$metadata.reason' } } },
+      ]);
+      latestReviews.forEach((r: any) => {
+        if (r.reason) reviewReasons.set(String(r._id), String(r.reason));
+      });
+    }
+
     const enrichedJobs = applications.map((job: any) => {
       const journey = journeyMap.get(job._id?.toString());
       return {
         ...job,
+        reviewReason: reviewReasons.get(job._id?.toString()),
         journey: journey
           ? {
               _id: journey._id,

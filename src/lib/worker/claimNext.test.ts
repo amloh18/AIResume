@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { claimNextApplication, completeQueueItem, failQueueItem } from './claimNext';
+import { claimNextApplication, completeQueueItem, failQueueItem, releaseStuckItems } from './claimNext';
 import ApplicationQueue from '@/models/ApplicationQueue';
 import JobApplication from '@/models/JobApplication';
 
@@ -10,6 +10,7 @@ vi.mock('@/models/ApplicationQueue', () => ({
     findById: vi.fn(),
     findByIdAndUpdate: vi.fn(),
     findOne: vi.fn(),
+    updateMany: vi.fn(),
   },
 }));
 vi.mock('@/models/JobApplication', () => ({
@@ -24,6 +25,7 @@ vi.mock('@/lib/database', () => ({
 const queueFindOneAndUpdate = ApplicationQueue.findOneAndUpdate as ReturnType<typeof vi.fn>;
 const queueFindByIdAndUpdate = ApplicationQueue.findByIdAndUpdate as ReturnType<typeof vi.fn>;
 const queueFindById = ApplicationQueue.findById as ReturnType<typeof vi.fn>;
+const queueUpdateMany = ApplicationQueue.updateMany as ReturnType<typeof vi.fn>;
 const appFindById = JobApplication.findById as ReturnType<typeof vi.fn>;
 
 const QUEUE_ITEM = {
@@ -38,6 +40,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   queueFindOneAndUpdate.mockResolvedValue(QUEUE_ITEM);
   queueFindById.mockResolvedValue({ _id: 'q1', attempts: 1, maxAttempts: 3 });
+  queueUpdateMany.mockResolvedValue({ modifiedCount: 0 });
   appFindById.mockResolvedValue({ _id: QUEUE_ITEM.applicationId, userId: 'u1' });
 });
 
@@ -126,5 +129,47 @@ describe('queue completion helpers', () => {
     expect(update.status).toBe('dead_letter');
     expect(update.completedAt).toBeInstanceOf(Date);
     expect(update.lastError).toBe('boom');
+  });
+});
+
+describe('releaseStuckItems — releases must respect maxAttempts', () => {
+  it('dead-letters an exhausted item instead of requeueing it', async () => {
+    await releaseStuckItems(30);
+
+    const deadCall = queueUpdateMany.mock.calls.find(([, update]) => update.$set.status === 'dead_letter');
+    expect(deadCall).toBeDefined();
+    const [filter, update] = deadCall!;
+    expect(filter.status).toBe('processing');
+    expect(filter.lockedAt.$lt).toBeInstanceOf(Date);
+    // Gated on the stored attempts/maxAttempts pair — this is the check the
+    // old unconditional requeue was missing (attempts=55 vs maxAttempts=3).
+    expect(filter.$expr.$gte).toEqual(['$attempts', { $ifNull: ['$maxAttempts', 3] }]);
+    expect(update.$set.lastError).toMatch(/no attempts left/i);
+    expect(update.$set.completedAt).toBeInstanceOf(Date);
+  });
+
+  it('counts a release as an attempt so a throwing run terminates', async () => {
+    await releaseStuckItems(30);
+
+    const requeueCall = queueUpdateMany.mock.calls.find(([, update]) => update.$set.status === 'queued');
+    expect(requeueCall).toBeDefined();
+    const [, update] = requeueCall!;
+    expect(update.$inc).toEqual({ attempts: 1 });
+    expect(update.$set.lockedAt).toBeNull();
+    expect(update.$set.lockedBy).toBeNull();
+    // And the requeue itself is still gated: attempts < maxAttempts.
+    const [filter] = requeueCall!;
+    expect(filter.$expr.$lt).toEqual(['$attempts', { $ifNull: ['$maxAttempts', 3] }]);
+  });
+
+  it('releases only items stuck past the configured threshold', async () => {
+    await releaseStuckItems(15);
+
+    const requeueCall = queueUpdateMany.mock.calls.find(([, update]) => update.$set.status === 'queued');
+    const [filter] = requeueCall!;
+    const cutoff = filter.lockedAt.$lt as Date;
+    const age = Date.now() - cutoff.getTime();
+    expect(age).toBeGreaterThan(14 * 60 * 1000);
+    expect(age).toBeLessThan(16 * 60 * 1000);
   });
 });
