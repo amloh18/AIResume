@@ -12,6 +12,7 @@ import CVCheckRedirect from './CVCheckRedirect';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import RecentAppliedJobsHeader from '@/components/layout/RecentAppliedJobsHeader';
 
 interface OptimizedDashboardLayoutProps {
   children?: React.ReactNode;
@@ -75,15 +76,16 @@ const DashboardContent: React.FC<{ children?: React.ReactNode; noPadding?: boole
             </div>
 
             {/* Desktop Left Spacer */}
-            <div className="hidden lg:block lg:w-[25%]" />
+            <div className="hidden lg:block lg:w-[20%]" />
 
             {/* Center: Search Bar */}
-            <div className="flex justify-center flex-1">
+            <div className="flex justify-center flex-1 min-w-0 px-2">
               <GlobalSearchBar />
             </div>
 
-            {/* Right: Notifications */}
-            <div className="flex justify-end w-[20%] sm:w-[25%]">
+            {/* Right: Applied Jobs + Notifications */}
+            <div className="flex items-center justify-end gap-2 sm:gap-3 flex-shrink-0">
+              <RecentAppliedJobsHeader />
               <NotificationCenter />
             </div>
           </header>

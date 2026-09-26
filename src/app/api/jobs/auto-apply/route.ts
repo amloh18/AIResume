@@ -5,6 +5,7 @@ import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import type { ATSType } from '@/types/automation-schema';
 import { log } from '@/lib/structured-logger';
+import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import {
   CORRELATION_HEADER,
   getCorrelationId,
@@ -319,11 +320,13 @@ async function enqueueAutoApply(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error: any) {
+    // Full detail stays in the server log; the client only ever sees the
+    // sanitized message (infra errors must not surface in the UI).
     log.error('Error enqueueing auto-apply:', error, {
       correlationId: getCorrelationId(),
     });
     return NextResponse.json(
-      { error: error.message || 'Failed to enqueue application' },
+      { error: toUserFacingMessage(error, 'Failed to enqueue application') },
       { status: 500 }
     );
   }

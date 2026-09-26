@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, useContext } from 'react';
 import type { JobsMetrics, JobListing, JobsFilter } from '@/types/automation-schema';
+import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import FiltersBar from './JobsDashboard/FiltersBar';
 import JobsErrorState from './JobsDashboard/JobsErrorState';
 import { Sparkles, Zap, Briefcase, Settings, ChevronRight, ArrowUp, Linkedin, Mic, X, Globe, RefreshCw, Loader2, Plus, Bookmark, FileText, Mail, LayoutDashboard, Kanban } from 'lucide-react';
@@ -522,7 +523,7 @@ export default function JobsDashboard() {
     if (userPreferences?.targetRoles && userPreferences.targetRoles.length > 0) {
       return userPreferences.targetRoles.join(' · ');
     }
-    return 'your target roles';
+    return 'target roles';
   }, [userPreferences, filters.roles]);
 
   // Only criteria that actually shape the feed belong in this summary:
@@ -1063,25 +1064,31 @@ export default function JobsDashboard() {
           updateProgress(appId, 100, resData.message || 'The application did not complete', 'info');
         }
       } else {
-        // Genuine submission failure on employer site
-        applyProgress.completeApply(job.title, job.company, false, resData.error || resData.message || "We couldn't complete the application on the employer's site.", job._id);
+        // Genuine submission failure on employer site. Sanitize: raw infra
+        // errors (DB/network) must never be shown to the user.
+        const failureMessage = toUserFacingMessage(
+          resData.error || resData.message,
+          "We couldn't complete the application on the employer's site."
+        );
+        applyProgress.completeApply(job.title, job.company, false, failureMessage, job._id);
         setEntitlementNoticeData({
           code: 'APPLICATION_FAILED',
           jobTitle: job.title,
           company: job.company,
           applyUrl: job.applyUrl,
-          message: resData.error || resData.message || "We couldn't complete the application on the employer's site.",
+          message: failureMessage,
         });
         setEntitlementNoticeOpen(true);
       }
     } catch (err: any) {
-      applyProgress.completeApply(job.title, job.company, false, err.message || 'Network error occurred during submission.', job._id);
+      const failureMessage = toUserFacingMessage(err, 'Network error occurred during submission.');
+      applyProgress.completeApply(job.title, job.company, false, failureMessage, job._id);
       setEntitlementNoticeData({
         code: 'APPLICATION_FAILED',
         jobTitle: job.title,
         company: job.company,
         applyUrl: job.applyUrl,
-        message: err.message || 'Network error occurred during submission.',
+        message: failureMessage,
       });
       setEntitlementNoticeOpen(true);
     } finally {
@@ -1155,9 +1162,24 @@ export default function JobsDashboard() {
       const response = await fetch(`/api/jobs/discover?${queryString}`, {});
 
       if (!response.ok) {
+        /*
+          A non-OK response used to `return` silently, so an outage rendered
+          the plain "No jobs found" empty state — indistinguishable from a
+          genuinely empty result. Surface a friendly error instead, but only
+          where the view would otherwise be empty: cached results (first page
+          with a cache hit) and already-loaded pages (page > 1) are kept as-is,
+          so a background refresh failing never wipes what the user sees.
+        */
+        console.error('Job discovery request failed with status:', response.status);
         if (isFirstPage && !getCachedJobs(params)) {
+          const message =
+            response.status >= 500
+              ? `The job service didn't respond (error ${response.status}). Please try again in a moment.`
+              : response.status === 429
+              ? 'Too many requests — please wait a moment and try again.'
+              : `We couldn't load jobs right now (error ${response.status}). Please try again.`;
           setJobs([]);
-          setLoading(false);
+          setError(message);
         }
         return;
       }
@@ -1494,7 +1516,7 @@ export default function JobsDashboard() {
         )}
 
         {activeTab === 'discover' && (
-          error && !metrics ? (
+          error && jobs.length === 0 ? (
             <JobsErrorState message={error} onRetry={handleRetry} />
           ) : (
           <div className="space-y-4">
@@ -1529,7 +1551,7 @@ export default function JobsDashboard() {
                     ? (displayedJobs.length === 1 ? 'available job' : 'available jobs')
                     : filters.sortBy === 'postedDate'
                     ? (displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
-                    : (displayedJobs.length === 1 ? 'matching job' : 'matching jobs')}
+                    : `${displayedJobs.length === 1 ? 'matching job' : 'matching jobs'}${total > displayedJobs.length ? ` of ${total.toLocaleString()}` : ''}`}
                 </span>
 
                 <span className="text-gray-500 dark:text-gray-400">
@@ -1573,6 +1595,22 @@ export default function JobsDashboard() {
                 >
                   <ArrowUp className="w-4 h-4" />
                   {newJobsCount} new job{newJobsCount !== 1 ? 's' : ''}
+                </button>
+              </div>
+            )}
+
+            {/* Slim inline error banner — a fetch failure while cached jobs are
+                still displayed must not be silently swallowed, but the grid is
+                kept so the outage doesn't wipe usable content. */}
+            {error && jobs.length > 0 && (
+              <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-amber-300/70 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-xs text-amber-800 dark:text-amber-200">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="font-bold underline shrink-0 hover:no-underline"
+                >
+                  Retry
                 </button>
               </div>
             )}

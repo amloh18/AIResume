@@ -257,7 +257,6 @@ const Footer = () => {
                     title={social.name}
                     whileHover={{
                       scale: 1.1,
-                      y: -5,
                       boxShadow: "0 10px 25px -5px rgba(1, 63, 46, 0.5)"
                     }}
                     whileTap={{ scale: 0.95 }}
@@ -391,7 +390,6 @@ const Footer = () => {
             <motion.a
               href="/legal#privacy"
               className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
-              whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               Privacy Policy
@@ -399,7 +397,6 @@ const Footer = () => {
             <motion.a
               href="/legal#terms"
               className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
-              whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               Terms of Service
@@ -407,7 +404,6 @@ const Footer = () => {
             <motion.a
               href="/legal#cookies"
               className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
-              whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               Cookie Policy
@@ -415,7 +411,6 @@ const Footer = () => {
             <motion.a
               href="/legal#support"
               className="text-white/60 hover:text-[#36D39B] text-small transition-colors duration-300 font-medium"
-              whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               Support

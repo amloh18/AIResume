@@ -11,6 +11,7 @@ import { validateStringValue } from '@/lib/utils/eventHandlers';
 import { uploadToS3 } from '@/lib/utils/upload';
 import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSuggestion';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import toast from '@/lib/hot-toast';
 
 interface PersonalInfoFormProps {
   data: {
@@ -172,6 +173,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       handleFieldChange('summary', result.summary);
     } catch (error) {
       console.error('Error generating AI summary:', error);
+      toast.error("Couldn't generate an AI summary. Try again.");
     } finally {
       setIsGeneratingSummary(false);
     }
@@ -207,6 +209,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       setSuggestions(result.suggestions);
     } catch (error) {
       console.error('Error generating AI suggestions:', error);
+      toast.error("Couldn't generate AI suggestions. Try again.");
       setShowSuggestions(false);
     } finally {
       setLoadingSuggestions(false);

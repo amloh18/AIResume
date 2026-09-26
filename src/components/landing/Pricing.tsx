@@ -446,7 +446,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
 
                       <motion.button
                         onClick={() => handlePlanSelect(activeFocusedPlan)}
-                        whileHover={{ scale: 1.03, y: -1 }}
+                        whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                         className="w-full py-2.5 px-4 rounded-xl text-xs font-black text-black bg-white hover:bg-gray-100 shadow-[0_0_20px_rgba(54,211,155,0.4)] transition-all"
                       >

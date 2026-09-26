@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '@/lib/data';
 import { Edit3, Save, X, Loader2, RefreshCw } from 'lucide-react';
+import toast from '@/lib/hot-toast';
 
 interface ProfileEditorProps {
   profile: UserProfile;
@@ -80,11 +81,13 @@ const ProfileEditor: React.FC<ProfileEditorProps> = ({
           } else {
             console.log('⚠️ ProfileEditor - No master CV found or API returned no data');
           }
-        } else {
+        } else if (response.status !== 404) {
           console.error('❌ ProfileEditor - Failed to fetch master CV:', response.status, response.statusText);
+          toast.error("Couldn't load your Master CV to pre-fill your profile.", { id: 'profile-master-cv' });
         }
       } catch (error) {
         console.error('❌ ProfileEditor - Error fetching Master CV:', error);
+        toast.error("Couldn't load your Master CV to pre-fill your profile.", { id: 'profile-master-cv' });
       }
     };
 

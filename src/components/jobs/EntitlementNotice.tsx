@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import type { UserEntitlements, UpgradeRecommendation } from '@/lib/services/entitlement-service';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
+import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 
 export type EntitlementOutcomeCode =
   | 'AUTO_APPLY_NOT_INCLUDED'
@@ -53,7 +55,24 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
 }) => {
   if (!isOpen || !data) return null;
 
-  const { code, jobTitle, company, applyUrl, message } = data;
+  const { code, jobTitle, company, applyUrl, message: rawMessage } = data;
+
+  /*
+    Last line of defence: whatever a caller passes in, internal infrastructure
+    errors (database/network/quota detail) are dropped to '' so each branch
+    below falls back to its own friendly default copy instead of showing
+    raw server logs to the user.
+  */
+  const message = toUserFacingMessage(rawMessage, '');
+
+  /*
+    When the server blocks an apply it returns the quota's reset time. Show the
+    real countdown instead of the vague "resets on the next billing cycle"
+    this notice used to print — for a Focused user that is wrong (daily reset),
+    and even for Starter the user asked to see HOW LONG is left.
+  */
+  const resetAt = data.entitlements?.autoApply?.resetAt ?? null;
+  const resetCountdown = formatResetLabel(resetAt, 'Resets');
 
   const handleManualApply = () => {
     onClose();
@@ -191,7 +210,8 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
 
             <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 text-xs text-gray-700 dark:text-gray-300 space-y-1.5 leading-relaxed">
               <p>
-                You&apos;ve used all your automated applications for this period. Your limit resets on the next billing cycle.
+                {message || "You've used all your automated applications for this period."}
+                {resetCountdown ? ` Your quota ${resetCountdown.toLowerCase()}.` : ''}
               </p>
               <p className="text-gray-500 dark:text-gray-400 text-[11px]">
                 Manual applications, CV tailoring, and job saves are never restricted.

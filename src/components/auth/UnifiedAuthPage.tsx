@@ -1,7 +1,7 @@
 // @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { signIn, useSession } from 'next-auth/react';
 import posthog from 'posthog-js';
@@ -53,6 +53,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
   const [twoFactorUserId, setTwoFactorUserId] = useState<string | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // Check if user is already signed in
   useEffect(() => {
@@ -78,6 +79,8 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   }, [success, status, session?.user, callbackUrl, isModal]);
 
   const handleFormSubmit = async (formData: Record<string, string>) => {
+    if (isSubmittingRef.current || isLoading) return;
+    isSubmittingRef.current = true;
     setIsLoading(true);
     setError('');
     setSuccess('');
@@ -96,6 +99,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       console.error('Form submission error:', error);
       setError(error.message || 'An error occurred. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };
@@ -309,6 +313,8 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   };
 
   const handleCodeVerification = async (code: string) => {
+    if (isSubmittingRef.current || isLoading) return;
+    isSubmittingRef.current = true;
     setIsLoading(true);
     setError('');
 
@@ -636,6 +642,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       console.error('Code verification error:', error);
       setError('Failed to verify code. Please try again.');
     } finally {
+      isSubmittingRef.current = false;
       setIsLoading(false);
     }
   };

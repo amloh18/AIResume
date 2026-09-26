@@ -14,7 +14,11 @@ dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 import mongoose from 'mongoose';
 
 async function runTests() {
-  await mongoose.connect(process.env.MONGODB_URI!);
+  // Apply MONGODB_DB the same way the app's connection manager does —
+  // without it this script silently reads the driver-default database.
+  await mongoose.connect(process.env.MONGODB_URI!, {
+    ...(process.env.MONGODB_DB ? { dbName: process.env.MONGODB_DB } : {}),
+  });
   const db = mongoose.connection.db!;
 
   let passed = 0;

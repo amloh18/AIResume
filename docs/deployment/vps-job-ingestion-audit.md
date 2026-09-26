@@ -156,7 +156,7 @@ The admin panel is functional but cannot display worker status correctly because
 
 ## 7. Database
 
-- MongoDB Atlas: `mongodb+srv://amarjot:<REDACTED-ROTATE-THIS-PASSWORD>@cluster0.ta7jxv7.mongodb.net`
+- MongoDB Atlas: `mongodb+srv://<REDACTED>@cluster0.ta7jxv7.mongodb.net`
 - Collections: jobs, jobSources, ingestionRuns, jobEvents, jobMatches, job_ingestion_locks
 - Indexes: Properly defined for dedup, search, and scheduling
 - No issues with database connectivity

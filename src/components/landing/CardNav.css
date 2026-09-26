@@ -142,7 +142,6 @@
 
 .nav-link:hover {
   color: #84cc16;
-  transform: translateY(-1px);
 }
 
 /* Mega Menu Styles — matching default frosted glass blur */
@@ -234,7 +233,6 @@
 .submenu-link:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.2); /* White hover border instead of neon */
-  transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
@@ -413,12 +411,7 @@
 
 .card-nav-cta-button:hover {
   background: #025c43;
-  transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(1, 63, 46, 0.6);
-}
-
-.card-nav-cta-button:active {
-  transform: translateY(0);
 }
 
 .card-nav-business-button {
@@ -442,11 +435,6 @@
 .card-nav-business-button:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
-.card-nav-business-button:active {
-  transform: translateY(0);
 }
 
 @media (max-width: 768px) {

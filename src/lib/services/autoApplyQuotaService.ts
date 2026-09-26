@@ -6,7 +6,10 @@
  *   - Atomic reservation (concurrency-safe)
  *   - Idempotent operations (operationId dedup)
  *   - Reservation lifecycle (reserved → consumed/released)
- *   - Plan-aware limits (Free: 10 lifetime, Starter: 25/mo, Focused: 50/mo)
+ *   - Plan-aware limits, aligned with `lib/entitlements/limits.ts`:
+ *       Free:    10 lifetime (10/day rate cap)
+ *       Starter: 10 / billing month
+ *       Focused: 50 / day (monthly uncapped — daily is the operative limit)
  *   - Billing period alignment
  *   - Recovery for abandoned reservations
  */
@@ -18,6 +21,7 @@ import AutoApplyReservation, {
   type ReservationStatus,
 } from '@/models/AutoApplyReservation';
 import User from '@/models/User';
+import { formatResetCountdown } from '@/lib/utils/reset-countdown';
 
 // ─── Plan Definitions ─────────────────────────────────────────────────────────
 
@@ -40,15 +44,18 @@ const PLAN_CONFIGS: Record<string, AutoApplyPlanConfig> = {
     enabled: true,          // Free plan does have auto-apply (with lifetime cap)
   },
   starter: {
-    monthlyLimit: 25,       // 25 per billing period
+    monthlyLimit: 10,       // 10 per billing period — canonical Starter cap
+                            // (matches limits.ts, the paywall, and legal copy)
     lifetimeLimit: -1,      // No lifetime cap
-    dailyLimit: 25,         // Rate limit
+    dailyLimit: 10,         // Rate limit (never the binding constraint; monthly is)
     enabled: true,
   },
   focused: {
-    monthlyLimit: 50,       // 50 per billing period (marketed as unlimited)
+    monthlyLimit: -1,       // Monthly uncapped — the DAILY limit is the operative cap,
+                            // matching the marketed "50 automated applications / day"
+                            // and entitlement-service's Focused behaviour.
     lifetimeLimit: -1,      // No lifetime cap
-    dailyLimit: 50,         // Rate limit
+    dailyLimit: 50,         // Rate limit — this is what binds on Focused
     enabled: true,
   },
 };
@@ -142,6 +149,59 @@ export class AutoApplyQuotaService {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     return { start, end };
+  }
+
+  /**
+   * The cap that actually binds for a plan right now, and its reset time.
+   *
+   * Mirrors the precedence in checkQuota:
+   *   free    → lifetime cap (resets never)
+   *   starter → monthly cap (resets at billing period end)
+   *   focused → daily cap (resets at midnight; monthly is uncapped)
+   *
+   * Returns null for unlimited plans (nothing binds).
+   */
+  private static resolveBindingCap(
+    plan: string,
+    config: AutoApplyPlanConfig,
+    usage: {
+      total: number;
+      dailyUsed: number;
+      lifetimeUsed?: number;
+      billingPeriodEnd: Date;
+    }
+  ): { cap: number; used: number; resetAt?: Date; reason: string } | null {
+    if (plan === 'free') {
+      const used = usage.lifetimeUsed ?? 0;
+      return {
+        cap: config.lifetimeLimit,
+        used,
+        reason: `Lifetime limit reached (${used}/${config.lifetimeLimit}). Upgrade for more.`,
+      };
+    }
+
+    if (plan === 'focused') {
+      return {
+        cap: config.dailyLimit,
+        used: usage.dailyUsed,
+        resetAt: this.getTomorrowStart(),
+        reason: `Daily limit reached (${usage.dailyUsed}/${config.dailyLimit}). Resets at midnight.`,
+      };
+    }
+
+    if (config.monthlyLimit === -1) return null;
+    const monthlyCountdown = formatResetCountdown(usage.billingPeriodEnd);
+    return {
+      cap: config.monthlyLimit,
+      used: usage.total,
+      resetAt: usage.billingPeriodEnd,
+      reason: `Monthly limit reached (${usage.total}/${config.monthlyLimit}). ${monthlyCountdown ? `Resets in ${monthlyCountdown}.` : `Resets ${usage.billingPeriodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`}`,
+    };
+  }
+
+  private static getTomorrowStart(): Date {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
   }
 
   /**
@@ -256,15 +316,17 @@ export class AutoApplyQuotaService {
       return {
         allowed: false,
         remaining: 0,
-        used: usage.consumed,
-        limit: config.monthlyLimit,
+        // In-progress reservations count against usage — report the total the
+        // user actually sees in the UI, not just completed operations.
+        used: usage.total,
+        limit: config.dailyLimit,
         reserved: usage.reserved,
         plan,
         billingPeriodStart: usage.billingPeriodStart,
         billingPeriodEnd: usage.billingPeriodEnd,
         lifetimeUsed: usage.lifetimeUsed,
         lifetimeLimit: config.lifetimeLimit,
-        reason: `Daily limit reached (${config.dailyLimit}/${config.dailyLimit}). Resets at midnight.`,
+        reason: `Daily limit reached (${usage.dailyUsed}/${config.dailyLimit}). Resets at midnight.`,
         resetAt: tomorrow,
       };
     }
@@ -304,16 +366,17 @@ export class AutoApplyQuotaService {
 
     // Paid plans: monthly limit
     if (config.monthlyLimit !== -1 && usage.total >= config.monthlyLimit) {
+      const monthlyCountdown = formatResetCountdown(usage.billingPeriodEnd);
       return {
         allowed: false,
         remaining: 0,
-        used: usage.consumed,
+        used: usage.total,
         limit: config.monthlyLimit,
         reserved: usage.reserved,
         plan,
         billingPeriodStart: usage.billingPeriodStart,
         billingPeriodEnd: usage.billingPeriodEnd,
-        reason: `Monthly limit reached (${config.monthlyLimit}/${config.monthlyLimit}). Resets at period end.`,
+        reason: `Monthly limit reached (${usage.total}/${config.monthlyLimit}). ${monthlyCountdown ? `Resets in ${monthlyCountdown}.` : `Resets ${usage.billingPeriodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}.`}`,
         resetAt: usage.billingPeriodEnd,
       };
     }
@@ -384,12 +447,43 @@ export class AutoApplyQuotaService {
         applicationId: options?.applicationId,
       });
 
-      // Recalculate usage after reservation
+      // Recalculate usage after reservation.
       const updatedUsage = await this.getUsage(userId);
       const configAfter = this.getPlanConfig(plan);
       const remainingAfter = plan === 'free'
         ? (configAfter.lifetimeLimit - (updatedUsage.lifetimeUsed ?? 0))
         : (configAfter.monthlyLimit === -1 ? null : configAfter.monthlyLimit - updatedUsage.total);
+
+      /*
+        Post-reserve recheck — closes the check-then-insert race.
+
+        `checkQuota` above runs before the insert; two concurrent requests can
+        both observe "1 slot left", both pass, and both insert. The unique
+        index only dedupes identical operationIds, which these are not.
+        Without this recheck the plan ends up one reservation over its cap —
+        the "12 of 10 used" class of bug.
+
+        The binding cap mirrors checkQuota: free → lifetime, focused → daily,
+        starter → monthly. If we are over, THIS reservation is the one that
+        loses the race: release it immediately and fail the request. Callers
+        treat it like any other quota denial.
+      */
+      const binding = this.resolveBindingCap(plan, configAfter, updatedUsage);
+      if (binding !== null && binding.used > binding.cap) {
+        await this.releaseReservation(reservation._id.toString(), 'over_limit_concurrent_reserve');
+
+        const resetAt = plan === 'free' ? undefined : binding.resetAt;
+        return {
+          success: false,
+          error: binding.reason,
+          usage: {
+            used: binding.cap,
+            reserved: updatedUsage.reserved,
+            limit: binding.cap,
+            remaining: 0,
+          },
+        };
+      }
 
       return {
         success: true,
@@ -532,6 +626,11 @@ export class AutoApplyQuotaService {
 
   /**
    * Get usage summary for display (used by API responses and frontend).
+   *
+   * The numbers here must match what checkQuota/reserve enforce: the binding
+   * cap per plan (free → lifetime, starter → monthly, focused → daily) and the
+   * matching reset time, so the UI never shows "X of Y used" for a limit that
+   * is not the one actually blocking the next apply.
    */
   static async getUsageSummary(userId: string): Promise<{
     plan: string;
@@ -551,19 +650,30 @@ export class AutoApplyQuotaService {
     const config = this.getPlanConfig(plan);
     const usage = await this.getUsage(userId);
 
-    const effectiveLimit = plan === 'free' ? config.lifetimeLimit : config.monthlyLimit;
-    const effectiveUsed = plan === 'free' ? (usage.lifetimeUsed ?? 0) : usage.consumed;
-    const isUnlimited = effectiveLimit === -1;
-    const remaining = isUnlimited ? null : Math.max(0, effectiveLimit - effectiveUsed);
+    const binding = this.resolveBindingCap(plan, config, usage);
+    if (!binding) {
+      // Unlimited plan — nothing binds; report totals against -1.
+      return {
+        plan,
+        used: usage.total,
+        reserved: usage.reserved,
+        limit: -1,
+        remaining: null,
+        resetAt: usage.billingPeriodEnd,
+        isUnlimited: true,
+      };
+    }
+
+    const remaining = Math.max(0, binding.cap - binding.used);
 
     return {
       plan,
-      used: effectiveUsed,
+      used: binding.used,
       reserved: usage.reserved,
-      limit: effectiveLimit,
+      limit: binding.cap,
       remaining,
-      resetAt: usage.billingPeriodEnd,
-      isUnlimited,
+      resetAt: binding.resetAt ?? usage.billingPeriodEnd,
+      isUnlimited: false,
       lifetimeUsed: plan === 'free' ? usage.lifetimeUsed : undefined,
       lifetimeLimit: plan === 'free' ? config.lifetimeLimit : undefined,
     };

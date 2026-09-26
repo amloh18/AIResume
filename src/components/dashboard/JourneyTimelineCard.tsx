@@ -2160,7 +2160,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/50'
         : 'bg-lime-50 dark:bg-[#24320f] border border-lime-200 dark:border-lime-500/30'
         } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
-      whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -3335,9 +3334,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       {job.jobUrl && (
                         <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                           <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(job.jobUrl);
-                              toast.success('Job URL copied to clipboard');
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(job.jobUrl);
+                                toast.success('Job URL copied to clipboard');
+                              } catch {
+                                toast.error("Couldn't copy the job URL");
+                              }
                             }}
                             className="text-small text-green-400 hover:text-green-300 underline transition-colors"
                           >

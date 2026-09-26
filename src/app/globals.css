@@ -2463,11 +2463,6 @@ nav {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes card-hover-lift {
-  0% { transform: translateY(0); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-  100% { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
-}
-
 @keyframes badge-pop {
   0% { transform: scale(0.8); opacity: 0; }
   60% { transform: scale(1.1); }
@@ -2494,14 +2489,6 @@ nav {
 
 .animate-tab-slide {
   animation: tab-slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.animate-card-lift {
-  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.animate-card-lift:hover {
-  animation: card-hover-lift 0.2s ease-out forwards;
 }
 
 .animate-badge-pop {

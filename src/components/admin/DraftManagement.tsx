@@ -8,10 +8,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/Skeleton';
 import DraftDetailModal from './DraftDetailModal';
 import { DRAFT_STATUSES, DEFAULT_PAGE_SIZE } from '@/lib/config/adminConstants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
+import { toast } from '@/lib/hot-toast';
 
 interface Draft {
   id: string;
@@ -35,6 +37,8 @@ interface Draft {
 const DraftManagement: React.FC = () => {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -59,9 +63,13 @@ const DraftManagement: React.FC = () => {
       if (data.success) {
         setDrafts(data.data);
         setTotalPages(data.pagination.totalPages);
+        setLoadError(null);
+      } else {
+        setLoadError("Couldn't load drafts. Try again.");
       }
     } catch (err) {
       console.error('Fetch error:', err);
+      setLoadError("Couldn't load drafts. Try again.");
     } finally {
       setLoading(false);
     }
@@ -82,16 +90,23 @@ const DraftManagement: React.FC = () => {
   };
 
   const handleDelete = async (draftId: string) => {
+    if (deletingId) return;
     if (!confirm('Delete this draft permanently?')) return;
     try {
+      setDeletingId(draftId);
       const response = await fetch(`/api/admin/drafts/${draftId}`, { method: 'DELETE' });
       if (response.ok) {
         setDrafts(drafts.filter(d => d.id !== draftId));
+        toast.success('Draft deleted');
       } else {
-        console.error('Failed to delete draft');
+        const body = await response.json().catch(() => ({}));
+        toast.error(body.error || "Couldn't delete the draft. Try again.");
       }
     } catch (err) {
       console.error('Delete error:', err);
+      toast.error("Couldn't delete the draft. Try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -133,8 +148,8 @@ const DraftManagement: React.FC = () => {
           </select>
         </div>
 
-        <Button onClick={fetchDrafts} className="flex items-center gap-1.5 p-2 px-3 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 rounded-xl transition-all h-auto text-xs font-medium">
-          <RefreshCw className="w-3.5 h-3.5" />
+        <Button onClick={fetchDrafts} disabled={loading} className="flex items-center gap-1.5 p-2 px-3 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white border border-white/10 rounded-xl transition-all h-auto text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
         </Button>
       </div>
@@ -178,7 +193,34 @@ const DraftManagement: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
-                <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">Loading Drafts...</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={`draft-skeleton-${i}`}>
+                    <td className="py-3 px-5">
+                      {i === 0 && <span role="status" className="sr-only">Loading drafts…</span>}
+                      <Skeleton className="h-8 w-40" />
+                    </td>
+                    <td className="py-3 px-5"><Skeleton className="h-4 w-32" /></td>
+                    <td className="py-3 px-5"><Skeleton className="h-4 w-14" /></td>
+                    <td className="py-3 px-5"><Skeleton className="h-4 w-16" /></td>
+                    <td className="py-3 px-5"><Skeleton className="h-4 w-20" /></td>
+                    <td className="py-3 px-5"><Skeleton className="h-8 w-16 ml-auto" /></td>
+                  </tr>
+                ))
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center">
+                    <div role="alert" className="flex flex-col items-center gap-2.5">
+                      <AlertCircle className="w-4 h-4 text-red-400" />
+                      <p className="text-red-400 font-medium text-xs">{loadError}</p>
+                      <button
+                        onClick={() => fetchDrafts()}
+                        className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 text-xs font-semibold transition-all"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ) : drafts.length === 0 ? (
                 <tr><td colSpan={6} className="py-12 text-center text-white/30 font-medium text-xs">No drafts found</td></tr>
               ) : (
@@ -234,8 +276,17 @@ const DraftManagement: React.FC = () => {
                         <button onClick={() => handleViewDetails(draft)} className="p-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/10 text-white/40 hover:text-emerald-400 transition-all">
                           <Eye className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => handleDelete(draft.id)} className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-all">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <button
+                          onClick={() => handleDelete(draft.id)}
+                          disabled={deletingId === draft.id}
+                          title="Delete draft"
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {deletingId === draft.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
                     </td>

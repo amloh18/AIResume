@@ -158,19 +158,22 @@ export function nuclearCleanupAllNonEssentialCookies() {
   
   try {
     const allCookies = document.cookie.split(';');
-    const essentialNextAuthCookies = [
+    const essentialCookies = [
       'next-auth.session-token',
       '__Secure-next-auth.session-token',
-      '__Host-next-auth.session-token'
+      '__Host-next-auth.session-token',
+      'cookie_consent',
+      'cookie_preferences',
+      'buildairesume_anonymous_token',
     ];
     
     allCookies.forEach(cookie => {
       const [name] = cookie.split('=');
       const trimmedName = name.trim();
       
-      // Check if this is an essential NextAuth cookie we want to keep
-      const isEssential = essentialNextAuthCookies.some(essential =>
-        trimmedName.includes(essential) || essential.includes(trimmedName)
+      // Check if this is an essential cookie we want to keep
+      const isEssential = essentialCookies.some(essential =>
+        trimmedName === essential || trimmedName.startsWith(essential) || essential.includes(trimmedName)
       );
       
       if (!isEssential) {

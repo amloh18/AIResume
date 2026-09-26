@@ -13,7 +13,7 @@ import {
   XCircle,
   Loader2,
 } from 'lucide-react';
-import type { JobLiveStep } from '@/lib/stores/jobLiveStatusStore';
+import { type JobLiveStep, useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 
 /**
  * Pipeline stages for the inline progress bar.
@@ -58,6 +58,9 @@ export interface JobCardProgressBarProps {
   description?: string;
   jobTitle?: string;
   company?: string;
+  jobId?: string;
+  autoCloseSeconds?: number;
+  autoClosePaused?: boolean;
 }
 
 export function JobCardProgressBar({
@@ -67,9 +70,25 @@ export function JobCardProgressBar({
   description,
   jobTitle,
   company,
+  jobId,
+  autoCloseSeconds,
+  autoClosePaused,
 }: JobCardProgressBarProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+
+  const { decrementTimer } = useJobLiveStatusStore();
+
+  // Auto-close countdown timer effect
+  useEffect(() => {
+    if (!jobId || !autoCloseSeconds || autoClosePaused) return;
+
+    const timer = setInterval(() => {
+      decrementTimer(jobId);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [jobId, autoCloseSeconds, autoClosePaused, decrementTimer]);
 
   const currentStage = resolveStageFromStep(currentStep);
   const currentOrder = PROGRESS_STAGES[currentStage]?.order ?? 0;
@@ -84,7 +103,7 @@ export function JobCardProgressBar({
   return (
     <div className="w-full space-y-2.5" onClick={(e) => e.stopPropagation()}>
       {/* Stage icons row */}
-      <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-start justify-between px-0.5">
         {stages.map(([key, meta], idx) => {
           const stageOrder = meta.order;
           const isDone = isFailed
@@ -100,7 +119,7 @@ export function JobCardProgressBar({
                 initial={mounted ? false : { scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: idx * 0.05, duration: 0.2 }}
-                className="flex flex-col items-center gap-1 relative z-10"
+                className="flex flex-col items-center gap-1 relative z-10 shrink-0"
               >
                 <div
                   className={`
@@ -121,7 +140,7 @@ export function JobCardProgressBar({
                 </div>
                 <span
                   className={`
-                    text-[9px] font-semibold leading-none transition-colors duration-300
+                    text-[9px] font-semibold leading-tight text-center transition-colors duration-300 max-w-[40px]
                     ${isDone || isActive ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}
                   `}
                 >
@@ -131,7 +150,7 @@ export function JobCardProgressBar({
 
               {/* Connector line between stages */}
               {idx < stages.length - 1 && (
-                <div className="flex-1 h-0.5 mx-1 mt-[-14px] relative">
+                <div className="flex-1 h-0.5 mx-0.5 mt-[13px] relative min-w-[6px]">
                   <div className="absolute inset-0 bg-gray-200 dark:bg-white/10 rounded-full" />
                   <motion.div
                     initial={{ scaleX: 0 }}

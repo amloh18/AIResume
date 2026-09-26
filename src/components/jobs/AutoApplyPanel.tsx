@@ -29,6 +29,7 @@ import {
   type WorkplaceType,
 } from '@/lib/jobs/workplace';
 import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 
 interface AutoApplyPreferences {
   enabled: boolean;
@@ -145,6 +146,17 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
     applicationMode: 'manual_review',
     defaultJobsTab: 'discover',
   });
+
+  /*
+    30s re-render tick so the reset countdown ("Resets in 5h 12m") stays live.
+    Declared before the `loading` early-return below — hooks must run on every
+    render regardless of which branch paints.
+  */
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   const [savedPreferences, setSavedPreferences] = useState<string>('');
   // Gates the mirror effect below. Until the first load has published real data,
@@ -443,22 +455,32 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
     ? entitlements?.application.used || 0
     : entitlements?.autoApply.used || 0;
   const limitCount = isStarter
-    ? entitlements?.application.limit || 10
-    : entitlements?.autoApply.limit || 50;
+    ? entitlements?.application.limit ?? 10
+    : entitlements?.autoApply.limit ?? 50;
   const remainingCount = isStarter
     ? entitlements?.application.remaining ?? 0
     : entitlements?.autoApply.remaining ?? 0;
 
-  const percentUsed = Math.min(100, Math.round((usedCount / (limitCount || 1)) * 100));
+  const percentUsed = limitCount > 0
+    ? Math.min(100, Math.round((usedCount / limitCount) * 100))
+    : 0;
 
-  const resetDateDisplay = isStarter
+  const resetAtDate = isStarter
     ? entitlements?.application.resetAt
-      ? new Date(entitlements.application.resetAt).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })
-      : 'end of month'
-    : 'tomorrow at midnight';
+    : entitlements?.autoApply.resetAt;
+  const resetCountdown = formatResetLabel(resetAtDate, 'Resets');
+  const resetDateDisplay = resetCountdown
+    ?? (resetAtDate
+      ? new Date(resetAtDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : isStarter ? 'end of month' : 'tomorrow at midnight');
+  const resetDateTooltip = resetAtDate
+    ? new Date(resetAtDate).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : undefined;
 
   const hasChanges = JSON.stringify(preferences) !== savedPreferences && savedPreferences !== '';
   
@@ -594,8 +616,20 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
               <span className="font-medium text-gray-700 dark:text-gray-300">
                 {usedCount} of {limitCount} used · {remainingCount} remaining
               </span>
-              <span>Resets {resetDateDisplay}</span>
+              <span
+                className={resetCountdown ? 'font-semibold' : undefined}
+                title={resetDateTooltip}
+              >
+                {resetDateDisplay}
+              </span>
             </div>
+
+            {remainingCount <= 0 && resetCountdown && (
+              <div className="pt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                <span>Limit reached — new applications unlock when your quota {resetCountdown.toLowerCase()}</span>
+              </div>
+            )}
             
             <div className="pt-1 flex justify-end">
               <Link

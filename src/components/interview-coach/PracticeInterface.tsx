@@ -333,10 +333,14 @@ export default function PracticeInterface({
     }
   }, [currentIndex, questions]);
 
-  const copySampleScript = () => {
+  const copySampleScript = async () => {
     if (currentQuestion?.aiFeedback?.improvedScript) {
-      navigator.clipboard.writeText(currentQuestion.aiFeedback.improvedScript);
-      toast.success('Script copied to clipboard!');
+      try {
+        await navigator.clipboard.writeText(currentQuestion.aiFeedback.improvedScript);
+        toast.success('Script copied to clipboard!');
+      } catch {
+        toast.error("Couldn't copy to clipboard");
+      }
     }
   };
 
