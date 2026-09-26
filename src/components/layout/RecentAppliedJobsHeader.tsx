@@ -248,6 +248,15 @@ export default function RecentAppliedJobsHeader() {
     }
   };
 
+  // The tooltip is anchored to the strip's right edge (not to each icon) so it
+  // always grows leftward — the strip sits at the far right of the header, so a
+  // centered/left-offset tooltip would otherwise overflow the viewport.
+  const hoveredJob = hoveredJobId ? jobsList.find((j) => j.id === hoveredJobId) || null : null;
+  const hoveredRemainingSec = hoveredJob
+    ? Math.max(0, Math.floor((hoveredJob.appliedAt + TEN_MINUTES_MS - currentTime) / 1000))
+    : 0;
+  const hoveredRemainingMins = Math.ceil(hoveredRemainingSec / 60);
+
   if (jobsList.length === 0 && !morphingJob) {
     return null;
   }
@@ -282,10 +291,6 @@ export default function RecentAppliedJobsHeader() {
       <motion.div layout className="flex items-center gap-1.5 sm:gap-2">
         <AnimatePresence initial={false}>
           {jobsList.map((job) => {
-            const isHovered = hoveredJobId === job.id;
-            const remainingSec = Math.max(0, Math.floor((job.appliedAt + TEN_MINUTES_MS - currentTime) / 1000));
-            const remainingMins = Math.ceil(remainingSec / 60);
-
             return (
               <div
                 key={job.id}
@@ -353,69 +358,71 @@ export default function RecentAppliedJobsHeader() {
                     />
                   </div>
                 </motion.button>
-
-                {/* Rich Tooltip on Hover */}
-                <AnimatePresence>
-                  {isHovered && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute top-full mt-2 -left-12 sm:left-1/2 sm:-translate-x-1/2 z-[100] w-52 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/15 rounded-xl shadow-xl p-2.5 text-left pointer-events-none"
-                    >
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <div className="w-5 h-5 rounded-md overflow-hidden bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
-                          <CompanyLogo
-                            company={job.company}
-                            logoUrl={job.companyLogo}
-                            size={16}
-                            className="rounded-sm"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                            {job.company}
-                          </div>
-                          <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                            {job.jobTitle}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 3 Stage Progress Badges */}
-                      <div className="grid grid-cols-3 gap-1 py-1.5 my-1 border-y border-gray-100 dark:border-white/10 text-[9px] font-semibold text-center">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="w-2 h-2 rounded-full bg-[#38bdf8] shadow-[0_0_4px_#38bdf8]" />
-                          <span className="text-gray-600 dark:text-gray-300">Saved</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="w-2 h-2 rounded-full bg-[#a855f7] shadow-[0_0_4px_#a855f7]" />
-                          <span className="text-gray-600 dark:text-gray-300">Staged</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <span className="w-2 h-2 rounded-full bg-[#10b981] shadow-[0_0_4px_#10b981]" />
-                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">Applied</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-400 pt-0.5">
-                        <span className="flex items-center gap-1">
-                          <Clock size={10} className="text-gray-400" />
-                          {remainingMins}m left in header
-                        </span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                          View &rarr;
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             );
           })}
         </AnimatePresence>
       </motion.div>
+
+      {/* Rich Tooltip on Hover — right-anchored to the strip so it never
+          escapes the right edge of the viewport */}
+      <AnimatePresence>
+        {hoveredJob && (
+          <motion.div
+            key={`tooltip-${hoveredJob.id}`}
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full right-0 mt-2 z-[100] w-52 max-w-[calc(100vw-1.5rem)] bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/15 rounded-xl shadow-xl p-2.5 text-left pointer-events-none"
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-5 h-5 rounded-md overflow-hidden bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
+                <CompanyLogo
+                  company={hoveredJob.company}
+                  logoUrl={hoveredJob.companyLogo}
+                  size={16}
+                  className="rounded-sm"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                  {hoveredJob.company}
+                </div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                  {hoveredJob.jobTitle}
+                </div>
+              </div>
+            </div>
+
+            {/* 3 Stage Progress Badges */}
+            <div className="grid grid-cols-3 gap-1 py-1.5 my-1 border-y border-gray-100 dark:border-white/10 text-[9px] font-semibold text-center">
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="w-2 h-2 rounded-full bg-[#38bdf8] shadow-[0_0_4px_#38bdf8]" />
+                <span className="text-gray-600 dark:text-gray-300">Saved</span>
+              </div>
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="w-2 h-2 rounded-full bg-[#a855f7] shadow-[0_0_4px_#a855f7]" />
+                <span className="text-gray-600 dark:text-gray-300">Staged</span>
+              </div>
+              <div className="flex flex-col items-center gap-0.5">
+                <span className="w-2 h-2 rounded-full bg-[#10b981] shadow-[0_0_4px_#10b981]" />
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Applied</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-400 pt-0.5">
+              <span className="flex items-center gap-1">
+                <Clock size={10} className="text-gray-400" />
+                {hoveredRemainingMins}m left in header
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                View &rarr;
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
