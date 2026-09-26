@@ -181,6 +181,7 @@ export interface IJobApplication extends Document {
     | 'applied'
     | 'automation_failed'
     | 'automation_unknown'
+    | 'automation_dismissed'
     | 'review_required'
     | 'interview'
     | 'offer'

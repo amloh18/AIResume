@@ -6,10 +6,7 @@ import { motion } from 'framer-motion';
 import {
   CheckCircle,
   CheckCircle2,
-  XCircle,
   MapPin,
-  Clock,
-  Sparkles,
   ExternalLink,
   Briefcase,
   Eye,
@@ -17,12 +14,12 @@ import {
   Trash2,
   Loader2
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
-import { deriveApplicationStatusBadge, type StatusIconKey } from '@/lib/utils/application-status-badge';
+import type { BadgeActionId } from '@/lib/utils/application-status-badge';
+import JobStatusActionChip from '@/components/jobs/JobStatusActionChip';
 import { CHIP_INLINE, CHIP_TONES, chipTone, type ChipTone } from '@/components/ui/chip-styles';
 
 interface JobApplication {
@@ -76,6 +73,8 @@ interface JobsListViewProps {
   onJobClick: (job: JobApplication) => void;
   onEditJob?: (job: JobApplication) => void;
   onDeleteJob?: (job: JobApplication) => void;
+  /** Approve / retry / dismiss a parked application (POST /api/applications/[id]/automation). */
+  onAutomationAction?: (job: JobApplication, actionId: BadgeActionId) => void;
   getJobJourneys: (jobId: string) => CVJourney[];
   getJourneyProgress: (journey: CVJourney) => number;
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
@@ -126,29 +125,22 @@ function getSourceBadge(source?: string) {
 }
 
 /**
- * Status chips — label/tone/icon come from the shared derivation, the only
- * place that knows `review_required` rows must not read as "Submitting"
- * (reason → label mapping lives in application-status-badge.ts).
+ * Status chips — label/tone/action come from the shared derivation and the
+ * shared chip component, the only places that know `review_required` rows must
+ * not read as "Submitting" (reason → label mapping lives in
+ * application-status-badge.ts; list and kanban render JobStatusActionChip).
  */
-const STATUS_ICONS: Record<StatusIconKey, LucideIcon | null> = {
-  clock: Clock,
-  external: ExternalLink,
-  eye: Eye,
-  x: XCircle,
-  sparkles: Sparkles,
-  check: CheckCircle,
-  none: null,
-};
-
-function getStatusBadge(job: { status?: string; internalStatus?: string; reviewReason?: string }) {
-  const { label, tone, icon, title } = deriveApplicationStatusBadge(job);
-  const Icon = STATUS_ICONS[icon];
-  return (
-    <span className={`${chipTone(tone, 'md')} font-semibold`} title={title}>
-      {Icon && <Icon className="w-3 h-3" />}
-      {label}
-    </span>
-  );
+function getStatusBadge(
+  job: {
+    status?: string;
+    internalStatus?: string;
+    reviewReason?: string;
+    queueEtaSeconds?: number;
+    queuePosition?: number;
+  },
+  onAutomationAction?: (job: any, actionId: BadgeActionId) => void
+) {
+  return <JobStatusActionChip job={job} onAutomationAction={onAutomationAction} />;
 }
 
 function formatSalary(salary?: any): string {
@@ -173,6 +165,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
   onJobClick,
   onEditJob,
   onDeleteJob,
+  onAutomationAction,
   getJobJourneys,
   getJourneyProgress,
   getJourneyStatusText,
@@ -391,7 +384,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                             </span>
                           );
                         }
-                        return getStatusBadge(job);
+                        return getStatusBadge(job, onAutomationAction);
                       })()}
                     </td>
 

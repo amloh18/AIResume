@@ -52,9 +52,11 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
     try {
       setError(null);
 
-      // Fetch jobs needing attention
+      // Fetch applications with the pipeline fields (internalStatus/reviewReason)
+      // — not the fictional `needs_input,failed` statuses, which matched nothing
+      // and left this widget permanently empty.
       const res = await authenticatedFetch(
-        '/api/jobs?limit=50&status=needs_input,failed&lite=true',
+        '/api/jobs?limit=50',
         { signal }
       );
       
@@ -68,11 +70,16 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
       // Transform into attention items
       const attentionItems: AttentionItem[] = rawJobs
         .filter((job: any) => {
+          const internal = String(job.internalStatus || '');
           return (
             job.status === 'needs_input' ||
-            job.automationStatus === 'needs_user_action' ||
-            job.automationStatus === 'failed' ||
-            job.skipReason
+            internal === 'review_required' ||
+            internal === 'automation_failed' ||
+            internal === 'automation_unknown' ||
+            internal === 'automation_dismissed' ||
+            job.deadLetter ||
+            job.skipReason ||
+            job.emailStatus === 'failed'
           );
         })
         .map((job: any) => {
@@ -80,15 +87,31 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
           let message = '';
           let actionLabel = 'Review';
           const actionUrl = `/dashboard/jobs?tab=applications&jobId=${job.id || job._id}`;
+          const internal = String(job.internalStatus || '');
+          const reason = String(job.reviewReason || '');
 
-          if (job.automationStatus === 'failed' || job.status === 'failed') {
+          if (internal === 'automation_failed' || job.deadLetter) {
             type = 'failed';
-            message = job.automationError || 'Application automation failed';
+            message = reason || 'Application automation failed — retry it or apply manually';
             actionLabel = 'Retry';
-          } else if (job.automationStatus === 'captcha_detected') {
+          } else if (internal === 'automation_unknown') {
+            type = 'needs_input';
+            message = 'The run ended without confirmation — verify whether it was submitted';
+            actionLabel = 'Review';
+          } else if (/captcha/i.test(reason)) {
             type = 'captcha';
-            message = 'CAPTCHA detected - manual completion required';
+            message = 'CAPTCHA detected — complete it manually to continue';
             actionLabel = 'Complete CAPTCHA';
+          } else if (internal === 'review_required') {
+            type = 'needs_input';
+            message =
+              reason ||
+              'Application paused and waiting for you (approve, or take over and apply manually)';
+            actionLabel = /approval/i.test(reason) ? 'Approve' : 'Review';
+          } else if (internal === 'automation_dismissed') {
+            type = 'needs_input';
+            message = 'You chose to apply manually — mark it applied when done';
+            actionLabel = 'Review';
           } else if (job.skipReason) {
             type = 'unanswered';
             message = job.skipReason;
