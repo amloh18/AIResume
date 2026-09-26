@@ -64,6 +64,17 @@ async function workerTick(): Promise<void> {
           // were observed at attempts=55 against maxAttempts=3). Count the attempt now so
           // the retry/dead-letter gate applies immediately; rethrow for the tick logger.
           await failQueueItem(queueItemId, `Unhandled worker error: ${err.message}`, true).catch(() => {});
+          const { notifyApplicationNeedsAction } = await import(
+            '@/lib/worker/applicationActionNotifier'
+          );
+          await notifyApplicationNeedsAction({
+            userId: String(jobApplication.userId),
+            applicationId,
+            jobTitle: jobApplication.jobTitle || jobApplication.title,
+            company: jobApplication.company,
+            status: 'automation_failed',
+            reason: `Worker error: ${err.message}`,
+          });
           throw err;
         }
 
@@ -74,6 +85,25 @@ async function workerTick(): Promise<void> {
           await failQueueItem(queueItemId, result.message, true);
           log.warn(`[ApplicationWorker] Failed ${applicationId}: ${result.message}`);
         }
+
+        /*
+          Tell the user when the pipeline ends somewhere only THEY can move it:
+          parked for approval/manual takeover, or failed outright. The alert
+          carries the deep link back to the exact application, and the same
+          metadata lets the approve/retry/dismiss endpoint mark it read.
+          Never throws — notifications must not affect queue processing.
+        */
+        const { notifyApplicationNeedsAction } = await import(
+          '@/lib/worker/applicationActionNotifier'
+        );
+        await notifyApplicationNeedsAction({
+          userId: String(jobApplication.userId),
+          applicationId,
+          jobTitle: jobApplication.jobTitle || jobApplication.title,
+          company: jobApplication.company,
+          status: result.status,
+          reason: result.message,
+        });
       }
     );
 

@@ -27,6 +27,7 @@ import InterviewStageView from "./stages/InterviewStageView";
 import OfferStageView from "./stages/OfferStageView";
 import RejectedStageView from "./stages/RejectedStageView";
 import JobKanbanCard from "./JobKanbanCard";
+import type { BadgeActionId } from "@/lib/utils/application-status-badge";
 import {
   routeTrackerCardAction,
   type TrackerSidebarOpenContext,
@@ -119,6 +120,8 @@ interface JobsKanbanViewProps {
   onRefresh?: () => void;
   onImproveATS?: (job: JobApplication) => void;
   onDownload?: (job: JobApplication) => void;
+  /** Approve / retry / dismiss a parked application (shared with the list view). */
+  onAutomationAction?: (job: any, actionId: BadgeActionId) => void;
   /**
    * Job ids whose document generation has been requested but not yet reflected
    * in the `journeys` payload. Owned by the parent so the block survives the
@@ -169,6 +172,7 @@ const ExpiredJobsAccordion: React.FC<{
   onCreateJourney?: (job: JobApplication) => Promise<void>;
   onImproveATS?: (job: JobApplication) => void;
   onDownload?: (job: JobApplication) => void;
+  onAutomationAction?: (job: any, actionId: BadgeActionId) => void;
   onJobStatusUpdate?: (jobId: string, newStatus: string) => Promise<void>;
   onRefresh?: () => void;
   pendingJourneyJobIds?: Set<string>;
@@ -186,6 +190,7 @@ const ExpiredJobsAccordion: React.FC<{
   onCreateJourney,
   onImproveATS,
   onDownload,
+  onAutomationAction,
   onJobStatusUpdate,
   onRefresh,
   pendingJourneyJobIds,
@@ -231,6 +236,7 @@ const ExpiredJobsAccordion: React.FC<{
                 onDragEnd={onDragEnd}
                 onDragOver={onDragOver}
                 onRefresh={onRefresh}
+                onAutomationAction={onAutomationAction}
                 onAction={(action, job) => {
                   routeTrackerCardAction({
                     action: action as any,
@@ -279,6 +285,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onRefresh,
   onImproveATS,
   onDownload,
+  onAutomationAction,
   pendingJourneyJobIds,
 }) => {
   // Saved color (used as default for all stages)
@@ -623,6 +630,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                       onDragEnd={onDragEnd}
                                       onDragOver={onDragOver}
                                       onRefresh={onRefresh}
+                                      onAutomationAction={onAutomationAction}
                                       onAction={(action, job) => {
                                         routeTrackerCardAction({
                                           action: action as any,
@@ -652,6 +660,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                   onCreateJourney={onCreateJourney as any}
                                   onImproveATS={onImproveATS as any}
                                   onDownload={onDownload as any}
+                                  onAutomationAction={onAutomationAction}
                                   onJobStatusUpdate={onJobStatusUpdate as any}
                                   onRefresh={onRefresh}
                                   pendingJourneyJobIds={pendingJourneyJobIds}
