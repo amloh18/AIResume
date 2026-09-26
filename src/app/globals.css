@@ -1721,15 +1721,19 @@ img {
   will-change: auto;
 }
 
-/* Sticky Navbar Styles */
-nav {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 1000 !important;
-  background: transparent !important;
-}
+/* Legacy "Sticky Navbar Styles" block (bare `nav { position: sticky !important;
+   z-index: 1000 !important }`) removed on purpose — do NOT re-add it.
 
-/* Main content - no padding needed since navbar overlays hero */
+   It forced EVERY <nav> in the app to z-index 1000 with !important, which
+   stacked the JobsDashboard tab bar (and anything else inside the dashboard
+   content card) ABOVE the sticky dashboard header (z-[60]) — the recent-applied
+   hover card and the notification popup rendered behind the tab labels.
+
+   Nothing relied on it: landing CardNav keeps its own
+   .card-nav-container { position: fixed; z-index: 999999 }, the blog TOC and
+   marketing-page navs declare their own sticky/fixed + z classes (which this
+   rule was overriding with !important), and the sidebar/tab navs never asked
+   for sticky. Each <nav> now stacks by its own classes. */
 
 /* Optimize sidebar */
 .sidebar-optimized {
