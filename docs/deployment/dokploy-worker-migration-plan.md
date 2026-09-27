@@ -215,13 +215,18 @@ docker service ps <new-worker-service> --no-trunc --format '{{.Name}} {{.Current
 docker images --format '{{.CreatedAt}} {{.ID}}' | head -1
 # task created AFTER the image timestamp ⇒ it followed the deploy
 
-# 6. Version truth — the worker now reports the commit it was built from
-curl -s http://<new-worker-service>:8791/health | jq '{role, commit, loops}'
-curl -s https://resume.morigrid.com/api/health | jq '{role, commit}'
-# the two commits must MATCH; a mismatch is exactly the stale-worker bug, now visible
-curl -s https://resume.morigrid.com/api/admin/vps-setup | jq '.workerLoop | {commit, commitStale}'
-#   commitStale: true  ⇒ the worker is answering from an older image
-#   commitStale: null  ⇒ not comparable (GIT_COMMIT was not passed to one of the builds)
+# 6. Build identity — the worker now reports when its image was built
+curl -s http://<new-worker-service>:8791/health | jq '{role, buildTime, loops}'
+curl -s https://resume.morigrid.com/api/health | jq '{role, buildTime}'
+# the worker's buildTime must not be HOURS older than the app's; minutes apart is expected,
+# because the two images are built by separate applications in one deploy cycle
+
+# The panel's own view (needs an authenticated admin session, so read it in the UI):
+#   Admin -> VPS Setup -> Background Worker -> Built / Stale image
+#   buildStale: true  ⇒ the worker is answering from an older image
+#   buildStale: null  ⇒ not comparable (a build stamp is missing)
+#
+# ⚠️ Do NOT use `commit` for this — it is always "unknown" in this deployment. §11.6 explains why.
 ```
 
 A redeploy must also leave `uptimeSeconds` in the worker's `/health` **rising** across a web-only deploy —
@@ -449,29 +454,57 @@ That is the whole risk, and it is a **config change, not a code change.**
       `workerGateway.online: true` after the cutover;
 - [ ] `workerLoop.commit` is populated and `workerLoop.commitStale` is `false` — see §11.6.
 
-### 11.6 Added 2026-09-27: the worker now reports *which build* it is running
+### 11.6 Added 2026-09-27: the worker now reports *when its image was built*
 
 The panel could already say the worker was **reachable**. It could not say whether it was **current** —
 and "the worker is stale after a deploy" is the failure this whole migration exists to remove (§1). The
 old worker's health payload carried `role`, `pid`, `startedAt`, `uptimeSeconds`, `memoryRssMb` and
-`loops` — no version. `/api/health` has reported `commit` for the web process all along; the worker had
-no equivalent, so a stale worker was indistinguishable from a healthy one in the UI.
+`loops` — no build identity at all, so a worker 45 h stale was indistinguishable from a fresh one.
 
-Three small additions close that:
+**The first attempt was wrong, and the way it was wrong is the point.** I added a `commit` field first —
+mirroring `/api/health`, which has reported `commit` for the web process all along. Then I checked whether
+that field has ever reported anything:
 
-- `src/workers/health.ts` — `WorkerHealthPayload.commit`, plus `resolveBuildCommit()`, which reads
-  `GIT_COMMIT || SOURCE_COMMIT || 'unknown'` (the same two variables `/api/health` reads).
-- `Dockerfile` — the `worker` stage now declares `ARG GIT_COMMIT` / `ENV GIT_COMMIT`, exactly as
-  `builder` does. `worker` is `FROM base`, so it never inherited `builder`'s ENV; this is a new
-  declaration, not a preserved one.
-- `src/app/api/admin/vps-setup/route.ts` — the `workerLoop` projection carries `commit` and
-  `commitStale`, the latter comparing the worker's commit against the **web container's own**
-  (`resolveBuildCommit()` on the app side).
+```
+$ docker exec <app> node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>r.json())…"
+{ "commit": "unknown" }
+```
 
-`commitStale` is deliberately **tri-state**, following the file's existing "unknown is not unhealthy"
-convention: it is `null` — not `true` — whenever either side reports `unknown`, because a missing build
-arg is not evidence of drift. `VpsSetupPanel.tsx` renders a `Stale image` chip and an explanatory line
-only on a strict `true`.
+**`/api/health`'s `commit` has been `"unknown"` on every deploy it has ever served.** It only reports a
+value if something *supplies* `GIT_COMMIT` at build time, and nothing does:
+
+- Dokploy's `application` table has a `buildArgs` column, but it holds a **static** value — it cannot know
+  the commit;
+- `.dockerignore:33` excludes `.git`, so the commit cannot be derived inside the build either;
+- no `DOKPLOY_*` or commit-ish variable is injected into the container at runtime (checked against all
+  128 env names on the app service).
+
+So the field was plumbing with no source — and an identity field that always reads `"unknown"` is **worse
+than no field at all**, because it looks like a working feature. That is the same class of defect this
+register keeps finding: *a declared value is not a written one*.
+
+**The fix: stamp the build time, which needs nothing passed in.**
+
+- `Dockerfile` — `RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build-time`, late in both target chains
+  (`builder`, so `runner` COPYs it; and `worker`, written before dropping to `nextjs`). Late on purpose:
+  a volatile `RUN` earlier would invalidate the expensive `npm ci` layer.
+- `src/workers/health.ts` — `WorkerHealthPayload.buildTime` + `resolveBuildTime()`. `commit` is kept and
+  documented as always-unknown plumbing.
+- `src/app/api/health/route.ts` — reports `buildTime` beside `commit`.
+- `src/app/api/admin/vps-setup/route.ts` — `workerLoop` carries `buildTime` and `buildStale`, comparing
+  the worker's stamp against the **web container's own**.
+
+**`buildStale` is a threshold, not an equality test, and tri-state.** The two images are built by
+*separate* Dokploy applications minutes apart in one deploy cycle, so their stamps will never be equal —
+the question is only whether the worker's is *old*. The threshold is one hour: a ~60x margin over the
+normal gap, against a smallest measured real staleness of ~45 hours. It is `null` — never `false` — when
+either stamp is missing, so "we don't know" is not rendered as "it's fine". `VpsSetupPanel.tsx` shows a
+`Stale image` chip only on a strict `true`.
+
+**Verified.** `date -u +%Y-%m-%dT%H:%M:%SZ` confirmed to work in `node:22-bookworm-slim` and to emit a
+`Date.parse`-able string (`2026-09-27T18:05:29Z`). `docker buildx build --check` run against the real
+build context on the VPS, on a scratch copy: **"Check complete, no warnings found"** for both the `worker`
+target and the default target. The suite still shows only the 5 documented pre-existing failures.
 
 **Consequence for this migration:** after the cutover, §6 step 6 is the cheapest possible proof that the
 new worker is real and current — and it will catch the old failure mode the next time Dokploy redeploys
