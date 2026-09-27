@@ -144,9 +144,11 @@ the answer decides what "deployed" has to mean:
 Evidence that the **worker-daemon's poll loop** is the one doing the work, not the cron:
 
 - `POST /api/cron/auto-apply` fires every 5 min (`/etc/cron.d/buildairesume` job #2) and
-  `/var/log/buildairesume/auto-apply.log` holds **245 consecutive runs with `processedCount: 0`** — it never
-  claims anything, because the loop has already taken it. (`skipped: "items remaining are handled by the
-  next run"` is a constant in the response, not a rate-limit signal.)
+  `/var/log/buildairesume/auto-apply.log` holds **264 runs, every one of them `processedCount: 0`** — it
+  has never claimed anything, because the loop has already taken it. (`skipped: "items remaining are
+  handled by the next run"` is a constant in the response, not a rate-limit signal.) Verified again
+  2026-09-27 (later), and the count is now *more* conclusive: **not a single non-zero run in the file's
+  whole history**, so the cron path is an unexercised backstop — see §7 item 4.
 - The newest queue item was created `14:21:08.421Z` and completed `14:21:11.729Z` — **3.3 s later**, landing
   *between* cron ticks (`14:20:03` → `14:25:01`). Only a 10 s poll loop explains that.
 - `/api/jobs/auto-apply` does **not** process inline — it only writes `status: 'queued'`.
@@ -885,11 +887,18 @@ is nothing left for the sanitiser to catch.)
    running the previous release — which is exactly what happened here.
 3. **`CRON_SECRET` is set** (64 chars) — SB-02 is closed. But it is stored in cleartext in
    `/etc/cron.d/buildairesume` and was surfaced in a shell transcript on 2026-09-27. **Rotate it.**
-4. **NEW — why has the `auto-apply` cron log gone quiet?** Last entry `2026-09-26T19:10`; silent since
-   ~`13:40 UTC on 09-27`, while the in-process worker keeps draining (`queued: 0`). Consistent with
-   SB-01b (the loop always wins, so the cron finds nothing to claim) — but "the cron stopped firing" and
-   "the cron fires and finds nothing" are indistinguishable from the log alone. Needs a `cron`/`syslog`
-   check on the box. **This is the one item from this session that is observed-but-unexplained.**
+4. ~~**NEW — why has the `auto-apply` cron log gone quiet?**~~ **ANSWERED 2026-09-27 — it never went
+   quiet, and my own report of it was wrong.** The file has **no newline characters** (`wc -l` → `0`), so
+   `head -1` and `tail -1` both return the *entire* file — I read the **first** timestamp in it
+   (`2026-09-26T19:10`) and mistook it for the last. Measured properly: the cron is firing every 5 min,
+   most recently `2026-09-27T17:05:01Z`, 33 s before the check.
+   **What *is* true, and is now stronger evidence for SB-01b:** the log holds **264 runs, all
+   `processedCount: 0` — not one has ever processed anything.** So the cron is a **backstop that has never
+   once been exercised.** The worker's 10 s loop wins every race, which is fine until it doesn't: if the
+   loop ever dies, the cron path becomes the only drainer and it has zero production history. Worth a
+   deliberate test rather than a discovery during an incident.
+   **Gotcha to remember:** a single-line log file makes `head`/`tail` meaningless. Count entries with
+   `grep -oE '"timestamp":"[^"]+"' | tail -1`.
 5. **NEW — should the `Mixed` id stores be normalised?** Every string value measured in SB-06 is a genuine
    24-hex `ObjectId`. A one-shot migration per collection (`jobapplications.userId`,
    `applicationqueues.userId`, `coverletters.jobId|journeyId|cvId`, …) would remove the entire defect class
@@ -914,6 +923,7 @@ is nothing left for the sanitiser to catch.)
 | 2026-09-27 | SSH restored; register re-triage from the live box. **SB-01 closed as not-the-cause** (queue drains: 48 completed, 0 queued) and replaced by **SB-01b** — the worker service runs the *web* image and Dokploy does not manage it. SB-03/04/05 fixed and deployed (`08f5af33`). **SB-16** (submissions sent with no CV attached) and **SB-17** (`stageHistory` written to a non-existent `statusHistory`) found and fixed (`a8398319`, `aa1ce364`). |
 | 2026-09-27 (later) | **Second deploy `3EL11R6lODg6YMZd6LP73` finished `15:31:41Z`** → image `029e44d7f146` from `aa1ce364`; app task recreated `15:31:46Z`. **SB-01b resolved for this release**: the worker-daemon was identified as the *primary* drainer (cron log: 245 runs, all `processedCount: 0`) and force-updated `15:32:52Z` onto the same digest, so it no longer runs 09-25 code. Root-cause tally confirmed against `applicationevents` — the 58 park reasons are exactly the four fixed bugs. SB-05 gained the event-level evidence + a regression test. |
 | 2026-09-27 (final pass) | **Register worked end to end; nothing committed or deployed.** **SB-09** (dead `applyToAdzuna` deleted) and **SB-15** (`.gitignore` policy inverted; the "3 untracked" count corrected to 2) closed. **SB-08** fixed by the `reason`/`operatorReason` channel split across the state machine, `processApplication`, `applicationWorker` and `unifiedApplyService` — the live leak was `automationUnavailable()` interpolating a raw Playwright error, which the register had missed. **SB-07** fixed with a Mongo lease (`CronLock`) plus a documented fail-open path. **SB-06** swept: **86 sites / 46 files → 0**, after fixing the scanner's barrel-import blind spot (the first pass reported 44 and was wrong — the tool could not open the very file that was the known bug). **SB-02** verified by probe (401, not 503) rather than assumed. **SB-18** (daily-summary counted `statusHistory`, a path that never exists — now `appliedAt`) and **SB-19** (six discarded `countDocuments` per user, deleted) found and fixed along the way. Full suite: `670 passed | 5 failed`, exactly the documented pre-existing set. `tsc -p tsconfig.pipeline.json` clean. |
+| 2026-09-27 (shipped) | Committed `47d46c30` (66 files) and deployed by the operator. **§7 item 4 resolved — and this register's own earlier claim about it was wrong**: the `auto-apply` cron log was never quiet; it is a single-line file (no newlines), so `head`/`tail` both returned the whole file and the *first* timestamp was misread as the last. The cron fires every 5 min (last `17:05:01Z`), and **all 264 runs have `processedCount: 0`** — it is an unexercised backstop, which is the real risk. |
 
 ---
 
@@ -924,8 +934,8 @@ is nothing left for the sanitiser to catch.)
 | `node .verify/scan-mixed-id-queries.mjs` | `0` sites / `0` files (was `86` / `46`) |
 | `npx tsc -p tsconfig.pipeline.json --noEmit` | exit 0, no output |
 | `npx vitest run` | `670 passed | 5 failed | 31 skipped` — the 5 are the documented pre-existing set (`applicationWorker` correlation ×2, `pdfService`/`docxService` import ×3) |
-| Committed | **no** — the tree is dirty; see the change log |
-| Deployed | **no** — and note SB-01b: deploying will *not* update the worker without the manual `service update --force` |
+| Committed | yes — `47d46c30` |
+| Deployed | **in progress 2026-09-27 22:34 IST** (Dokploy deployment `MNlCTbzlugu1shoWHfhP6`). **SB-01b applies: this deploy updates the app tier only.** The worker keeps the previous image until someone runs the manual `service update --force` — verified after the deploy that both services were still on the *pre-`47d46c30`* image `029e44d7f146`. |
 
 **Coverage caveat.** `tsconfig.pipeline.json` does not include `src/workers/**`, `src/app/api/interview/**`
 or most of the swept route files, so many of the files changed in this pass were **not** type-checked by the
