@@ -244,15 +244,30 @@ port, so its internal networking is less entangled than the worker's.
 
 ---
 
-## 8. What I need from you before implementing
+## 8. What I need from you before implementing — `ANSWERED 2026-09-27`
 
-1. **Go-ahead for the Dockerfile change in §2** — it is the prerequisite that makes Option A cheap, and it
-   is independently worth having. (I would verify it with a real build.)
-2. **Confirmation that Option A is the shape you want**, or a preference for B.
-3. **A maintenance window of ~30 minutes**, because step 3 (removing the old worker) is the only
-   irreversible moment and it briefly means a single worker instead of two.
-4. **A decision on the exposed secrets** — see below. This is unrelated to the migration but it came up
-   during it and should not be silently dropped.
+1. **Go-ahead for the Dockerfile change in §2** — ✅ **done, committed `993006dd`.** Verified with the real
+   build (`.next` moved aside, `dist/worker.mjs` still emitted).
+2. **Option A or B** — ✅ **Option A.** A second Dokploy application with `dockerBuildStage: worker`.
+3. **A maintenance window** — ✅ **~40 minutes, at your convenience.** Re-examined while answering: there is
+   no irreversible moment after all. The cutover *scales* the old worker to `0/0` instead of removing it, so
+   the rollback is `docker service scale …=1`. Deleting it is deferred housekeeping, not part of the change.
+   With no live users, the only cost of a bad window is your own time.
+4. **The exposed secrets (§9)** — ✅ **migrate first, rotate after.** The env is entered once now and rotated
+   as a separate change; the cost is touching it twice, which was accepted.
+
+**Execution is a runbook, not this document:** `dokploy-worker-runbook.md` — the step-by-step, written to be
+run by hand, with the exact Dokploy settings, the env payload, the verification commands and a rollback.
+
+**Why I could not create the application myself.** Dokploy's API is live on `:3000` but returns `401`, and
+the `apikey` table is **empty** — and it stores only a hash (`key`), so a key cannot be recovered from the
+database either. Creating the application by raw SQL is not an option: Dokploy keeps env in a separate
+`environment` row, **encrypted at rest**, so an insert would produce a broken application. The choice was
+therefore an API key (I drive it end to end) or the UI (you drive it, I verify). You chose the runbook.
+
+Also confirmed while checking: `dockerBuildStage` exists as a column and is **empty on all three existing
+applications**, and `resumebuiler` has `cleanCache = t` — both of which this plan had asserted and neither of
+which had been measured until now.
 
 ---
 
