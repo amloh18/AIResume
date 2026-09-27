@@ -452,7 +452,7 @@ That is the whole risk, and it is a **config change, not a code change.**
       panel's `workerLoop` section reports for the first time;
 - [ ] `GET /api/admin/vps-setup` still returns `ingestionService.reachable: true` and
       `workerGateway.online: true` after the cutover;
-- [ ] `workerLoop.commit` is populated and `workerLoop.commitStale` is `false` — see §11.6.
+- [ ] `workerLoop.buildTime` is populated and `workerLoop.buildStale` is `false` — see §11.6.
 
 ### 11.6 Added 2026-09-27: the worker now reports *when its image was built*
 
