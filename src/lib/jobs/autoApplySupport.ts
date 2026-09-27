@@ -46,18 +46,48 @@ export const PLAYWRIGHT_AUTOMATABLE_ATS = [
 
 export type PlaywrightAutomatableAts = (typeof PLAYWRIGHT_AUTOMATABLE_ATS)[number];
 
-/** Case-insensitive check whether an ATS/source string supports auto-apply. */
-export function isAutoApplySupported(atsType: string | undefined | null): boolean {
-  if (!atsType) return false;
-  const normalized = atsType.trim().toLowerCase();
-  return (AUTO_APPLY_SUPPORTED_ATS as readonly string[]).includes(normalized);
+/**
+ * Reduce whatever a caller has to hand down to a comparable lowercase token.
+ *
+ * Callers legitimately hold two different shapes:
+ *   - an `atsType` string (`'greenhouse'`, or `null`);
+ *   - a `source`, which is a plain string for the in-app ingestion sources **or** the
+ *     `{ primary, applicationUrl, … }` object the `feashliaa` sync writes — an object in 86.7% of the
+ *     corpus, even though `Job.ts` still declares the path as `String` (schema drift, see SB-20).
+ *
+ * Anything else yields `''`, so the exported predicates below are total and can never throw.
+ */
+function normalizeAtsInput(value: unknown): string {
+  if (typeof value === 'string') return value.trim().toLowerCase();
+
+  // Object-shaped `source`: use `primary`, the same field the DB-level filter matches on
+  // (`'source.primary': { $in: … }` in discover/route.ts), so the two filters agree.
+  if (value && typeof value === 'object') {
+    const primary = (value as { primary?: unknown }).primary;
+    if (typeof primary === 'string') return primary.trim().toLowerCase();
+  }
+
+  return '';
+}
+
+/**
+ * Case-insensitive check whether an ATS/source value supports auto-apply.
+ *
+ * The parameter is typed `unknown` on purpose. It used to be `string | undefined | null`, but
+ * `discover/route.ts` calls it as `isAutoApplySupported(job.atsType || job.source || '')` — and for
+ * a `feashliaa` job `atsType` is `null` while `source` is an object, so the object went straight into
+ * `.trim()` and threw a `TypeError` out of the request. A predicate that only answers a yes/no
+ * question must not be able to fail the whole endpoint because a caller passed the wrong shape.
+ */
+export function isAutoApplySupported(value: unknown): boolean {
+  const normalized = normalizeAtsInput(value);
+  return normalized !== '' && (AUTO_APPLY_SUPPORTED_ATS as readonly string[]).includes(normalized);
 }
 
 /** Case-insensitive check whether an ATS type has an unattended Playwright handler. */
-export function isPlaywrightAutomatable(atsType: string | undefined | null): boolean {
-  if (!atsType) return false;
-  const normalized = atsType.trim().toLowerCase();
-  return (PLAYWRIGHT_AUTOMATABLE_ATS as readonly string[]).includes(normalized);
+export function isPlaywrightAutomatable(value: unknown): boolean {
+  const normalized = normalizeAtsInput(value);
+  return normalized !== '' && (PLAYWRIGHT_AUTOMATABLE_ATS as readonly string[]).includes(normalized);
 }
 
 /**
@@ -74,6 +104,53 @@ export type DetectedAts =
   | 'naukri'
   | 'indeed'
   | 'adzuna';
+
+/**
+ * The URL of the form a job must actually be submitted at.
+ *
+ * Why this exists
+ * ---------------
+ * `detectAtsFromUrl()` is the authority on routing (SB-03) — but it can only be as good as the URL
+ * it is handed, and two different fields describe that URL depending on which discovery source
+ * produced the job:
+ *
+ *   - `applyUrl`               — set by the in-app ingestion sources (greenhouse, lever, ashby, …)
+ *   - `source.applicationUrl`  — set by the `feashliaa` pre-aggregated sync
+ *
+ * Measured on production 2026-09-27: of the 42,338 `feashliaa` jobs (86.7% of the corpus),
+ * **42,338 have `source.applicationUrl` and 0 have `applyUrl`.** So for the large majority of jobs
+ * the only field carrying the form URL was one nothing read.
+ *
+ * Before this helper the fallback existed as a hand-written expression in exactly one place — the
+ * saved-jobs filter in `discover/route.ts` — and was missing from every place that mattered. The
+ * empty `applyUrl` was therefore forwarded to the client, posted back on enqueue, and resolved to
+ * `'unknown'`, parking 42,338 jobs as "not automatable" no matter which ATS really hosted the form
+ * (SB-20).
+ *
+ * Keep this the ONLY place that decides the order — it is the input to `detectAtsFromUrl()`.
+ *
+ * The parameter is `unknown` on purpose: `source` is declared `String` on the `Job` model but the
+ * ingestion service stores an object there (schema drift — see SB-20), so callers legitimately hold
+ * either shape and neither is worth a cast at every call site.
+ *
+ * @returns the apply URL, trimmed, or `''` when neither field carries one.
+ */
+export function resolveApplyUrl(job: unknown): string {
+  if (!job || typeof job !== 'object') return '';
+
+  const record = job as { applyUrl?: unknown; source?: unknown };
+
+  const direct = typeof record.applyUrl === 'string' ? record.applyUrl.trim() : '';
+  if (direct) return direct;
+
+  const source = record.source;
+  if (source && typeof source === 'object') {
+    const fromSource = (source as { applicationUrl?: unknown }).applicationUrl;
+    if (typeof fromSource === 'string') return fromSource.trim();
+  }
+
+  return '';
+}
 
 /**
  * Resolve the ATS that actually hosts the application form, from the apply URL.

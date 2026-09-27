@@ -875,7 +875,7 @@ is nothing left for the sanitiser to catch.)
 
 ---
 
-### SB-20 · The apply URL never reaches the detector — 42,338 jobs carry it in a field nothing reads · `OPEN — measured 2026-09-27`
+### SB-20 · The apply URL never reaches the detector — 42,338 jobs carry it in a field nothing reads · `FIXED IN TREE 2026-09-27`
 
 **The largest single cause of "most jobs come in as manual apply", and it is not an ATS problem.**
 
@@ -946,6 +946,64 @@ file already computes 250 lines earlier.
 **Full analysis, per-platform difficulty and the recommended sequence:**
 `docs/ats-coverage-and-adapter-scoping.md`.
 
+**Fix (in tree 2026-09-27).**
+
+1. **One resolver, one home.** `resolveApplyUrl(job)` in `lib/jobs/autoApplySupport.ts` returns
+   `applyUrl || source.applicationUrl`, trimmed. It replaces four hand-written copies: two identical
+   response mappings in `discover/route.ts` (`:682`, `:806`), the saved-jobs filter (`:927`, `:937`) —
+   which was the *only* place the fallback existed — and the enqueue route.
+2. **Resolved server-side.** `POST /api/jobs/auto-apply` no longer trusts the client's `jobUrl`. It loads
+   the listing by `jobId` (`findListingForApply`, native driver via `Job.findById(...).lean()`) and
+   resolves from that. The client value survives only as a fallback for jobs with no listing — manual and
+   browser-extension entries. **A client cannot be the authority on a routing decision**, and this is the
+   third appearance of that class.
+3. **Persisted, not just resolved.** The worker navigates to the *stored* `jobApplication.jobUrl`
+   (`processApplication.ts:176`), so the resolved URL is written on create. An existing application whose
+   `jobUrl` is empty and whose `atsType` is `'unknown'` is **repaired in place** on the next enqueue —
+   fill-in only, never overwriting a URL or downgrading a resolved ATS, so the 27 already-parked rows can
+   recover instead of staying parked forever.
+
+**Verified against the real corpus, with the real functions** (`.verify/check-apply-url-resolution.ts`,
+bundled with esbuild and run inside the app container against `MONGODB_URI`; read-only):
+
+| | |
+| --- | --- |
+| jobs iterated | **48,812** (all of them) |
+| resolved to `(none)` **before** | 44,313 |
+| resolved to `(none)` **after** | **9,182** |
+| documents whose answer changed | 35,131 |
+| **newly auto-applyable (the unlock)** | **9,481** — greenhouse 6,598 · lever 1,703 · ashby 1,099 · workable 81 |
+| **regressions** (already resolved, now different) | **0** |
+
+After the fix the distribution is workday 25,584 · greenhouse 10,869 · lever 1,825 · ashby 1,168 · indeed
+103 · workable 81. The unlock is **higher than the 8,055 arithmetic estimate** in the scoping doc, because
+the same empty-`applyUrl` defect also affected greenhouse/lever/ashby jobs from sources other than
+`feashliaa`.
+
+### SB-21 · `isAutoApplySupported()` threw on the object-shaped `source` · `FIXED IN TREE 2026-09-27`
+
+Found while fixing SB-20, in the same filter, and caused by the same field confusion.
+
+`isAutoApplySupported` / `isPlaywrightAutomatable` were typed `string | undefined | null` and did
+`value.trim()` with no runtime guard. But `discover/route.ts:919` calls them as
+`isAutoApplySupported(job.atsType || (job as any).source || '')` — and for a `feashliaa` job `atsType` is
+`null` while `source` is an **object**, so the object went into `.trim()` and threw a `TypeError`.
+
+**Why it was reachable:** `discover/route.ts` has two paths. The Mongo-filter path applies `easyApplyOnly`
+at the database level (`:611`), but the `retrieveCandidates` path (`:756`) has **no** such filter — its only
+`easyApplyOnly` handling is the in-memory filter at `:917`. A `feashliaa` job (`atsType: null`, `source`
+object) reaching that filter therefore threw, turning
+`GET /api/jobs/discover?easyApplyOnly=true` into a 500.
+
+**Fix.** Both predicates now take `unknown` and normalise through `normalizeAtsInput()`: a string is
+trimmed and lowercased; an object contributes its `primary` field — the same field the DB-level filter
+already matches on (`'source.primary': { $in: … }` at `:614`), so the two filters now agree; anything else
+is `''`. A yes/no predicate must not be able to fail an endpoint because a caller passed the wrong shape.
+
+**Root cause worth naming:** `Job.ts:301` declares `source` as `String` with a five-value enum, but the
+ingestion service stores an **object** there for 42,338 documents. That schema drift is what let both
+SB-20 and SB-21 hide — every consumer that trusted the declared type was wrong about the data.
+
 ---
 
 ## 7. Open questions for you
@@ -1012,6 +1070,7 @@ file already computes 250 lines earlier.
 | 2026-09-27 (final pass) | **Register worked end to end; nothing committed or deployed.** **SB-09** (dead `applyToAdzuna` deleted) and **SB-15** (`.gitignore` policy inverted; the "3 untracked" count corrected to 2) closed. **SB-08** fixed by the `reason`/`operatorReason` channel split across the state machine, `processApplication`, `applicationWorker` and `unifiedApplyService` — the live leak was `automationUnavailable()` interpolating a raw Playwright error, which the register had missed. **SB-07** fixed with a Mongo lease (`CronLock`) plus a documented fail-open path. **SB-06** swept: **86 sites / 46 files → 0**, after fixing the scanner's barrel-import blind spot (the first pass reported 44 and was wrong — the tool could not open the very file that was the known bug). **SB-02** verified by probe (401, not 503) rather than assumed. **SB-18** (daily-summary counted `statusHistory`, a path that never exists — now `appliedAt`) and **SB-19** (six discarded `countDocuments` per user, deleted) found and fixed along the way. Full suite: `670 passed | 5 failed`, exactly the documented pre-existing set. `tsc -p tsconfig.pipeline.json` clean. |
 | 2026-09-27 (shipped) | Committed `47d46c30` (66 files) and deployed by the operator. **§7 item 4 resolved — and this register's own earlier claim about it was wrong**: the `auto-apply` cron log was never quiet; it is a single-line file (no newlines), so `head`/`tail` both returned the whole file and the *first* timestamp was misread as the last. The cron fires every 5 min (last `17:05:01Z`), and **all 264 runs have `processedCount: 0`** — it is an unexercised backstop, which is the real risk. |
 | 2026-09-27 (coverage pass) | **SB-20 opened** — the apply URL never reaches `detectAtsFromUrl` for 42,338 jobs (87 % of the corpus), which is the largest single cause of manual-apply parking and is **not** an ATS problem. Measured the real ATS mix behind `source.applicationUrl`: workday 25,584 · icims 4,442 · paylocity 2,524 · bamboohr 1,733 · greenhouse 5,406 · lever 1,652 · ashby 997. **§7 items 5–7 answered**: the `Mixed` normalisation is **withdrawn** (it fights the writers — see the migration plan §10), Workday is a **product decision** at 52 % of the corpus, and iCIMS turns out to be the biggest unmentioned platform. Full scoping in `docs/ats-coverage-and-adapter-scoping.md`. Also confirmed SB-01b on the running container: the worker still executes `029e44d7f146` (started `15:32:52Z`) with **no `/app/dist/worker.mjs`**, while the app image is `36ace7eb4437` (22:47 IST). |
+| 2026-09-27 (SB-20 fixed) | **SB-20 and SB-21 fixed in tree.** `resolveApplyUrl()` added as the single resolver (`lib/jobs/autoApplySupport.ts`), replacing four hand-written copies; `POST /api/jobs/auto-apply` now resolves from the listing server-side instead of trusting the client, persists the URL (the worker navigates to `jobApplication.jobUrl`), and **repairs** existing rows still parked as `unknown`. Verified against all 48,812 production documents with the real functions: **9,481 jobs newly auto-applyable, 0 regressions.** **SB-21 found in the same filter** — `isAutoApplySupported()` called `.trim()` on the object-shaped `source` and threw a `TypeError`, making `GET /api/jobs/discover?easyApplyOnly=true` a 500 on the `retrieveCandidates` path (which has no DB-level `easyApplyOnly` filter). Both predicates are now total. Root cause named: **`Job.ts:301` declares `source` as `String` while 42,338 documents store an object.** |
 
 ---
 
@@ -1030,3 +1089,17 @@ or most of the swept route files, so many of the files changed in this pass were
 targeted config, and the repo-wide `tsconfig.json` run dies at exit 137 in this environment. Several of the
 swept route files also carry `// @ts-nocheck`. The edits are mechanical (`{ id }` → `{ id: mixedIdFilter(id) }`),
 which limits the risk, but this is the honest state of the verification.
+
+---
+
+## Appendix — verification state after the SB-20 / SB-21 fix
+
+| Check | Result |
+| --- | --- |
+| `npx vitest run src/lib/jobs/autoApplySupport.test.ts` | `10 passed` (6 new: the object-`source` guard, the resolver's precedence/fallback/degenerate cases) |
+| `npx vitest run` (full) | `676 passed | 5 failed | 31 skipped` — 6 more passing than the previous run, failures exactly the documented pre-existing set (`applicationWorker` correlation ×2, `pdfService`/`docxService` import ×3) |
+| `npx tsc -p tsconfig.pipeline.json --noEmit` | exit 0, no output — and **all four changed files are covered by that config** (`src/app/api/jobs/**/*.ts`, `src/lib/jobs/autoApplySupport.ts`) |
+| `.verify/check-apply-url-resolution.ts` vs production | **48,812 jobs iterated · 9,481 newly auto-applyable · 0 regressions** |
+| `.verify/probe-worker-network.mjs` (inside the worker container) | `172.19.0.1:4001` → 200 · `172.17.0.1:4001` → 200 · **`10.0.1.1:4001` → FAIL** |
+| Committed | `2a32380c` (analysis) + this pass |
+| Deployed | **not yet** — app tier is still `36ace7eb4437` (`47d46c30`); the worker is still `029e44d7f146` |
