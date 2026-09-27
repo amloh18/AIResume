@@ -58,7 +58,9 @@ import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { formatResetCountdown } from '@/lib/utils/reset-countdown';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import { JobLiveStatusCard } from '@/components/jobs/JobLiveStatusCard';
-import { CHIP_INLINE, CHIP_TONES } from '@/components/ui/chip-styles';
+import { CHIP_INLINE, CHIP_TONES, chipTone } from '@/components/ui/chip-styles';
+import { useApplicationProgress } from '@/hooks/useApplicationProgress';
+import { LiveProgressBar } from '@/components/applications/LiveProgressBar';
 import { formatQueueEta } from '@/lib/utils/queue-eta';
 import type { BadgeActionId } from '@/lib/utils/application-status-badge';
 
@@ -425,6 +427,17 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const appliedOpenContextRef = useRef<string | null>(null);
 
   const jobId = job.id || job._id;
+
+  /*
+    Live progress from the one shared cache. The sidebar used to answer "where
+    is this application?" with a five-node BUILD→MATCH→TAILOR→SUBMIT→TRACK
+    stepper — every step at once, so a running application and a stalled one
+    looked the same. It now shows the single step that is actually happening,
+    with its substeps, and it is the same data the feed cards and the tracker
+    row are rendering.
+  */
+  const { getForJob } = useApplicationProgress();
+  const liveProgress = getForJob(jobId);
 
   // Email connection status
   const [isEmailConnected, setIsEmailConnected] = useState(false);
@@ -1562,6 +1575,13 @@ ${userName}`
           ? ` Estimated completion ${formatQueueEta(data.etaSeconds)}.`
           : '';
       toast.success(`${data.message || 'Done'}${eta}`);
+      /*
+        Broadcast the state change so the shared progress cache refetches now,
+        rather than waiting up to one poll interval. `useApplicationProgress`
+        listens for this event, so approving here updates the tracker row, the
+        feed card and this sidebar together.
+      */
+      window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: applicationId } }));
       onRefresh?.();
       if (actionId === 'dismiss') {
         const url = (job as any).jobUrl || (job as any).applyUrl || (job as any).sourceUrl;
@@ -3742,50 +3762,47 @@ ${userName}`
                       </div>
                     )}
 
-                    {/* Application Flow — BUILD → MATCH → TAILOR → SUBMIT → TRACK */}
+                    {/* Live Progress — the CURRENT step, not the whole pipeline */}
                     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">
-                        Application Flow
-                      </span>
-                      <ol className="flex items-start gap-2">
-                        {applicationFlow.steps.map((step) => (
-                          <li key={step.key} className="flex-1 min-w-0" title={step.label}>
-                            <div
-                              className={`h-1.5 rounded-full transition-colors ${
-                                step.status === 'done'
-                                  ? 'bg-emerald-500'
-                                  : step.status === 'current'
-                                    ? step.tone === 'rose'
-                                      ? 'bg-rose-500'
-                                      : step.tone === 'amber'
-                                        ? 'bg-amber-500'
-                                        : step.tone === 'blue'
-                                          ? 'bg-blue-500'
-                                          : step.tone === 'orange'
-                                            ? 'bg-orange-500'
-                                            : step.tone === 'violet'
-                                              ? 'bg-violet-500'
-                                              : 'bg-[#013f2e]'
-                                    : 'bg-gray-200 dark:bg-white/10'
-                              }`}
-                            />
-                            <p
-                              className={`mt-1 text-[9px] font-bold uppercase tracking-wide truncate ${
-                                step.status === 'done'
-                                  ? 'text-emerald-600 dark:text-emerald-400'
-                                  : step.status === 'current'
-                                    ? 'text-gray-900 dark:text-white'
-                                    : 'text-gray-400 dark:text-gray-500'
-                              }`}
-                            >
-                              {step.label}
-                            </p>
-                          </li>
-                        ))}
-                      </ol>
-                      <p className="mt-2.5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                        {applicationFlow.note}
-                      </p>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          {liveProgress && liveProgress.state !== 'idle' ? 'Live Progress' : 'Application Flow'}
+                        </span>
+                        {liveProgress && liveProgress.state !== 'idle' && (
+                          <span
+                            className={`${chipTone(
+                              liveProgress.state === 'running'
+                                ? 'blue'
+                                : liveProgress.state === 'waiting_user'
+                                  ? 'amber'
+                                  : liveProgress.state === 'failed'
+                                    ? 'rose'
+                                    : 'emerald',
+                              'sm',
+                            )} font-bold`}
+                          >
+                            {liveProgress.phaseLabel}
+                          </span>
+                        )}
+                      </div>
+
+                      {liveProgress && liveProgress.state !== 'idle' ? (
+                        <LiveProgressBar
+                          progress={liveProgress}
+                          variant="full"
+                          onAction={(actionId) => void handleAutomationAction(actionId as BadgeActionId)}
+                        />
+                      ) : (
+                        <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                          {applicationFlow.note}
+                        </p>
+                      )}
+
+                      {liveProgress && liveProgress.state !== 'idle' && (
+                        <p className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                          {applicationFlow.note}
+                        </p>
+                      )}
                     </div>
 
                     {/* Next Action */}

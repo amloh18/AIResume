@@ -39,6 +39,8 @@ import {
 } from "@/lib/utils/journey-documents";
 import { useJobLiveStatusStore } from "@/lib/stores/jobLiveStatusStore";
 import { JobLiveStatusCard } from "@/components/jobs/JobLiveStatusCard";
+import { useApplicationProgress } from '@/hooks/useApplicationProgress';
+import { LiveProgressBar } from '@/components/applications/LiveProgressBar';
 import { getJobCardColorClass } from "@/lib/config/job-constants";
 import { metricTone, CHIP_TONES, chipTone } from "@/components/ui/chip-styles";
 import JobStatusActionChip from "@/components/jobs/JobStatusActionChip";
@@ -922,6 +924,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
   // journey poll, which runs before this point in the render body.
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
   const { clearStatus } = useJobLiveStatusStore();
+  // Server-derived progress, from the same shared cache the list row and the
+  // journey sidebar read — so a card and its table row never disagree.
+  const { getForJob } = useApplicationProgress();
+  const liveProgress = getForJob(jobId);
   const cardColorClass = getJobCardColorClass(colorIndex, jobId);
 
   return (
@@ -1007,7 +1013,15 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         </div>
 
         {/* Live Status OR Stage Specific Content */}
-        {liveStatus ? (
+        {liveProgress?.isActive ? (
+          <div className="mt-2.5">
+            <LiveProgressBar
+              progress={liveProgress}
+              variant="compact"
+              onAction={(actionId) => onAutomationAction?.(job, actionId)}
+            />
+          </div>
+        ) : liveStatus ? (
           <div className="mt-2.5">
             <JobLiveStatusCard
               status={liveStatus}

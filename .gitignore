@@ -59,8 +59,14 @@ Thumbs.db
 # Project documentation is version-controlled (AGENTS.md §53/54 requires maintaining
 # docs/application-automation/). The blanket *.md ignore previously swallowed the entire
 # docs/ tree — 54 documents were never committed because of it.
+#
+# ⚠️ The blanket rule was never actually fixed: only AGENTS.md is excepted, so new root-level
+# docs are still dropped silently (measured 2026-09-26: 3 files under docs/ are untracked).
+# See server_bugs.md SB-15. Add an explicit exception for each doc that must be committed.
 *.md
 !AGENTS.md
+!server_bugs.md
+!refactor_audit.md
 
 # ── Logs ────────────────────────────────────────────────────────────────
 npm-debug.log*

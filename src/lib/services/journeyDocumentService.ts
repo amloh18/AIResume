@@ -32,6 +32,7 @@ import {
   getTemplateById,
   resolveAtsSafeTemplateId,
 } from '@/lib/templates/template-utils';
+import { reportApplicationProgress } from '@/lib/applications/progress-reporter';
 
 export interface CreateJourneyDocumentsResult {
   success: boolean;
@@ -197,6 +198,26 @@ export async function createJourneyDocuments(
         error: 'Job not found'
       };
     }
+
+    /*
+      Announce the first real step of staging.
+
+      `staging_cv_generating` has been a declared value of
+      `JobApplication.internalStatus` since the state machine was written, and
+      nothing ever set it — so from the user's side staging was one opaque jump
+      from "saved" to "documents ready", and the progress bar had nothing to
+      show. Reporting here is what turns the document phase into visible
+      substeps (Tailoring your CV → Writing your cover letter → ATS check).
+      Best-effort: the reporter never throws.
+    */
+    await reportApplicationProgress({
+      applicationId: String(currentJourney.jobId),
+      userId,
+      internalStatus: 'staging_cv_generating',
+      reason: `Tailoring your CV for ${(job as any).jobTitle || 'this role'}…`,
+      source: 'system',
+      metadata: { journeyId: String(currentJourney._id), tailored: shouldTailorDocuments },
+    });
 
     let cvId: string | null = currentJourney.cvId;
     let coverLetterId: string | null = currentJourney.coverLetterId;
@@ -580,6 +601,16 @@ export async function createJourneyDocuments(
     }
 
     if (!coverLetterId) {
+      // Second staging substep — see the note on the CV report above.
+      await reportApplicationProgress({
+        applicationId: String(currentJourney.jobId),
+        userId,
+        internalStatus: 'staging_cover_letter_generating',
+        reason: `Writing your cover letter for ${(job as any).company || 'this company'}…`,
+        source: 'system',
+        metadata: { journeyId: String(currentJourney._id) },
+      });
+
       // CRITICAL: Ensure CV exists and has data before generating cover letter
       if (!cvId) {
         log.error('❌ Journey Document Service - Cannot create cover letter: CV must be created first');
@@ -813,6 +844,25 @@ Thank you for your time and consideration. I would welcome the opportunity to di
     }
 
     log.info('✅ Journey Document Service - Documents created successfully for journey:', { journeyId });
+
+    /*
+      Staging is done. `staging_ready` is the value the "Ready to apply" state
+      reads — without it the row kept whatever status the run happened to leave
+      behind, so a fully prepared application could still render as "Saved".
+    */
+    await reportApplicationProgress({
+      applicationId: String(currentJourney.jobId),
+      userId,
+      internalStatus: 'staging_ready',
+      reason: 'Your tailored documents are ready.',
+      source: 'system',
+      metadata: {
+        journeyId: String(currentJourney._id),
+        cvId: savedJourney.cvId,
+        coverLetterId: savedJourney.coverLetterId,
+        fallbackCreated: usedFallbackContent,
+      },
+    });
 
     // Send notification that documents are ready
     try {

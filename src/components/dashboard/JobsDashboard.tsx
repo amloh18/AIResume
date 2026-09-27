@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useApplyProgress } from '@/hooks/useApplyProgress';
+import { useApplicationProgress } from '@/hooks/useApplicationProgress';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { ToastAction } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/switch';
@@ -302,6 +303,8 @@ export default function JobsDashboard() {
   const { updateProgress } = useNotifications();
   const queryClient = useQueryClient();
   const applyProgress = useApplyProgress();
+  // One shared cache for live progress — see useApplicationProgress.
+  const { getForJob } = useApplicationProgress();
   const { plan } = useEntitlements();
   const isPaidUser = plan !== 'free';
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
@@ -1726,6 +1729,14 @@ export default function JobsDashboard() {
                           });
                         }}
                         onApply={() => handleApplyJob(job)}
+                        /*
+                          Live progress from the shared cache. Keyed by the
+                          resolved application id when we have one, falling back
+                          to the listing id (which is what `JobApplication.jobId`
+                          stores for saved jobs) — `getForJob` checks both key
+                          spaces, so either resolves.
+                        */
+                        progress={getForJob(resolveApplicationId(job) || job._id) ?? null}
                       />
                       );
                     })}

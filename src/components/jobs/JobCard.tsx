@@ -6,7 +6,8 @@ import type { JobListing } from '@/types/automation-schema';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { timeAgo } from '@/lib/utils/format-utils';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
-import { JobCardProgressBar } from '@/components/jobs/JobCardProgressBar';
+import { LiveProgressBar } from '@/components/applications/LiveProgressBar';
+import type { ApplicationProgress } from '@/lib/applications/live-progress';
 import { getCurrencySymbol, getJobCardColorClass } from '@/lib/config/job-constants';
 import { CHIP_INLINE, CHIP_TONES, metricTone, type ChipTone } from '@/components/ui/chip-styles';
 import {
@@ -72,6 +73,15 @@ export interface JobCardProps {
   onOpenDocuments?: () => void;
   /** If true, job was auto-saved during apply — hide the explicit save button. */
   savedViaApply?: boolean;
+  /**
+   * Server-derived live progress for this job, when it has an application
+   * moving. Supplied by the caller from `useApplicationProgress` — the card
+   * stays a pure renderer (the Explore grid mounts hundreds of these).
+   *
+   * This replaces the card's old client-only timeline, which only ever knew
+   * about steps the *browser* performed and fabricated its percentages.
+   */
+  progress?: ApplicationProgress | null;
 }
 
 /**
@@ -215,6 +225,7 @@ export function JobCard({
   onOpenTracker,
   onOpenDocuments,
   savedViaApply = false,
+  progress = null,
 }: JobCardProps) {
   const jobId = String(job._id || job.id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
@@ -349,19 +360,33 @@ export function JobCard({
           </div>
         </div>
 
-        {/* Live Status: Inline Progress Bar */}
-        {liveStatus ? (
+        {/* Live Status: the current step + a progress bar, from the server */}
+        {progress ? (
           <div className="mt-auto pt-3 border-t border-black/8 dark:border-white/5">
-            <JobCardProgressBar
-              currentStep={liveStatus.step}
-              progress={liveStatus.progress}
-              success={liveStatus.success}
-              description={liveStatus.description}
-              jobTitle={liveStatus.jobTitle}
-              company={liveStatus.company}
-              jobId={jobId}
-              autoCloseSeconds={liveStatus.autoCloseSeconds}
-              autoClosePaused={liveStatus.autoClosePaused}
+            <LiveProgressBar progress={progress} variant="compact" />
+          </div>
+        ) : liveStatus ? (
+          /*
+            The click has landed but the server row does not exist yet. Show an
+            indeterminate bar rather than a number: the previous card invented
+            10/35/60/85 with `setTimeout`, so the bar advanced on its own timer
+            and then sat at 100% while the worker was still running.
+          */
+          <div className="mt-auto pt-3 border-t border-black/8 dark:border-white/5">
+            <LiveProgressBar
+              progress={{
+                applicationId: jobId,
+                phase: 'queued',
+                phaseLabel: 'Starting',
+                liveText: liveStatus.description || liveStatus.title || 'Starting…',
+                percent: 0,
+                state: 'running',
+                substeps: [],
+                isActive: true,
+                updatedAt: new Date().toISOString(),
+              }}
+              variant="compact"
+              indeterminate
             />
           </div>
         ) : (
