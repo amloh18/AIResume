@@ -33,6 +33,7 @@
     "src/components/dashboard/jobs/JobSidebar.tsx",
     "src/components/dashboard/redesigned/TopJobMatchesSection.tsx",
     "src/app/api/admin/vps-setup/route.ts",
+    "src/app/api/health/route.ts",
     "src/components/admin/job-intelligence/VpsSetupPanel.tsx"
   ],
   "exclude": ["node_modules", "scripts", "scratch"]

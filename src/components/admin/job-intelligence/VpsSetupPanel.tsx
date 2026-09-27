@@ -52,10 +52,12 @@ interface VpsStatus {
   workerLoop?: {
     configured: boolean;
     role: string | null;
-    /** Build commit the worker image reports, or `'unknown'`. */
+    /** Build commit the worker reports — always `'unknown'` in this deployment; kept as plumbing. */
     commit: string | null;
-    /** `true` when the worker's commit differs from this web container's. `null` = not comparable. */
-    commitStale: boolean | null;
+    /** When the worker's image was built (UTC ISO), or `'unknown'`. */
+    buildTime: string | null;
+    /** `true` when the worker's image is older than this web container's. `null` = not comparable. */
+    buildStale: boolean | null;
     uptimeSeconds: number | null;
     memoryRssMb: number | null;
     loops: Record<string, unknown> | null;
@@ -425,10 +427,10 @@ export default function VpsSetupPanel() {
               </h3>
               {status.workerLoop?.configured ? (
                 <div className="flex items-center gap-2">
-                  {status.workerLoop.commitStale === true && (
+                  {status.workerLoop.buildStale === true && (
                     <span
                       className={`${CHIP_INLINE} ${CHIP_TONES_DARK.orange} uppercase tracking-wider`}
-                      title="The worker is answering, but from an older image than this web container. Redeploy the worker service."
+                      title="The worker is answering, but its image was built well before this web container's. Redeploy the worker service."
                     >
                       Stale image
                     </span>
@@ -447,10 +449,10 @@ export default function VpsSetupPanel() {
             {status.workerLoop?.configured ? (
               <div className="text-xs text-white/50 font-mono space-y-1">
                 <div>Role: <span className="text-white/70">{status.workerLoop.role}</span></div>
-                <div>Commit: <span className="text-white/70">{status.workerLoop.commit ?? '—'}</span></div>
+                <div>Built: <span className="text-white/70">{status.workerLoop.buildTime ?? '—'}</span></div>
                 <div>Uptime: <span className="text-white/70">{uptimeLabel(status.workerLoop.uptimeSeconds)}</span></div>
                 <div>Memory: <span className="text-white/70">{status.workerLoop.memoryRssMb ?? '—'} MB RSS</span></div>
-                {status.workerLoop.commitStale === true && (
+                {status.workerLoop.buildStale === true && (
                   <div className="text-orange-400/80 pt-1">
                     This worker is running an older image than the web container. Redeploy the worker service to bring it up to date.
                   </div>

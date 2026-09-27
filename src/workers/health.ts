@@ -9,6 +9,7 @@
  * Next.js route handler, so it must not pull in mongoose or the Next runtime.
  */
 
+import { readFileSync } from 'fs';
 import type { WorkerEnv, WorkerPlan, WorkerRole } from './roles';
 
 export interface WorkerHealthPayload {
@@ -16,14 +17,22 @@ export interface WorkerHealthPayload {
   role: WorkerRole;
   pid: number;
   /**
-   * The commit the worker image was built from, or `'unknown'`.
+   * The commit the image was built from, or `'unknown'`.
    *
-   * This is the only way to tell a *stale* worker from a healthy one. The worker runs its own image
-   * and Dokploy does not redeploy it with the web tier, so "the worker is up" and "the worker is
-   * running the commit you just shipped" are different questions. `/api/health` answers the second
-   * for the web process; without this field the panel could not answer it for the worker at all.
+   * ⚠️ In practice this is **always `'unknown'`** in this deployment: it only reports a value if
+   * something *supplies* `GIT_COMMIT` at build time, and nothing does — Dokploy exposes no build arg
+   * for it, and `.dockerignore` excludes `.git`, so it cannot be derived either. It is kept as
+   * plumbing for the day a CI supplies one. Use {@link WorkerHealthPayload.buildTime} for the
+   * staleness question.
    */
   commit: string;
+  /**
+   * UTC timestamp of when this image was built, or `'unknown'`.
+   *
+   * This is the field that answers "is this container older than that one?". It is stamped by the
+   * Dockerfile at build time, so it needs nothing passed in and is never empty.
+   */
+  buildTime: string;
   startedAt: string;
   uptimeSeconds: number;
   memoryRssMb: number;
@@ -40,16 +49,32 @@ export interface BuildHealthPayloadInput {
   runtime?: { pid: number; memoryUsage: () => { rss: number } };
   /** Defaults to {@link resolveBuildCommit}. Pass explicitly to make a test independent of the env. */
   commit?: string;
+  /** Defaults to {@link resolveBuildTime}. */
+  buildTime?: string;
 }
 
 /**
- * The commit baked into this image at build time.
+ * The commit baked into this image at build time, if anything supplied one.
  *
- * Mirrors `/api/health`, which reads the same two variables — `GIT_COMMIT` is set by the Dockerfile
- * from the build arg, `SOURCE_COMMIT` is the fallback some platforms inject instead.
+ * Mirrors `/api/health`, which reads the same two variables. Expect `'unknown'` here — see the note on
+ * {@link WorkerHealthPayload.commit}.
  */
 export function resolveBuildCommit(env: Record<string, string | undefined> = process.env): string {
   return env.GIT_COMMIT || env.SOURCE_COMMIT || 'unknown';
+}
+
+/**
+ * Read the build stamp the Dockerfile wrote at build time.
+ *
+ * A file rather than an env var on purpose: `ENV` cannot run `date`, and an `ARG` would have to be
+ * supplied by the build platform — which is exactly what makes `commit` useless here.
+ */
+export function resolveBuildTime(filePath = '/app/.build-time'): string {
+  try {
+    return readFileSync(filePath, 'utf8').trim() || 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 export function buildWorkerHealthPayload({
@@ -60,12 +85,14 @@ export function buildWorkerHealthPayload({
   now = new Date(),
   runtime = process,
   commit = resolveBuildCommit(),
+  buildTime = resolveBuildTime(),
 }: BuildHealthPayloadInput): WorkerHealthPayload {
   return {
     ok: true,
     role,
     pid: runtime.pid,
     commit,
+    buildTime,
     startedAt: startedAt.toISOString(),
     uptimeSeconds: Math.max(0, Math.round((now.getTime() - startedAt.getTime()) / 1000)),
     memoryRssMb: Math.round(runtime.memoryUsage().rss / (1024 * 1024)),

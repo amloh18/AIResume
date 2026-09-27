@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
+import { writeFileSync, rmSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import {
   buildWorkerHealthPayload,
   getWorkerHealthUrl,
   probeWorkerHealth,
   resolveBuildCommit,
+  resolveBuildTime,
 } from './health';
 import { getWorkerPlan } from './roles';
 
@@ -17,12 +21,14 @@ describe('buildWorkerHealthPayload', () => {
       loops: { email: { isRunning: true } },
       runtime: { pid: 4242, memoryUsage: () => ({ rss: 209 * 1024 * 1024 }) },
       commit: 'deadbee',
+      buildTime: '2026-09-27T10:00:00Z',
     });
 
     expect(payload.ok).toBe(true);
     expect(payload.role).toBe('worker');
     expect(payload.pid).toBe(4242);
     expect(payload.commit).toBe('deadbee');
+    expect(payload.buildTime).toBe('2026-09-27T10:00:00Z');
     expect(payload.startedAt).toBe('2026-09-21T10:00:00.000Z');
     expect(payload.uptimeSeconds).toBe(125);
     expect(payload.memoryRssMb).toBe(209);
@@ -70,6 +76,34 @@ describe('resolveBuildCommit', () => {
     // Never empty: an unbuilt image must read as "unknown", not as a blank that a UI hides.
     expect(payload.commit).toBe(resolveBuildCommit());
     expect(payload.commit).not.toBe('');
+  });
+});
+
+describe('resolveBuildTime', () => {
+  it('reads the stamp the Dockerfile wrote at build time', () => {
+    const file = join(tmpdir(), `build-time-${process.pid}.txt`);
+    writeFileSync(file, '2026-09-27T10:00:00Z\n');
+    try {
+      expect(resolveBuildTime(file)).toBe('2026-09-27T10:00:00Z');
+    } finally {
+      rmSync(file, { force: true });
+    }
+  });
+
+  it('reports unknown — never an empty string — when the stamp is absent', () => {
+    // The image always has the file, but a local `next dev` does not. A blank would let a UI render
+    // nothing where it should say "we don't know".
+    expect(resolveBuildTime(join(tmpdir(), 'definitely-not-here/.build-time'))).toBe('unknown');
+  });
+
+  it('treats a blank stamp as unknown', () => {
+    const file = join(tmpdir(), `build-time-blank-${process.pid}.txt`);
+    writeFileSync(file, '\n   \n');
+    try {
+      expect(resolveBuildTime(file)).toBe('unknown');
+    } finally {
+      rmSync(file, { force: true });
+    }
   });
 });
 

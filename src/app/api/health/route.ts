@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { validateEnvironment } from '@/lib/env-validation';
 import { resolveWorkerRole, getWorkerPlan, getEnabledLoops } from '@/workers/roles';
+import { resolveBuildTime } from '@/workers/health';
 
 /**
  * Health endpoint.
@@ -172,11 +173,21 @@ async function checkExternalServices(): Promise<Record<string, DependencyResult>
   return results;
 }
 
-/** Build SHA — set at image build time so an operator can tell exactly what is running. */
-function getBuildInfo(): { commit: string; version: string } {
+/**
+ * Build identity — so an operator can tell exactly what is running.
+ *
+ * ⚠️ `commit` has **always** been `'unknown'` in this deployment, and still is. It only reports a value
+ * if something supplies `GIT_COMMIT` at build time; Dokploy exposes no build arg for it and
+ * `.dockerignore` excludes `.git`, so it cannot be derived either. A field that is permanently
+ * "unknown" reads as a working feature, which is why `buildTime` exists beside it: the Dockerfile
+ * stamps it at build time, so it needs nothing passed in and is what the admin panel actually compares
+ * against the worker's.
+ */
+function getBuildInfo(): { commit: string; version: string; buildTime: string } {
   return {
     commit: process.env.GIT_COMMIT || process.env.SOURCE_COMMIT || 'unknown',
     version: process.env.npm_package_version || process.env.npm_package_version || '1.0.0',
+    buildTime: resolveBuildTime(),
   };
 }
 
