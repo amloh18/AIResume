@@ -52,11 +52,23 @@ RUN npm ci --legacy-peer-deps
 # belt-and-braces against any future silent skip.
 RUN node -e "const req=['next','react','mongoose','mammoth','tesseract.js'];const missing=req.filter(p=>{try{require.resolve(p);return false}catch{return true}});if(missing.length){console.error('FATAL: required dependencies missing after npm ci: '+missing.join(', '));process.exit(1)}console.log('OK required dependencies present: '+req.join(', '))"
 
-# ── builder ────────────────────────────────────────────────────────────────────
-FROM base AS builder
+# ── source ─────────────────────────────────────────────────────────────────────
+# node_modules plus the working tree, with nothing built from them. `builder` and `worker-bundle`
+# are now siblings that both start here.
+#
+# `worker-bundle` used to be `FROM builder`, and the `worker` target copies only `node_modules`,
+# `package.json` and `dist/` — never `.next`. So every worker image paid for the full Next.js build
+# and then discarded it. That was merely wasteful while one Dockerfile produced one image, but
+# Dokploy runs with `cleanCache = t`, so every build is cold and two images share nothing: a second
+# Dokploy application for the worker would have run the 4 GB-heap Next.js build twice per deploy, on
+# a 4-core / 7 GB box. Splitting the stage is what makes that second application cheap.
+FROM base AS source
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# ── builder ────────────────────────────────────────────────────────────────────
+FROM source AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -72,7 +84,11 @@ RUN npm run build
 # esbuild bundles src/workers/entry.ts into dist/worker.mjs. The build script verifies that every
 # external specifier in the output resolves under plain Node, so an unresolvable import fails the
 # image build instead of the deploy.
-FROM builder AS worker-bundle
+FROM source AS worker-bundle
+# Re-declared because this stage no longer inherits `builder`'s ENV block, and the bundle must be
+# built for production. `npm run build:worker` is esbuild over `src/workers/entry.ts` and needs
+# neither `.next` nor the Next.js runtime.
+ENV NODE_ENV=production
 RUN npm run build:worker
 
 # ── worker ─────────────────────────────────────────────────────────────────────
@@ -87,11 +103,19 @@ ENV NODE_ENV=production
 ENV WORKER_ROLE=worker
 ENV WORKER_HEALTH_PORT=8791
 
+# Same version truth as `builder`, for the same reason: `/health` on :8791 reports it, so an operator
+# can tell a *stale* worker (old commit, still answering) from a current one. Without it the only
+# signal that the worker was not redeployed is a missing feature or a behaviour change.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+# Everything comes from `source`, not `builder` — so Docker never schedules the Next.js build for
+# this target. That is the whole point of the split above.
+COPY --from=source --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=source --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=worker-bundle --chown=nextjs:nodejs /app/dist ./dist
 
 USER nextjs
