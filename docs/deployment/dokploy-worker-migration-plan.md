@@ -159,7 +159,7 @@ removes its only real cost.
 | # | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- | --- |
 | 1 | **Env vars must be re-entered by hand.** Dokploy stores `env` **encrypted at rest** (`enc:v1:…`), so the row cannot be cloned by copying it — a hand-written SQL row would carry an unreadable env. A missing variable means a loop silently does not start. | High (it's manual) | High | Create through the Dokploy UI so it encrypts properly. Then **diff the running container's env against the old service's** before removing the old one. The worker logs every loop it starts, and exits non-zero if none start — so a missing var is loud, not silent. |
-| 2 | **Host-service reachability.** The worker talks to Stalwart/JMAP, Playwright (`172.17.0.1:9222`), the ingestion gateway (`172.19.0.1:8790`), Ollama (`172.19.0.1:11434`) via host bridge addresses. A Dokploy-created container lands on `dokploy-network` like the current one, so these *should* behave identically — but this is the one thing I cannot fully predict. | Low–Medium | High (auto-apply stops) | Before removing the old worker, exec into the **new** container and `curl`/`nc` each address. |
+| 2 | **Host-service reachability.** The worker talks to Stalwart/JMAP, Playwright (`172.17.0.1:9222`), the ingestion gateway (`172.19.0.1:8790`), Ollama (`172.19.0.1:11434`) via host bridge addresses. | **Resolved — measured** | — | **No longer a prediction.** Both the app and the worker are already on `dokploy-network`, and probing from inside the worker container showed the host services are reachable at `172.19.0.1` and `172.17.0.1` **from that network**. A new Dokploy worker lands on the same network and reaches the same addresses. **But the network gateway `10.0.1.1` does *not* work** — do not substitute it. Full evidence in §11.3. |
 | 3 | **Double-draining during cutover** | High (by construction) | Low | Designed for: `claimNextApplication` is an atomic `findOneAndUpdate`; emails carry idempotency keys. Remove the old service promptly anyway. |
 | 4 | **Build resource exhaustion** — two cold builds, one of which wants a 4 GB heap, on 4 cores / 7 GB with ~3 GB free and disk at 84% | Medium | High (OOM can take down the running app) | §2 removes the Next.js build from the worker entirely. Build the worker app **once manually** and watch `free`/`df` before enabling `autoDeploy` on it. |
 | 5 | **Disk growth.** 17 GB free, 84% used, images never pruned, `cleanCache=t`. Two images per deploy. | Medium | Medium | `docker image prune` on a schedule, or keep `rollbackActive` off and prune old tags. Worth monitoring regardless of this plan. |
@@ -330,3 +330,97 @@ That is the same class of failure the whole investigation started from.
    reachable — it is the actual fix, not a stopgap.
 4. **Run the scanner in CI.** `.verify/scan-mixed-id-queries.mjs` reporting `0` is the invariant that keeps
    this from regressing — and remember it was itself blind to barrel imports until 2026-09-27.
+
+---
+
+## 11. The admin panel — what it depends on, and what the move actually changes
+
+You asked to be sure the worker and microservices shown in the admin panel keep working when the
+containers move. Measured 2026-09-27.
+
+### 11.1 The panel probes three separate things, all by env var
+
+`GET /api/admin/vps-setup` (`src/app/api/admin/vps-setup/route.ts:325-329`) probes three remote
+services in parallel:
+
+| Panel section | Env var | What it actually is | In this migration? |
+| --- | --- | --- | --- |
+| `workerLoop` | `WORKER_HEALTH_URL` | the app's own in-process loops — `buildairesume-worker-daemon` today | **yes — this is the thing being moved** |
+| `ingestionService` | `INGESTION_SERVICE_URL` | the ingestion microservice (SmartRecruiters/Workable/Recruitee/Personio/BambooHR) | **Phase 2** |
+| `workerGateway` | `INGESTION_WORKER_URL` | the Python JobSpy/LinkedIn gateway | no — it stays on the host |
+
+All three are read from `process.env` **at request time**, so the panel follows the env vars, not the
+container topology. Nothing is keyed to a container name or a Swarm service id.
+
+### 11.2 `WORKER_HEALTH_URL` is not set anywhere today
+
+```
+buildairesume-app-vmvp35      WORKER_HEALTH_URL: (unset)
+buildairesume-worker-daemon   WORKER_HEALTH_URL: (unset)
+```
+
+So `probeWorkerHealth(getWorkerHealthUrl())` returns `null` and the route answers
+`workerLoop: { configured: false, … }` — and the code is explicit (`route.ts:366-367`) that this means
+**"unknown", not "unhealthy"**.
+
+**The panel cannot see the worker today, and the migration does not change that either way.** It is,
+however, the first opportunity to fix it: a Dokploy app on `dokploy-network` is addressable by its
+service name, so `WORKER_HEALTH_URL=http://<new-worker-service>:8791` would populate that section for
+the first time. Worth doing as part of the cutover.
+
+### 11.3 ⚠️ The network finding — and it inverts the obvious "tidy-up"
+
+Both the app and the worker are already on `dokploy-network` (`3qw5bnsbfhm9jkaq3u253wesb`,
+`10.0.1.0/24`, gateway `10.0.1.1`). But they reach the host services through **different** addresses:
+
+| Service | `INGESTION_SERVICE_URL` | `INGESTION_WORKER_URL` |
+| --- | --- | --- |
+| app | `http://172.17.0.1:4001` | `http://172.17.0.1:8790` |
+| worker | `http://172.19.0.1:4001` | `http://172.19.0.1:8790` |
+
+`172.17.0.1` is the default `bridge` gateway; `172.19.0.1` is `server-mgmt-network`'s. Both host
+services bind `0.0.0.0` (`:4001` ingestion, `:8790` the python3 gateway).
+
+Probed **from inside the worker container** (`.verify/probe-worker-network.mjs`):
+
+| Address | Result |
+| --- | --- |
+| `10.0.1.1:4001` — the dokploy-network gateway | **FAIL** (`fetch failed`) |
+| `10.0.1.1:8790` | **FAIL** |
+| `172.19.0.1:4001` | **OK 200** `{"status":"healthy",…}` |
+| `172.17.0.1:4001` | **OK 200** |
+| `172.19.0.1:8790` | **OK 401** — reachable; needs the bearer token, which `probeWorkerGateway` sends |
+
+**Two conclusions, both counter-intuitive:**
+
+1. **`172.17.0.1` and `172.19.0.1` are not specific to the current containers.** They are generic
+   host-bridge gateways, and they are reachable from a container sitting on `dokploy-network`. A new
+   Dokploy worker lands on that same network and reaches the same addresses. **So moving the worker
+   does not break host-service connectivity, as long as the new app's env carries the same values.**
+2. **Do not "tidy" these to the network gateway `10.0.1.1`.** It does not work. Whatever the cause
+   (most likely the host firewall dropping traffic to the swarm ingress gateway), it is *measured*, and
+   the `172.x` addresses are the ones that work.
+
+### 11.4 The one thing that genuinely *would* break the panel
+
+**Phase 2 — moving the ingestion microservice.** The panel's `ingestionService` section follows
+`INGESTION_SERVICE_URL`, which is currently a **host-published port** (`:4001`). If the microservice
+moves under Dokploy:
+
+- **keep it published on the same host port** → the URL is unchanged and nothing breaks; or
+- address it by service name → then **both** `INGESTION_SERVICE_URL` **and** `INGESTION_WORKER_URL`
+  must be updated on **both** the app and the worker, or the panel's ingestion section goes dark and
+  the worker loses its gateway.
+
+That is the whole risk, and it is a **config change, not a code change.**
+
+### 11.5 Additions to the §6 verification checklist
+
+- [ ] the new worker app's env carries `INGESTION_SERVICE_URL` and `INGESTION_WORKER_URL` with the
+      **same `172.x` values** as the old service — **not** `10.0.1.1`;
+- [ ] re-run `.verify/probe-worker-network.mjs` **inside the new container** and confirm the two
+      `172.x:4001` probes return `200`;
+- [ ] set `WORKER_HEALTH_URL` on the **app** to the new worker's service name + `:8791`, so the admin
+      panel's `workerLoop` section reports for the first time;
+- [ ] `GET /api/admin/vps-setup` still returns `ingestionService.reachable: true` and
+      `workerGateway.online: true` after the cutover.

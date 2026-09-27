@@ -25,7 +25,7 @@ import { extractCandidateProfile } from '@/matching/candidateProfileExtractor';
 import { getOrComputeProfile } from '@/lib/search/userProfileCache';
 import type { NormalizedUserProfile } from '@/lib/search/userProfileCache';
 import { resolveFeedRemoteOnly } from '@/lib/jobs/workplace';
-import { AUTO_APPLY_SUPPORTED_ATS, isAutoApplySupported } from '@/lib/jobs/autoApplySupport';
+import { AUTO_APPLY_SUPPORTED_ATS, isAutoApplySupported, resolveApplyUrl } from '@/lib/jobs/autoApplySupport';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -677,7 +677,9 @@ export async function GET(request: NextRequest) {
           matchScore,
           source: candidate.source as any,
           atsType: candidate.atsType as any,
-          applyUrl: candidate.applyUrl,
+          // One resolver decides this. `applyUrl` alone is empty for 86.7% of the corpus — the
+        // `feashliaa` sync writes the form URL to `source.applicationUrl` (SB-20).
+        applyUrl: resolveApplyUrl(candidate),
           postedDate: candidate.postedDate,
           userId: userId || '',
           country: candidate.country,
@@ -799,7 +801,9 @@ export async function GET(request: NextRequest) {
         matchScore,
         source: candidate.source as any,
         atsType: candidate.atsType as any,
-        applyUrl: candidate.applyUrl,
+        // One resolver decides this. `applyUrl` alone is empty for 86.7% of the corpus — the
+        // `feashliaa` sync writes the form URL to `source.applicationUrl` (SB-20).
+        applyUrl: resolveApplyUrl(candidate),
         postedDate: candidate.postedDate,
         userId: userId || '',
         country: candidate.country,
@@ -920,7 +924,7 @@ export async function GET(request: NextRequest) {
     if (savedOnlyFilter && userId) {
       filteredListings = filteredListings.filter((job) => {
         if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return true;
-        const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
+        const jobUrl = resolveApplyUrl(job);
         if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return true;
         const comp = ((job as any).company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         const tit = ((job as any).title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
@@ -930,7 +934,7 @@ export async function GET(request: NextRequest) {
     } else if (userId && savedIds.size > 0) {
       filteredListings = filteredListings.filter((job) => {
         if (savedIds.has(job._id) || savedIds.has((job as any).id) || savedIds.has((job as any).externalId)) return false;
-        const jobUrl = (job as any).applyUrl || (job as any).source?.applicationUrl || '';
+        const jobUrl = resolveApplyUrl(job);
         if (jobUrl && savedJobUrls.has(jobUrl.trim().toLowerCase())) return false;
         const comp = ((job as any).company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         const tit = ((job as any).title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');

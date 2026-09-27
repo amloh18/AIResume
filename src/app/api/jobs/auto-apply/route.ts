@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
-import { detectAtsFromUrl } from '@/lib/jobs/autoApplySupport';
+import { detectAtsFromUrl, resolveApplyUrl } from '@/lib/jobs/autoApplySupport';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import type { ATSType } from '@/types/automation-schema';
 import { log } from '@/lib/structured-logger';
@@ -74,10 +74,28 @@ async function enqueueAutoApply(request: NextRequest) {
       client-supplied value is the fallback. See SB-03 in `server_bugs.md`.
     */
     const validAtsTypes: ATSType[] = ['greenhouse', 'lever', 'workable', 'naukri', 'indeed', 'adzuna', 'ashby', 'workday', 'unknown'];
-    const resolvedAtsType: ATSType =
-      detectAtsFromUrl(jobUrl) ?? (validAtsTypes.includes(atsType) ? atsType : 'unknown');
 
     await getConnection();
+
+    /*
+      …and the URL itself is resolved from the listing, not from the request body (SB-20).
+
+      SB-03 made the apply URL the authority on routing but left the *client* as its source, and the
+      client reads the wrong field: it posts `jobs.applyUrl`, which is empty for all 42,338
+      `feashliaa` jobs (86.7% of the corpus) because that sync writes the form URL to
+      `source.applicationUrl`. So the authority was handed an empty string and every one of those
+      jobs resolved to `'unknown'`, parking as "not automatable" regardless of the ATS that actually
+      hosts the form.
+
+      We already receive the listing id, so we ask the listing instead. The client's value survives
+      only as a fallback for jobs that have no listing — manual and browser-extension entries — where
+      the client genuinely is the only source.
+    */
+    const listing = await findListingForApply(jobId);
+    const resolvedJobUrl = resolveApplyUrl(listing) || (typeof jobUrl === 'string' ? jobUrl.trim() : '');
+
+    const resolvedAtsType: ATSType =
+      detectAtsFromUrl(resolvedJobUrl) ?? (validAtsTypes.includes(atsType) ? atsType : 'unknown');
 
     // Generate operationId for idempotency (deterministic from request data)
     const operationId = `aa_${auth.userId}_${jobId || title}_${Date.now()}`;
@@ -194,13 +212,34 @@ async function enqueueAutoApply(request: NextRequest) {
 
     if (existingByTitle) {
       jobApp = existingByTitle;
+
+      /*
+        Repair an application that was enqueued before SB-20.
+
+        An existing row may carry an empty `jobUrl` and `atsType: 'unknown'` — which is precisely what
+        the bug wrote. The worker navigates to `jobApplication.jobUrl` (`processApplication:176`), so
+        without this backfill the fix would only ever help applications created *after* it shipped,
+        and the rows already parked as `unknown` would stay parked.
+
+        Both fields are only ever filled in, never overwritten: a URL we already had is not replaced,
+        and an ATS we already resolved is not downgraded to `unknown`.
+      */
+      const repairs: { jobUrl?: string; atsType?: ATSType } = {};
+      if (!jobApp.jobUrl && resolvedJobUrl) repairs.jobUrl = resolvedJobUrl;
+      if (jobApp.atsType === 'unknown' && resolvedAtsType !== 'unknown') repairs.atsType = resolvedAtsType;
+
+      if (Object.keys(repairs).length > 0) {
+        await JobApplication.findByIdAndUpdate(jobApp._id, { $set: repairs });
+        if (repairs.jobUrl) jobApp.jobUrl = repairs.jobUrl;
+        if (repairs.atsType) jobApp.atsType = repairs.atsType;
+      }
     } else {
       jobApp = await JobApplication.create({
         userId: userObjId,
         jobId: jobId || `job_${Date.now()}`,
         jobTitle: title,
         company,
-        jobUrl: jobUrl || '',
+        jobUrl: resolvedJobUrl,
         jobDescription: description || '',
         location: location || 'Remote',
         source: sanitizedSource,
@@ -340,5 +379,32 @@ async function enqueueAutoApply(request: NextRequest) {
       { error: toUserFacingMessage(error, 'Failed to enqueue application') },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Load the discover listing an auto-apply request refers to.
+ *
+ * `jobId` is the `jobs` collection `_id` — the same value `JobApplication.jobId` stores — and it is
+ * the only trustworthy description of where the form lives, because the `feashliaa` sync writes the
+ * form URL to `source.applicationUrl` rather than `applyUrl` (SB-20).
+ *
+ * Returns `null` rather than throwing for every "there is no listing" case: a missing or non-ObjectId
+ * `jobId`, a deleted listing, or a DB error. All of them are legitimate — manual and
+ * browser-extension entries have no listing at all — and the caller falls back to the client value.
+ * A routing lookup must never be able to fail the request.
+ */
+async function findListingForApply(jobId: unknown): Promise<{ applyUrl?: unknown; source?: unknown } | null> {
+  if (typeof jobId !== 'string' || jobId.trim() === '') return null;
+
+  try {
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.Types.ObjectId.isValid(jobId)) return null;
+
+    const Job = (await import('@/models/Job')).default;
+    const listing = await Job.findById(jobId).select('applyUrl source.applicationUrl').lean();
+    return (listing as { applyUrl?: unknown; source?: unknown }) ?? null;
+  } catch {
+    return null;
   }
 }
