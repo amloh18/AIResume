@@ -94,15 +94,113 @@ alarm. `GET /api/health` and this endpoint together cover most of what SSH would
 
 ## 2. P0 — nothing is being submitted
 
-### SB-01 · The application queue has no drainer in production · `OPEN (needs server access)`
+### SB-01 · The application queue has no drainer in production · `NOT THE CAUSE — closed 2026-09-27`
 
-**Symptom.** Staging completes (documents are generated), then nothing: no form fill, no CV/CL attach, no
-submit, no email. Rows sit at `internalStatus: 'queued'` forever.
+**Closed by measurement, not by a fix.** SSH access was restored and the queue *is* being drained:
 
-**Why it is invisible.** Staging runs in the Next.js request path, so it always works. Submission runs in
-a background loop. If no process runs the loop, *nothing errors* — the queue simply never advances.
+| Evidence | Value |
+| --- | --- |
+| `ApplicationQueue` by status | `completed: 48`, `dead_letter: 4`, `failed: 1`, **`queued: 0`, `processing: 0`** |
+| Newest completion | `2026-09-27T14:21:11Z` — the row behind the user's "Apply manually" screenshot |
+| `buildairesume-worker-daemon` `/api/health` | `{"role":"all","loops":["email","emailIngestion","applicationQueue","reconciliation"]}` |
 
-**Two independent drain paths — both must be checked:**
+So the drainer runs. The applications were parking **after** the drain, not before it — see SB-03, SB-04,
+SB-05 and SB-16 below. `WORKER_ROLE=web` **is** correctly set on the web service, and the worker runs the
+loops with `WORKER_ROLE` unset (→ `all`), which is the documented single-container behaviour.
+
+**What is still wrong here — SB-01b below.** The drainer works but it is the *wrong image*.
+
+---
+
+### SB-01b · The worker service runs the **web** image, and Dokploy does not manage it · `FIXED FOR THIS DEPLOY 2026-09-27 — still needs a decision`
+
+**Which process actually drains the queue — measured, not inferred.** Two candidates run the drain path, and
+the answer decides what "deployed" has to mean:
+
+| Process | Role | `applicationQueue` loop | Cron endpoint |
+| --- | --- | --- | --- |
+| `buildairesume-worker-daemon` | `all` (`WORKER_ROLE` unset) | **yes** — 10 s poll | not published |
+| `buildairesume-app-vmvp35` | `web` (`WORKER_ROLE=web`) | no | **yes** — `*:3001->3000`, cron every 5 min |
+
+Evidence that the **worker-daemon's poll loop** is the one doing the work, not the cron:
+
+- `POST /api/cron/auto-apply` fires every 5 min (`/etc/cron.d/buildairesume` job #2) and
+  `/var/log/buildairesume/auto-apply.log` holds **245 consecutive runs with `processedCount: 0`** — it never
+  claims anything, because the loop has already taken it. (`skipped: "items remaining are handled by the
+  next run"` is a constant in the response, not a rate-limit signal.)
+- The newest queue item was created `14:21:08.421Z` and completed `14:21:11.729Z` — **3.3 s later**, landing
+  *between* cron ticks (`14:20:03` → `14:25:01`). Only a 10 s poll loop explains that.
+- `/api/jobs/auto-apply` does **not** process inline — it only writes `status: 'queued'`.
+- The ~40 items that completed at `09-26 09:33–09:34` likewise appear nowhere in the cron log.
+
+So the worker-daemon is not a redundant bystander: **it is the primary drainer.** Before this deploy it was
+running **09-25 code with all four auto-apply bugs live** — the direct cause of the user-visible
+"Apply manually" rows.
+
+**Deployed 2026-09-27.** Both tiers were force-recreated onto image `029e44d7f146` (built from `aa1ce364`):
+
+```
+buildairesume-app-vmvp35     task started 2026-09-27T15:31:46Z   img=029e44d7f146
+buildairesume-worker-daemon  task started 2026-09-27T15:32:52Z   img=029e44d7f146
+worker /api/health -> {"role":"all","loops":["email","emailIngestion","applicationQueue","reconciliation"]}
+app    /api/health -> {"role":"web","loops":[]}
+```
+
+The worker had been pinned to `40688b8ab49e` since **09-25** — 45 h stale — and its stdout held only **22
+lines** for that whole period, last activity `09-26T09:19:29Z`. A silent success path (the structured logger
+does not write these to stdout) is why it *looked* idle while it was in fact the only thing submitting.
+
+`buildairesume-worker-daemon` and `buildairesume-app-vmvp35` are two Swarm services pointing at the **same
+tag** (`buildairesume-app-vmvp35:latest`), but Dokploy only knows about the second one.
+
+```
+NAME                          MODE        REPLICAS  IMAGE
+buildairesume-app-vmvp35      replicated  1/1       buildairesume-app-vmvp35:latest   *:3001->3000/tcp
+buildairesume-worker-daemon   replicated  1/1       buildairesume-app-vmvp35:latest   (no ports)
+```
+
+The Dokploy build never passes `--target`, and `runner` is the Dockerfile default, so the tag holds the
+**web** image. Verified inside the running worker container: `ls /app/dist` → *No such file or directory* —
+the `dist/worker.mjs` bundle that `--target worker` produces is not there. The service therefore runs
+`npm run start` (`next start`, `PORT=3009`) with `WORKER_ROLE` unset, i.e. **a second Next.js server whose
+only purpose is to host the background loops.**
+
+Consequences:
+
+1. **It goes stale silently.** The service has empty Swarm labels, no `applicationId`, and no Dokploy row
+   (`command: null`, `args: null`). Dokploy updates the *app* service on deploy and never touches this one,
+   so the worker keeps running whatever image was current when it was created. Measured 2026-09-27: the
+   app was on `52e2d00188c6` (09-26) while the worker was still on `40688b8ab49e` (**09-25, 44 h old**) —
+   which is why the worker's logs still showed the pre-fix Greenhouse failures.
+2. **Every deploy must be followed by a manual `docker service update --force`** or the worker runs the
+   previous release. Nothing in the pipeline enforces this.
+
+**Fix direction (preferred).** Dokploy's `application` table has a `dockerBuildStage` column, so the worker
+should be its own Dokploy application over the same repo with `dockerBuildStage: worker` and
+`WORKER_ROLE: worker` — then it builds from the worker target, deploys with the app, and drops the
+redundant Next.js server. Until then the stop-gap is:
+
+```bash
+ssh amloh@192.168.1.8 'docker service update --force --image buildairesume-app-vmvp35:latest buildairesume-worker-daemon'
+```
+
+**Do not "fix" this by setting `WORKER_ROLE=worker` on the existing daemon** — with the *web* image that
+flips `instrumentation.ts` to "loops run in the worker service" and stops every loop in the process that
+is actually running them. That would turn SB-01b into a real P0.
+
+**Verify (done 2026-09-27).** `docker service ps buildairesume-worker-daemon` shows a task created *after*
+the newest `docker images … buildairesume-app-vmvp35:latest` timestamp, and its `/api/health` still lists
+`applicationQueue` in `loops`. Both hold: task `15:32:52Z` vs image `15:28:32Z`, loops intact. The worker
+container's `/app/.next` also greps clean for `resolveResumeAttachment`, `stageEntry` and
+`resolveGreenhouseNavigationUrl`, so it is genuinely the new build and not a re-tagged old one.
+
+**Reference — the two drain paths, and what gates them.** `src/workers/roles.ts:47-51`:
+
+```ts
+all:    { email: true,  emailIngestion: true,  applicationQueue: true,  reconciliation: true }
+worker: { email: true,  emailIngestion: true,  applicationQueue: true,  reconciliation: true }
+web:    { email: false, emailIngestion: false, applicationQueue: false, reconciliation: false }
+```
 
 | Path | Where | Cadence |
 | --- | --- | --- |
@@ -113,27 +211,10 @@ Both call the same primitives (`claimNextApplication` → `processApplication` �
 `failQueueItem`), so there is exactly one queue and one set of transitions. Claiming is an atomic
 `findOneAndUpdate`, so running both is wasteful but not corrupting.
 
-**What gates them.** `src/workers/roles.ts:47-51`:
-
-```ts
-all:    { email: true,  emailIngestion: true,  applicationQueue: true,  reconciliation: true }
-worker: { email: true,  emailIngestion: true,  applicationQueue: true,  reconciliation: true }
-web:    { email: false, emailIngestion: false, applicationQueue: false, reconciliation: false }
-```
-
-- `WORKER_ROLE=web` on **both** services ⇒ nothing drains. This is the single most likely cause.
-- `WORKER_ROLE` unset ⇒ `all` ⇒ the loops run **inside the web container** and are killed by every
-  redeploy (`src/instrumentation.ts:49-54` warns about exactly this).
+- `WORKER_ROLE=web` on **both** services ⇒ nothing drains.
+- `WORKER_ROLE` unset ⇒ `all` ⇒ the loops run in whatever process started.
 - A typo (`wroker`) fails **open** to `all` and logs a `warning` — deliberately, so a typo cannot silently
   stop queue processing.
-
-**Fix direction.** Set `WORKER_ROLE=web` on the web service and run the worker service
-(`docker build --target worker`, `npm run worker`) with `WORKER_ROLE=worker` or unset. *And* schedule the
-cron as a belt-and-braces path. Then confirm via §1.1 / §1.2.
-
-**Verify.** `curl /api/health` shows `applicationQueue` in `loops` for the process you intend, **and**
-`/api/cron/auto-apply` returns 200, **and** a queued application's `phase` moves past `queued` within
-5 minutes.
 
 ---
 
@@ -155,7 +236,23 @@ re-check for `200`.
 
 ## 3. P1 — applications that can never submit
 
-### SB-03 · `atsType` is the *discovery source*, not the apply target · `OPEN`
+### SB-03 · `atsType` is the *discovery source*, not the apply target · `FIXED IN TREE + DEPLOYED 2026-09-27`
+
+**Fixed** in `08f5af33`. `detectAtsFromUrl()` now lives in the canonical `lib/jobs/autoApplySupport.ts`
+alongside `isPlaywrightAutomatable()` and is used at enqueue, falling back to the client value:
+
+```ts
+const resolvedAtsType: ATSType =
+  detectAtsFromUrl(jobUrl) ?? (validAtsTypes.includes(atsType) ? atsType : 'unknown');
+```
+
+It matches host-based boards (`greenhouse.io`, `grnh.se`, `lever.co`, `ashbyhq.com`, `workable.com`,
+`myworkdayjobs.com`, `myworkdaysite.com`, `naukri.com`, `indeed.`, `adzuna.`) **and** the embed parameters
+employers put on their own domains (`?gh_jid=`, `?ashby_jid=`, `?lever-origins=`). Verified with
+`.verify/check-ats-routing.ts` — 34 assertions over real production `applyUrl`s, 34 pass.
+
+Measured before the fix: 42,372 of 47,054 `jobs` carry `atsType: null`, and the single most common park
+reason in production was `ATS type "unknown" is not automatable. Manual submission required.`
 
 **This is the biggest functional gap in job discovery.**
 
@@ -196,7 +293,14 @@ in `src/platforms/greenhouse/GreenhouseAdapter.ts:8-9` and
 
 ---
 
-### SB-04 · `workday` is declared automatable but has no handler · `OPEN`
+### SB-04 · `workday` is declared automatable but has no handler · `FIXED IN TREE + DEPLOYED 2026-09-27`
+
+**Fixed** in `08f5af33`. The gate in `processApplication.ts` now reads the canonical
+`PLAYWRIGHT_AUTOMATABLE_ATS` (`greenhouse`, `lever`, `ashby`, `workable` — deliberately **no** `workday`)
+instead of its own inline list, so the gate and the `switch` in `UnifiedApplyService.apply` can no longer
+disagree. A Workday job now parks with a reason that names Workday, not the generic message.
+
+**Original report.**
 
 ```ts
 // processApplication.ts:99 — workday PASSES the gate
@@ -225,7 +329,46 @@ implement `applyToWorkday`. `ATSType` (`src/types/automation-schema.ts:10`) alre
 
 ---
 
-### SB-05 · Company-hosted ATS embeds fail form detection · `OPEN (needs a live page)`
+### SB-05 · Company-hosted ATS embeds fail form detection · `FIXED IN TREE + DEPLOYED 2026-09-27`
+
+**Fixed** in `08f5af33` by `resolveGreenhouseNavigationUrl()` in `unifiedApplyService.ts`. The `gh_jid`
+value *is* the Greenhouse job id and Greenhouse resolves the board from it, so `?gh_jid=<id>` is rewritten
+to `https://boards.greenhouse.io/embed/job_app?token=<id>`, which serves the same form directly instead of
+behind a cross-origin iframe.
+
+Verified live: `boards.greenhouse.io/embed/job_app?token=8194604` → HTTP 200 → redirects to
+`job-boards.greenhouse.io/embed/job_app?for=stripe&token=8194604`, 117 KB, rendering `#first_name`,
+`#last_name`, `#email`, `#phone`, `#resume`, `#cover_letter` and `<button type="submit">`.
+
+**Live confirmation of the original bug** — captured from the stale worker's logs on 2026-09-27, exactly
+the two failure shapes this fix removes:
+
+```
+[greenhouse] Playwright automation unavailable: Automation error: page.goto: net::ERR_TOO_MANY_REDIRECTS
+  at https://jobs.elastic.co/jobs?gh_jid=8121805&gh_jid=8121805
+[greenhouse] Playwright automation unavailable: Automation error: page.goto: Timeout 30000ms exceeded.
+  - navigating to "https://stripe.com/jobs/search?gh_jid=8190046", waiting until "domcontentloaded"
+```
+
+**And at the application level**, from `applicationevents` (58 `APPLICATION_REQUIRES_REVIEW` documents) — the
+`reason` strings the user actually saw rendered as "Apply manually":
+
+```
+No application form detected at https://careers.airbnb.com/positions/8232474?gh_jid=8232474.
+  The job may have been filled or the URL may be incorrect.
+Tailored documents ready for Stripe. Automated submission unavailable
+  (Automation error: page.goto: Timeout 30000ms exceeded. …)
+```
+
+Airbnb hit this twice in sequence: first `Documents prepared for Airbnb. Awaiting your approval before
+submission.` (the SB-03/04 veto), then after approval the navigation failure above.
+
+**Regression test.** `unifiedApplyService.test.ts` → *"UnifiedApplyService.apply — Greenhouse navigation URL
+(SB-05)"* asserts the rewrite for the four real failing URLs (Stripe, Airbnb, the duplicated-`gh_jid` Elastic
+URL, and a `&`-separated Databricks URL) **and** the two pass-through cases (a real `boards.greenhouse.io`
+board, and a URL with no token). 10/10 in that file pass.
+
+**Original report.**
 
 **Example.** `https://careers.airbnb.com/positions/8232474?gh_jid=8232474`
 
@@ -247,6 +390,65 @@ the *query parameter* (not just the host) and descend into the iframe. This need
 against, so it is not an app-side-only fix.
 
 **Verify.** An `?gh_jid=` URL should reach `phase: 'field_fill'`.
+
+---
+
+### SB-16 · Automated submissions were sent with **no CV attached** · `FIXED IN TREE + DEPLOYED 2026-09-27`
+
+**This is the reason the pipeline could not be trusted to submit, and the reason the guard in `08f5af33`
+existed.**
+
+All four ATS fillers accept a resume and upload it correctly —
+`atsPlaywrightService.ts:236, 568, 856, 1139`:
+
+```ts
+if (resumeInput && candidateData.resumePdf && candidateData.resumeFileName) {
+  const tmpFile = path.join(os.tmpdir(), candidateData.resumeFileName);
+  fs.writeFileSync(tmpFile, candidateData.resumePdf);
+  await resumeInput.setInputFiles(tmpFile);
+}
+```
+
+But **no caller ever passed `resumePdf` or `resumeFileName`**, and `JobApplication.attachments` is written
+by no code path in the repo. Measured 2026-09-27: 0 of 99 `jobapplications` have a non-empty `attachments`
+array. A run that reached the submit button therefore filled the candidate's name, email and phone, clicked
+submit, and delivered an application with **no resume**.
+
+**Impact.** Worse than a park. The user believes they applied, the employer receives an empty application,
+and nothing surfaces the problem — the tracker says `applied`.
+
+**Fix** (`aa1ce364`). `resolveResumeAttachment()` resolves the tailored CV for the application
+(`ApplicationJourney.jobId` holds the `JobApplication._id`, so the application id is the lookup; falls back
+to the user's Master CV) and renders it through the same `PDFService` + `resolveTemplate` pair the download
+route uses — so the attachment is the same PDF the user gets from "Download PDF", custom template renderer
+included. Deliberately **no HTML fallback**: an HTML file is not a resume. Wired into all four handlers.
+
+**Verify.** A completed Greenhouse run logs no `Refusing to submit without a resume attachment`, and the
+submitted form's `#resume` input has a file attached (`fillAudit.totalFields` includes `resume`).
+
+---
+
+### SB-17 · The stage audit trail was written to a field that does not exist · `FIXED IN TREE + DEPLOYED 2026-09-27`
+
+`JobApplication` declares `stageHistory` (`{ stage, internalStatus, changedAt, reason, source }`) and has
+**no `statusHistory` path**. Mongoose's strict mode strips unknown paths from an update **silently**, so
+all seven `$push: { statusHistory: … }` sites in `unifiedApplyService.ts` were no-ops — including the one
+that recorded *why* an application was parked.
+
+Measured 2026-09-27: **0 of 99** `jobapplications` carry a `statusHistory` field; 63 carry `stageHistory`,
+and **49 of those have an empty array**.
+
+**Impact.** The user sees "Apply manually" and has no way to find out which of the six park reasons fired.
+It is also the same defect class as the confirmed-submission push fixed in `08f5af33` — there it lost the
+reason an application was marked applied, here it loses the reason one was held.
+
+**Fix** (`a8398319`). All seven sites now go through one `stageEntry()` helper that owns the field name,
+the entry shape and the `currentStage`/`internalStatus` vocabulary. Park reasons map to real state-machine
+values — `staging_ready`, `review_required`, `automation_failed` — rather than the legacy tracker-column
+value `'created'`, which is not a stage.
+
+**Verify.** `db.jobapplications.countDocuments({statusHistory:{$exists:true}})` stays 0 and the next parked
+application gains a `stageHistory` entry whose `reason` names the park.
 
 ---
 
@@ -437,12 +639,23 @@ requiring a **superset** of the sanitiser's.
 
 1. **What is the cron cadence on the VPS?** It sets `QUEUE_STALL_SECONDS` (SB-13) and the batch size
    (`AUTO_APPLY_CRON_BATCH`, default 5, max 20 — browser automation is heavy).
-2. **Is `WORKER_ROLE` set on the web service?** If not, the loops run in the web container and die on every
-   redeploy (SB-01).
-3. **Is `CRON_SECRET` set?** If not, *no* scheduled work runs anywhere (SB-02).
-4. **Is Workday intended to be supported?** (SB-04)
-5. **How many app replicas?** >1 turns SB-07 from a note into a bug.
-6. **Should `docs/` be version-controlled?** The `.gitignore` comment says yes; the rule says no. 3 files
+2. ~~**Is `WORKER_ROLE` set on the web service?**~~ **Answered 2026-09-27: yes, `WORKER_ROLE=web`.** The
+   in-process loops run in `buildairesume-worker-daemon` (`role: all`) — and it, not the cron, is the
+   *primary* drainer (SB-01b). But that service is the *web* image and is not Dokploy-managed.
+   **Do you want it converted to a second Dokploy application with `dockerBuildStage: worker`?** Until
+   that happens, every deploy needs a manual `docker service update --force` on the worker or it keeps
+   running the previous release — which is exactly what happened here.
+3. **Is `CRON_SECRET` set?** If not, *no* scheduled work runs anywhere (SB-02). It **is** set (64 chars) —
+   but note the value is stored in cleartext in `/etc/cron.d/buildairesume` as
+   `Authorization: Bearer <secret>` on every line, and it was surfaced in a shell transcript on
+   2026-09-27. **Rotate it**, and prefer `CRON_SECRET` read from a root-owned env file over an inline
+   literal in a world-readable cron file (`-rw-r--r--`).
+4. **Is Workday intended to be supported?** (SB-04) — currently 3 of the 12 parked applications
+   (syneoshealth, tiketdotcom ×2) are Workday, i.e. correctly manual.
+5. **Which ATSes are actually in the user's funnel?** Paylocity and BambooHR also appeared in the parked
+   set (SB-03) and have no adapter. If those boards matter, they are new-adapter work, not a bug.
+6. **How many app replicas?** >1 turns SB-07 from a note into a bug.
+7. **Should `docs/` be version-controlled?** The `.gitignore` comment says yes; the rule says no. 3 files
    are currently invisible, one of them mandated by `AGENTS.md` §53/54 (SB-15).
 
 ---
@@ -452,3 +665,5 @@ requiring a **superset** of the sanitiser's.
 | Date | Change |
 | --- | --- |
 | 2026-09-26 | Register opened. SB-12 … SB-14 fixed app-side in the working tree. SB-03/04/05 identified. SB-01/02 documented as the P0 pair. SB-15 found while creating this file; narrow `.gitignore` exception added. |
+| 2026-09-27 | SSH restored; register re-triage from the live box. **SB-01 closed as not-the-cause** (queue drains: 48 completed, 0 queued) and replaced by **SB-01b** — the worker service runs the *web* image and Dokploy does not manage it. SB-03/04/05 fixed and deployed (`08f5af33`). **SB-16** (submissions sent with no CV attached) and **SB-17** (`stageHistory` written to a non-existent `statusHistory`) found and fixed (`a8398319`, `aa1ce364`). |
+| 2026-09-27 (later) | **Second deploy `3EL11R6lODg6YMZd6LP73` finished `15:31:41Z`** → image `029e44d7f146` from `aa1ce364`; app task recreated `15:31:46Z`. **SB-01b resolved for this release**: the worker-daemon was identified as the *primary* drainer (cron log: 245 runs, all `processedCount: 0`) and force-updated `15:32:52Z` onto the same digest, so it no longer runs 09-25 code. Root-cause tally confirmed against `applicationevents` — the 58 park reasons are exactly the four fixed bugs. SB-05 gained the event-level evidence + a regression test. |

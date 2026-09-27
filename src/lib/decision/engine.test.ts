@@ -124,7 +124,14 @@ describe('makeApplicationDecision — mode selection', () => {
     expect(result.mode).toBe('auto');
   });
 
-  it('downgrades auto to review on a low match score', async () => {
+  it('keeps auto on a low match score — relevance must not veto submission', async () => {
+    /*
+      This test used to assert `mode === 'review'`, which is what the product did until 2026-09-27 and is
+      exactly why nothing was being submitted: `computeBasicMatchScore` counts ten hardcoded tech keywords,
+      so it returns 0–40 for every non-software role, and the veto silently moved ~92% of applications
+      (measured: 92 of 99 scored ≤40) out of `auto` and into `review` — a mode that prepares documents and
+      never submits. The score is a *ranking* signal; safety belongs to `assessApplicationRisk`.
+    */
     const input = baseInput();
     const result = await makeApplicationDecision({
       ...input,
@@ -137,7 +144,10 @@ describe('makeApplicationDecision — mode selection', () => {
     });
 
     expect(result.matchScore).toBe(0);
-    expect(result.mode).toBe('review');
+    expect(result.mode).toBe('auto');
+    expect(result.warnings).toContainEqual(
+      expect.stringMatching(/Low keyword match/)
+    );
   });
 
   it('recommends manual for a high-risk listing (missing job URL → risk ≥ 40)', async () => {
