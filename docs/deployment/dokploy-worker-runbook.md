@@ -140,24 +140,30 @@ ssh amloh@192.168.1.8 "docker exec \$(docker ps -qf name=buildairesume-app-vmvp3
 That last call is the one that matters most, and it is new. It should return:
 
 ```json
-{ "ok": true, "role": "worker", "commit": "<sha>", "loops": { "enabled": [ ... all four ... ] } }
+{ "ok": true, "role": "worker", "buildTime": "2026-09-27T18:05:29Z", "loops": { "enabled": [ ... all four ... ] } }
 ```
 
 - `role` must be `worker` — not `all`, not `web`.
-- `commit` must be present. This field did not exist before today; it is how you tell a current worker from
-  a stale one **without SSH**.
+- `buildTime` must be a real timestamp, not `"unknown"`. This field did not exist before today, and it is
+  how you tell a current worker from a stale one **without SSH**.
 - `loops.enabled` must list all four.
+
+> **Do not use `commit` for this.** It is present in the payload but is **always `"unknown"`** in this
+> deployment: it only reports a value if something supplies `GIT_COMMIT` at build time, and nothing does —
+> Dokploy exposes no build arg for it and `.dockerignore` excludes `.git`, so it cannot be derived either.
+> `buildTime` is stamped by the Dockerfile itself and therefore always populated.
 
 **Sanity-check the tier split is still right:**
 
 ```bash
 ssh amloh@192.168.1.8 "docker exec \$(docker ps -qf name=buildairesume-app-vmvp35) \
-  node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>r.json()).then(j=>console.log(j.role, j.commit, JSON.stringify(j.loops)))\""
-# → web  <sha>  []
+  node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>r.json()).then(j=>console.log(j.role, j.buildTime, JSON.stringify(j.loops)))\""
+# → web  2026-09-27T18:0...Z  []
 ```
 
-If the app's commit and the worker's commit **differ**, the worker did not rebuild — do not proceed to
-step 4.
+The two `buildTime` values are stamped by **separate builds**, minutes apart within one deploy cycle, so
+they will not be identical — that is expected. What matters is that the worker's is not **hours** older
+than the app's. If it is, the worker did not rebuild — do not proceed to step 4.
 
 ---
 
@@ -225,13 +231,21 @@ Admin → VPS Setup → **Background Worker**. You should now see:
 
 - **Running**
 - `Role: worker`
-- **`Commit: <sha>`** ← new
+- **`Built: <utc timestamp>`** ← new
 - `Uptime`, `Memory`
 - **no** `Stale image` chip
 
-The `Stale image` chip appears only when the worker's commit differs from the web container's. To prove the
-check works, force the drift: deploy only the app, and the chip should appear until the worker also
-redeploys. With Auto Deploy on, both should move together and the chip should never appear.
+The `Stale image` chip appears only when the worker's image was built **more than an hour** before the web
+container's. To prove the check works, force the drift: deploy only the app, and the chip should appear
+until the worker also redeploys. With Auto Deploy on, both should move together and the chip should never
+appear.
+
+If the chip *does* appear with Auto Deploy on, that is the check earning its keep — it means Dokploy
+redeployed the web tier without the worker, which is exactly SB-01b.
+
+The threshold is deliberately generous (an hour, against a normal gap of minutes and a smallest real
+staleness of ~45 hours), because a false "stale" trains the reader to ignore the chip. `buildStale` is
+`null` — never `false` — when either stamp is missing, so "we don't know" is not shown as "it's fine".
 
 Then clean up both secret-bearing files once you no longer need the rollback:
 
@@ -248,7 +262,7 @@ shred -u ~/worker-env.txt ~/worker-daemon-spec.json 2>/dev/null || rm -P ~/worke
 that is SB-01b.
 
 **After:** the worker is a managed Dokploy application. `git push` → both tiers rebuild and redeploy
-together. The panel shows the worker's commit, so drift is visible if it ever happens again.
+together. The panel shows when each image was built, so drift is visible if it ever happens again.
 
 **Still true, and worth keeping:** the ingestion microservice (`buildairesume-job-ingestion`) is still
 outside Dokploy on host ports. That is Phase 2 — see the plan §7. Its `INGESTION_SERVICE_URL` /
@@ -268,3 +282,6 @@ section goes dark (plan §11.4).
 | `workerLoop` still `configured: false` | `WORKER_HEALTH_URL` wrong, or the app was not redeployed | Step 5; verify the service name resolves from inside the app container |
 | Panel ingestion section goes dark | `INGESTION_*` values were changed | Restore `172.17.0.1`, not `10.0.1.1` |
 | Worker drains nothing | It is running, but the queue is empty | Normal. Submit one application and watch |
+| `Built: unknown` | `/app/.build-time` is missing from the image | The build did not run the `date` step — check it is building this Dockerfile, not an older one |
+| `Built:` shows on the worker but the chip never appears | Working as intended | The chip needs an hour of drift; a normal deploy is minutes |
+| `commit` reads `unknown` | Expected, always | Nothing supplies `GIT_COMMIT` (no Dokploy build arg, `.git` excluded). Use `Built:` |
