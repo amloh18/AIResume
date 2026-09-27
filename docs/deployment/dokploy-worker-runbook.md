@@ -78,6 +78,7 @@ Dokploy → your project → **Create Application**. Match the existing app exac
 | Branch | `refactor/simple` |
 | Build type | **Dockerfile** |
 | Dockerfile path | `Dockerfile` |
+| Docker context path | **`.`** ← leave as a single dot |
 | **Docker Build Stage** | **`worker`** ← the one difference. Must be exactly `worker` |
 | Auto Deploy | **on** — this is what fixes SB-01b permanently |
 | Clean Cache | on (harmless now; the worker target no longer builds Next.js) |
@@ -86,7 +87,54 @@ Dokploy → your project → **Create Application**. Match the existing app exac
 
 Leave the environment for step 2.
 
-**Why `dockerBuildStage: worker` matters.** The column exists on all three current apps and is **empty**,
+> ### ⚠️ The two adjacent fields — this bit me, so it will bite you
+>
+> **Docker Context Path** and **Docker Build Stage** sit next to each other in the UI, and `worker`
+> belongs in the **second** one. Putting it in the first produces a deploy that fails at the build step
+> with:
+>
+> ```
+> /bin/sh: 3: cd: can't cd to .../code/worker
+> ❌ The path .../code/worker does not exist
+> ```
+>
+> That is not a subtle message — but it names a *path*, which makes it look like a missing-directory
+> problem rather than a wrong-field problem. It is the wrong field.
+>
+> Read from Dokploy v0.30.6's own builder
+> (`@dokploy/server/dist/utils/builders/docker-file.js`):
+>
+> ```js
+> const dockerContextPath = getDockerContextPath(application) || defaultContextPath;
+> const commandArgs = ["build", "-t", image, "-f", dockerFilePath, dockerContextPath];
+> if (dockerBuildStage) {
+>     commandArgs.push("--target", dockerBuildStage);   // ← what we actually want
+> }
+> ```
+>
+> and `getDockerContextPath` joins the column onto the checkout:
+>
+> ```js
+> if (!dockerContextPath) return null;                                   // → falls back to <code>
+> return path.join(APPLICATIONS_PATH, appName, "code", dockerContextPath);
+> ```
+>
+> So the context path is used as **both** the shell `cd` target **and** the build-context argument —
+> which is why a stray `worker` there produces exactly the `cd` failure above, and never reaches
+> `--target` at all.
+>
+> **Verify it took** (run on the VPS):
+>
+> ```bash
+> ssh amloh@192.168.1.8 'docker exec -i dokploy-postgres.1.v4toohu8tw7ltgs0benrzzss5 \
+>   psql -U dokploy -d dokploy -c "select \"appName\", \"dockerContextPath\", \"dockerBuildStage\" \
+>   from application order by \"appName\""'
+> ```
+>
+> Every application should show context path `.`. Only the worker app should have a build stage, and it
+> must read `worker`. The three apps that already work all use `.`.
+
+**Why `dockerBuildStage: worker` matters.** The column exists on all three original apps and is **empty**,
 which is why the tag holds the web image and the daemon runs `npm run start` with no `/app/dist/worker.mjs`.
 Setting it makes Dokploy pass `--target worker`.
 
@@ -276,6 +324,7 @@ section goes dark (plan §11.4).
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| `can't cd to .../code/worker` / `The path .../code/worker does not exist` | `worker` was entered in **Docker Context Path** instead of **Docker Build Stage** | Set context path to `.` and build stage to `worker` — see step 1 |
 | Build runs `next build` | `dockerBuildStage` not set to `worker` | Fix it and rebuild — this is the only setting that matters |
 | `/health` returns `role: all` | `WORKER_ROLE` unset and the image is the *web* one | You are running the old image; check the build stage |
 | No loops enabled | `WORKER_ROLE=web` was set | Remove it. Never set it on a worker |
