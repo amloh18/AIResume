@@ -26,7 +26,7 @@ import {
   isIngestionServiceSource,
   SOURCE_REGISTRY,
 } from '@/lib/ingestion/engine';
-import { probeWorkerHealth, getWorkerHealthUrl } from '@/workers/health';
+import { probeWorkerHealth, getWorkerHealthUrl, resolveBuildCommit } from '@/workers/health';
 
 export const dynamic = 'force-dynamic';
 
@@ -328,6 +328,8 @@ async function checkVpsStatus() {
     probeWorkerHealth(getWorkerHealthUrl()).catch(() => null),
   ]);
   const executionMode = getWorkerExecutionMode();
+  // This web container's own commit, for the drift comparison below.
+  const webCommit = resolveBuildCommit();
 
   const markerOr = (key: string, remote: boolean | undefined | null) =>
     remote ?? (marker?.[key] === true);
@@ -379,11 +381,28 @@ async function checkVpsStatus() {
       ? {
           configured: true,
           role: workerLoop.role,
+          commit: workerLoop.commit ?? null,
+          // The worker runs its own image and Dokploy does not redeploy it with the web tier, so
+          // "reachable" and "running what you just shipped" are different questions. Compare the two
+          // build commits to answer the second. `unknown` on either side means the build arg was not
+          // passed — that is not evidence of drift, so it reports null rather than `true`.
+          commitStale:
+            workerLoop.commit && workerLoop.commit !== 'unknown' && webCommit !== 'unknown'
+              ? workerLoop.commit !== webCommit
+              : null,
           uptimeSeconds: workerLoop.uptimeSeconds,
           memoryRssMb: workerLoop.memoryRssMb,
           loops: workerLoop.loops,
         }
-      : { configured: false, role: null, uptimeSeconds: null, memoryRssMb: null, loops: null },
+      : {
+          configured: false,
+          role: null,
+          commit: null,
+          commitStale: null,
+          uptimeSeconds: null,
+          memoryRssMb: null,
+          loops: null,
+        },
     docker,
     stalwart,
     _diagnostics: {

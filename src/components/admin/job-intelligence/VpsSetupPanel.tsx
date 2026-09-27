@@ -52,6 +52,10 @@ interface VpsStatus {
   workerLoop?: {
     configured: boolean;
     role: string | null;
+    /** Build commit the worker image reports, or `'unknown'`. */
+    commit: string | null;
+    /** `true` when the worker's commit differs from this web container's. `null` = not comparable. */
+    commitStale: boolean | null;
     uptimeSeconds: number | null;
     memoryRssMb: number | null;
     loops: Record<string, unknown> | null;
@@ -420,10 +424,20 @@ export default function VpsSetupPanel() {
                 Background Worker
               </h3>
               {status.workerLoop?.configured ? (
-                <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Running
-                </span>
+                <div className="flex items-center gap-2">
+                  {status.workerLoop.commitStale === true && (
+                    <span
+                      className={`${CHIP_INLINE} ${CHIP_TONES_DARK.orange} uppercase tracking-wider`}
+                      title="The worker is answering, but from an older image than this web container. Redeploy the worker service."
+                    >
+                      Stale image
+                    </span>
+                  )}
+                  <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Running
+                  </span>
+                </div>
               ) : (
                 <span className={`${CHIP_INLINE} ${CHIP_TONES_DARK.neutral} uppercase tracking-wider`}>
                   Not configured
@@ -433,8 +447,14 @@ export default function VpsSetupPanel() {
             {status.workerLoop?.configured ? (
               <div className="text-xs text-white/50 font-mono space-y-1">
                 <div>Role: <span className="text-white/70">{status.workerLoop.role}</span></div>
+                <div>Commit: <span className="text-white/70">{status.workerLoop.commit ?? '—'}</span></div>
                 <div>Uptime: <span className="text-white/70">{uptimeLabel(status.workerLoop.uptimeSeconds)}</span></div>
                 <div>Memory: <span className="text-white/70">{status.workerLoop.memoryRssMb ?? '—'} MB RSS</span></div>
+                {status.workerLoop.commitStale === true && (
+                  <div className="text-orange-400/80 pt-1">
+                    This worker is running an older image than the web container. Redeploy the worker service to bring it up to date.
+                  </div>
+                )}
                 <div className="text-white/40 pt-1">Runs email delivery, inbox ingestion, the application queue and reconciliation — redeploys of the web tier do not interrupt them.</div>
               </div>
             ) : (

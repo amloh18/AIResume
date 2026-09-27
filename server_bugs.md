@@ -223,6 +223,23 @@ the newest `docker images … buildairesume-app-vmvp35:latest` timestamp, and it
 container's `/app/.next` also greps clean for `resolveResumeAttachment`, `stageEntry` and
 `resolveGreenhouseNavigationUrl`, so it is genuinely the new build and not a re-tagged old one.
 
+**⚠️ Consequence 1 was unverifiable from the admin panel — fixed 2026-09-27.** Every check above needs
+SSH. The panel could report that the worker was *reachable* but never whether it was *current*, because the
+worker's `/health` payload had no version field — so a worker 45 h stale (exactly the state described
+above) rendered identically to a fresh one. Three additions close that gap:
+
+- `src/workers/health.ts` — `WorkerHealthPayload.commit` + `resolveBuildCommit()`, reading
+  `GIT_COMMIT || SOURCE_COMMIT || 'unknown'` (the same pair `/api/health` already reads for the web tier);
+- `Dockerfile` — the `worker` stage declares `ARG GIT_COMMIT` / `ENV GIT_COMMIT`. `worker` is `FROM base`,
+  so it never inherited `builder`'s ENV; this is a new declaration;
+- `src/app/api/admin/vps-setup/route.ts` — `workerLoop` now carries `commit` and `commitStale`, the latter
+  comparing the worker's commit against the **web container's own**. `VpsSetupPanel.tsx` renders a
+  `Stale image` chip on a strict `true`.
+
+`commitStale` is **tri-state on purpose**: `null`, never `true`, when either side reports `unknown`, because
+a missing build arg is not evidence of drift. See
+`docs/deployment/dokploy-worker-migration-plan.md` §11.6 for why, and §6 step 6 for the check that uses it.
+
 **Reference — the two drain paths, and what gates them.** `src/workers/roles.ts:47-51`:
 
 ```ts
@@ -1071,6 +1088,7 @@ SB-20 and SB-21 hide — every consumer that trusted the declared type was wrong
 | 2026-09-27 (shipped) | Committed `47d46c30` (66 files) and deployed by the operator. **§7 item 4 resolved — and this register's own earlier claim about it was wrong**: the `auto-apply` cron log was never quiet; it is a single-line file (no newlines), so `head`/`tail` both returned the whole file and the *first* timestamp was misread as the last. The cron fires every 5 min (last `17:05:01Z`), and **all 264 runs have `processedCount: 0`** — it is an unexercised backstop, which is the real risk. |
 | 2026-09-27 (coverage pass) | **SB-20 opened** — the apply URL never reaches `detectAtsFromUrl` for 42,338 jobs (87 % of the corpus), which is the largest single cause of manual-apply parking and is **not** an ATS problem. Measured the real ATS mix behind `source.applicationUrl`: workday 25,584 · icims 4,442 · paylocity 2,524 · bamboohr 1,733 · greenhouse 5,406 · lever 1,652 · ashby 997. **§7 items 5–7 answered**: the `Mixed` normalisation is **withdrawn** (it fights the writers — see the migration plan §10), Workday is a **product decision** at 52 % of the corpus, and iCIMS turns out to be the biggest unmentioned platform. Full scoping in `docs/ats-coverage-and-adapter-scoping.md`. Also confirmed SB-01b on the running container: the worker still executes `029e44d7f146` (started `15:32:52Z`) with **no `/app/dist/worker.mjs`**, while the app image is `36ace7eb4437` (22:47 IST). |
 | 2026-09-27 (SB-20 fixed) | **SB-20 and SB-21 fixed in tree.** `resolveApplyUrl()` added as the single resolver (`lib/jobs/autoApplySupport.ts`), replacing four hand-written copies; `POST /api/jobs/auto-apply` now resolves from the listing server-side instead of trusting the client, persists the URL (the worker navigates to `jobApplication.jobUrl`), and **repairs** existing rows still parked as `unknown`. Verified against all 48,812 production documents with the real functions: **9,481 jobs newly auto-applyable, 0 regressions.** **SB-21 found in the same filter** — `isAutoApplySupported()` called `.trim()` on the object-shaped `source` and threw a `TypeError`, making `GET /api/jobs/discover?easyApplyOnly=true` a 500 on the `retrieveCandidates` path (which has no DB-level `easyApplyOnly` filter). Both predicates are now total. Root cause named: **`Job.ts:301` declares `source` as `String` while 42,338 documents store an object.** |
+| 2026-09-27 (Dokploy prep) | **Dockerfile split into `source → {builder, worker-bundle}`**, so `--target worker` no longer runs the Next.js build and discards it. Required before a second Dokploy application can exist: Dokploy runs `cleanCache = t`, so two applications share no layers and the worker target would otherwise pay for the 4 GB-heap build a second time on a 4-core / 7 GB box. Verified with `.next` moved aside — `npm run build:worker` still emits `dist/worker.mjs` (945 KB, externals verified), and the only `next` specifiers in the bundle are four `next-auth/providers/*` imports, no Next.js runtime. **Worker version truth added** (`WorkerHealthPayload.commit` + `resolveBuildCommit()`, `ARG GIT_COMMIT` on the `worker` stage, `workerLoop.commit`/`commitStale` in `/api/admin/vps-setup`) — see SB-01b. **`src/workers/**`, the `vps-setup` route and `VpsSetupPanel.tsx` added to `tsconfig.pipeline.json`**, closing the coverage caveat below. Verified: `tsc -p tsconfig.pipeline.json` exit 0 and all 11 files confirmed as config roots via `--listFiles`; `vitest run` = `678 passed | 5 failed` — the same documented pre-existing set, no new failures. |
 
 ---
 
@@ -1084,11 +1102,19 @@ SB-20 and SB-21 hide — every consumer that trusted the declared type was wrong
 | Committed | yes — `47d46c30` |
 | Deployed | **in progress 2026-09-27 22:34 IST** (Dokploy deployment `MNlCTbzlugu1shoWHfhP6`). **SB-01b applies: this deploy updates the app tier only.** The worker keeps the previous image until someone runs the manual `service update --force` — verified after the deploy that both services were still on the *pre-`47d46c30`* image `029e44d7f146`. |
 
-**Coverage caveat.** `tsconfig.pipeline.json` does not include `src/workers/**`, `src/app/api/interview/**`
-or most of the swept route files, so many of the files changed in this pass were **not** type-checked by the
-targeted config, and the repo-wide `tsconfig.json` run dies at exit 137 in this environment. Several of the
-swept route files also carry `// @ts-nocheck`. The edits are mechanical (`{ id }` → `{ id: mixedIdFilter(id) }`),
-which limits the risk, but this is the honest state of the verification.
+**Coverage caveat — partially closed 2026-09-27 (Dokploy prep).** `tsconfig.pipeline.json` does not include
+`src/app/api/interview/**` or most of the swept route files, so many of the files changed in the SB-06 pass
+were **not** type-checked by the targeted config, and the repo-wide `tsconfig.json` run dies at exit 137 in
+this environment. Several of the swept route files also carry `// @ts-nocheck`. Those edits are mechanical
+(`{ id }` → `{ id: mixedIdFilter(id) }`), which limits the risk, but this remains the honest state of the
+verification.
+
+The gap that mattered most is now closed: **`src/workers/**` was in no tsconfig at all** — the worker bundle
+is produced by esbuild, which does not type-check, so `src/workers/health.ts` could break the worker's
+`/health` contract with nothing failing in CI. `tsconfig.pipeline.json` now includes `src/workers/**/*.ts`,
+`src/app/api/admin/vps-setup/route.ts` and `src/components/admin/job-intelligence/VpsSetupPanel.tsx`.
+Confirmed as genuine roots rather than incidental imports: `tsc -p tsconfig.pipeline.json --listFiles` lists
+all 11 worker files plus the two admin files, and the run exits 0.
 
 ---
 
