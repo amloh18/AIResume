@@ -120,6 +120,37 @@ function resolveGreenhouseNavigationUrl(jobUrl: string): string {
   return token ? `https://boards.greenhouse.io/embed/job_app?token=${token}` : jobUrl;
 }
 
+/**
+ * Build one `stageHistory` entry.
+ *
+ * `JobApplication` has **no** `statusHistory` path — the real field is `stageHistory`, whose shape is
+ * `{ stage, internalStatus, changedAt, reason, source }` — and Mongoose's strict mode strips unknown
+ * paths from an update **silently**. Every `$push: { statusHistory: … }` in this file was therefore a
+ * no-op. Measured on production 2026-09-27: **0 of 99** `jobapplications` documents carry a
+ * `statusHistory` field, 63 carry `stageHistory`, and 49 of those have an empty array. The writes
+ * looked like an audit trail and produced none, so an application parked in Staging never recorded
+ * *why* it was parked — which is exactly the question a user asks when the tracker says
+ * "Apply manually".
+ *
+ * `stage`/`internalStatus` use the state-machine vocabulary from `JobApplication.currentStage` /
+ * `.internalStatus` (note `'staging'` + `'staging_ready'` — not the legacy `status: 'created'` that
+ * the callers below also write to the tracker column).
+ */
+function stageEntry(opts: {
+  stage: 'saved' | 'staging' | 'applied' | 'interview' | 'offer' | 'rejected';
+  reason: string;
+  internalStatus?: string;
+  source?: 'user' | 'automation' | 'automation_worker' | 'email_intelligence' | 'admin' | 'system';
+}) {
+  return {
+    stage: opts.stage,
+    internalStatus: opts.internalStatus ?? opts.stage,
+    changedAt: new Date(),
+    reason: opts.reason,
+    source: opts.source ?? ('automation_worker' as const),
+  };
+}
+
 export interface ApplyJobContext {
   jobId: string;
   title: string;
@@ -206,11 +237,10 @@ export class UnifiedApplyService {
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'saved',
         $push: {
-          statusHistory: {
-            status: 'saved',
-            date: new Date(),
-            notes: `Document generation encountered an error: ${docResult.error || 'fallback'}. Placed in Saved stage.`,
-          },
+          stageHistory: stageEntry({
+            stage: 'saved',
+            reason: `Document generation encountered an error: ${docResult.error || 'fallback'}. Placed in Saved stage.`,
+          }),
         },
       });
 
@@ -228,11 +258,11 @@ export class UnifiedApplyService {
     await JobApplication.findByIdAndUpdate(jobApp._id, {
       status: 'created',
       $push: {
-        statusHistory: {
-          status: 'created',
-          date: new Date(),
-          notes: 'Tailored CV & Cover Letter prepared. Job staged for application.',
-        },
+        stageHistory: stageEntry({
+          stage: 'staging',
+          internalStatus: 'staging_ready',
+          reason: 'Tailored CV & Cover Letter prepared. Job staged for application.',
+        }),
       },
     });
 
@@ -252,11 +282,11 @@ export class UnifiedApplyService {
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'created',
         $push: {
-          statusHistory: {
-            status: 'created',
-            date: new Date(),
-            notes: `Quality gate failed: ${failReason}`,
-          },
+          stageHistory: stageEntry({
+            stage: 'staging',
+            internalStatus: 'review_required',
+            reason: `Quality gate failed: ${failReason}`,
+          }),
         },
       });
 
@@ -293,14 +323,14 @@ export class UnifiedApplyService {
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'created',
         $push: {
-          statusHistory: {
-            status: 'created',
-            date: new Date(),
-            notes:
+          stageHistory: stageEntry({
+            stage: 'staging',
+            internalStatus: 'review_required',
+            reason:
               executionMode === 'manual'
                 ? 'Manual mode: documents prepared, automation withheld. Submit yourself or approve automated submission.'
                 : 'Review mode: documents prepared and held for your approval before submission.',
-          },
+          }),
         },
       });
 
@@ -387,11 +417,11 @@ export class UnifiedApplyService {
         await JobApplication.findByIdAndUpdate(jobApp._id, {
           status: 'created',
           $push: {
-            statusHistory: {
-              status: 'created',
-              date: new Date(),
-              notes: `Application staged in Tracker (${applyResult.message || 'Manual submission required with tailored documents'}).`,
-            },
+            stageHistory: stageEntry({
+              stage: 'staging',
+              internalStatus: 'review_required',
+              reason: `Application staged in Tracker (${applyResult.message || 'Manual submission required with tailored documents'}).`,
+            }),
           },
         });
 
@@ -428,11 +458,11 @@ export class UnifiedApplyService {
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'created',
         $push: {
-          statusHistory: {
-            status: 'created',
-            date: new Date(),
-            notes: `Auto-submission encountered an issue: ${applyErr.message}. Staged for manual review.`,
-          },
+          stageHistory: stageEntry({
+            stage: 'staging',
+            internalStatus: 'automation_failed',
+            reason: `Auto-submission encountered an issue: ${applyErr.message}. Staged for manual review.`,
+          }),
         },
       });
 
@@ -491,8 +521,8 @@ export class UnifiedApplyService {
       status: 'saved',
       priority: 'high',
       salary: context.salary || undefined,
-      statusHistory: [
-        { status: 'saved', date: new Date(), notes: 'Job initiated via Auto-Apply' },
+      stageHistory: [
+        stageEntry({ stage: 'saved', reason: 'Job initiated via Auto-Apply' }),
       ],
     });
 
