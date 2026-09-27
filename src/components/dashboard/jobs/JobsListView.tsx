@@ -378,16 +378,19 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       {appliedDateStr}
                     </td>
 
-                    {/* Status — the live step while a run is moving, the badge otherwise */}
+                    {/* Status — a compact chip while a run is live, the shared
+                        status chip otherwise. The progress bar, the live
+                        sentence and the reason paragraph belong to the sidebar
+                        this row opens, not to a table cell. */}
                     <td className="py-3.5 px-4">
                       {(() => {
                         const live = getForJob(jobId);
                         if (live?.isActive) {
                           return (
-                            <div className="min-w-[180px] max-w-[220px]">
+                            <div className="min-w-[190px] max-w-[230px]">
                               <LiveProgressBar
                                 progress={live}
-                                variant="compact"
+                                variant="minimal"
                                 onAction={(actionId) => onAutomationAction?.(job, actionId)}
                               />
                             </div>

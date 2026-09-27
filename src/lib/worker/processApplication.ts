@@ -4,7 +4,11 @@ import ApplicationEvent from '@/models/ApplicationEvent';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import { applicationStateMachine, type CanonicalStage, type InternalApplicationStatus } from '@/lib/application-state/stateMachine';
-import { isPlaywrightAutomatable } from '@/lib/jobs/autoApplySupport';
+import {
+  isPlaywrightAutomatable,
+  resolveApplyUrl,
+  detectAtsFromUrl,
+} from '@/lib/jobs/autoApplySupport';
 import { log } from '@/lib/structured-logger';
 
 export interface ProcessContext {
@@ -111,7 +115,42 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     }
 
     // 3. Determine ATS type and check automation capability
-    const atsType = jobApplication.atsType || 'unknown';
+    /*
+      The stored `atsType` and `jobUrl` may be stale or empty for rows created before
+      SB-20, or for rows where the enqueue-time repair in `auto-apply/route.ts` failed
+      (e.g. the listing was temporarily missing). The listing is the only authority on
+      where the form actually lives, so we re-resolve at worker time as a safety net.
+
+      `jobApplication.jobId` is the discover listing `_id` (see `JobApplication` model).
+      Manual / extension entries use generated strings (`job_…`), so the ObjectId guard
+      skips them and the stored values remain the fallback.
+    */
+    let resolvedJobUrl: string = jobApplication.jobUrl || '';
+    let resolvedAtsType: string = jobApplication.atsType || 'unknown';
+
+    if (resolvedAtsType === 'unknown' || !resolvedJobUrl) {
+      try {
+        const jobId = jobApplication.jobId;
+        if (jobId && mongoose.Types.ObjectId.isValid(String(jobId))) {
+          const Job = (await import('@/models/Job')).default;
+          const listing = await Job.findById(jobId)
+            .select('applyUrl source.applicationUrl')
+            .lean();
+          if (listing) {
+            const listingUrl = resolveApplyUrl(listing);
+            if (listingUrl) {
+              resolvedJobUrl = listingUrl;
+              const detected = detectAtsFromUrl(listingUrl);
+              if (detected) resolvedAtsType = detected;
+            }
+          }
+        }
+      } catch {
+        // Best-effort: the stored values are the fallback.
+      }
+    }
+
+    const atsType = resolvedAtsType;
     /*
       The gate reads the canonical list rather than a local array.
 
@@ -173,7 +212,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       description: jobApplication.jobDescription || '',
       location: jobApplication.location,
       salary: jobApplication.salary,
-      jobUrl: jobApplication.jobUrl || '',
+      jobUrl: resolvedJobUrl,
       atsType: atsType as any,
       source: jobApplication.source || 'auto_apply',
       screeningQuestions: [],

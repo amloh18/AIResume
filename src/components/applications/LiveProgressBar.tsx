@@ -7,6 +7,7 @@ import {
   Check,
   CheckCircle2,
   CircleDashed,
+  Clock,
   Loader2,
   X,
 } from 'lucide-react';
@@ -38,8 +39,16 @@ import { chipTone, type ChipTone } from '@/components/ui/chip-styles';
 
 export interface LiveProgressBarProps {
   progress: ApplicationProgress;
-  /** `compact` for job cards (one line of context), `full` for the sidebar. */
-  variant?: 'compact' | 'full';
+  /**
+   * `minimal` — ONE chip + the row's control, for a dense table cell (the
+   *   tracker's STATUS column, and the dashboard's Recent Jobs instance of it).
+   *   No bar, no percentage, no detail paragraph: a status column states the
+   *   status, and the sentence/bar/percentage belong in the sidebar the row
+   *   opens. The full text survives on `title`, so nothing is lost to hover.
+   * `compact` — job cards (Discover feed): live sentence + bar + one line of context.
+   * `full`    — the job/journey sidebar: everything, including substeps.
+   */
+  variant?: 'minimal' | 'compact' | 'full';
   /** Renders the substep list under the bar (defaults to `full`). */
   showSubsteps?: boolean;
   /**
@@ -127,6 +136,28 @@ function currentSubstep(substeps: ProgressSubstep[]): ProgressSubstep | undefine
 }
 
 /**
+ * Chip-sized glyph for the `minimal` variant.
+ *
+ * Deliberately a *static* icon where the bar uses a ping animation: a chip is a
+ * label, and a pulsing label in a dense table draws the eye to every row at
+ * once — the opposite of what a status column is for.
+ */
+function chipGlyph(state: ProgressState) {
+  switch (state) {
+    case 'running':
+      return <Loader2 className="w-3 h-3 animate-spin" />;
+    case 'waiting_user':
+      return <Clock className="w-3 h-3" />;
+    case 'failed':
+      return <AlertTriangle className="w-3 h-3" />;
+    case 'done':
+      return <CheckCircle2 className="w-3 h-3" />;
+    default:
+      return null;
+  }
+}
+
+/**
  * One console line per application per kind of trouble — a fire alarm, not a
  * heartbeat. The customer copy for a slow queue is deliberately calm, so this is
  * where the real signal survives. `progress.diagnostic` is also present on the
@@ -173,6 +204,58 @@ export function LiveProgressBar({
 
   const counter = stepCounter(progress.substeps);
   const current = currentSubstep(progress.substeps);
+
+  /*
+    ── `minimal`: the dense-table shape ──────────────────────────────────────
+    Rendered by the tracker's STATUS column and the dashboard's Recent Jobs
+    (which is the same component). Deliberately mirrors `JobStatusActionChip`'s
+    `stacked` layout — chip, optional number, optional control — so a row with a
+    live run and a row without one look like the same column, instead of the
+    live row growing a five-line progress block inside a table cell.
+
+    What is NOT here: the bar, `liveText` and `detail`. Those are the sidebar's
+    job. They are not thrown away — `title` carries them, so hover still answers
+    "why?", and clicking the row opens the full panel.
+  */
+  if (variant === 'minimal') {
+    const fullTitle = progress.detail
+      ? `${progress.liveText} — ${progress.detail}`
+      : progress.liveText;
+    return (
+      <div className={`flex flex-col items-start gap-1 min-w-0 ${className}`}>
+        <div className="flex items-center gap-1.5 min-w-0 max-w-full">
+          <span
+            className={`${chipTone(style.tone, 'sm')} font-semibold max-w-[190px]`}
+            title={fullTitle}
+          >
+            {chipGlyph(progress.state)}
+            <span className="truncate min-w-0">{progress.phaseLabel}</span>
+          </span>
+          {/* A percentage is only honest while something is moving — parked and
+              failed rows sit at a band's start, which reads as real progress. */}
+          {isRunning && !indeterminate && (
+            <span className="text-[10px] font-bold tabular-nums text-gray-500 dark:text-gray-400 shrink-0">
+              {Math.round(progress.percent)}%
+            </span>
+          )}
+        </div>
+
+        {progress.action && onAction && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction(progress.action!.id);
+            }}
+            className={`${chipTone(style.tone, 'sm')} font-bold hover:opacity-90 transition-opacity`}
+            title={fullTitle}
+          >
+            {progress.action.label}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full space-y-2 ${className}`}>
