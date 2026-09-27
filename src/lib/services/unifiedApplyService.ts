@@ -151,6 +151,72 @@ function stageEntry(opts: {
   };
 }
 
+/**
+ * Resolve the tailored CV for an application as a PDF buffer, ready to attach to a live form.
+ *
+ * The ATS fillers (`fillGreenhouseFields`, `fillLeverFields`, `fillAshbyFields`, `fillWorkableFields`)
+ * all accept `resumePdf: Buffer` + `resumeFileName` and upload it via `setInputFiles`, but **no caller
+ * ever passed them** and `JobApplication.attachments` is written by no code path in the repo — so an
+ * automated run filled the candidate's name and email and then submitted with **no resume attached**.
+ *
+ * Resolution order matches the rest of the product:
+ *   1. the tailored CV the journey was built around (`ApplicationJourney.cvId` — note that
+ *      `ApplicationJourney.jobId` holds the `JobApplication._id`, so the application id is the lookup);
+ *   2. the user's Master CV.
+ *
+ * Rendering goes through the same `PDFService` + `resolveTemplate` pair the download route uses, so the
+ * attachment is byte-identical to what the user gets from "Download PDF" — including the template's
+ * custom renderer. There is deliberately **no HTML fallback**: an HTML file is not a resume, and
+ * silently attaching one would be worse than parking the application.
+ *
+ * Returns `null` on any failure; the caller parks the application instead of submitting an incomplete
+ * one.
+ */
+async function resolveResumeAttachment(
+  applicationId: string,
+  userId: string,
+): Promise<{ buffer: Buffer; fileName: string } | null> {
+  try {
+    const journey: any = await ApplicationJourney.findOne({ jobId: applicationId }).lean();
+
+    let cvId: string | undefined = journey?.cvId ? String(journey.cvId) : undefined;
+    if (!cvId) {
+      const master: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+      cvId = master?._id ? String(master._id) : undefined;
+    }
+    if (!cvId) return null;
+
+    const { getCVWithTemplate } = await import('@/lib/cv-template-utils');
+    const cvWithTemplate = await getCVWithTemplate(cvId);
+    if (!cvWithTemplate?.cvData) return null;
+
+    const { resolveTemplate } = await import('@/lib/services/templateResolutionService');
+    const { template } = await resolveTemplate(cvWithTemplate);
+    if (!template) return null;
+
+    const { PDFService } = await import('@/lib/services/pdfService');
+    const blob = await PDFService.generatePDF(cvWithTemplate.cvData, template, {
+      paperSize: 'A4',
+      orientation: 'portrait',
+      format: 'pdf',
+    });
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    if (!buffer.length) return null;
+
+    const rawName = String(cvWithTemplate.cvData?.basics?.name || 'Candidate').trim();
+    const safeName = rawName.replace(/[^A-Za-z0-9 _-]/g, '').trim().replace(/\s+/g, '-') || 'Candidate';
+    return { buffer, fileName: `${safeName}-Resume.pdf` };
+  } catch (error) {
+    // Best-effort: a missing attachment must park the application, not crash the queue item.
+    console.error(
+      '[apply] Could not build the resume attachment',
+      JSON.stringify({ applicationId, error: error instanceof Error ? error.message : String(error) }),
+    );
+    return null;
+  }
+}
+
 export interface ApplyJobContext {
   jobId: string;
   title: string;
@@ -786,12 +852,17 @@ export class UnifiedApplyService {
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
+        // The tailored CV as a PDF, so the form is submitted with a resume attached.
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+
         const fillResult = await fillGreenhouseFields(page, detection.fields, {
           firstName: user?.firstName || primaryCv?.basics?.name?.split(' ')[0] || '',
           lastName: user?.lastName || primaryCv?.basics?.name?.split(' ').slice(1).join(' ') || '',
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
+          resumePdf: resume?.buffer,
+          resumeFileName: resume?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'greenhouse', 'filled', context, {
@@ -801,27 +872,22 @@ export class UnifiedApplyService {
         });
 
         /*
-          Refuse to submit without a CV.
+          Refuse to submit without a resume.
 
-          `fillGreenhouseFields` accepts `resumePdf`, but no caller has ever passed it and
-          `JobApplication.attachments` is not written by any code path in the repo — so a run that
-          reached the submit button would have sent the candidate's details with **no resume
-          attached**. A silently incomplete submission is worse than a parked one: the user believes
-          they applied, the employer receives an empty application, and nothing surfaces the problem.
+          `resolveResumeAttachment` renders the tailored CV through the same `PDFService` the download
+          route uses. If it returns null — no CV, no template, renderer unavailable — halt explicitly
+          rather than submit the candidate's details with nothing attached. A silently incomplete
+          submission is worse than a parked one: the user believes they applied, the employer receives
+          an empty application, and nothing surfaces the problem.
 
-          Until the document pipeline populates an attachment, halt explicitly instead of submitting.
           The operator detail goes to the log; `message` stays user-facing copy (SB-08).
         */
-        const resumeAttachment = (jobApp.attachments || []).find(
-          (a: any) => a?.type === 'cv' && a?.url
-        );
-        if (!resumeAttachment) {
+        if (!resume) {
           console.error(
             '[greenhouse] Refusing to submit without a resume attachment',
             JSON.stringify({
               applicationId: jobApp._id.toString(),
               navigationUrl,
-              attachmentsOnApplication: (jobApp.attachments || []).length,
               filledFields: fillResult?.fieldsFilled,
             })
           );
@@ -946,11 +1012,16 @@ export class UnifiedApplyService {
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
+        // The tailored CV as a PDF, so the form is submitted with a resume attached.
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+
         const fillResult = await fillLeverFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
+          resumePdf: resume?.buffer,
+          resumeFileName: resume?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'lever', 'filled', context, {
@@ -1065,11 +1136,16 @@ export class UnifiedApplyService {
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
+        // The tailored CV as a PDF, so the form is submitted with a resume attached.
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+
         const fillResult = await fillAshbyFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
+          resumePdf: resume?.buffer,
+          resumeFileName: resume?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'ashby', 'filled', context, {
@@ -1184,10 +1260,15 @@ export class UnifiedApplyService {
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
+        // The tailored CV as a PDF, so the form is submitted with a resume attached.
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+
         const fillResult = await fillWorkableFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
+          resumePdf: resume?.buffer,
+          resumeFileName: resume?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'workable', 'filled', context, {
