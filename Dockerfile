@@ -80,6 +80,17 @@ ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
 RUN npm run build
 
+# Build identity that needs nothing passed in.
+#
+# `GIT_COMMIT` above only reports anything if something *supplies* it, and nothing does: Dokploy has no
+# build-arg for it and `.dockerignore` excludes `.git`, so `/api/health` has reported `"commit":"unknown"`
+# on every deploy. An identity field that is always "unknown" is worse than none — it reads as a feature.
+# A timestamp written at build time is always populated, and it is what actually answers "is this
+# container older than that one?".
+#
+# Placed after `npm run build` so it does not invalidate the expensive `deps`/`npm ci` layers.
+RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build-time
+
 # ── worker bundle ──────────────────────────────────────────────────────────────
 # esbuild bundles src/workers/entry.ts into dist/worker.mjs. The build script verifies that every
 # external specifier in the output resolves under plain Node, so an unresolvable import fails the
@@ -118,6 +129,10 @@ COPY --from=source --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=source --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=worker-bundle --chown=nextjs:nodejs /app/dist ./dist
 
+# Same build identity as `runner`, for the same reason — see the note there. Written while still root,
+# then handed to `nextjs` so the unprivileged process can read it.
+RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build-time && chown nextjs:nodejs /app/.build-time
+
 USER nextjs
 # Internal health port only. Do not publish it; the web service reaches it on the Docker network.
 EXPOSE 8791
@@ -152,6 +167,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+# The build stamp, so `/api/health` can report when this image was built.
+COPY --from=builder --chown=nextjs:nodejs /app/.build-time ./.build-time
 
 # Next.js writes ISR / image-optimizer output here.
 RUN mkdir -p /app/.next/cache && chown -R nextjs:nodejs /app/.next

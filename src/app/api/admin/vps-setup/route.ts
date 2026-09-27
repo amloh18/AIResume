@@ -26,7 +26,32 @@ import {
   isIngestionServiceSource,
   SOURCE_REGISTRY,
 } from '@/lib/ingestion/engine';
-import { probeWorkerHealth, getWorkerHealthUrl, resolveBuildCommit } from '@/workers/health';
+import { probeWorkerHealth, getWorkerHealthUrl, resolveBuildTime } from '@/workers/health';
+
+/**
+ * How much older the worker's image may be before it is reported as stale.
+ *
+ * The web and worker images are built by **separate** Dokploy applications, minutes apart within one
+ * deploy cycle, so the threshold only has to separate "minutes" from "hours". An hour leaves a ~60x
+ * margin over the normal case; the smallest genuine staleness measured on this deployment was ~45
+ * hours (SB-01b). It is deliberately generous — a false "stale" is worse than a late one, because it
+ * trains the reader to ignore the chip.
+ */
+const BUILD_STALE_THRESHOLD_MS = 60 * 60 * 1000;
+
+/**
+ * Is the worker running an older image than this web container?
+ *
+ * Returns `null` — never `false` — when either stamp is missing or unparseable, so "we don't know" is
+ * not reported as "it's fine". Same convention as the probe results elsewhere in this file.
+ */
+function isBuildStale(webBuildTime: string, workerBuildTime: string | undefined | null): boolean | null {
+  if (!webBuildTime || !workerBuildTime) return null;
+  const web = Date.parse(webBuildTime);
+  const worker = Date.parse(workerBuildTime);
+  if (Number.isNaN(web) || Number.isNaN(worker)) return null;
+  return web - worker > BUILD_STALE_THRESHOLD_MS;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -328,8 +353,8 @@ async function checkVpsStatus() {
     probeWorkerHealth(getWorkerHealthUrl()).catch(() => null),
   ]);
   const executionMode = getWorkerExecutionMode();
-  // This web container's own commit, for the drift comparison below.
-  const webCommit = resolveBuildCommit();
+  // This web container's own build stamp, for the drift comparison below.
+  const webBuildTime = resolveBuildTime();
 
   const markerOr = (key: string, remote: boolean | undefined | null) =>
     remote ?? (marker?.[key] === true);
@@ -381,15 +406,13 @@ async function checkVpsStatus() {
       ? {
           configured: true,
           role: workerLoop.role,
+          // `commit` is always 'unknown' in this deployment (nothing supplies GIT_COMMIT) — kept as
+          // plumbing. `buildTime` is the stamp that actually works, and what the drift check uses.
           commit: workerLoop.commit ?? null,
+          buildTime: workerLoop.buildTime ?? null,
           // The worker runs its own image and Dokploy does not redeploy it with the web tier, so
-          // "reachable" and "running what you just shipped" are different questions. Compare the two
-          // build commits to answer the second. `unknown` on either side means the build arg was not
-          // passed — that is not evidence of drift, so it reports null rather than `true`.
-          commitStale:
-            workerLoop.commit && workerLoop.commit !== 'unknown' && webCommit !== 'unknown'
-              ? workerLoop.commit !== webCommit
-              : null,
+          // "reachable" and "current" are different questions. This answers the second.
+          buildStale: isBuildStale(webBuildTime, workerLoop.buildTime),
           uptimeSeconds: workerLoop.uptimeSeconds,
           memoryRssMb: workerLoop.memoryRssMb,
           loops: workerLoop.loops,
@@ -398,7 +421,8 @@ async function checkVpsStatus() {
           configured: false,
           role: null,
           commit: null,
-          commitStale: null,
+          buildTime: null,
+          buildStale: null,
           uptimeSeconds: null,
           memoryRssMb: null,
           loops: null,
