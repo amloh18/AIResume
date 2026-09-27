@@ -11,6 +11,8 @@
 import { getConnection } from '@/lib/database';
 import mongoose from 'mongoose';
 import QuotaService, { PlanType } from './quota-service';
+import { detectAtsFromUrl } from '@/lib/jobs/autoApplySupport';
+import type { ATSType } from '@/types/automation-schema';
 
 export interface JobSearchCriteria {
   keywords: string[];
@@ -37,7 +39,14 @@ export interface JobListing {
     period?: 'hourly' | 'monthly' | 'yearly';
   };
   remote?: boolean;
-  atsType?: 'greenhouse' | 'lever' | 'workable' | 'unknown';
+  /**
+   * Canonical `ATSType`. This used to be `'greenhouse' | 'lever' | 'workable' | 'unknown'`, and the
+   * missing `'workday'` slot is exactly why `detectATS` mapped a Workday URL to `'workable'` — the
+   * label was wrong because there was nowhere else to put it. Widening to `ATSType` removes the
+   * reason to lie. No consumer switches on this value (they pass it through or filter on it), so the
+   * extra members are additive.
+   */
+  atsType?: ATSType;
   postedDate?: Date;
   matchScore?: number;
   createdAt: Date;
@@ -324,11 +333,19 @@ class PortalFetcherService {
    * Detect ATS type from job URL
    */
   private static detectATS(url: string): JobListing['atsType'] {
-    const urlLower = url.toLowerCase();
-    if (urlLower.includes('greenhouse')) return 'greenhouse';
-    if (urlLower.includes('lever')) return 'lever';
-    if (urlLower.includes('workday') || urlLower.includes('myworkday')) return 'workable';
-    return 'unknown';
+    /*
+      Delegates to the canonical detector instead of hand-rolling another copy. The version this
+      replaced had two defects:
+
+        - `workday` / `myworkday` returned `'workable'`. Not a typo — `JobListing['atsType']` had no
+          `'workday'` member, so a Workday URL was mislabelled to fit the union. Fixed by widening the
+          union above.
+        - `ashby` was never detected, so an Ashby board fell through to `'unknown'`.
+
+      `detectAtsFromUrl` is also embed-aware (`?gh_jid=`, `?ashby_jid=`, `?lever-origins=`), which
+      substring matching over the raw URL cannot be.
+    */
+    return detectAtsFromUrl(url) ?? 'unknown';
   }
 
   /**
