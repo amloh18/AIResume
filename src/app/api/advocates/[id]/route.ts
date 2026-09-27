@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Advocate from '@/models/Advocate';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function PUT(
   request: NextRequest,
@@ -24,7 +25,7 @@ export async function PUT(
 
     const advocate = await Advocate.findOne({
       _id: id,
-      userId: auth.userId
+      userId: mixedIdFilter(auth.userId)
     });
 
     if (!advocate) {
@@ -81,7 +82,7 @@ export async function DELETE(
 
     const advocate = await Advocate.findOneAndDelete({
       _id: id,
-      userId: auth.userId
+      userId: mixedIdFilter(auth.userId)
     });
 
     if (!advocate) {

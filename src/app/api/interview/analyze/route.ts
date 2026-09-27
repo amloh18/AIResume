@@ -6,6 +6,7 @@ import { JobApplication, CV, User } from '@/models';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 // Increase timeout for AI
 export const maxDuration = 60;
@@ -35,14 +36,12 @@ export async function POST(request: NextRequest) {
             ? new mongoose.Types.ObjectId(jobId)
             : jobId;
 
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
         // Fetch job with embedded interview data
         const job = await JobApplication.findOne({
             _id: jobIdQuery,
-            userId: userIdQuery,
+            userId: userFilter,
             'interviewCoach.questions.id': questionId
         }).select('jobTitle company jobDescription interviewCoach');
 
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest) {
         await JobApplication.updateOne(
             {
                 _id: jobIdQuery,
-                userId: userIdQuery,
+                userId: userFilter,
                 'interviewCoach.questions.id': questionId
             },
             {
@@ -140,7 +139,7 @@ export async function POST(request: NextRequest) {
         // --- Streak Logic ---
         let streakEvent = null;
         try {
-            const user = await User.findById(userIdQuery);
+            const user = await User.findById(auth.userId);
             if (user) {
                 const now = new Date();
                 const lastPractice = user.interviewCoach?.lastPracticeDate;

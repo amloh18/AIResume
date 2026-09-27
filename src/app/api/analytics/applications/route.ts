@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { JobApplication, ApplicationJourney } from '@/models';
 
 export async function GET(request: NextRequest) {
@@ -29,33 +29,23 @@ export async function GET(request: NextRequest) {
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // JobApplication uses Mixed type for userId, so we need to handle both ObjectId and string
-    // Support both ObjectId and string userId formats
-    let userIdQuery: any;
-    if (mongoose.Types.ObjectId.isValid(authResult.userId)) {
-      userIdQuery = { $in: [new mongoose.Types.ObjectId(authResult.userId), authResult.userId] };
-    } else {
-      userIdQuery = authResult.userId;
-    }
+    // JobApplication.userId is Mixed, so query both stored shapes (SB-06)
+    const userFilter = mixedIdFilter(authResult.userId);
 
     console.log('Applications API: Using userId from authenticated user', { 
       userId: authResult.userId,
-      userIdQuery 
+      userFilter 
     });
 
     // Fetch jobs and journeys in parallel (no data dependency)
-    const userIdObjectId = mongoose.Types.ObjectId.isValid(authResult.userId) 
-      ? new mongoose.Types.ObjectId(authResult.userId)
-      : null;
-    
     const [allJobs, journeys] = await Promise.all([
       JobApplication.find({
-        userId: userIdQuery,
+        userId: userFilter,
         createdAt: { $gte: startDate }
       }),
-      userIdObjectId 
-        ? ApplicationJourney.find({ userId: userIdObjectId })
-        : ApplicationJourney.find({ userId: authResult.userId }),
+      // ApplicationJourney.userId is a String path; mixedIdFilter is safe and also covers
+      // any legacy rows written with the ObjectId shape (SB-06).
+      ApplicationJourney.find({ userId: mixedIdFilter(authResult.userId) }),
     ]);
 
     // Calculate application stats

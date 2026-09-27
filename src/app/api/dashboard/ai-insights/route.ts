@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import mongoose from 'mongoose';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +15,19 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = authResult;
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    /*
+      `JobApplication.userId` is `Schema.Types.Mixed`, so Mongoose does not cast the query value for
+      us: a bare ObjectId silently misses rows stored as a 24-hex string and vice versa — no error,
+      no log, just fewer rows (SB-06). `mixedIdFilter` matches both shapes, and is also correct on
+      the ObjectId-typed `CV.userId` path, where `$in` casts the string form to the same ObjectId.
+    */
+    const userFilter = mixedIdFilter(userId);
 
     // Fetch some data to generate insights
     const [cvCount, jobCount, recentJobs] = await Promise.all([
-      CV.countDocuments({ userId: userObjectId }),
-      JobApplication.countDocuments({ userId: userObjectId }),
-      JobApplication.find({ userId: userObjectId }).sort({ updatedAt: -1 }).limit(5).lean()
+      CV.countDocuments({ userId: userFilter }),
+      JobApplication.countDocuments({ userId: userFilter }),
+      JobApplication.find({ userId: userFilter }).sort({ updatedAt: -1 }).limit(5).lean()
     ]);
 
     const insights = [];

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
 import { isFreeTierPlan } from '@/lib/utils/subscription-helpers';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,9 +19,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const cvId = searchParams.get('cvId');
 
-    const query: any = { userId: session.user.id };
+    // `MoriChat.userId` / `.cvId` are `Schema.Types.Mixed` and therefore uncast (SB-06).
+    const query: any = { userId: mixedIdFilter(session.user.id) };
     if (cvId) {
-      query.cvId = cvId;
+      query.cvId = mixedIdFilter(cvId);
     }
 
     const chats = await MoriChat.find(query)
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest) {
         
         // Count messages since lastResetDate
         const userChats = await MoriChat.find({
-          userId: session.user.id,
+          userId: mixedIdFilter(session.user.id),
           updatedAt: { $gte: lastResetDate }
         }).lean();
 

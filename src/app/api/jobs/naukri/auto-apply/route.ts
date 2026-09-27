@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import JobApplication from '@/models/JobApplication';
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0];
     const todayStart = new Date(today + 'T00:00:00Z');
     const todayCount = await JobApplication.countDocuments({
-      userId: auth.userId,
+      userId: mixedIdFilter(auth.userId),
       source: 'naukri',
       applicationDate: { $gte: todayStart },
     });

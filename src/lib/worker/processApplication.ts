@@ -43,7 +43,11 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     targetStatus: 'processing',
     eventType: 'status_update',
     source: 'automation_worker',
-    reason: 'Worker picked up application from queue',
+    // `reason` reaches a customer (as `reviewReason` and as the notification body) while
+    // `operatorReason` does not — see SB-08 and `StateTransitionRequest`. Never put a technical
+    // string in `reason`.
+    reason: 'Your AI agent picked this up and started preparing your application.',
+    operatorReason: 'Worker picked up application from queue',
     runId: queueItem._id?.toString(),
   });
 
@@ -71,9 +75,19 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
         : 'review';
 
     if (executionMode === 'manual' || executionMode === 'skip') {
+      /*
+        Split channel (SB-08). This reason is rendered verbatim by the tracker and copied into the
+        user's notification, and the operator wording used to leak: the `skip` branch literally read
+        `Decision engine returned "skip"…`, which reached customers and had to be caught after the
+        fact by `sanitizeReason()`. The technical cause now travels in `operatorReason`.
+      */
       const reason =
         executionMode === 'manual'
-          ? 'Execution mode is "manual": automation is not permitted for this application. Submit it yourself, or re-queue it with mode "auto" to approve automated submission.'
+          ? 'This application is set to be applied for manually, so we have not submitted it. Apply on the employer\u2019s site, or approve automated submission to let your AI agent send it.'
+          : 'We have not submitted this application. Apply on the employer\u2019s site to finish it.';
+      const operatorReason =
+        executionMode === 'manual'
+          ? 'Execution mode is "manual": automation is not permitted for this application.'
           : 'Decision engine returned "skip": this application must not be automated.';
 
       await applicationStateMachine.transition({
@@ -84,6 +98,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
         eventType: 'APPLICATION_REQUIRES_REVIEW',
         source: 'automation_worker',
         reason,
+        operatorReason,
         runId: queueItem._id?.toString(),
       });
 
@@ -144,7 +159,8 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       targetStatus: 'form_detected',
       eventType: 'status_update',
       source: 'automation_worker',
-      reason: `ATS ${atsType} detected. Playwright automation ready.`,
+      reason: 'We found the application form and are filling in your details.',
+      operatorReason: `ATS ${atsType} detected. Playwright automation ready.`,
     });
 
     // 5. Attempt Playwright automation via UnifiedApplyService
@@ -194,7 +210,8 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
         targetStatus: 'applied',
         eventType: 'SUBMISSION_CONFIRMED',
         source: 'automation_worker',
-        reason: `Successfully submitted via ${atsType}`,
+        reason: 'Your application was submitted successfully.',
+        operatorReason: `Successfully submitted via ${atsType}`,
         evidence: {
           confirmationId: applyResult.confirmationId,
           confirmationUrl: applyResult.confirmationUrl,
@@ -222,7 +239,9 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
     }
 
     if (applyResult.status === 'action_required') {
-      // CAPTCHA or manual intervention needed
+      // CAPTCHA, an unrecognised form, or a Playwright failure. `applyResult.message` is already
+      // customer-safe (see `automationUnavailable`); the raw technical string travels in
+      // `operatorDetail` and goes to `operatorReason`, never to the customer (SB-08).
       await applicationStateMachine.transition({
         applicationId,
         userId,
@@ -231,6 +250,7 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
         eventType: 'APPLICATION_REQUIRES_REVIEW',
         source: 'automation_worker',
         reason: applyResult.message,
+        operatorReason: applyResult.operatorDetail,
       });
 
       return {
@@ -241,7 +261,12 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       };
     }
 
-    // Failed
+    // Failed.
+    // Both `reason` and the returned `message` are customer-facing — the worker copies `message`
+    // straight into the user's notification body — so neither may carry the raw failure string.
+    const failedMessage =
+      'We could not submit this application automatically. Please apply on the employer\u2019s site.';
+
     await applicationStateMachine.transition({
       applicationId,
       userId,
@@ -249,18 +274,22 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       targetStatus: 'automation_failed',
       eventType: 'status_update',
       source: 'automation_worker',
-      reason: `Automation failed: ${applyResult.message}`,
+      reason: failedMessage,
+      operatorReason: applyResult.operatorDetail || applyResult.message,
     });
 
     return {
       success: false,
       stage: (jobApplication.currentStage as CanonicalStage) || 'saved',
       status: 'automation_failed',
-      message: applyResult.message,
+      message: failedMessage,
     };
 
   } catch (err: any) {
     log.error(`[ApplicationWorker] Error processing ${applicationId}:`, err.message);
+
+    const erroredMessage =
+      'Something went wrong while preparing this application. Please apply on the employer\u2019s site.';
 
     // Transition to failed state
     await applicationStateMachine.transition({
@@ -270,14 +299,17 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
       targetStatus: 'automation_failed',
       eventType: 'status_update',
       source: 'automation_worker',
-      reason: `Worker error: ${err.message}`,
+      reason: erroredMessage,
+      operatorReason: `Worker error: ${err.message}`,
     }).catch(() => {}); // Best-effort
 
     return {
       success: false,
       stage: (jobApplication.currentStage as CanonicalStage) || 'saved',
       status: 'automation_failed',
-      message: err.message,
+      // `err.message` used to be returned here, and the worker turns the returned message into the
+      // notification the user reads.
+      message: erroredMessage,
     };
   }
 }

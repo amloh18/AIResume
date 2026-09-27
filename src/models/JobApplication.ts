@@ -197,7 +197,10 @@ export interface IJobApplication extends Document {
     stage: string;
     internalStatus: string;
     changedAt: Date;
+    /** Customer-facing. `GET /api/jobs` surfaces this as `reviewReason`. */
     reason?: string;
+    /** Operator-only detail (a Playwright error, a selector, a URL). Never rendered. */
+    operatorReason?: string;
     source: 'user' | 'automation' | 'automation_worker' | 'email_intelligence' | 'admin' | 'system';
   }>;
   evidence?: {
@@ -528,6 +531,13 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     internalStatus: { type: String, required: true },
     changedAt: { type: Date, default: Date.now },
     reason: { type: String },
+    /*
+      Must be declared, not just written. Mongoose's `strict` mode strips unknown paths from an
+      update **silently** — the whole reason `$push: { statusHistory }` wrote nothing for months
+      (SB-17). Adding `operatorReason` to the state machine without adding it here would reproduce
+      that bug exactly: the split would look implemented and record nothing.
+    */
+    operatorReason: { type: String },
     source: {
       type: String,
       // `automation_worker` is what the application worker and the state machine

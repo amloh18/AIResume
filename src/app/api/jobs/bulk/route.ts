@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import JobApplication from '@/models/JobApplication';
 import mongoose from 'mongoose';
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     // Validate that all jobs belong to the user
     const jobs = await JobApplication.find({
       _id: { $in: jobIds.map((id: string) => new mongoose.Types.ObjectId(id)) },
-      userId: new mongoose.Types.ObjectId(userId)
+      userId: mixedIdFilter(userId)
     });
 
     if (jobs.length !== jobIds.length) {

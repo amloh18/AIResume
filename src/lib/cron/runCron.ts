@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { cronAuthFailure } from '@/lib/auth/cron-guard';
+import { log } from '@/lib/structured-logger';
 import {
   CORRELATION_HEADER,
   resolveCorrelationId,
@@ -23,12 +25,12 @@ import {
  *
  *     const denied = cronAuthFailure(request.headers);
  *     if (denied) return denied;
- *     const lock = acquireCronLock('daily-summary');
+ *     const lock = await acquireCronLock('daily-summary');
  *     if (!lock) return cronBusyResponse('daily-summary');
  *     try {
  *       …existing work, unchanged…
  *     } catch (e) { … } finally {
- *       lock.release();
+ *       await lock.release();
  *     }
  *
  * Wrapped (for new routes):
@@ -37,19 +39,42 @@ import {
  *
  * ## Scope of the guarantee
  *
- * The lock is an **in-process** `Map`: it protects against overlap *within one Node process*, which
- * is what this deployment has (a single app container). It deliberately does not use the database — a
- * Mongo-based lock would be cross-process but adds a write per cron tick and a new failure mode to
- * every route for a scheduler that is already single-host. If the app is ever scaled to multiple
- * replicas, this must become a Mongo `findOneAndUpdate` lease before these routes rely on it.
+ * Two guards, checked in order:
+ *
+ *   1. an **in-process `Map`** — synchronous, so a same-process overlap is refused without a round
+ *      trip, and the 409 can still report how long the run has been going;
+ *   2. a **Mongo lease** (`cronlocks`, one document per job name) — the cross-process guard.
+ *
+ * The `Map` alone was the original implementation, and it is only correct while exactly one app
+ * container exists. The docblock used to say so ("If the app is ever scaled to multiple replicas,
+ * this must become a Mongo `findOneAndUpdate` lease before these routes rely on it") — this is that
+ * lease (SB-07). Two replicas ticking `daily-summary` at the same second would otherwise both run.
+ *
+ * The lease is acquired with a conditional `findOneAndUpdate` on `expiresAt`, so exactly one caller
+ * can win a given lease even when several race for an expired one: Mongo evaluates the filter
+ * against the document state at update time, so the loser's filter no longer matches and its upsert
+ * trips the unique index instead. That collision is the "someone else holds it" signal.
+ *
+ * **Degradation is deliberate.** If there is no database connection, or the lease store errors, the
+ * run proceeds on the in-process guard alone and logs a warning. A guard that cannot reach its store
+ * must not silently stop every scheduled job — that would trade a rare double-send for a total
+ * outage, which is the worse failure. The practical consequence is that the first tick after a cold
+ * boot may be single-process-only; every later tick is covered.
+ *
+ * **Known limitation.** The lease is not renewed, so a run that outlives `CRON_LEASE_TTL_MS` (or a
+ * container killed without releasing) can be joined by the next tick once the lease lapses. The TTL
+ * is therefore a ceiling on a stuck job's outage window, and is set well above the slowest job.
  *
  * A skipped run returns **409** with `code: 'CRON_ALREADY_RUNNING'` so the scheduler log shows the
  * tick was refused rather than silently dropped.
  */
 
 interface CronLock {
-  release(): void;
+  release(): Promise<void>;
 }
+
+/** How long a lease is valid before another tick may take it over. */
+const CRON_LEASE_TTL_MS = 15 * 60 * 1000;
 
 const running = new Map<string, { startedAt: number }>();
 
@@ -68,16 +93,103 @@ export function cronRunElapsedMs(name: string): number | null {
   return entry ? Date.now() - entry.startedAt : null;
 }
 
+type LeaseOutcome =
+  | { kind: 'acquired'; owner: string }
+  | { kind: 'held' }
+  | { kind: 'unavailable' };
+
+/**
+ * Try to take the cross-process lease.
+ *
+ * Distinguishing `held` from `unavailable` is the whole point: `held` means another run owns the job
+ * and this tick must be refused, whereas `unavailable` means we could not ask and must fall back.
+ */
+async function tryAcquireLease(name: string): Promise<LeaseOutcome> {
+  let CronLockModel: typeof import('@/models/CronLock').default;
+  try {
+    const mongoose = (await import('mongoose')).default;
+    if (mongoose.connection.readyState !== 1) return { kind: 'unavailable' };
+    CronLockModel = (await import('@/models/CronLock')).default;
+  } catch (err: any) {
+    log.warn('[runCron] Lease unavailable, falling back to the in-process guard', {
+      job: name,
+      error: err?.message,
+    });
+    return { kind: 'unavailable' };
+  }
+
+  const now = new Date();
+  const owner = randomUUID();
+
+  try {
+    const doc = await CronLockModel.findOneAndUpdate(
+      { name, expiresAt: { $lte: now } },
+      {
+        $set: {
+          name,
+          owner,
+          startedAt: now,
+          expiresAt: new Date(now.getTime() + CRON_LEASE_TTL_MS),
+        },
+      },
+      { upsert: true, new: true }
+    ).lean();
+
+    // Defensive: with `upsert: true` a loser can, in principle, still observe the winner's document.
+    if (!doc || doc.owner !== owner) return { kind: 'held' };
+    return { kind: 'acquired', owner };
+  } catch (err: any) {
+    // A live lease already occupies the unique `name` — that is a genuine overlap.
+    if (err?.code === 11000) return { kind: 'held' };
+
+    log.warn('[runCron] Lease acquire failed, falling back to the in-process guard', {
+      job: name,
+      error: err?.message,
+    });
+    return { kind: 'unavailable' };
+  }
+}
+
+async function releaseLease(name: string, owner: string): Promise<void> {
+  const CronLockModel = (await import('@/models/CronLock')).default;
+  // Scoped to `owner` so a run whose lease already lapsed cannot delete the lease of the run that
+  // took over from it.
+  await CronLockModel.deleteOne({ name, owner });
+}
+
 /**
  * Take the lock for `name`, or return `null` when a run is already in flight.
- * Always pair with `release()` in a `finally`.
+ * Always pair with `await release()` in a `finally`.
  */
-export function acquireCronLock(name: string): CronLock | null {
+export async function acquireCronLock(name: string): Promise<CronLock | null> {
+  /*
+    In-process slot first, and synchronously — before the first `await`. That keeps the guard cheap
+    for the common case and preserves the property that a caller can observe the run as in-flight
+    immediately after invoking it.
+  */
   if (running.has(name)) return null;
   running.set(name, { startedAt: Date.now() });
+
+  const outcome = await tryAcquireLease(name);
+
+  if (outcome.kind === 'held') {
+    // Another process is running this job. Give the local slot back — we are not running it.
+    running.delete(name);
+    return null;
+  }
+
+  const owner = outcome.kind === 'acquired' ? outcome.owner : null;
+
   return {
-    release: () => {
+    release: async () => {
       running.delete(name);
+      if (!owner) return;
+      try {
+        await releaseLease(name, owner);
+      } catch (err: any) {
+        // The lease expires on its own; failing to delete it must not fail the run.
+        log.warn('[runCron] Lease release failed', { job: name, error: err?.message });
+      }
     },
   };
 }
@@ -108,7 +220,7 @@ export async function runCron(
   const denied = cronAuthFailure(request.headers);
   if (denied) return denied;
 
-  const lock = acquireCronLock(name);
+  const lock = await acquireCronLock(name);
   if (!lock) return cronBusyResponse(name);
 
   /*
@@ -123,6 +235,6 @@ export async function runCron(
     response.headers.set(CORRELATION_HEADER, correlationId);
     return response;
   } finally {
-    lock.release();
+    await lock.release();
   }
 }

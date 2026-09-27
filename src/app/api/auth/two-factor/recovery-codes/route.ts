@@ -11,6 +11,7 @@ import {
   hasRecoveryCodes,
 } from '@/lib/services/twoFactorService';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * Generate recovery codes for 2FA
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if 2FA is enabled
-    const userSettings = await UserSettings.findOne({ userId: user.id });
+    const userSettings = await UserSettings.findOne({ userId: mixedIdFilter(user.id) });
     if (!userSettings?.security?.twoFactorEnabled) {
       return NextResponse.json(
         { success: false, error: '2FA is not enabled for this account' },
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
     } else if (action === 'check') {
       // Check if user has available recovery codes
       const hasCodes = await hasRecoveryCodes(user.id);
-      const userSettings = await UserSettings.findOne({ userId: user.id });
+      const userSettings = await UserSettings.findOne({ userId: mixedIdFilter(user.id) });
       const totalCodes = userSettings?.security?.twoFactorRecoveryCodes?.length || 0;
       const usedCodes = userSettings?.security?.twoFactorRecoveryUsed?.length || 0;
       const availableCodes = totalCodes - usedCodes;
@@ -129,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     await getConnection();
 
-    const userSettings = await UserSettings.findOne({ userId: authResult.user.id });
+    const userSettings = await UserSettings.findOne({ userId: mixedIdFilter(authResult.user.id) });
     const hasCodes = await hasRecoveryCodes(authResult.user.id);
     const totalCodes = userSettings?.security?.twoFactorRecoveryCodes?.length || 0;
     const usedCodes = userSettings?.security?.twoFactorRecoveryUsed?.length || 0;

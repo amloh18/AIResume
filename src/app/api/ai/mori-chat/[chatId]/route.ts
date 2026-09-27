@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import MoriChat from '@/models/MoriChat';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ chatId: string }> }) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ chat
 
     await getConnection();
 
-    const chat = await MoriChat.findOne({ _id: chatId, userId: session.user.id }).lean();
+    const chat = await MoriChat.findOne({ _id: chatId, userId: mixedIdFilter(session.user.id) }).lean();
     if (!chat) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }
@@ -42,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ chat
     await getConnection();
 
     const chat = await MoriChat.findOneAndUpdate(
-      { _id: chatId, userId: session.user.id },
+      { _id: chatId, userId: mixedIdFilter(session.user.id) },
       { $set: { title: body.title } },
       { new: true }
     ).lean();
@@ -68,7 +69,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ c
 
     await getConnection();
 
-    const result = await MoriChat.deleteOne({ _id: chatId, userId: session.user.id });
+    const result = await MoriChat.deleteOne({ _id: chatId, userId: mixedIdFilter(session.user.id) });
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }

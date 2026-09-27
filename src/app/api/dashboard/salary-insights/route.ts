@@ -3,6 +3,7 @@ import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
 import JobApplication from '@/models/JobApplication';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +16,8 @@ export async function GET(request: NextRequest) {
 
     const { userId } = authResult;
     const userObjectId = new mongoose.Types.ObjectId(userId);
+    // `JobApplication.userId` is Mixed, so a bare ObjectId misses string-stored rows (SB-06).
+    const userFilter = mixedIdFilter(userId);
 
     // Fetch user profile for region detection
     const User = mongoose.models.User;
@@ -22,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch job applications with salary info
     const jobs = await JobApplication.find({
-      userId: userObjectId,
+      userId: userFilter,
       'salary.min': { $exists: true }
     }).select('salary jobTitle company').lean();
 

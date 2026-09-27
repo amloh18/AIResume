@@ -7,6 +7,7 @@ import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
 
 /**
@@ -173,7 +174,7 @@ export async function POST(request: NextRequest) {
     // Fetch jobs from database (only for the authenticated user)
     const jobs = await JobApplication.find({
       _id: { $in: objectIds },
-      userId: new mongoose.Types.ObjectId(userId)
+      userId: mixedIdFilter(userId)
     }).lean();
 
     if (jobs.length === 0) {

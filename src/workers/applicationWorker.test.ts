@@ -126,9 +126,23 @@ describe('applicationWorker — correlation handoff', () => {
     // The thrown error is caught by processApplication's own handler in production; here the tick's
     // catch path runs, which must not mark the item complete.
     expect(completeMock).not.toHaveBeenCalled();
-    // …and the user hears about the failure even on the escaping-exception path.
-    expect(notifyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'automation_failed', reason: expect.stringContaining('playwright exploded') })
+
+    /*
+      …and the user hears about the failure even on the escaping-exception path.
+
+      This assertion used to read `reason: expect.stringContaining('playwright exploded')`, i.e. it
+      pinned the leak: the notification body is rendered to the customer, so it must carry no raw
+      error text (SB-08). The technical string now goes to the queue item's `lastError` instead,
+      which only operators read.
+    */
+    const alert = notifyMock.mock.calls[0][0] as { status: string; reason: string };
+    expect(alert.status).toBe('automation_failed');
+    expect(alert.reason).not.toContain('playwright exploded');
+    expect(alert.reason).toMatch(/apply on the employer/i);
+    expect(failMock).toHaveBeenCalledWith(
+      QUEUE_ITEM._id,
+      expect.stringContaining('playwright exploded'),
+      true
     );
   });
 

@@ -235,7 +235,15 @@ export interface ApplyResult {
   atsType: ATSType;
   applicationId?: string;
   status: 'applied' | 'queued' | 'action_required' | 'saved' | 'failed';
+  /** Customer-facing. Safe to render as-is — see SB-08 and `operatorDetail`. */
   message: string;
+  /**
+   * Operator-only counterpart to `message`: the raw technical detail (a Playwright error, a
+   * selector, a URL) that must never reach a customer. The worker forwards this to
+   * `transition({ operatorReason })`, which lands it in `stageHistory[].operatorReason` and
+   * `ApplicationEvent.metadata.operatorReason` for ops, while `message` stays user-safe.
+   */
+  operatorDetail?: string;
   screeningAnswers?: { question: string; answer: string | number | boolean; confidence: number }[];
   nextStep?: string;
   error?: string;
@@ -435,9 +443,18 @@ export class UnifiedApplyService {
         case 'indeed':
           applyResult = await this.applyToIndeed(userId, context, jobApp, screeningAnswers);
           break;
-        case 'adzuna':
-          applyResult = await this.applyToAdzuna(userId, context, jobApp, screeningAnswers);
-          break;
+        /*
+          No `case 'adzuna'`.
+
+          `adzuna` is not in `PLAYWRIGHT_AUTOMATABLE_ATS`, so `processApplication` parks it long
+          before this switch is reached, and there is no adzuna auto-apply route. A private
+          `applyToAdzuna` stub used to sit here returning the same `action_required` shape as
+          `applyGeneric` — unreachable, but it read as a supported handler (SB-09). Adzuna now
+          falls through to `applyGeneric`, which is the honest description of what happens.
+
+          Unlike `naukri` / `indeed` — which have real routes that are deliberately gated off, and
+          are documented in `server_bugs.md` §5 — there was nothing here worth keeping.
+        */
         default:
           applyResult = await this.applyGeneric(userId, context, jobApp, screeningAnswers);
           break;
@@ -824,7 +841,8 @@ export class UnifiedApplyService {
             atsType: 'greenhouse',
             applicationId: jobApp._id.toString(),
             status: 'action_required',
-            message: `CAPTCHA detected on Greenhouse application (${captchaCheck.type}). Manual completion required.`,
+            message: `A CAPTCHA is blocking automated submission for ${context.company}. Please complete it manually on the employer\u2019s site.`,
+            operatorDetail: `CAPTCHA detected on Greenhouse application (${captchaCheck.type})`,
             screeningAnswers,
             nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
           };
@@ -1040,7 +1058,8 @@ export class UnifiedApplyService {
             atsType: 'lever',
             applicationId: jobApp._id.toString(),
             status: 'action_required',
-            message: `CAPTCHA appeared during Lever submission (${submissionResult.error}). Manual completion required.`,
+            message: `A CAPTCHA is blocking automated submission for ${context.company}. Please complete it manually on the employer\u2019s site.`,
+            operatorDetail: `CAPTCHA appeared during Lever submission (${submissionResult.error})`,
             screeningAnswers,
             nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
           };
@@ -1164,7 +1183,8 @@ export class UnifiedApplyService {
             atsType: 'ashby',
             applicationId: jobApp._id.toString(),
             status: 'action_required',
-            message: `CAPTCHA appeared during Ashby submission (${submissionResult.error}). Manual completion required.`,
+            message: `A CAPTCHA is blocking automated submission for ${context.company}. Please complete it manually on the employer\u2019s site.`,
+            operatorDetail: `CAPTCHA appeared during Ashby submission (${submissionResult.error})`,
             screeningAnswers,
             nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
           };
@@ -1287,7 +1307,8 @@ export class UnifiedApplyService {
             atsType: 'workable',
             applicationId: jobApp._id.toString(),
             status: 'action_required',
-            message: `CAPTCHA appeared during Workable submission (${submissionResult.error}). Manual completion required.`,
+            message: `A CAPTCHA is blocking automated submission for ${context.company}. Please complete it manually on the employer\u2019s site.`,
+            operatorDetail: `CAPTCHA appeared during Workable submission (${submissionResult.error})`,
             screeningAnswers,
             nextStep: `Complete CAPTCHA at ${context.jobUrl} and submit manually`,
           };
@@ -1425,25 +1446,6 @@ export class UnifiedApplyService {
   }
 
   // ==========================================
-  // ADZUNA HANDLER
-  // ==========================================
-  private static async applyToAdzuna(
-    userId: string,
-    context: ApplyJobContext,
-    jobApp: any,
-    screeningAnswers: any[]
-  ): Promise<ApplyResult> {
-    return {
-      success: true,
-      atsType: 'adzuna',
-      applicationId: jobApp._id.toString(),
-      status: 'action_required',
-      message: `Documents staged for ${context.company}. Please submit on the employer's career page.`,
-      screeningAnswers,
-    };
-  }
-
-  // ==========================================
   // GENERIC FALLBACK
   // ==========================================
   private static async applyGeneric(
@@ -1491,7 +1493,20 @@ export class UnifiedApplyService {
       atsType,
       applicationId: jobApp._id.toString(),
       status: 'action_required',
-      message: `Tailored documents ready for ${context.company}. Automated submission unavailable (${detail}). Please submit manually.`,
+      /*
+        `message` is customer-facing and used to interpolate `detail` — so a Playwright failure put
+        `Automation error: page.goto: Timeout 30000ms exceeded. - navigating to "https://…"` in front
+        of the user, rendered raw by the tracker (SB-08). The technical string now travels in
+        `operatorDetail`, which the worker routes to `operatorReason`, and the customer copy stays
+        true without naming a timeout or a URL.
+
+        Keep the word "manually": `MANUAL_HALT` in `live-progress.ts` classifies this park by
+        matching `/manual|not automatable|captcha|no application form/i`, and the previous wording
+        ("Please submit manually.") matched it. Dropping the word would silently reclassify the row
+        and change the badge the customer sees.
+      */
+      message: `Tailored documents are ready for ${context.company}. We could not submit this one automatically — please submit it manually on the employer\u2019s site.`,
+      operatorDetail: detail,
       screeningAnswers,
       nextStep: `Open ${context.jobUrl} and submit your tailored resume`,
     };

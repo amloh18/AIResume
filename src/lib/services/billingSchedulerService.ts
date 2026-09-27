@@ -8,6 +8,7 @@ import Subscription from '@/models/Subscription';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import PaymentMethod from '@/models/PaymentMethod';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * Process subscription renewals for subscriptions due today
@@ -59,7 +60,7 @@ export async function processRenewals(): Promise<{
 
         // Find default payment method
         const paymentMethod = await PaymentMethod.findOne({
-          userId: subscription.userId,
+          userId: mixedIdFilter(subscription.userId),
           isDefault: true,
           isActive: true
         });
@@ -156,7 +157,7 @@ export async function processDunning(): Promise<{
       try {
         // Get user's default payment method
         const paymentMethod = await PaymentMethod.findOne({
-          userId: subscription.userId,
+          userId: mixedIdFilter(subscription.userId),
           isDefault: true,
           isActive: true
         });

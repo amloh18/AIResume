@@ -9,6 +9,8 @@
     "src/types/**/*.d.ts",
     "src/lib/auth/cronAuth.ts",
     "src/lib/auth/cron-guard.ts",
+    "src/lib/cron/runCron.ts",
+    "src/models/CronLock.ts",
     "src/app/api/cron/**/*.ts",
     "src/app/api/admin/seed-recurring-campaigns/route.ts",
     "src/app/api/applications/**/*.ts",

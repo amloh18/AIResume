@@ -5,6 +5,7 @@ import ApplicationEvent from '@/models/ApplicationEvent';
 import Notification from '@/models/Notification';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import { estimateQueueEta, type QueueEtaEstimate } from '@/lib/utils/queue-eta';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * User-facing controls for a parked/failed application.
@@ -144,7 +145,12 @@ async function recordDecision(
 }
 
 async function enqueueApproved(app: any, userId: string): Promise<string> {
-  const existing = await ApplicationQueue.findOne({ applicationId: app._id }).sort({ createdAt: -1 });
+  // `ApplicationQueue.applicationId` is `Schema.Types.Mixed` (uncast). A bare ObjectId here misses
+  // any item stored with the string form — and a miss is not harmless: the code below would treat
+  // the application as an orphan and `create` a **second** queue item, i.e. a double submission.
+  const existing = await ApplicationQueue.findOne({ applicationId: mixedIdFilter(app._id) }).sort({
+    createdAt: -1,
+  });
 
   if (existing) {
     // Reuse the queue document: its unique idempotencyKey (and any quota
@@ -225,7 +231,7 @@ export async function performAutomationAction(params: {
   const internal = String(appDoc.internalStatus || '');
 
   const activeItem = await ApplicationQueue.findOne({
-    applicationId: app._id,
+    applicationId: mixedIdFilter(app._id),
     status: { $in: ['queued', 'processing'] },
   });
 
@@ -325,8 +331,13 @@ export async function performAutomationAction(params: {
 
   // Stop the worker from ever picking this up again (queued items only —
   // a `processing` item is impossible here because of the guard above).
+  //
+  // This is the site where a `Mixed`-path miss is worst: `ApplicationQueue.applicationId` is
+  // uncast, so a bare `app._id` leaves any string-stored item `queued`, and the worker then
+  // submits the application the user just chose to handle themselves — precisely the outcome
+  // the header comment rules out.
   await ApplicationQueue.updateMany(
-    { applicationId: app._id, status: 'queued' },
+    { applicationId: mixedIdFilter(app._id), status: 'queued' },
     {
       $set: {
         status: 'cancelled',

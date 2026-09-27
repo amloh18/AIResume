@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import mongoose from 'mongoose';
 import JobApplication from '@/models/JobApplication';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,10 +14,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = authResult;
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    // `JobApplication.userId` is Mixed, so a bare ObjectId misses rows stored as a string (SB-06).
+    const userFilter = mixedIdFilter(userId);
 
     // Fetch user's recent applications to understand their preferences
-    const recentJobs = await JobApplication.find({ userId: userObjectId })
+    const recentJobs = await JobApplication.find({ userId: userFilter })
       .sort({ createdAt: -1 })
       .limit(3)
       .select('jobTitle company')

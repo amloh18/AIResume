@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { JobApplication } from '@/models';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
@@ -40,29 +41,19 @@ export async function GET(request: NextRequest) {
     // Also create a startDate for MongoDB queries (MongoDB stores dates in UTC anyway)
     const startDate = new Date(startDateUTC);
 
-    // JobApplication uses Mixed type for userId, so we need to handle both ObjectId and string
-    // Support both ObjectId and string userId formats
-    let userIdQuery: any;
-    if (mongoose.Types.ObjectId.isValid(authResult.userId)) {
-      userIdQuery = { $in: [new mongoose.Types.ObjectId(authResult.userId), authResult.userId] };
-    } else {
-      userIdQuery = authResult.userId;
-    }
+    // JobApplication.userId is Mixed, so query both stored shapes (SB-06)
+    const userFilter = mixedIdFilter(authResult.userId);
 
     console.log('Progress API: Using userId from authenticated user', { 
       userId: authResult.userId,
-      userIdQuery,
+      userFilter,
       startDate: startDate.toISOString(),
       startDateUTC: startDateUTC.toISOString()
     });
 
     // OPTIMIZED: Use MongoDB aggregation pipeline to do counting in database
     // This is much faster than fetching all documents and processing in JavaScript
-    const userIdObjectId = mongoose.Types.ObjectId.isValid(authResult.userId) 
-      ? new mongoose.Types.ObjectId(authResult.userId)
-      : null;
-
-    if (!userIdObjectId) {
+    if (!mongoose.Types.ObjectId.isValid(authResult.userId)) {
       console.error('Progress API: Invalid userId format', { userId: authResult.userId });
       return NextResponse.json(
         { success: false, message: 'Invalid user ID format' },
@@ -76,7 +67,7 @@ export async function GET(request: NextRequest) {
       JobApplication.aggregate([
         {
           $match: {
-            userId: userIdQuery,
+            userId: userFilter,
             status: { $ne: 'saved' }, // Exclude saved jobs - they're not active progress
             $or: [
               { createdAt: { $gte: startDate } },
@@ -123,7 +114,7 @@ export async function GET(request: NextRequest) {
       CV.aggregate([
         {
           $match: {
-            userId: userIdObjectId,
+            userId: userFilter,
             $or: [
               { createdAt: { $gte: startDate } },
               { updatedAt: { $gte: startDate } }
@@ -169,7 +160,7 @@ export async function GET(request: NextRequest) {
       CoverLetter.aggregate([
         {
           $match: {
-            userId: userIdObjectId,
+            userId: userFilter,
             $or: [
               { createdAt: { $gte: startDate } },
               { updatedAt: { $gte: startDate } }

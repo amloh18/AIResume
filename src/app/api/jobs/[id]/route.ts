@@ -6,6 +6,7 @@ import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import {
   createQueuedGenerationState,
   getJourneyGenerationEntitlement
@@ -67,7 +68,7 @@ export async function GET(
 
     const job = await JobApplication.findOne({
       _id: resolvedParams.id,
-      userId: userId
+      userId: mixedIdFilter(userId)
     });
 
     if (!job) {
@@ -226,6 +227,9 @@ export async function PUT(
     const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
       ? new mongoose.Types.ObjectId(userId)
       : userId;
+
+    // JobApplication.userId is Mixed — query both stored shapes (SB-06)
+    const userFilter = mixedIdFilter(userId);
 
     const body = await request.json();
     console.log('🔍 Job Update API - Request body keys:', Object.keys(body));
@@ -464,7 +468,7 @@ export async function PUT(
           const updatedJob = await JobApplication.findOneAndUpdate(
             {
               _id: new mongoose.Types.ObjectId(resolvedParams.id),
-              userId: normalizedUserId
+              userId: userFilter
             },
             statusUpdateData,
             { new: true, ...(session && { session }) }
@@ -665,7 +669,7 @@ export async function PUT(
       job = await JobApplication.findOneAndUpdate(
         {
           _id: new mongoose.Types.ObjectId(resolvedParams.id),
-          userId: normalizedUserId
+          userId: userFilter
         },
         updateData,
         { new: true }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { callGeminiWithFallback } from '@/lib/utils/gemini-api-helper';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import JobApplication from '@/models/JobApplication';
 import CV from '@/models/CV';
 import ApplicationJourney from '@/models/ApplicationJourney';
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Get job
     const job = await JobApplication.findOne({
       _id: jobObjectId,
-      userId: userObjectId
+      userId: mixedIdFilter(userObjectId)
     }).lean();
 
     if (!job) {

@@ -2,22 +2,14 @@
 import { getConnection } from '@/lib/database';
 import { JobApplication, ApplicationJourney, User } from '@/models';
 import { sendEmail } from '@/lib/email-service';
-import mongoose from 'mongoose';
 import SystemEmailTracker from './SystemEmailTracker';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 interface DailySummary {
   jobsAdded: number;
   jobsApplied: number;
   interviewsScheduled: number;
   documentsReady: number;
-  jobsByStatus: {
-    draft: number;
-    created: number;
-    applied: number;
-    interview: number;
-    offer: number;
-    rejected: number;
-  };
 }
 
 interface UserSummary {
@@ -39,59 +31,82 @@ class DailySummaryEmailService {
   ): Promise<DailySummary | null> {
     await getConnection();
 
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    // `JobApplication.userId` is a `Schema.Types.Mixed` path, so Mongoose does not cast the query
+    // value: a bare ObjectId misses the string-stored rows and vice versa (SB-06). Measured
+    // 2026-09-27 — objectId 84 / string 15.
+    const userFilter = mixedIdFilter(userId);
 
     // Get jobs added in the last 24 hours
     const jobsAdded = await JobApplication.countDocuments({
-      userId: userObjectId,
+      userId: userFilter,
       createdAt: { $gte: startDate, $lte: endDate },
     });
 
-    // Get jobs moved to applied status in the last 24 hours
-    // Check statusHistory for when status changed to 'applied'
-    const appliedJobs = await JobApplication.find({
-      userId: userObjectId,
-      'statusHistory.status': 'applied',
-      'statusHistory.changedAt': { $gte: startDate, $lte: endDate },
-    }).lean();
+    /*
+      Jobs submitted in the last 24 hours.
 
-    // Also check jobs without statusHistory that were updated to applied
-    const appliedJobsNoHistory = await JobApplication.find({
-      userId: userObjectId,
-      status: 'applied',
-      statusHistory: { $exists: false },
-      updatedAt: { $gte: startDate, $lte: endDate },
-    }).lean();
+      `appliedAt` is the authoritative submission timestamp — the same field `/api/dashboard/streak`
+      and `entitlement-service` already count on — and it is set by both writers that reach
+      `applied` (`processApplication.ts:208`, `unifiedApplyService.ts:471`).
 
-    const jobsApplied = new Set([
-      ...appliedJobs.map(j => j._id.toString()),
-      ...appliedJobsNoHistory.map(j => j._id.toString()),
-    ]).size;
+      This used to query `'statusHistory.status'` / `'statusHistory.changedAt'` with a
+      `statusHistory: { $exists: false }` fallback. `JobApplication` has **no** `statusHistory`
+      path — the same defect class as SB-17 — so the first branch matched nothing (measured: 0 of 99
+      documents carry the field) and the fallback's guard was a tautology that excluded nothing.
+      The count therefore silently degraded to "status is `applied` AND `updatedAt` is in the
+      window", which any unrelated write (a note, a stage change) drags into today and re-counts.
+    */
+    const jobsApplied = await JobApplication.countDocuments({
+      userId: userFilter,
+      $or: [
+        { appliedAt: { $gte: startDate, $lte: endDate } },
+        {
+          // The state machine's own trail, for a transition recorded without a timestamp write.
+          stageHistory: {
+            $elemMatch: {
+              internalStatus: 'applied',
+              changedAt: { $gte: startDate, $lte: endDate },
+            },
+          },
+        },
+        {
+          // Legacy rows that reached `applied` with no timestamp at all (measured: 2 of 11).
+          status: 'applied',
+          appliedAt: { $exists: false },
+          updatedAt: { $gte: startDate, $lte: endDate },
+        },
+      ],
+    });
 
-    // Get interviews scheduled in the last 24 hours
-    // Check statusHistory for when status changed to 'interview'
-    const interviewJobs = await JobApplication.find({
-      userId: userObjectId,
-      'statusHistory.status': 'interview',
-      'statusHistory.changedAt': { $gte: startDate, $lte: endDate },
-    }).lean();
+    /*
+      Interviews in the last 24 hours.
 
-    // Also check jobs without statusHistory that were updated to interview
-    const interviewJobsNoHistory = await JobApplication.find({
-      userId: userObjectId,
-      status: 'interview',
-      statusHistory: { $exists: false },
-      updatedAt: { $gte: startDate, $lte: endDate },
-    }).lean();
+      There is no `interviewAt` field, and the state machine has never recorded an `interview`
+      entry (measured: `stageHistory.internalStatus` only ever holds processing / review_required /
+      saved / form_detected / automation_failed / queued), so this is necessarily derived from the
+      current status. The history branch is kept so it starts counting the moment the state machine
+      does record one.
+    */
+    const interviewsScheduled = await JobApplication.countDocuments({
+      userId: userFilter,
+      $or: [
+        {
+          stageHistory: {
+            $elemMatch: {
+              internalStatus: 'interview',
+              changedAt: { $gte: startDate, $lte: endDate },
+            },
+          },
+        },
+        { status: 'interview', updatedAt: { $gte: startDate, $lte: endDate } },
+      ],
+    });
 
-    const interviewsScheduled = new Set([
-      ...interviewJobs.map(j => j._id.toString()),
-      ...interviewJobsNoHistory.map(j => j._id.toString()),
-    ]).size;
-
-    // Get documents ready in the last 24 hours (journeys with documents created)
+    // Get documents ready in the last 24 hours (journeys with documents created).
+    // `ApplicationJourney.userId` is a plain `String` path, so Mongoose casts the value for us and
+    // the raw string is the correct query — deliberately no `mixedIdFilter` here (SB-06).
     const documentsReady = await ApplicationJourney.countDocuments({
-      userId: userObjectId,
+      userId,
       'metadata.updatedAt': { $gte: startDate, $lte: endDate },
       $or: [
         { cvId: { $exists: true, $ne: null } },
@@ -99,15 +114,10 @@ class DailySummaryEmailService {
       ],
     });
 
-    // Get current job counts by status
-    const jobsByStatus = {
-      saved: await JobApplication.countDocuments({ userId: userObjectId, status: 'saved' }),
-      created: await JobApplication.countDocuments({ userId: userObjectId, status: 'created' }),
-      applied: await JobApplication.countDocuments({ userId: userObjectId, status: 'applied' }),
-      interview: await JobApplication.countDocuments({ userId: userObjectId, status: 'interview' }),
-      offer: await JobApplication.countDocuments({ userId: userObjectId, status: 'offer' }),
-      rejected: await JobApplication.countDocuments({ userId: userObjectId, status: 'rejected' }),
-    };
+    // NOTE: a `jobsByStatus` block used to run six more `countDocuments` here and return the result.
+    // Nothing ever read it — neither template touches it and `getUserDailySummary` has exactly one
+    // caller, `sendDailySummary` — so it was six wasted round-trips **per user** on a cron that
+    // walks the whole user table. Removed rather than left as decoration.
 
     // Only return summary if there's activity
     if (jobsAdded === 0 && jobsApplied === 0 && interviewsScheduled === 0 && documentsReady === 0) {
@@ -119,7 +129,6 @@ class DailySummaryEmailService {
       jobsApplied,
       interviewsScheduled,
       documentsReady,
-      jobsByStatus,
     };
   }
 

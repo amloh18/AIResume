@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
 import JobApplication from '@/models/JobApplication';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * Sanitize and validate CV data to ensure correct structure
@@ -201,7 +202,7 @@ export async function GET(
           const jobResult = await Promise.allSettled([
             JobApplication.findOne({
               _id: foundJourney.jobId,
-              userId: new mongoose.Types.ObjectId(userId)
+              userId: mixedIdFilter(userId)
             }).lean()
           ]);
 

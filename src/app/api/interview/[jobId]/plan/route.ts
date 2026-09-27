@@ -5,6 +5,7 @@ import { JobApplication, User } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import { buildSession, groupQuestionsByModule } from '@/lib/interview/plan';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 // Force dynamic
 export const dynamic = 'force-dynamic';
@@ -37,13 +38,11 @@ export async function GET(
             ? new mongoose.Types.ObjectId(jobId)
             : jobId;
 
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
         const job = await JobApplication.findOne({
             _id: jobIdQuery,
-            userId: userIdQuery
+            userId: userFilter
         }).select('jobTitle company interviewCoach').lean() as any;
 
         if (!job) {
@@ -75,7 +74,7 @@ export async function GET(
         const questionsByModule = groupQuestionsByModule(modules, questions);
 
         // Fetch User streak
-        const user = await User.findById(userIdQuery).select('interviewCoach');
+        const user = await User.findById(auth.userId).select('interviewCoach');
         const currentStreak = user?.interviewCoach?.currentStreak || 0;
 
         // Build session-like response for frontend compatibility

@@ -7,6 +7,7 @@
 
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/database';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import User from '@/models/User';
 import Invoice from '@/models/Invoice';
 import Transaction from '@/models/Transaction';
@@ -137,7 +138,7 @@ class StateRecoveryService {
       }).select('_id subscription');
 
       for (const user of usersWithSubscriptions) {
-        const invoices = await Invoice.find({ userId: user._id.toString() });
+        const invoices = await Invoice.find({ userId: mixedIdFilter(user._id) });
         
         if (invoices.length === 0) {
           issues.push({

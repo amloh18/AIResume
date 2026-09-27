@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import mongoose from 'mongoose';
 import {
   performAutomationAction,
   AutomationActionError,
@@ -254,12 +255,20 @@ describe('dismiss', () => {
 
     expect(result.status).toBe('dismissed');
 
-    expect(queueUpdateMany).toHaveBeenCalledWith(
-      { applicationId: APP_ID, status: 'queued' },
-      expect.objectContaining({
-        $set: expect.objectContaining({ status: 'cancelled' }),
-      })
-    );
+    // SB-06: `ApplicationQueue.applicationId` is `Schema.Types.Mixed`, so Mongoose does not cast the
+    // filter and the query must carry **both** storage shapes. This assertion used to pin the bare
+    // `{ applicationId: APP_ID }`, which is the defect: a string-stored item would stay `queued` and
+    // the worker would then submit an application the user had just chosen to handle themselves.
+    const [dismissFilter] = queueUpdateMany.mock.calls[0];
+    expect(dismissFilter.status).toBe('queued');
+    const applicationIdShapes = dismissFilter.applicationId.$in;
+    expect(applicationIdShapes).toContain(APP_ID);
+    expect(
+      applicationIdShapes.some(
+        (v: unknown) => v instanceof mongoose.Types.ObjectId && v.toString() === APP_ID
+      )
+    ).toBe(true);
+    expect(queueUpdateMany.mock.calls[0][1].$set).toMatchObject({ status: 'cancelled' });
 
     expect(appUpdateOne.mock.calls[0][1].$set).toMatchObject({
       internalStatus: 'automation_dismissed',

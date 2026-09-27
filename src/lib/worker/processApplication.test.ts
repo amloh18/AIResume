@@ -75,12 +75,16 @@ describe('processApplication — execution gate (manual never reaches Playwright
       stage: 'staging',
       status: 'review_required',
     });
-    expect(result.message).toMatch(/manual/i);
+    // Customer copy: says what happened and what to do, without naming the decision engine.
+    expect(result.message).toMatch(/manually/i);
+    expect(result.message).not.toMatch(/execution mode|engine/i);
     expect(transitionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         targetStage: 'staging',
         targetStatus: 'review_required',
         eventType: 'APPLICATION_REQUIRES_REVIEW',
+        // …and the operator cause is preserved on the channel no UI renders.
+        operatorReason: expect.stringMatching(/execution mode is "manual"/i),
       })
     );
   });
@@ -90,7 +94,20 @@ describe('processApplication — execution gate (manual never reaches Playwright
 
     expect(applyMock).not.toHaveBeenCalled();
     expect(result.status).toBe('review_required');
-    expect(result.message).toMatch(/skip/i);
+
+    /*
+      This used to assert `result.message` matched /skip/i — but `message` is rendered to the
+      customer (as the park reason, and as the notification body by `applicationWorker`), so pinning
+      the operator wording there pinned the leak (SB-08). The customer copy must not name the
+      decision engine; the technical cause belongs in `operatorReason`.
+    */
+    expect(result.message).not.toMatch(/skip|engine/i);
+    expect(transitionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: result.message,
+        operatorReason: expect.stringMatching(/skip/i),
+      })
+    );
   });
 
   it('mode=review calls apply with mode "review" (prepare, do not submit)', async () => {

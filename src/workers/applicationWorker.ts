@@ -73,7 +73,11 @@ async function workerTick(): Promise<void> {
             jobTitle: jobApplication.jobTitle || jobApplication.title,
             company: jobApplication.company,
             status: 'automation_failed',
-            reason: `Worker error: ${err.message}`,
+            // `reason` is rendered as the notification body, so it must stay customer-safe — see
+            // SB-08. The raw `err.message` goes to the log line above and to the queue item's
+            // `lastError`, both operator-only.
+            reason:
+              'Something went wrong while preparing this application. Please apply on the employer\u2019s site.',
           });
           throw err;
         }
