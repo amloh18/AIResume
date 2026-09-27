@@ -214,6 +214,14 @@ curl -s https://resume.morigrid.com/api/health   # → role: web, loops: []
 docker service ps <new-worker-service> --no-trunc --format '{{.Name}} {{.CurrentState}}'
 docker images --format '{{.CreatedAt}} {{.ID}}' | head -1
 # task created AFTER the image timestamp ⇒ it followed the deploy
+
+# 6. Version truth — the worker now reports the commit it was built from
+curl -s http://<new-worker-service>:8791/health | jq '{role, commit, loops}'
+curl -s https://resume.morigrid.com/api/health | jq '{role, commit}'
+# the two commits must MATCH; a mismatch is exactly the stale-worker bug, now visible
+curl -s https://resume.morigrid.com/api/admin/vps-setup | jq '.workerLoop | {commit, commitStale}'
+#   commitStale: true  ⇒ the worker is answering from an older image
+#   commitStale: null  ⇒ not comparable (GIT_COMMIT was not passed to one of the builds)
 ```
 
 A redeploy must also leave `uptimeSeconds` in the worker's `/health` **rising** across a web-only deploy —
@@ -423,4 +431,33 @@ That is the whole risk, and it is a **config change, not a code change.**
 - [ ] set `WORKER_HEALTH_URL` on the **app** to the new worker's service name + `:8791`, so the admin
       panel's `workerLoop` section reports for the first time;
 - [ ] `GET /api/admin/vps-setup` still returns `ingestionService.reachable: true` and
-      `workerGateway.online: true` after the cutover.
+      `workerGateway.online: true` after the cutover;
+- [ ] `workerLoop.commit` is populated and `workerLoop.commitStale` is `false` — see §11.6.
+
+### 11.6 Added 2026-09-27: the worker now reports *which build* it is running
+
+The panel could already say the worker was **reachable**. It could not say whether it was **current** —
+and "the worker is stale after a deploy" is the failure this whole migration exists to remove (§1). The
+old worker's health payload carried `role`, `pid`, `startedAt`, `uptimeSeconds`, `memoryRssMb` and
+`loops` — no version. `/api/health` has reported `commit` for the web process all along; the worker had
+no equivalent, so a stale worker was indistinguishable from a healthy one in the UI.
+
+Three small additions close that:
+
+- `src/workers/health.ts` — `WorkerHealthPayload.commit`, plus `resolveBuildCommit()`, which reads
+  `GIT_COMMIT || SOURCE_COMMIT || 'unknown'` (the same two variables `/api/health` reads).
+- `Dockerfile` — the `worker` stage now declares `ARG GIT_COMMIT` / `ENV GIT_COMMIT`, exactly as
+  `builder` does. `worker` is `FROM base`, so it never inherited `builder`'s ENV; this is a new
+  declaration, not a preserved one.
+- `src/app/api/admin/vps-setup/route.ts` — the `workerLoop` projection carries `commit` and
+  `commitStale`, the latter comparing the worker's commit against the **web container's own**
+  (`resolveBuildCommit()` on the app side).
+
+`commitStale` is deliberately **tri-state**, following the file's existing "unknown is not unhealthy"
+convention: it is `null` — not `true` — whenever either side reports `unknown`, because a missing build
+arg is not evidence of drift. `VpsSetupPanel.tsx` renders a `Stale image` chip and an explanatory line
+only on a strict `true`.
+
+**Consequence for this migration:** after the cutover, §6 step 6 is the cheapest possible proof that the
+new worker is real and current — and it will catch the old failure mode the next time Dokploy redeploys
+only the web tier.

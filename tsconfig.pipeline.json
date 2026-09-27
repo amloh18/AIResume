@@ -22,6 +22,7 @@
     "src/lib/jobs/autoApplySupport.ts",
     "src/lib/decision/**/*.ts",
     "src/lib/worker/**/*.ts",
+    "src/workers/**/*.ts",
     "src/lib/services/unifiedApplyService.ts",
     "src/hooks/useApplicationProgress.ts",
     "src/components/applications/LiveProgressBar.tsx",
@@ -30,7 +31,9 @@
     "src/services/emailIngestionService.ts",
     "src/components/dashboard/JobsDashboard.tsx",
     "src/components/dashboard/jobs/JobSidebar.tsx",
-    "src/components/dashboard/redesigned/TopJobMatchesSection.tsx"
+    "src/components/dashboard/redesigned/TopJobMatchesSection.tsx",
+    "src/app/api/admin/vps-setup/route.ts",
+    "src/components/admin/job-intelligence/VpsSetupPanel.tsx"
   ],
   "exclude": ["node_modules", "scripts", "scratch"]
 }

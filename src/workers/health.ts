@@ -15,6 +15,15 @@ export interface WorkerHealthPayload {
   ok: boolean;
   role: WorkerRole;
   pid: number;
+  /**
+   * The commit the worker image was built from, or `'unknown'`.
+   *
+   * This is the only way to tell a *stale* worker from a healthy one. The worker runs its own image
+   * and Dokploy does not redeploy it with the web tier, so "the worker is up" and "the worker is
+   * running the commit you just shipped" are different questions. `/api/health` answers the second
+   * for the web process; without this field the panel could not answer it for the worker at all.
+   */
+  commit: string;
   startedAt: string;
   uptimeSeconds: number;
   memoryRssMb: number;
@@ -29,6 +38,18 @@ export interface BuildHealthPayloadInput {
   loops: Record<string, unknown>;
   now?: Date;
   runtime?: { pid: number; memoryUsage: () => { rss: number } };
+  /** Defaults to {@link resolveBuildCommit}. Pass explicitly to make a test independent of the env. */
+  commit?: string;
+}
+
+/**
+ * The commit baked into this image at build time.
+ *
+ * Mirrors `/api/health`, which reads the same two variables — `GIT_COMMIT` is set by the Dockerfile
+ * from the build arg, `SOURCE_COMMIT` is the fallback some platforms inject instead.
+ */
+export function resolveBuildCommit(env: Record<string, string | undefined> = process.env): string {
+  return env.GIT_COMMIT || env.SOURCE_COMMIT || 'unknown';
 }
 
 export function buildWorkerHealthPayload({
@@ -38,11 +59,13 @@ export function buildWorkerHealthPayload({
   loops,
   now = new Date(),
   runtime = process,
+  commit = resolveBuildCommit(),
 }: BuildHealthPayloadInput): WorkerHealthPayload {
   return {
     ok: true,
     role,
     pid: runtime.pid,
+    commit,
     startedAt: startedAt.toISOString(),
     uptimeSeconds: Math.max(0, Math.round((now.getTime() - startedAt.getTime()) / 1000)),
     memoryRssMb: Math.round(runtime.memoryUsage().rss / (1024 * 1024)),

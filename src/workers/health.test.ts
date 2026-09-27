@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildWorkerHealthPayload, getWorkerHealthUrl, probeWorkerHealth } from './health';
+import {
+  buildWorkerHealthPayload,
+  getWorkerHealthUrl,
+  probeWorkerHealth,
+  resolveBuildCommit,
+} from './health';
 import { getWorkerPlan } from './roles';
 
 describe('buildWorkerHealthPayload', () => {
@@ -11,11 +16,13 @@ describe('buildWorkerHealthPayload', () => {
       now: new Date('2026-09-21T10:02:05.400Z'),
       loops: { email: { isRunning: true } },
       runtime: { pid: 4242, memoryUsage: () => ({ rss: 209 * 1024 * 1024 }) },
+      commit: 'deadbee',
     });
 
     expect(payload.ok).toBe(true);
     expect(payload.role).toBe('worker');
     expect(payload.pid).toBe(4242);
+    expect(payload.commit).toBe('deadbee');
     expect(payload.startedAt).toBe('2026-09-21T10:00:00.000Z');
     expect(payload.uptimeSeconds).toBe(125);
     expect(payload.memoryRssMb).toBe(209);
@@ -40,6 +47,29 @@ describe('buildWorkerHealthPayload', () => {
 
     expect(payload.loops.enabled).toEqual([]);
     expect(payload.memoryRssMb).toBe(1);
+  });
+});
+
+describe('resolveBuildCommit', () => {
+  it('prefers GIT_COMMIT, then SOURCE_COMMIT, then reports unknown', () => {
+    expect(resolveBuildCommit({ GIT_COMMIT: 'aaa1111', SOURCE_COMMIT: 'bbb2222' })).toBe('aaa1111');
+    expect(resolveBuildCommit({ SOURCE_COMMIT: 'bbb2222' })).toBe('bbb2222');
+    expect(resolveBuildCommit({})).toBe('unknown');
+  });
+
+  it('is what the payload reports when no commit is passed explicitly', () => {
+    const payload = buildWorkerHealthPayload({
+      role: 'worker',
+      plan: getWorkerPlan('worker'),
+      startedAt: new Date('2026-09-21T10:00:00.000Z'),
+      now: new Date('2026-09-21T10:00:00.000Z'),
+      loops: {},
+      runtime: { pid: 1, memoryUsage: () => ({ rss: 1024 * 1024 }) },
+    });
+
+    // Never empty: an unbuilt image must read as "unknown", not as a blank that a UI hides.
+    expect(payload.commit).toBe(resolveBuildCommit());
+    expect(payload.commit).not.toBe('');
   });
 });
 
