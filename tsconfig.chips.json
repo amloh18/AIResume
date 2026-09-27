@@ -7,6 +7,9 @@
   "include": [
     "next-env.d.ts",
     "src/types/**/*.d.ts",
+    "src/lib/applications/**/*.ts",
+    "src/hooks/useApplicationProgress.ts",
+    "src/components/applications/LiveProgressBar.tsx",
     "src/components/ui/chip-styles.ts",
     "src/components/ui/Pill.tsx",
     "src/components/ui/badge.tsx",

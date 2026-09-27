@@ -4,6 +4,7 @@ import ApplicationEvent from '@/models/ApplicationEvent';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import { applicationStateMachine, type CanonicalStage, type InternalApplicationStatus } from '@/lib/application-state/stateMachine';
+import { isPlaywrightAutomatable } from '@/lib/jobs/autoApplySupport';
 import { log } from '@/lib/structured-logger';
 
 export interface ProcessContext {
@@ -96,10 +97,27 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
 
     // 3. Determine ATS type and check automation capability
     const atsType = jobApplication.atsType || 'unknown';
-    const isAutomatable = ['greenhouse', 'lever', 'ashby', 'workable', 'workday'].includes(atsType);
+    /*
+      The gate reads the canonical list rather than a local array.
+
+      It previously named `workday` inline while `UnifiedApplyService.apply` has no `case 'workday'`,
+      so a Workday job cleared this gate and then fell through to `applyGeneric`, which returns
+      "Review and submit on employer website" and never attempts a submission — a silent degradation
+      with no signal anywhere (SB-04). `PLAYWRIGHT_AUTOMATABLE_ATS` is kept in step with the switch.
+    */
+    const isAutomatable = isPlaywrightAutomatable(atsType);
 
     if (!isAutomatable) {
-      // Not automatable — route to manual review
+      /*
+        This reason is user-facing: `deriveApplicationStatusBadge` matches on it to pick the row's
+        label and renders the raw string as hover text. Name the board so the halt is diagnosable, but
+        keep operator vocabulary out (SB-08).
+      */
+      const reason =
+        atsType === 'workday'
+          ? 'Workday applications must be submitted on the employer site — automated submission is not supported for Workday yet.'
+          : `Automated submission is not supported for this job board (${atsType}). Apply on the employer site.`;
+
       await applicationStateMachine.transition({
         applicationId,
         userId,
@@ -107,14 +125,14 @@ export async function processApplication(ctx: ProcessContext): Promise<ProcessRe
         targetStatus: 'review_required',
         eventType: 'APPLICATION_REQUIRES_REVIEW',
         source: 'automation_worker',
-        reason: `ATS type "${atsType}" is not automatable. Manual submission required.`,
+        reason,
       });
 
       return {
         success: true,
         stage: 'staging',
         status: 'review_required',
-        message: `Application ready for manual submission (${atsType})`,
+        message: reason,
       };
     }
 

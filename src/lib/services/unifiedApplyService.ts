@@ -11,6 +11,114 @@ import { acquirePlaywrightBrowser } from '@/lib/services/browserService';
 import { decryptToken } from '@/lib/auth/token-encryption';
 import type { ApplicationStep, ATSType } from '@/types/automation-schema';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
+import { reportApplicationProgress } from '@/lib/applications/progress-reporter';
+
+/**
+ * Report one step of an ATS run to the tracker.
+ *
+ * The execution half of the pipeline used to be invisible: `processApplication`
+ * set `processing`, then `form_detected`, and then the row sat on that value
+ * for the entire Playwright run — detect fields, fill, attach, submit, confirm
+ * — before jumping to `applied`. A user watching the progress bar saw
+ * "Finding the application form" for two minutes and then "Applied", with no
+ * way to tell a working run from a hung one.
+ *
+ * `submitting` and `verification` are declared on `JobApplication.internalStatus`
+ * and were never written anywhere in the repo; this is where they get written.
+ *
+ * Best-effort — the reporter swallows its own errors, so instrumentation can
+ * never fail a submission.
+ */
+async function reportAtsStep(
+  applicationId: string,
+  atsType: ATSType,
+  step: 'detected' | 'filled' | 'submitting' | 'verifying',
+  context: { title?: string; company?: string; jobUrl?: string },
+  extra?: {
+    fields?: Array<{ label?: string; name?: string; required?: boolean }>;
+    filledCount?: number;
+    /** Field names the filler skipped — the rest are counted as filled. */
+    skippedNames?: string[];
+  },
+): Promise<void> {
+  const target = context.company ? `${context.company}` : 'the employer';
+  const map = {
+    detected: {
+      internalStatus: 'form_detected' as const,
+      reason: `Application form found on ${atsType} — reading the fields…`,
+    },
+    filled: {
+      internalStatus: 'form_detected' as const,
+      reason: extra?.fields?.length
+        ? `Filled ${extra.filledCount ?? extra.fields.length} of ${extra.fields.length} fields on ${atsType}…`
+        : `Filling the application form on ${atsType}…`,
+    },
+    submitting: {
+      internalStatus: 'submitting' as const,
+      reason: `Submitting your application to ${target}…`,
+    },
+    verifying: {
+      internalStatus: 'verification' as const,
+      reason: 'Checking that the employer confirmed your application…',
+    },
+  } as const;
+
+  const stepMeta = map[step];
+  const skipped = new Set(extra?.skippedNames || []);
+
+  await reportApplicationProgress({
+    applicationId,
+    internalStatus: stepMeta.internalStatus,
+    reason: stepMeta.reason,
+    source: 'automation_worker',
+    // Field detail is what turns "Filling the form" into a real substep list.
+    artifacts:
+      step === 'filled' && extra?.fields?.length
+        ? {
+            atsType,
+            detectedFields: extra.fields.slice(0, 12).map((f) => ({
+              label: f.label || f.name || 'Field',
+              type: 'text',
+              required: Boolean(f.required),
+              filled: !skipped.has(String(f.name || '')),
+              fillMethod: skipped.has(String(f.name || '')) ? 'skipped' : 'deterministic',
+            })),
+            fillAudit: {
+              totalFields: extra.fields.length,
+              filledFields: extra.filledCount ?? extra.fields.length - skipped.size,
+              skippedFields: skipped.size,
+              errorFields: 0,
+              filledAt: new Date(),
+            },
+          }
+        : undefined,
+    metadata: { atsType, step, jobUrl: context.jobUrl },
+  });
+}
+
+/**
+ * Resolve the URL a Greenhouse run should actually navigate to.
+ *
+ * Many employers serve the Greenhouse form from their **own** domain behind a `gh_jid` parameter —
+ * `stripe.com/jobs/search?gh_jid=…`, `careers.airbnb.com/positions/…?gh_jid=…`,
+ * `jobs.elastic.co/jobs?gh_jid=…`. Navigating to that URL loads a page whose form lives in a
+ * cross-origin iframe, so field detection finds nothing; on some sites it also redirect-loops.
+ * Measured on production 2026-09-27: "No application form detected at
+ * https://stripe.com/jobs/search?gh_jid=8194604" and `net::ERR_TOO_MANY_REDIRECTS` on
+ * `https://jobs.elastic.co/jobs?gh_jid=8121805`.
+ *
+ * The `gh_jid` value IS the Greenhouse job id and Greenhouse resolves the board from it, so
+ * `/embed/job_app?token=<id>` serves the same form directly. Verified: HTTP 200, redirecting to
+ * `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>` and rendering the full form
+ * (`#first_name`, `#last_name`, `#email`, `#phone`, `#resume`, `button[type="submit"]`).
+ */
+function resolveGreenhouseNavigationUrl(jobUrl: string): string {
+  if (!jobUrl) return jobUrl;
+  // Already a real Greenhouse board — nothing to rewrite.
+  if (/greenhouse\.io/i.test(jobUrl) || /grnh\.se/i.test(jobUrl)) return jobUrl;
+  const token = jobUrl.match(/[?&]gh_jid=(\d+)/i)?.[1];
+  return token ? `https://boards.greenhouse.io/embed/job_app?token=${token}` : jobUrl;
+}
 
 export interface ApplyJobContext {
   jobId: string;
@@ -241,16 +349,28 @@ export class UnifiedApplyService {
 
       // CRITICAL USER RULES ON SUBMISSION OUTCOME:
       if (applyResult.status === 'applied') {
-        // Application succeeded externally with confirmed evidence
+        /*
+          Record the confirmed submission on `stageHistory`, not `statusHistory`.
+
+          `JobApplication` has no `statusHistory` path — the real field is `stageHistory` — and
+          Mongoose's strict mode strips unknown paths from updates **silently**. The push below used
+          to name `statusHistory`, so the one line that records *why* an application is marked applied
+          was dropped on every successful submission while `status: 'applied'` persisted. That is the
+          same class of bug that made the tracker claim applications had been sent when nothing was
+          (`server_bugs.md` §5) — here it only lost the audit trail, but the failure is invisible
+          either way.
+        */
         await JobApplication.findByIdAndUpdate(jobApp._id, {
           status: 'applied',
           applicationDate: new Date(),
           appliedAt: new Date(),
           $push: {
-            statusHistory: {
-              status: 'applied',
-              date: new Date(),
-              notes: `Submission confirmed via ${context.atsType} Auto-Apply.`,
+            stageHistory: {
+              stage: 'applied',
+              internalStatus: 'applied',
+              changedAt: new Date(),
+              reason: `Submission confirmed via ${context.atsType} Auto-Apply.`,
+              source: 'automation_worker',
             },
           },
         });
@@ -595,8 +715,10 @@ export class UnifiedApplyService {
         });
         page = await ctx.newPage();
 
-        // Navigate to application URL
-        await page.goto(context.jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        // Navigate to the URL that actually serves the form. Company-hosted embeds must be rewritten
+        // to the Greenhouse embed endpoint first — see resolveGreenhouseNavigationUrl.
+        const navigationUrl = resolveGreenhouseNavigationUrl(context.jobUrl);
+        await page.goto(navigationUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
         // CAPTCHA check before any interaction
         const captchaCheck = await detectCAPTCHA(page);
@@ -620,11 +742,15 @@ export class UnifiedApplyService {
             atsType: 'greenhouse',
             applicationId: jobApp._id.toString(),
             status: 'action_required',
-            message: `No application form detected at ${context.jobUrl}. The job may have been filled or the URL may be incorrect.`,
+            message: `No application form detected at ${navigationUrl}. The job may have been filled or the URL may be incorrect.`,
             screeningAnswers,
             nextStep: 'Verify the application URL and submit manually',
           };
         }
+
+        await reportAtsStep(jobApp._id.toString(), 'greenhouse', 'detected', context, {
+          fields: detection.fields,
+        });
 
         // Fill fields with candidate data
         const user = await User.findById(userId).lean() as any;
@@ -637,6 +763,51 @@ export class UnifiedApplyService {
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
         });
+
+        await reportAtsStep(jobApp._id.toString(), 'greenhouse', 'filled', context, {
+          fields: detection.fields,
+          filledCount: fillResult?.fieldsFilled,
+          skippedNames: (fillResult?.skippedFields || []).map((s: any) => s.name),
+        });
+
+        /*
+          Refuse to submit without a CV.
+
+          `fillGreenhouseFields` accepts `resumePdf`, but no caller has ever passed it and
+          `JobApplication.attachments` is not written by any code path in the repo — so a run that
+          reached the submit button would have sent the candidate's details with **no resume
+          attached**. A silently incomplete submission is worse than a parked one: the user believes
+          they applied, the employer receives an empty application, and nothing surfaces the problem.
+
+          Until the document pipeline populates an attachment, halt explicitly instead of submitting.
+          The operator detail goes to the log; `message` stays user-facing copy (SB-08).
+        */
+        const resumeAttachment = (jobApp.attachments || []).find(
+          (a: any) => a?.type === 'cv' && a?.url
+        );
+        if (!resumeAttachment) {
+          console.error(
+            '[greenhouse] Refusing to submit without a resume attachment',
+            JSON.stringify({
+              applicationId: jobApp._id.toString(),
+              navigationUrl,
+              attachmentsOnApplication: (jobApp.attachments || []).length,
+              filledFields: fillResult?.fieldsFilled,
+            })
+          );
+
+          return {
+            success: true,
+            atsType: 'greenhouse',
+            applicationId: jobApp._id.toString(),
+            status: 'action_required',
+            message: `We opened the ${context.company} application form but your tailored CV wasn't ready to attach, so nothing was submitted. Apply on the employer site, or retry once your documents are ready.`,
+            screeningAnswers,
+            nextStep: `Apply at ${context.jobUrl}`,
+          };
+        }
+
+        await reportAtsStep(jobApp._id.toString(), 'greenhouse', 'submitting', context);
 
         // Submit form
         const submissionResult = await submitGreenhouseForm(page);
@@ -738,6 +909,10 @@ export class UnifiedApplyService {
           };
         }
 
+        await reportAtsStep(jobApp._id.toString(), 'lever', 'detected', context, {
+          fields: detection.fields,
+        });
+
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
@@ -747,6 +922,14 @@ export class UnifiedApplyService {
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
         });
+
+        await reportAtsStep(jobApp._id.toString(), 'lever', 'filled', context, {
+          fields: detection.fields,
+          filledCount: fillResult?.fieldsFilled,
+          skippedNames: (fillResult?.skippedFields || []).map((s: any) => s.name),
+        });
+
+        await reportAtsStep(jobApp._id.toString(), 'lever', 'submitting', context);
 
         const submissionResult = await submitLeverForm(page);
 
@@ -845,6 +1028,10 @@ export class UnifiedApplyService {
           };
         }
 
+        await reportAtsStep(jobApp._id.toString(), 'ashby', 'detected', context, {
+          fields: detection.fields,
+        });
+
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
@@ -854,6 +1041,14 @@ export class UnifiedApplyService {
           phone: user?.phone || primaryCv?.basics?.phone || '',
           linkedin: primaryCv?.basics?.url || '',
         });
+
+        await reportAtsStep(jobApp._id.toString(), 'ashby', 'filled', context, {
+          fields: detection.fields,
+          filledCount: fillResult?.fieldsFilled,
+          skippedNames: (fillResult?.skippedFields || []).map((s: any) => s.name),
+        });
+
+        await reportAtsStep(jobApp._id.toString(), 'ashby', 'submitting', context);
 
         const submissionResult = await submitAshbyForm(page);
 
@@ -952,6 +1147,10 @@ export class UnifiedApplyService {
           };
         }
 
+        await reportAtsStep(jobApp._id.toString(), 'workable', 'detected', context, {
+          fields: detection.fields,
+        });
+
         const user = await User.findById(userId).lean() as any;
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
@@ -960,6 +1159,14 @@ export class UnifiedApplyService {
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
         });
+
+        await reportAtsStep(jobApp._id.toString(), 'workable', 'filled', context, {
+          fields: detection.fields,
+          filledCount: fillResult?.fieldsFilled,
+          skippedNames: (fillResult?.skippedFields || []).map((s: any) => s.name),
+        });
+
+        await reportAtsStep(jobApp._id.toString(), 'workable', 'submitting', context);
 
         const submissionResult = await submitWorkableForm(page);
 

@@ -97,19 +97,32 @@ export async function makeApplicationDecision(input: DecisionInput): Promise<Dec
   // 4. Match Score (basic skill match — no AI call here, just keyword)
   const matchScore = computeBasicMatchScore(input);
 
-  // 5. Determine mode — merge risk recommendation with match score
+  // 5. Determine mode — the risk assessment is the gate; the match score only advises.
   let mode: ApplicationMode = risk.recommendation;
 
-  // High match can upgrade from review to auto
+  /*
+    A high match may still *upgrade* a review decision to auto, but a low one must never downgrade
+    auto to review.
+
+    `computeBasicMatchScore` below is a keyword counter over a hardcoded tech-vocabulary list, so it
+    returns 0–40 for every non-software role and cannot be treated as a safety signal. Using it as a
+    veto silently moved ~92% of applications out of `auto` and into `review` (measured 2026-09-27:
+    92 of 99 applications scored ≤40) — and `review` prepares documents without ever submitting, so
+    the application simply waited for an approval click that was never meant to be required.
+
+    Safety belongs to `assessApplicationRisk` above (unknown ATS, missing URL, expired listing) and to
+    the missing-CV check below. Relevance belongs to ranking. Conflating the two is what broke
+    auto-apply.
+  */
   if (mode === 'review' && matchScore >= 90) {
     mode = 'auto';
     warnings.push('Upgraded to auto due to high match score');
   }
 
-  // Low match can downgrade from auto to review
   if (mode === 'auto' && matchScore < 70) {
-    mode = 'review';
-    warnings.push('Downgraded to review due to moderate match score');
+    warnings.push(
+      `Low keyword match (${matchScore}%) — ranked lower, but not a reason to withhold submission`
+    );
   }
 
   // User-requested mode override (if stricter than computed)

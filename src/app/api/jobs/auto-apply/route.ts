@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { getConnection } from '@/lib/database';
 import { sanitizeJobApplicationSource } from '@/lib/jobs/jobApplicationSource';
+import { detectAtsFromUrl } from '@/lib/jobs/autoApplySupport';
 import { AutoApplyQuotaService } from '@/lib/services/autoApplyQuotaService';
 import type { ATSType } from '@/types/automation-schema';
 import { log } from '@/lib/structured-logger';
@@ -62,9 +63,19 @@ async function enqueueAutoApply(request: NextRequest) {
       );
     }
 
-    // Validate atsType
+    /*
+      Routing is derived from the apply URL, not from the discovery source.
+
+      `atsType` arrives from the client meaning *where the job was found* (adzuna, jobspy, remoteok…).
+      The worker (`processApplication`) and `UnifiedApplyService` read the same field meaning *where
+      the form is*. Those are not the same thing: a job discovered through an aggregator whose
+      `applyUrl` is an ordinary Greenhouse board was parked as "not automatable" and could never
+      auto-apply. The URL is the only evidence describing the submission target, so it wins; the
+      client-supplied value is the fallback. See SB-03 in `server_bugs.md`.
+    */
     const validAtsTypes: ATSType[] = ['greenhouse', 'lever', 'workable', 'naukri', 'indeed', 'adzuna', 'ashby', 'workday', 'unknown'];
-    const resolvedAtsType: ATSType = validAtsTypes.includes(atsType) ? atsType : 'unknown';
+    const resolvedAtsType: ATSType =
+      detectAtsFromUrl(jobUrl) ?? (validAtsTypes.includes(atsType) ? atsType : 'unknown');
 
     await getConnection();
 

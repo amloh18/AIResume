@@ -17,6 +17,8 @@ import {
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { useApplicationProgress } from '@/hooks/useApplicationProgress';
+import { LiveProgressBar } from '@/components/applications/LiveProgressBar';
 import { getJourneyDocumentsForJob } from '@/lib/utils/journey-documents';
 import type { BadgeActionId } from '@/lib/utils/application-status-badge';
 import JobStatusActionChip from '@/components/jobs/JobStatusActionChip';
@@ -173,6 +175,11 @@ const JobsListView: React.FC<JobsListViewProps> = ({
   hideSelection = false,
   hideActions = false,
 }) => {
+  // Live progress from the one shared cache (see useApplicationProgress), so a
+  // row here shows the same step as the card in Discover and the journey
+  // sidebar — and updates as the worker advances.
+  const { getForJob } = useApplicationProgress();
+
   const handleSelectJob = (jobId: string) => {
     if (!setSelectedJobs) return;
     setSelectedJobs(prev => {
@@ -371,9 +378,21 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                       {appliedDateStr}
                     </td>
 
-                    {/* Status */}
+                    {/* Status — the live step while a run is moving, the badge otherwise */}
                     <td className="py-3.5 px-4">
                       {(() => {
+                        const live = getForJob(jobId);
+                        if (live?.isActive) {
+                          return (
+                            <div className="min-w-[180px] max-w-[220px]">
+                              <LiveProgressBar
+                                progress={live}
+                                variant="compact"
+                                onAction={(actionId) => onAutomationAction?.(job, actionId)}
+                              />
+                            </div>
+                          );
+                        }
                         const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
                         if (liveStatus) {
                           const isSuccess = liveStatus.step === 'submitted' || liveStatus.success;

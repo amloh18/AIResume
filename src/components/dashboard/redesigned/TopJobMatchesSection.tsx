@@ -21,6 +21,7 @@ import { JobCard } from '@/components/jobs/JobCard';
 import type { JobListing } from '@/types/automation-schema';
 import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
+import { useApplicationProgress, invalidateApplicationProgress } from '@/hooks/useApplicationProgress';
 
 export interface TopMatchJob {
   _id: string;
@@ -66,6 +67,12 @@ export default function TopJobMatchesSection() {
   const { updateProgress } = useNotifications();
   const applyProgress = useApplyProgress();
   const { statuses, clearStatus } = useJobLiveStatusStore();
+  /*
+    Live progress comes from the shared cache, so this carousel, the Discover
+    feed, the tracker and the journey sidebar all show the same step of the same
+    application — and all advance together as the worker moves.
+  */
+  const { getForJob } = useApplicationProgress();
   const queryClient = useQueryClient();
   /*
     Apply re-entry guard (pattern from JobsDashboard `handleApplyJob`): the CTA
@@ -803,6 +810,9 @@ export default function TopJobMatchesSection() {
                   // would show "Working…" across the row. Concurrent submits
                   // stay blocked by the applyingRef guard in handleApply.
                   applying={applyingJobId === job._id}
+                  // Same shared cache the Discover feed, the tracker and the
+                  // sidebar read — so this carousel cannot disagree with them.
+                  progress={getForJob(job._id) ?? null}
                 />
               </div>
             ))}
