@@ -4,6 +4,7 @@ import { User, JobApplication, ApplicationJourney, CV, CoverLetter } from '@/mod
 import LoginSession from '@/models/LoginSession';
 import { requireAdmin } from '@/lib/middleware/admin-auth';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * DELETE /api/admin/users/[id]
@@ -46,7 +47,7 @@ export async function DELETE(
 
     // Delete all associated data
     const [jobsResult, journeysResult, cvsResult, coverLettersResult] = await Promise.all([
-      JobApplication.deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
+      JobApplication.deleteMany({ userId: mixedIdFilter(userId) }),
       ApplicationJourney.deleteMany({ userId: { $in: [userId, new mongoose.Types.ObjectId(userId)] } }),
       CV.deleteMany({ userId: new mongoose.Types.ObjectId(userId) }),
       CoverLetter.deleteMany({ userId: new mongoose.Types.ObjectId(userId) })
@@ -172,7 +173,7 @@ export async function PATCH(
         const userId = user._id.toString();
         const userObjId = new mongoose.Types.ObjectId(userId);
         const [jobsResult, journeysResult, cvsResult, coverLettersResult] = await Promise.all([
-          JobApplication.deleteMany({ userId: userObjId }),
+          JobApplication.deleteMany({ userId: mixedIdFilter(userId) }),
           ApplicationJourney.deleteMany({ userId: { $in: [userId, userObjId] } }),
           CV.deleteMany({ userId: userObjId }),
           CoverLetter.deleteMany({ userId: userObjId })

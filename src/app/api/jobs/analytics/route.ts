@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import JobApplication from '@/models/JobApplication';
 import mongoose from 'mongoose';
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     // Get all jobs for the user
     const jobs = await JobApplication.find({
-      userId: new mongoose.Types.ObjectId(userId),
+      userId: mixedIdFilter(userId),
       ...dateFilter
     }).lean();
 

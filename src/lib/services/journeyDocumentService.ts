@@ -1,5 +1,6 @@
 import { log } from '@/lib/structured-logger';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { ApplicationJourney, CV, CoverLetter, JobApplication } from '@/models';
 import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -590,7 +591,7 @@ export async function createJourneyDocuments(
     if (!coverLetterId) {
       // Check if a cover letter already exists for this journey (atomic check)
       const existingJourneyCoverLetter = await CoverLetter.findOne({
-        journeyId: currentJourney._id.toString(),
+        journeyId: mixedIdFilter(currentJourney._id),
         userId: new mongoose.Types.ObjectId(userId)
       });
 
@@ -738,7 +739,7 @@ Thank you for your time and consideration. I would welcome the opportunity to di
 
       // Double-check one more time before creating (race condition protection)
       const finalCheck = await CoverLetter.findOne({
-        journeyId: currentJourney._id.toString(),
+        journeyId: mixedIdFilter(currentJourney._id),
         userId: new mongoose.Types.ObjectId(userId)
       });
 

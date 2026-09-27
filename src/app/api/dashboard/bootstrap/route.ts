@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { userId } = authResult;
+    // `User.findById` and the `Job` / `CV` / `CoverLetter` queries key on an `ObjectId` path, so the
+    // cast value is exact for them. `JobApplication.userId` is `Schema.Types.Mixed` and is therefore
+    // **not** cast — it needs both shapes or it silently misses the string-stored rows (SB-06;
+    // measured on production 2026-09-27: objectId 84 / string 15).
     const userObjectId = new mongoose.Types.ObjectId(userId);
+    const userFilter = mixedIdFilter(userId);
 
     // Import models dynamically to avoid circular dependencies
     const { default: User } = await import('@/models/User');
@@ -62,8 +68,9 @@ export async function GET(request: NextRequest) {
         Job.countDocuments({ userId: userObjectId }),
 
         // Application status counts - single aggregation pipeline
+        // (`$match` on a Mixed path needs both shapes too — an aggregation does not cast.)
         JobApplication.aggregate([
-          { $match: { userId: userObjectId } },
+          { $match: { userId: userFilter } },
           {
             $group: {
               _id: '$status',
@@ -80,7 +87,7 @@ export async function GET(request: NextRequest) {
           .lean(),
 
         // Recent applications - lightweight projection, limited to 5
-        JobApplication.find({ userId: userObjectId })
+        JobApplication.find({ userId: userFilter })
           .select('jobTitle company companyLogo status location applicationDate createdAt')
           .sort({ createdAt: -1 })
           .limit(5)

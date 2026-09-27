@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,6 +22,12 @@ export async function GET(request: NextRequest) {
 
     const { userId } = authResult;
     const userObjectId = new mongoose.Types.ObjectId(userId);
+    /*
+      `JobApplication.userId` is `Schema.Types.Mixed`, so Mongoose does not cast the query value:
+      a bare ObjectId silently misses rows stored as a 24-hex string and vice versa (SB-06).
+      `userObjectId` is kept for `findById`; `userFilter` is for the Mixed `userId` path only.
+    */
+    const userFilter = mixedIdFilter(userId);
 
     // Get date ranges
     const now = new Date();
@@ -35,7 +42,7 @@ export async function GET(request: NextRequest) {
       CV.find({ userId: userObjectId })
         .select('createdAt updatedAt')
         .lean(),
-      JobApplication.find({ userId: userObjectId })
+      JobApplication.find({ userId: userFilter })
         .select('createdAt updatedAt status appliedAt')
         .lean(),
       ApplicationJourney.find({ userId: userObjectId })

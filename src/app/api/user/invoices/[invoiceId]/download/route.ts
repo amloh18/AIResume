@@ -5,6 +5,7 @@ import { getConnection } from '@/lib/database';
 import { User, Invoice } from '@/models';
 import InvoiceItem from '@/models/InvoiceItem';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import PolarService from '@/lib/payment/polar';
 
 /**
@@ -42,7 +43,7 @@ export async function GET(
     // Find invoice
     let invoice = await Invoice.findOne({
       ...(isObjectId ? { _id: invoiceId } : { 'metadata.polarCheckoutId': invoiceId }),
-      userId: user._id
+      userId: mixedIdFilter(user._id)
     });
 
     if (!invoice) {

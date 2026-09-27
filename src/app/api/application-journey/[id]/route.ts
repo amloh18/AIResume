@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney, CV, JobApplication, CoverLetter } from '@/models';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
@@ -105,7 +106,7 @@ export async function GET(
       journey.jobId 
         ? JobApplication.findOne({
             _id: journey.jobId,
-            userId: new mongoose.Types.ObjectId(userId)
+            userId: mixedIdFilter(userId)
           }).lean<any>()
         : Promise.resolve(null),
       

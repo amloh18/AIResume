@@ -6,6 +6,7 @@ import CV from '@/models/CV';
 import { JobApplication, CoverLetter } from '@/models';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 import { checkForDuplicate } from '@/lib/jobs/deduplicate';
 
@@ -177,7 +178,7 @@ export async function POST(
       // Verify job exists and belongs to user
       job = await JobApplication.findOne({
         _id: new mongoose.Types.ObjectId(jobId),
-        userId: new mongoose.Types.ObjectId(userId)
+        userId: mixedIdFilter(userId)
       });
 
       if (!job) {
@@ -327,7 +328,7 @@ export async function POST(
       
       // Check if cover letter already exists for this journey
       const existingCoverLetter = await CoverLetter.findOne({
-        journeyId: journey._id
+        journeyId: mixedIdFilter(journey._id)
       });
       
       if (existingCoverLetter) {

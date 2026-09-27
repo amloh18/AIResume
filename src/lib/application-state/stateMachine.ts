@@ -29,7 +29,18 @@ export interface StateTransitionRequest {
   eventType: ApplicationEventType;
   source: 'user' | 'automation_worker' | 'email_intelligence' | 'admin' | 'system';
   runId?: string;
+  /** Customer-facing explanation. This is rendered in the tracker — see SB-08. */
   reason?: string;
+  /**
+   * Operator-only counterpart to `reason`, never rendered.
+   *
+   * It exists so a technical string (a Playwright error, a CSS selector, a URL) can be recorded
+   * without putting operator prose into a customer-facing field. `reason` is surfaced as
+   * `reviewReason` by `GET /api/jobs` and `GET /api/applications/progress` and rendered raw, so
+   * anything written there is read by a customer; the detail belongs here instead. Ops read it from
+   * `stageHistory[].operatorReason` and `ApplicationEvent.metadata.operatorReason`.
+   */
+  operatorReason?: string;
   evidence?: Record<string, any>;
   metadata?: Record<string, any>;
 }
@@ -89,6 +100,7 @@ export class ApplicationStateMachine {
       internalStatus: req.targetStatus,
       changedAt: new Date(),
       reason: req.reason,
+      operatorReason: req.operatorReason,
       // No `as any` here on purpose: this cast previously masked a real drift
       // between this type union and the Mongoose enums on JobApplication /
       // ApplicationEvent, so every worker transition failed validation at
@@ -112,6 +124,7 @@ export class ApplicationStateMachine {
       runId: req.runId,
       metadata: {
         reason: req.reason,
+        operatorReason: req.operatorReason,
         evidence: req.evidence,
         ...(req.metadata || {}),
       },

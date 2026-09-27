@@ -57,16 +57,26 @@ Thumbs.db
 
 # ── DOCS  ───────────────────────────────────────────────────────────
 # Project documentation is version-controlled (AGENTS.md §53/54 requires maintaining
-# docs/application-automation/). The blanket *.md ignore previously swallowed the entire
-# docs/ tree — 54 documents were never committed because of it.
+# docs/application-automation/). The blanket *.md rule swallowed the entire docs/ tree once —
+# 54 documents were never committed — and was never actually fixed: only AGENTS.md was
+# excepted, so every *new* .md was still dropped silently, with no error and no diff to notice.
 #
-# ⚠️ The blanket rule was never actually fixed: only AGENTS.md is excepted, so new root-level
-# docs are still dropped silently (measured 2026-09-26: 3 files under docs/ are untracked).
-# See server_bugs.md SB-15. Add an explicit exception for each doc that must be committed.
+# Policy: `*.md` guards against stray scratch notes at the repo root; `docs/` is tracked in
+# full; the repo-mandated root documents are named explicitly. Note that ignore rules do not
+# apply to already-tracked files, which is exactly why the old rule looked harmless.
+#
+# Measured 2026-09-27 — this surfaces precisely the 3 previously-invisible docs/ files.
+# `.claude/**` and `brag-output/**` stay ignored via their own directory rules. See
+# server_bugs.md SB-15.
 *.md
 !AGENTS.md
 !server_bugs.md
 !refactor_audit.md
+!/docs/**
+# The `!/docs/**` negation above re-includes *everything* under docs/, including the OS metadata
+# the earlier `.DS_Store` rule would otherwise have caught (verified: `git check-ignore docs/.DS_Store`
+# pointed at the negation). Later rules win, so re-assert it here rather than relying on the top rule.
+**/.DS_Store
 
 # ── Logs ────────────────────────────────────────────────────────────────
 npm-debug.log*

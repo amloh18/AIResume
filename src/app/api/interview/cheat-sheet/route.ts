@@ -5,6 +5,7 @@ import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { JobApplication } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,15 +35,13 @@ export async function POST(request: NextRequest) {
             ? new mongoose.Types.ObjectId(jobId)
             : jobId;
 
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
         // Use positional operator to toggle cheat sheet flag
         const result = await JobApplication.updateOne(
             {
                 _id: jobIdQuery,
-                userId: userIdQuery,
+                userId: userFilter,
                 'interviewCoach.questions.id': questionId
             },
             {
@@ -100,13 +99,11 @@ export async function GET(request: NextRequest) {
             ? new mongoose.Types.ObjectId(jobId)
             : jobId;
 
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
         const job = await JobApplication.findOne({
             _id: jobIdQuery,
-            userId: userIdQuery
+            userId: userFilter
         }).select('jobTitle company interviewCoach.questions').lean();
 
         if (!job || !job.interviewCoach) {

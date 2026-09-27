@@ -9,6 +9,7 @@ import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import { buildSession, groupQuestionsByModule } from '@/lib/interview/plan';
 import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 // Force dynamic to ensure route is always available
 export const dynamic = 'force-dynamic';
@@ -46,16 +47,14 @@ export async function POST(request: NextRequest) {
         }
 
         const jobIdObj = new mongoose.Types.ObjectId(jobId);
-        const userIdObj = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
-        console.log(`🔍 Looking for job: ${jobIdObj.toString()} for user: ${userIdObj}`);
+        console.log(`🔍 Looking for job: ${jobIdObj.toString()} for user: ${auth.userId}`);
 
         // Fetch job with ownership check
         const job = await JobApplication.findOne({
             _id: jobIdObj,
-            userId: userIdObj
+            userId: userFilter
         }).select('jobTitle company jobDescription missingKeywords interviewCoach');
 
         if (!job) {
@@ -73,7 +72,7 @@ export async function POST(request: NextRequest) {
         // --- Gating Logic: Free users can only generate 1 plan total ---
         // `interviewCoach` is selected in the same query so the response can
         // carry the practice streak without an extra round-trip.
-        const user = await User.findById(userIdObj).select('currentPlanKey subscription interviewCoach');
+        const user = await User.findById(auth.userId).select('currentPlanKey subscription interviewCoach');
         const planKey = user?.currentPlanKey || 'free';
         const currentStreak = user?.interviewCoach?.currentStreak || 0;
 
@@ -148,7 +147,7 @@ export async function POST(request: NextRequest) {
         if (!planLimits.interviewCoach) {
             // Count how many jobs already have a generated interview plan
             const generatedCount = await JobApplication.countDocuments({
-                userId: userIdObj,
+                userId: userFilter,
                 'interviewCoach.status': 'ready'
             });
             

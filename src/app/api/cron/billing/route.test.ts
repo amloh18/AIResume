@@ -113,7 +113,7 @@ describe('POST /api/cron/billing — same guard as GET', () => {
 
 describe('overlap protection (a concurrent pass could double-charge a card)', () => {
   it('returns 409 CRON_ALREADY_RUNNING while a run holds the lock', async () => {
-    const held = acquireCronLock('billing');
+    const held = await acquireCronLock('billing');
     expect(held).not.toBeNull();
 
     const res = await GET(req(bearer('test-secret')));
@@ -122,22 +122,24 @@ describe('overlap protection (a concurrent pass could double-charge a card)', ()
     expect((await res.json()).code).toBe('CRON_ALREADY_RUNNING');
     expect(processRenewals).not.toHaveBeenCalled();
 
-    held!.release();
+    await held!.release();
   });
 
   it('releases the lock after the run, including after an auth failure inside the lock', async () => {
     await GET(req(bearer('test-secret')));      // authorised run — finally { release() }
     await GET(req(bearer('wrong')));            // auth fails *inside* the lock — also released
 
-    const after = acquireCronLock('billing');
+    const after = await acquireCronLock('billing');
     expect(after).not.toBeNull();
-    after!.release();
+    await after!.release();
   });
 
   it('actually runs billing work while holding the lock (lock is not a bypass)', async () => {
     let sawLockDuringRun = false;
     (processRenewals as any).mockImplementation(async () => {
-      sawLockDuringRun = !acquireCronLock('billing'); // busy → still held
+      // `acquireCronLock` is async now (the in-process slot is still taken synchronously, but the
+      // cross-process lease is awaited) — so this must be awaited to read the real answer.
+      sawLockDuringRun = !(await acquireCronLock('billing')); // busy → still held
       return { processed: 0 };
     });
 

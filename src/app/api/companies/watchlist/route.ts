@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import CompanyWatchlist from '@/models/CompanyWatchlist';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * GET /api/companies/watchlist
@@ -21,7 +22,8 @@ export async function GET(request: NextRequest) {
     const activeOnly = searchParams.get('activeOnly') === 'true';
     const priority = searchParams.get('priority') as 'high' | 'medium' | 'low' | null;
 
-    const query: any = { userId: session.user.id };
+    // `CompanyWatchlist.userId` is `Schema.Types.Mixed` and therefore uncast (SB-06).
+    const query: any = { userId: mixedIdFilter(session.user.id) };
     
     if (activeOnly) {
       query.isActive = true;
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Check if already exists
     const normalizedName = companyName.toLowerCase().trim();
     const existing = await CompanyWatchlist.findOne({
-      userId: session.user.id,
+      userId: mixedIdFilter(session.user.id),
       normalizedName,
     });
 
@@ -159,7 +161,7 @@ export async function PUT(request: NextRequest) {
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const updated = await CompanyWatchlist.findOneAndUpdate(
-      { _id: id, userId: session.user.id },
+      { _id: id, userId: mixedIdFilter(session.user.id) },
       { $set: updateData },
       { new: true, runValidators: true }
     );
@@ -209,7 +211,7 @@ export async function DELETE(request: NextRequest) {
 
     const deleted = await CompanyWatchlist.findOneAndDelete({
       _id: id,
-      userId: session.user.id,
+      userId: mixedIdFilter(session.user.id),
     });
 
     if (!deleted) {

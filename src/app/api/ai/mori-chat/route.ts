@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { cleanAndParseJSON, inferCvSectionFromPrompt, mergeMoriCvIntoCanvas, parseMoriChatContent } from '@/lib/utils/mori-chat-response';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { normalizeCvData } from '@/types/cv-normalizer';
 import { diffCVData } from '@/types/cv-edit-ops';
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
       const userChats = await MoriChat.find({
-        userId: session.user.id,
+        userId: mixedIdFilter(session.user.id),
         updatedAt: { $gte: lastResetDate }
       }).lean();
 
@@ -294,7 +295,7 @@ export async function POST(req: NextRequest) {
       let chatRecord;
       if (chatId) {
         chatRecord = await MoriChat.findOneAndUpdate(
-          { _id: chatId, userId: session.user.id },
+          { _id: chatId, userId: mixedIdFilter(session.user.id) },
           {
             $push: { messages: { $each: [latestMessage, assistantMessage] } },
             $set: { updatedAt: new Date() }
@@ -552,7 +553,7 @@ RESPONSE FORMAT:
     
     if (chatId) {
       chatRecord = await MoriChat.findOneAndUpdate(
-        { _id: chatId, userId: session.user.id },
+        { _id: chatId, userId: mixedIdFilter(session.user.id) },
         { 
           $push: { messages: { $each: [latestMessage, assistantMessage] } },
           $set: { updatedAt: new Date() }
@@ -602,7 +603,7 @@ RESPONSE FORMAT:
       const lastResetDate = user.credits?.lastResetDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
       const userChats = await MoriChat.find({
-        userId: session.user.id,
+        userId: mixedIdFilter(session.user.id),
         updatedAt: { $gte: lastResetDate }
       }).lean();
 

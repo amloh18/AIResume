@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
 import { toObjectId } from '@/lib/db-utils';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
@@ -31,14 +32,18 @@ export async function GET(request: NextRequest) {
       : userId;
     let query = CoverLetter.find({ userId: normalizedUserId });
 
-    // Add cvId filter
+    // Add cvId filter.
+    // `CoverLetter.cvId` / `.journeyId` are `Schema.Types.Mixed`, so choosing one shape by
+    // `ObjectId.isValid` is not enough — production holds **both** (cvId objectId 45 / string 3,
+    // journeyId string 56 / objectId 26), so whichever branch is not taken silently misses those
+    // rows (SB-06).
     if (cvId) {
-      query = query.find({ cvId: mongoose.Types.ObjectId.isValid(cvId) ? new mongoose.Types.ObjectId(cvId) : cvId });
+      query = query.find({ cvId: mixedIdFilter(cvId) });
     }
 
     // Add journeyId filter
     if (journeyId) {
-      query = query.find({ journeyId: mongoose.Types.ObjectId.isValid(journeyId) ? new mongoose.Types.ObjectId(journeyId) : journeyId });
+      query = query.find({ journeyId: mixedIdFilter(journeyId) });
     }
 
     // Add status filter
@@ -174,7 +179,7 @@ export async function POST(request: NextRequest) {
     // Check if cover letter already exists for this journey to prevent duplicates
     if (journeyId) {
       const existingCoverLetter = await CoverLetter.findOne({
-        journeyId: journeyId,
+        journeyId: mixedIdFilter(journeyId),
         userId: toObjectId(userId)
       });
 

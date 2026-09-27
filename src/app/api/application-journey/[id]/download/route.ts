@@ -6,6 +6,7 @@ import { ApplicationJourney } from '@/models/ApplicationJourney';
 import JobApplication from '@/models/JobApplication';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { ZipDownloadService } from '@/lib/services/zipDownloadService';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
 
@@ -40,7 +41,7 @@ export async function GET(
     if (downloadType === 'all' || downloadType === 'jobDescription') {
       job = await JobApplication.findOne({
         _id: journey.jobId,
-        userId: session.user.id
+        userId: mixedIdFilter(session.user.id)
       });
 
       if (!job) {
@@ -51,7 +52,7 @@ export async function GET(
       try {
         job = await JobApplication.findOne({
           _id: journey.jobId,
-          userId: session.user.id
+          userId: mixedIdFilter(session.user.id)
         });
       } catch (error) {
         // Job lookup failed, but we can still proceed with CV/Cover Letter download
@@ -251,7 +252,7 @@ export async function POST(request: NextRequest) {
     try {
       job = await JobApplication.findOne({
         _id: journey.jobId,
-        userId: session.user.id
+        userId: mixedIdFilter(session.user.id)
       });
     } catch (error) {
       // Job lookup failed, but we can still estimate file sizes

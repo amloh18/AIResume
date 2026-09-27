@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import UserSettings from '@/models/UserSettings';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -35,7 +36,7 @@ export async function GET() {
       );
     }
 
-    const settings = await UserSettings.findOne({ userId: session.user.id })
+    const settings = await UserSettings.findOne({ userId: mixedIdFilter(session.user.id) })
       .select('preferences.dashboard.layout')
       .lean();
 
@@ -81,8 +82,13 @@ export async function PATCH(request: NextRequest) {
 
     // Targeted $set on the declared nested path. Upsert so a user who has never
     // opened the settings page still gets a document to write to.
+    //
+    // `UserSettings.userId` is `Schema.Types.Mixed`, so the filter is uncast (SB-06). With
+    // `upsert: true` a miss is worse than a no-op: `"abc"` and `ObjectId("abc")` are distinct keys
+    // to the `unique` index, so a wrong-shape filter inserts a **second** settings document rather
+    // than colliding with the first.
     await UserSettings.findOneAndUpdate(
-      { userId },
+      { userId: mixedIdFilter(userId) },
       { $set: { 'preferences.dashboard.layout': body.layout } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );

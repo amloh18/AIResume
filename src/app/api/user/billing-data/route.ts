@@ -6,6 +6,7 @@ import { getConnection } from '@/lib/database';
 import { User, Subscription, PaymentMethod, Invoice, Transaction } from '@/models';
 import InvoiceItem from '@/models/InvoiceItem';
 import PolarService from '@/lib/payment/polar';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 /**
  * Unified billing data API
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
       
       // Get payment methods
       PaymentMethod.find({
-        userId: user._id,
+        userId: mixedIdFilter(user._id),
         isActive: true
       })
         .sort({ isDefault: -1, createdAt: -1 })
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       
       // Get invoices (last 20)
       Invoice.find({
-        userId: user._id
+        userId: mixedIdFilter(user._id)
       })
         .sort({ createdAt: -1 })
         .limit(20)
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       
       // Get transactions (last 50)
       Transaction.find({
-        invoiceId: { $in: await Invoice.find({ userId: user._id }).distinct('_id') }
+        invoiceId: { $in: await Invoice.find({ userId: mixedIdFilter(user._id) }).distinct('_id') }
       })
         .sort({ createdAt: -1 })
         .limit(50)

@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { CV, JobApplication, ApplicationJourney } from '@/models';
 import UserModel from '@/models/User';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import subscriptionService from '@/lib/services/subscriptionService';
 
 /**
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
 
     const { userId, userEmail } = authResult;
     const userObjectId = new mongoose.Types.ObjectId(userId);
+    // JobApplication.userId is Mixed — query both stored shapes (SB-06)
+    const userFilter = mixedIdFilter(userId);
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -79,7 +82,7 @@ export async function GET(request: NextRequest) {
       
       // Fetch jobs (conditional)
       includeJobs
-        ? JobApplication.find({ userId: userObjectId })
+        ? JobApplication.find({ userId: userFilter })
             .select('jobTitle company status location salary deadline createdAt updatedAt')
             .sort({ updatedAt: -1 })
             .limit(100)
@@ -97,7 +100,7 @@ export async function GET(request: NextRequest) {
 
       // Count queries (parallelized with the above)
       includeCVs ? CV.countDocuments({ userId: userObjectId }) : Promise.resolve(0),
-      includeJobs ? JobApplication.countDocuments({ userId: userObjectId }) : Promise.resolve(0),
+      includeJobs ? JobApplication.countDocuments({ userId: userFilter }) : Promise.resolve(0),
     ]);
 
     if (!user) {

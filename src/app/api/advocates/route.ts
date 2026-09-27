@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Advocate from '@/models/Advocate';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const advocates = await Advocate.find({ userId: auth.userId })
+    const advocates = await Advocate.find({ userId: mixedIdFilter(auth.userId) })
       .sort({ createdAt: -1 })
       .lean();
 

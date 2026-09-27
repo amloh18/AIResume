@@ -5,6 +5,7 @@ import InterviewSession from '@/models/InterviewSession';
 import { JobApplication, User } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 // Force dynamic to ensure we always fetch fresh data
 export const dynamic = 'force-dynamic';
@@ -26,14 +27,12 @@ export async function GET(request: NextRequest) {
         // a) Have interviewCoach.status = 'ready' (Already generated plan)
         // b) Have status in ['applied', 'interview', 'screening', 'offer'] (Eligible to start)
 
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
-            ? new mongoose.Types.ObjectId(auth.userId)
-            : auth.userId;
+        const userFilter = mixedIdFilter(auth.userId);
 
         const eligibleStatuses = ['created', 'applied', 'screening', 'interview', 'offer', 'Created', 'Applied', 'Screening', 'Interview', 'Offer'];
 
         const allJobs = await JobApplication.find({
-            userId: userIdQuery,
+            userId: userFilter,
             $or: [
                 { 'interviewCoach.status': 'ready' },
                 { status: { $in: eligibleStatuses } }
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
         const averageScore = completedQuestions > 0 ? Math.round(totalScore / completedQuestions) : 0;
 
         // Fetch User streak
-        const user = await User.findById(userIdQuery).select('interviewCoach');
+        const user = await User.findById(auth.userId).select('interviewCoach');
         const currentStreak = user?.interviewCoach?.currentStreak || 0;
 
         return setCorsHeaders(

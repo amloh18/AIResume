@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
 import JobApplication from '@/models/JobApplication';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function POST(
   request: NextRequest,
@@ -61,7 +62,7 @@ export async function POST(
     // Get the job to revert its status
     const job = await JobApplication.findOne({
       _id: journey.jobId,
-      userId: session.user.id
+      userId: mixedIdFilter(session.user.id)
     });
 
     // Revert journey to in-progress

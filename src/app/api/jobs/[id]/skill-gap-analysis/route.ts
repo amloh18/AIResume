@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { JobApplication, CV } from '@/models';
 import { SkillGapAnalysisService } from '@/lib/services/skillGapAnalysisService';
 import mongoose from 'mongoose';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 export async function GET(
   request: NextRequest,
@@ -42,15 +43,18 @@ export async function GET(
       );
     }
 
-    // Normalize userId to ObjectId to ensure consistent querying (matches jobs API pattern)
+    // Normalize userId to ObjectId for the CV lookups below (matches jobs API pattern)
     const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
       ? new mongoose.Types.ObjectId(userId)
       : userId;
 
+    // JobApplication.userId is Mixed — query both stored shapes (SB-06)
+    const userFilter = mixedIdFilter(userId);
+
     // Fetch job application - convert both jobId and userId to ObjectId
     const job = await JobApplication.findOne({
       _id: new mongoose.Types.ObjectId(jobId),
-      userId: normalizedUserId
+      userId: userFilter
     }).lean();
 
     if (!job) {
@@ -141,7 +145,7 @@ export async function GET(
 
     // Update job application with analysis
     await JobApplication.updateOne(
-      { _id: new mongoose.Types.ObjectId(jobId), userId: normalizedUserId },
+      { _id: new mongoose.Types.ObjectId(jobId), userId: userFilter },
       { 
         $set: { 
           skillGapAnalysis: analysis 

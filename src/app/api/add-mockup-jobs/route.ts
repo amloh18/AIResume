@@ -3,6 +3,7 @@ import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
+import { mixedIdFilter } from '@/lib/utils/mixed-id';
 
 // Mockup jobs data
 const mockupJobs = [
@@ -494,7 +495,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Delete existing jobs for this user (to avoid duplicates)
-    await JobApplication.deleteMany({ userId: user._id });
+    await JobApplication.deleteMany({ userId: mixedIdFilter(user._id) });
     console.log('Cleared existing jobs for user');
 
     // Create mockup jobs
@@ -512,7 +513,7 @@ export async function POST(request: NextRequest) {
     console.log(`Successfully created ${mockupJobs.length} mockup jobs for jamie@gmail.com`);
 
     // Verify the jobs were created
-    const jobCount = await JobApplication.countDocuments({ userId: user._id });
+    const jobCount = await JobApplication.countDocuments({ userId: mixedIdFilter(user._id) });
 
     return NextResponse.json({
       success: true,

@@ -1,9 +1,14 @@
 # server_bugs.md — server-side issues register
 
-Opened 2026-09-26, from the live-application-progress work. **App-side fixes are already in the working
-tree; everything below marked `OPEN` needs a decision or a server-side change.**
+Opened 2026-09-26, from the live-application-progress work.
 
-You cannot SSH to the VPS right now, so §1 exists to let you triage from a browser/terminal.
+**2026-09-27 (later) — the register was worked end to end, with SSH restored.** SB-06, SB-07, SB-08, SB-09
+and SB-15 are **fixed in the working tree**; SB-02 is *verified* rather than assumed; and two new items
+(**SB-18**, **SB-19**) were found while fixing SB-06 and SB-08. **Nothing below is committed or deployed
+yet** — the tree is dirty on purpose, and §8 records what each item needs to go live.
+
+**Read §2 before trusting this file's own framing.** The register was opened on the assumption that the P0
+was *"the queue has no drainer."* That assumption was wrong, and it cost a day. §2 states the correction.
 
 ---
 
@@ -47,7 +52,7 @@ Look at `worker`:
 | `loops` contains `applicationQueue` | This process drains the queue. Fine. |
 | `loops: []` and `role: "web"` | **Correct for the web tier.** Check the *worker* service's own `/api/health`… which it does not serve. See §1.2. |
 | `loops: []` on **both** tiers | **P0.** Nothing drains the queue. See SB-01. |
-| `role: "all"` on the web tier | The loops run inside the web container → they die on every redeploy. See SB-01. |
+| `role: "all"` on the web tier | The loops run inside the web container → they die on every redeploy. See SB-01b. |
 | `warning` present | `WORKER_ROLE` is misspelled. It falls back to `all` (fail-open) — see SB-01. |
 
 ### 1.2 Are the cron endpoints even reachable?
@@ -92,7 +97,21 @@ alarm. `GET /api/health` and this endpoint together cover most of what SSH would
 
 ---
 
-## 2. P0 — nothing is being submitted
+## 2. The "nothing is being submitted" investigation — closed 2026-09-27
+
+> **Correction, and it matters.** This section used to be titled *"P0 — nothing is being submitted"* and
+> opened with SB-01, *"the application queue has no drainer in production."* **That diagnosis was wrong.**
+> It was also repeated in `MEMORY.md`, which is how it survived unchallenged.
+>
+> Measured instead: the queue **is** drained (`completed: 48`, `queued: 0`, `processing: 0`). Applications
+> were parking **after** the drain, for four independent reasons — SB-03, SB-04, SB-05 and SB-16. The real
+> failure was the *combination*: the fixes were in the repo while the process actually draining the queue
+> ran a **45-hour-stale image** (SB-01b). The bug and the fix coexisted, which is why "the code looks
+> right" and "the user sees Apply manually" were both true.
+>
+> **For the next reader:** "nothing is being submitted" had five candidate causes and this register named
+> the one that was not it. Measure the queue (and the *image digest* behind it) before believing the
+> register.
 
 ### SB-01 · The application queue has no drainer in production · `NOT THE CAUSE — closed 2026-09-27`
 
@@ -149,6 +168,14 @@ app    /api/health -> {"role":"web","loops":[]}
 The worker had been pinned to `40688b8ab49e` since **09-25** — 45 h stale — and its stdout held only **22
 lines** for that whole period, last activity `09-26T09:19:29Z`. A silent success path (the structured logger
 does not write these to stdout) is why it *looked* idle while it was in fact the only thing submitting.
+
+**⚠️ The two tiers agreeing on a digest is NOT evidence the problem is fixed.** They match only because
+this investigation ran `docker service update --force` by hand. Verified again 2026-09-27 (later): both
+services report `buildairesume-app-vmvp35:latest` and their tasks were recreated 1 min apart
+(`21:01:45` / `21:02:49` IST) — but that is my force-update, not the pipeline. Dokploy still has **no row**
+for `buildairesume-worker-daemon` (empty Swarm labels, no `applicationId`), so **the next deploy will
+re-create the app and leave the worker on the previous image.** Until SB-01b is converted to a managed
+application, every deploy needs the manual step below.
 
 `buildairesume-worker-daemon` and `buildairesume-app-vmvp35` are two Swarm services pointing at the **same
 tag** (`buildairesume-app-vmvp35:latest`), but Dokploy only knows about the second one.
@@ -218,7 +245,7 @@ Both call the same primitives (`claimNextApplication` → `processApplication` �
 
 ---
 
-### SB-02 · Cron auth fails closed — unset secret kills all scheduled work · `OPEN (needs server access)`
+### SB-02 · Cron auth fails closed — unset secret kills all scheduled work · `VERIFIED SET 2026-09-27 — closed`
 
 **Evidence.** `src/lib/auth/cron-guard.ts:45-56`. When neither `CRON_SECRET` nor `CRON_API_KEY` is set,
 every `/api/cron/*` request gets `503 CRON_NOT_CONFIGURED` and nothing runs.
@@ -227,10 +254,27 @@ This is **correct and deliberate** (`cron-guard.ts:9-25` documents the fail-open
 it is a silent-work-stopper if the secret was never set on the deployment: a fresh box has no scheduled
 work at all and the only trace is a 503 in the scheduler log.
 
-**Check.** §1.2. `503` = not configured; `401` = configured but the cron file sends the wrong header.
+**Verified, not assumed (2026-09-27).** Probed with a **deliberately non-matching** bearer so no cron job
+was actually run:
 
-**Fix.** Set `CRON_SECRET` (or `CRON_API_KEY`) on the deployment **and** in the host crontab's header, then
-re-check for `200`.
+| Probe | Result | Reading |
+| --- | --- | --- |
+| no `Authorization` header | `401` | guard is armed |
+| wrong bearer | `401` | secret **is** set (a `503` would mean unset) |
+
+`/var/log/buildairesume/auto-apply.log` also holds `{"success":true,…}` 200 bodies, so the host cron file's
+header matches. The header secret is 64 chars.
+
+**⚠️ Follow-ups that are still open:**
+- **The `auto-apply` cron log has gone quiet.** Its last entries are `2026-09-26T19:10`; the file has been
+  silent since ~`13:40 UTC on 09-27`, while the in-process worker keeps draining (queue shows `queued: 0`).
+  Consistent with SB-01b — the loop wins every race so the cron has nothing to claim — but "the log
+  stopped" and "the log has nothing to report" look identical from outside. Worth confirming the cron is
+  still *firing* (not just finding nothing). See §7.
+- **The secret is stored in cleartext** in `/etc/cron.d/buildairesume` as `Authorization: Bearer <secret>`
+  on every line, and it was surfaced in a shell transcript on 2026-09-27. **Rotate it**, and prefer
+  `CRON_SECRET` read from a root-owned env file over an inline literal in a world-readable
+  (`-rw-r--r--`) cron file.
 
 ---
 
@@ -454,16 +498,39 @@ application gains a `stageHistory` entry whose `reason` names the park.
 
 ## 4. P2 — latent / correctness
 
-### SB-06 · `Mixed`-typed keys silently miss rows · `OPEN`
+### SB-06 · `Mixed`-typed keys silently miss rows · `FIXED IN TREE 2026-09-27`
 
 `Schema.Types.Mixed` disables Mongoose casting, so a query with one shape silently misses documents stored
 in the other. A plain `find({ applicationId: id })` returns nothing and reports no error.
 
-| Model | Field | Evidence |
+**This was filed as latent — "works today, breaks under a stated condition." Measurement says it was
+live, and worse than described.** Two corrections to the original framing:
+
+1. It is not only *split* paths that break. A path where **every** stored value is a string, queried with
+   an `ObjectId`, misses **every** row — and vice versa. No split is required for a total miss.
+2. On an `upsert`, a wrong-shape filter is worse than a miss. `"abc"` and `ObjectId("abc")` are distinct
+   keys to a `unique` index, so the upsert does not collide with the existing row — it **inserts a second
+   document**.
+
+Measured against production 2026-09-27 with `.verify/probe-mixed-types.js` (reads the app's own
+`MONGODB_URI` from the running container; no credential handling):
+
+| Collection path | Stored shapes | Verdict |
 | --- | --- | --- |
-| `ApplicationQueue` | `applicationId`, `userId`, `jobId` | `src/models/ApplicationQueue.ts:47-49` |
-| `JobApplication` | `userId` | `src/models/JobApplication.ts:222-224` |
-| `UserSettings` | `userId` | `src/models/UserSettings.ts:174` |
+| `jobapplications.userId` | objectId 84 / string 15 | **live miss** |
+| `applicationqueues.userId` | string 52 / objectId 1 | **live miss** (an `ObjectId` query misses 52) |
+| `coverletters.jobId` | string 56 / objectId 53 | **live miss** |
+| `coverletters.journeyId` | string 56 / objectId 26 | **live miss** |
+| `coverletters.cvId` | objectId 45 / string 3 | **live miss** |
+| `invoices.userId` | objectId 5 / string 1 | live miss |
+| `communications.jobId` / `.applicationId` | objectId 25 / string 1 | live miss |
+| `applicationjourneys.userId` | string 194 / objectId 1 | `String`-typed → Mongoose casts; 1 row unreachable |
+| `applicationqueues.applicationId` | objectId 53 | uniform, still **uncast** |
+| `applicationqueues.jobId`, `applicationevents.jobId` | string | uniform, uncast |
+| `autoapplyreservations.*` | objectId / string | uniform |
+| `usersettings.userId`, `morichats.userId`, `morichats.cvId` | string | uniform |
+| `paymentmethods.userId`, `portaljobsynctasks.portalConnectionId` | objectId | uniform |
+| `portalconnections.userId`, `portaljobsynctasks.userId` | string | uniform |
 
 **Rule.** Always query both shapes:
 
@@ -471,31 +538,100 @@ in the other. A plain `find({ applicationId: id })` returns nothing and reports 
 { $in: [rawId, new mongoose.Types.ObjectId(rawId)] }
 ```
 
-**Status.** Applied in `GET /api/applications/progress` (`src/app/api/applications/progress/route.ts`).
-**The rest of the codebase has not been swept.** Grep every query on these paths.
+The canonical helper is **`src/lib/utils/mixed-id.ts`** — `mixedIdFilter(id)` for a filter, `idShapes(id)`
+for the list, `hasUsableId(id)` for a guard. It is a no-op `{ $in: [raw] }` for a non-ObjectId-shaped
+string (so it cannot over-match), never returns `[]` for a valid id, and is safe on an ordinary cast path
+too, because Mongoose casts each `$in` element to the schema type. It is also required inside
+`aggregate([{ $match }])`, where Mongoose does **not** cast at all.
 
-**Verify.** `grep -rn "applicationId:" src/ | grep -v '\$in'` should return no bare equality query.
+**Status — swept, and the sweep was much bigger than the first pass thought.** Pre-fix, against a clean
+`HEAD` checkout:
+
+| Scanner version | Result |
+| --- | --- |
+| path-only discovery (first version) | `44 sites / 26 files` |
+| barrel-aware discovery (current) | **`86 sites / 46 files`** |
+
+The first version discovered files with `grep -rl '@/models/<Model>'`. A file that imports from the
+**`@/models` barrel** (`import { JobApplication, User } from '@/models'`) contains no such string and was
+**never opened** — 42 sites in 20 files were invisible, including `dailySummaryEmailService.ts` (11 sites),
+which was a confirmed live bug. **The tool's blind spot and the bug were the same file**, which is how the
+first pass "verified clean" and was wrong.
+
+Post-fix: **`0 bare-equality query site(s) on a Mixed id path, in 0 file(s)`**.
+
+Highest-blast-radius fixes, worth knowing about even if you never read the rest:
+
+- `applicationAutomationActionService.ts` — three filters where a miss means a **double submission**, or a
+  submission the user had just chosen to handle themselves.
+- `admin/users/[id]/route.ts` — the admin "delete all user data" path used a bare `ObjectId` for
+  `JobApplication.deleteMany`. **A miss leaves rows behind**, i.e. a failed deletion that reports success.
+- `interview/**` (9 files) — `ObjectId.isValid(x) ? new ObjectId(x) : x` picks one shape, so a user whose
+  applications were stored as strings got an **empty interview dashboard** and could not open interview prep.
+- `journeyDocumentService.ts` / `stateRecoveryService.ts` — queried `CoverLetter.journeyId` and
+  `Invoice.userId` with a **`.toString()`** string, missing the objectId-stored rows.
+- `dailySummaryEmailService.ts` — 11 sites, on a cron that walks the whole user table (see SB-18).
+
+**Verify.**
+
+```bash
+node .verify/scan-mixed-id-queries.mjs
+```
+
+**Do not use the old `grep -rn "applicationId:" src/ | grep -v '\$in'`.** It only looked at one field name,
+only under `src/`, and could not see a filter built into a `query` variable or an id held in a variable —
+it reported clean while 86 sites were live. The scanner enumerates every `Mixed` path, attributes each
+bare-equality **query** to the receiver of its enclosing call (resolved through the file's own imports, so
+`CV.findOne({ userId })` in a file that also imports `JobApplication` is not misreported), and excludes
+tests, projections, `NextResponse.json()` bodies and already-guarded lines. **Add every new `Mixed` path to
+its `MIXED_PATHS` table when you add a model.** Its remaining limits are documented at the top of the file
+(namespace imports are still missed) — a `0` from it is necessary, not sufficient.
+
+**The real fix is the data, not the guard.** Every string value measured above is a genuine 24-hex
+`ObjectId`, so normalising the stores (`$toObjectId` / a one-shot migration per collection) would make the
+`$in` unnecessary and the whole class impossible to reintroduce. That is a production write and needs
+sign-off — see §7.
 
 ---
 
-### SB-07 · Cron overlap lock is in-process only · `OPEN`
+### SB-07 · Cron overlap lock is in-process only · `FIXED IN TREE 2026-09-27`
 
-`src/lib/cron/runCron.ts` guards against overlapping runs with an in-process `Map`:
+`src/lib/cron/runCron.ts` used to guard against overlapping runs with an in-process `Map` only:
 
 > The lock is an **in-process** `Map` … If the app is ever scaled to multiple replicas, this must become a
 > Mongo `findOneAndUpdate` lease before these routes rely on it.
 
-**Impact.** Correct on a single container. On ≥2 replicas, `daily-summary` can enqueue the same emails
-twice and `process-campaigns` can clone the same recurring child twice. A skipped run returns `409
-CRON_ALREADY_RUNNING`.
+**Impact when unfixed.** Correct on a single container. On ≥2 replicas, `daily-summary` can enqueue the
+same emails twice and `process-campaigns` can clone the same recurring child twice. A skipped run returns
+`409 CRON_ALREADY_RUNNING`.
 
-**Trigger to fix:** the moment you run more than one app replica.
+**Fix.** The in-process `Map` stays as the fast path; a Mongo lease (`src/models/CronLock.ts`) is now the
+cross-process authority. `findOneAndUpdate({ name, expiresAt: { $lte: now } }, …)` with `upsert: true` — Mongo
+evaluates the filter against **pre-update** document state, so a racing loser's filter no longer matches and
+its upsert hits the unique index on `name`. That `11000` collision *is* the "someone else holds it" signal,
+which is why the code treats it as `held` rather than as an error.
+
+Three deliberate properties, each of which a reviewer should not "simplify" away:
+
+1. **The in-process slot is taken first and synchronously — before the first `await`.** That keeps the guard
+   cheap for the common case and preserves the existing observable property that a caller can see the run
+   as in-flight immediately after invoking it.
+2. **`held` and `unavailable` are distinct outcomes.** A genuine overlap is refused (`409`); a store that
+   cannot be reached is **tolerated** (the job runs). This is deliberate fail-**open** on infrastructure
+   failure: a guard that cannot reach its store must not stop every scheduled job, and trading a rare
+   double-send (a one-person billing system, <2 concurrent runs) for a possible total outage is the worse
+   bargain. `runCron.test.ts` pins it — the unreachable case asserts `200`.
+3. **`releaseLease` is scoped to `owner`,** so a run whose lease already lapsed cannot delete a successor's.
+
+**Known limitation.** The lease is not renewed, so `CRON_LEASE_TTL_MS` (15 min) is a ceiling on a stuck
+job's outage window. The `expiresAt` TTL index on `CronLock` is a *tidiness* net, not the correctness
+mechanism — Mongo's TTL monitor sweeps only about once a minute, so expiry is enforced by the acquire filter.
 
 ---
 
-### SB-08 · The server writes operator prose into `reviewReason` (a user-facing field) · `OPEN`
+### SB-08 · The server writes operator prose into `reviewReason` (a user-facing field) · `FIXED IN TREE 2026-09-27`
 
-`reviewReason` is returned to the client and rendered. The producers write it for operators:
+`reviewReason` is returned to the client and rendered. The producers wrote it for operators:
 
 | Evidence | String |
 | --- | --- |
@@ -506,69 +642,168 @@ CRON_ALREADY_RUNNING`.
 | `processApplication.ts:255` | `Worker error: ${err.message}` |
 | `unifiedApplyService.ts:1308` | `… Automated submission unavailable (${detail}). Please submit manually.` |
 
-**App-side mitigation is shipped** (`sanitizeReason()` in `src/lib/applications/live-progress.ts` drops
-anything with operator vocabulary, a snake_case token, a URL, >180 chars, or that is not a sentence — the
-curated copy then wins). Two real leaks were found and closed on 2026-09-26:
+**App-side mitigation was already shipped** (`sanitizeReason()` in `src/lib/applications/live-progress.ts`
+drops anything with operator vocabulary, a snake_case token, a URL, >180 chars, or that is not a sentence —
+the curated copy then wins). Two real leaks were found and closed on 2026-09-26:
 `ATS type "adzuna" is not automatable…` and `Decision engine returned "skip"…`.
 
-**The server-side fix is still worth doing:** do not put operator prose in a user-facing field. Either
-write user-safe copy at the producer, or split the field (`reason` for users, `operatorReason` for us) —
-the same channel split applied to the progress derivation. Until then the sanitiser is a filter, not a
-fix, and every new reason is a new chance to leak.
+**The live leak was worse than the six rows above.** Reading the producers turned up two more the register
+had missed, and one of them was the actual user-visible defect:
+
+- `unifiedApplyService.ts`'s `automationUnavailable()` interpolated a **raw Playwright error** into
+  user-facing copy — the exact strings `sanitizeReason()` had to catch after the fact.
+- `applicationWorker.ts:76` put a raw `err.message` in the **notification body**.
+- `processApplication.ts`'s returned `message` becomes that notification body, and carried `err.message`.
+- Four CAPTCHA branches (greenhouse / lever / ashby / workable) wrote vendor detail into the user message.
+
+**Fix — the channel split, not more filtering.** `reason` is customer-facing; `operatorReason` is
+ops-only. The state machine now writes both (`stageHistory[].operatorReason`,
+`ApplicationEvent.metadata.operatorReason`), and every producer was split:
+
+| Site | `reason` (customer) | `operatorReason` |
+| --- | --- | --- |
+| processing transition | `'Your AI agent picked this up and started preparing your application.'` | `'Worker picked up application from queue'` |
+| `manual` mode | `'This application is set to be applied for manually, so we have not submitted it. …'` | `'Execution mode is "manual": automation is not permitted for this application.'` |
+| `skip` mode | `'We have not submitted this application. Apply on the employer's site to finish it.'` | `'Decision engine returned "skip": this application must not be automated.'` |
+| form found | `'We found the application form and are filling in your details.'` | `` `ATS ${atsType} detected. Playwright automation ready.` `` |
+| submitted | `'Your application was submitted successfully.'` | `` `Successfully submitted via ${atsType}` `` |
+| `action_required` | `applyResult.message` | `applyResult.operatorDetail` |
+| failed | `'We could not submit this application automatically. Please apply on the employer's site.'` | `applyResult.operatorDetail \|\| applyResult.message` |
+| catch | `'Something went wrong while preparing this application. …'` | `` `Worker error: ${err.message}` `` |
+
+`operatorReason` had to be **declared on the `JobApplication` schema**, not just written — Mongoose's
+`strict` mode strips unknown paths from an update silently, which is precisely the SB-17 defect. Adding it
+to the state machine without adding it to the model would have reproduced SB-17 exactly: the split would
+look implemented and record nothing.
+
+**Result:** `sanitizeReason()` is now a filter with nothing left to catch. Three tests that encoded the old
+behaviour were rewritten to assert the **split** instead of the old string (`applicationWorker.test.ts`,
+`processApplication.test.ts`, `applicationAutomationActionService.test.ts`) — see the note in §8 about tests
+encoding defects.
 
 ---
 
-### SB-09 · `applyToAdzuna` is unreachable dead code · `OPEN`
+### SB-09 · `applyToAdzuna` is unreachable dead code · `FIXED IN TREE 2026-09-27`
 
-`unifiedApplyService.ts:1244` is a stub returning `action_required`, and it cannot be reached:
+`unifiedApplyService.ts:1244` was a stub returning `action_required`, and it could not be reached:
 `'adzuna'` is not in `isAutomatable` (`processApplication.ts:99`), there is no adzuna auto-apply route
-(`find src/app/api -ipath "*adzuna*"` → nothing), and the only caller is the switch case itself.
+(`find src/app/api -ipath "*adzuna*"` → nothing), and the only caller was the switch case itself.
 
-Low risk. Either delete it or make it reachable — do not leave it looking implemented.
+**Fixed** by deleting the stub and replacing `case 'adzuna':` with a comment that falls through to
+`default:`. Leaving it in place made the ATS support surface look larger than it is.
 
 ---
 
-### SB-15 · The blanket `*.md` gitignore silently drops new documentation · `OPEN`
+### SB-15 · The blanket `*.md` gitignore silently drops new documentation · `FIXED IN TREE 2026-09-27`
 
 Found while creating *this file* — it was invisible to `git status` the moment it was written.
 
-`.gitignore:58-68` carries a comment that reads:
+`.gitignore` carried a comment that read:
 
 > The blanket `*.md` ignore previously swallowed the entire `docs/` tree — 54 documents were never
 > committed because of it.
 
 …followed by `*.md` and a single exception, `!AGENTS.md`. **The rule described as fixed was never actually
 fixed.** Ignore rules do not affect already-tracked files, which is why this looked resolved: `docs/*.md`
-were force-added or added before the rule, so 86 of them are tracked and nobody noticed the rule still
+were force-added or added before the rule, so most of them are tracked and nobody noticed the rule still
 firing on anything *new*.
 
-**Measured 2026-09-26:**
+**Fix applied (policy inverted, as the comment always intended).**
 
-```
-docs/*.md tracked: 86
-docs/*.md on disk: 89          ← 3 silently untracked
+```gitignore
+# Policy: `*.md` guards against stray scratch notes at the repo root; `docs/` is tracked in
+# full; the repo-mandated root documents are named explicitly. Note that ignore rules do not
+# apply to already-tracked files, which is exactly why the old rule looked harmless.
+*.md
+!AGENTS.md
+!server_bugs.md
+!refactor_audit.md
+!/docs/**
+# The `!/docs/**` negation above re-includes *everything* under docs/, including the OS metadata
+# the earlier `.DS_Store` rule would otherwise have caught. Later rules win, so re-assert it here.
+**/.DS_Store
 ```
 
-The three currently invisible:
+**Measured 2026-09-27:** `docs/*.md` tracked **87**, on disk **89** — **2** files were being silently
+dropped:
 
 - `docs/application-automation/application-flow.md` — **`AGENTS.md` §53/54 requires maintaining
-  `docs/application-automation/`.** A doc the repo mandates is not in version control.
-- `docs/CVCircle Editor Deep Audit — Steps 1-5.md`
+  `docs/application-automation/`.** A doc the repo mandates was not in version control.
 - `docs/auto-apply/task-rate-limits-paywall.md`
 
-**Impact.** Every new `.md` a developer or agent writes is lost on the next clone. It fails silently in
-both directions: no error when writing, no diff to notice. `CLAUDE.md` is tracked only by luck.
+Both now resolve to the `!/docs/**` negation (`git check-ignore -v` → `.gitignore:75:!/docs/**`) and appear
+as ordinary untracked files, i.e. they are *visible* to git and await a `git add`.
 
-**Fix applied (narrow).** Added `!server_bugs.md` so this register is trackable, and annotated the rule
-with the measurement and a pointer here. The blanket rule itself is left alone because changing it is a
-repo-wide policy call — `!/docs/**` would surface the three files above.
+**⚠️ Two corrections to this item's own history.**
+1. The original report said **3** files were invisible. The third,
+   `docs/CVCircle Editor Deep Audit — Steps 1-5.md`, **is tracked** — the count was wrong. The `comm`
+   command below reported it as untracked because `git ls-files` octal-escapes non-ASCII paths by default
+   (the em-dash), so its output never string-matched `find`'s. Use `git -c core.quotePath=false ls-files`.
+2. The original verify command was therefore unreliable for any filename with a non-ASCII character.
 
-**Decide.** Either invert the policy (`*.md` → ignore nothing, or an explicit allow-list) or keep adding
-per-file exceptions. **Recommended:** `!/docs/**` plus named root-level docs, since the comment already
-states the intent that docs are version-controlled.
+**Verify.**
 
-**Verify.** `git check-ignore -v <new>.md` should print a `!` negation rule (or nothing), not `*.md`.
-`comm -13 <(git ls-files docs/ | sort) <(find docs -name '*.md' | sort)` should print nothing.
+```bash
+git check-ignore -v <new>.md                       # → a `!` negation rule, or nothing. Never `*.md`.
+git -c core.quotePath=false ls-files docs/ | wc -l # compare against: find docs -name '*.md' | wc -l
+```
+
+---
+
+### SB-18 · The daily-summary "jobs applied today" count was measuring the wrong field · `FIXED IN TREE 2026-09-27`
+
+Found while fixing SB-06 in `dailySummaryEmailService.ts` — the SB-06 sweep led into this, and it is the
+more user-visible of the two.
+
+The count was built from `statusHistory`, which is the **SB-17 non-existent path**:
+
+```ts
+$or: [
+  { statusHistory: { $elemMatch: { status: 'applied', changedAt: { $gte, $lte } } } },  // dead
+  { status: 'applied', statusHistory: { $exists: false }, updatedAt: { $gte, $lte } },  // tautology
+]
+```
+
+Two independent defects, one masking the other:
+
+- **The first branch was dead.** `statusHistory` never exists on any document, so `$elemMatch` over it
+  matches nothing.
+- **The second branch was a tautology.** `statusHistory: { $exists: false }` excludes nothing — the field
+  never exists — so the branch reduced to `status === 'applied' && updatedAt in today`.
+
+So the number silently degraded to *"applications that are `applied` and were last touched today"*, which
+is a different quantity: an application applied for today but edited tomorrow leaves the count, and one
+applied for last week but edited today enters it.
+
+Measured against production, which is what identified the correct field:
+
+| Fact | Value |
+| --- | --- |
+| `applied` rows carrying `appliedAt` | 9 of 11 |
+| rows carrying `appliedAt` **without** `status === 'applied'` | 8 |
+| rows where `stageHistory` records `applied` | **0** — it only ever holds processing / review_required / saved / form_detected / automation_failed / queued |
+
+**Fix.** Count on `appliedAt`, which is authoritative — it is written by both terminal paths
+(`processApplication.ts:225`, `unifiedApplyService.ts:479`) and is already the field `streak` and
+`entitlement-service` treat as the source of truth. The dead branch was deleted, and a `stageHistory`
+`$elemMatch` plus a small no-`appliedAt` legacy fallback were added for rows that predate the field.
+
+**Verify.** For a user with a known `appliedAt` timestamp, the summary's `jobsApplied` changes when the
+`appliedAt` date moves, and does **not** change when only `updatedAt` moves.
+
+---
+
+### SB-19 · Six `countDocuments` per user, computed and discarded · `FIXED IN TREE 2026-09-27`
+
+Same function as SB-18. `getUserDailySummary()` ran six `countDocuments` — one per tracker status
+(`saved`, `created`, `applied`, `interview`, `offer`, `rejected`) — assembled them into a `jobsByStatus`
+object, and **returned it to nobody**: no caller read the field.
+
+It ran on the daily-summary cron, which walks the **whole user table**, so the cost scaled with the user
+base while the value was exactly zero.
+
+**Fix.** The interface field and the six queries were deleted. If a status breakdown is wanted later, it
+belongs in an aggregation, not six round-trips per user per day.
 
 ---
 
@@ -588,6 +823,8 @@ anyone when `CRON_SECRET` was unset, and one route that compared against the lit
 `"Bearer undefined"`.
 
 **`releaseStuckItems` releasing after 30 minutes** — see SB-10. The behaviour is the fix.
+
+**The cron lease failing open when its store is unreachable** — see SB-07. Deliberate.
 
 ---
 
@@ -631,7 +868,8 @@ The first `sanitizeReason()` omitted `ats`, `automation`, `engine` and the ATS v
 `ATS type "adzuna" is not automatable. Manual submission required.` reached customers. Found by feeding the
 sweep the **real** producer strings instead of invented ones — the guard regex was also narrower than the
 sanitiser's, which is why it had passed. Both lists are now aligned and the guard is documented as
-requiring a **superset** of the sanitiser's.
+requiring a **superset** of the sanitiser's. (Superseded in practice by SB-08: with the channel split there
+is nothing left for the sanitiser to catch.)
 
 ---
 
@@ -645,18 +883,26 @@ requiring a **superset** of the sanitiser's.
    **Do you want it converted to a second Dokploy application with `dockerBuildStage: worker`?** Until
    that happens, every deploy needs a manual `docker service update --force` on the worker or it keeps
    running the previous release — which is exactly what happened here.
-3. **Is `CRON_SECRET` set?** If not, *no* scheduled work runs anywhere (SB-02). It **is** set (64 chars) —
-   but note the value is stored in cleartext in `/etc/cron.d/buildairesume` as
-   `Authorization: Bearer <secret>` on every line, and it was surfaced in a shell transcript on
-   2026-09-27. **Rotate it**, and prefer `CRON_SECRET` read from a root-owned env file over an inline
-   literal in a world-readable cron file (`-rw-r--r--`).
-4. **Is Workday intended to be supported?** (SB-04) — currently 3 of the 12 parked applications
+3. **`CRON_SECRET` is set** (64 chars) — SB-02 is closed. But it is stored in cleartext in
+   `/etc/cron.d/buildairesume` and was surfaced in a shell transcript on 2026-09-27. **Rotate it.**
+4. **NEW — why has the `auto-apply` cron log gone quiet?** Last entry `2026-09-26T19:10`; silent since
+   ~`13:40 UTC on 09-27`, while the in-process worker keeps draining (`queued: 0`). Consistent with
+   SB-01b (the loop always wins, so the cron finds nothing to claim) — but "the cron stopped firing" and
+   "the cron fires and finds nothing" are indistinguishable from the log alone. Needs a `cron`/`syslog`
+   check on the box. **This is the one item from this session that is observed-but-unexplained.**
+5. **NEW — should the `Mixed` id stores be normalised?** Every string value measured in SB-06 is a genuine
+   24-hex `ObjectId`. A one-shot migration per collection (`jobapplications.userId`,
+   `applicationqueues.userId`, `coverletters.jobId|journeyId|cvId`, …) would remove the entire defect class
+   rather than guard it. It is a production write, so it needs your sign-off. **Recommended**, and the
+   guard should stay regardless (it is what makes the migration safe to do incrementally).
+6. **Is Workday intended to be supported?** (SB-04) — currently 3 of the 12 parked applications
    (syneoshealth, tiketdotcom ×2) are Workday, i.e. correctly manual.
-5. **Which ATSes are actually in the user's funnel?** Paylocity and BambooHR also appeared in the parked
+7. **Which ATSes are actually in the user's funnel?** Paylocity and BambooHR also appeared in the parked
    set (SB-03) and have no adapter. If those boards matter, they are new-adapter work, not a bug.
-6. **How many app replicas?** >1 turns SB-07 from a note into a bug.
-7. **Should `docs/` be version-controlled?** The `.gitignore` comment says yes; the rule says no. 3 files
-   are currently invisible, one of them mandated by `AGENTS.md` §53/54 (SB-15).
+8. **How many app replicas?** >1 is now *handled* (SB-07), but the lease is worth knowing about when you
+   size the deployment.
+9. ~~**Should `docs/` be version-controlled?**~~ **Answered 2026-09-27: yes** — the policy is inverted
+   (SB-15). `docs/` is tracked in full; the 2 remaining files need a `git add`.
 
 ---
 
@@ -667,3 +913,22 @@ requiring a **superset** of the sanitiser's.
 | 2026-09-26 | Register opened. SB-12 … SB-14 fixed app-side in the working tree. SB-03/04/05 identified. SB-01/02 documented as the P0 pair. SB-15 found while creating this file; narrow `.gitignore` exception added. |
 | 2026-09-27 | SSH restored; register re-triage from the live box. **SB-01 closed as not-the-cause** (queue drains: 48 completed, 0 queued) and replaced by **SB-01b** — the worker service runs the *web* image and Dokploy does not manage it. SB-03/04/05 fixed and deployed (`08f5af33`). **SB-16** (submissions sent with no CV attached) and **SB-17** (`stageHistory` written to a non-existent `statusHistory`) found and fixed (`a8398319`, `aa1ce364`). |
 | 2026-09-27 (later) | **Second deploy `3EL11R6lODg6YMZd6LP73` finished `15:31:41Z`** → image `029e44d7f146` from `aa1ce364`; app task recreated `15:31:46Z`. **SB-01b resolved for this release**: the worker-daemon was identified as the *primary* drainer (cron log: 245 runs, all `processedCount: 0`) and force-updated `15:32:52Z` onto the same digest, so it no longer runs 09-25 code. Root-cause tally confirmed against `applicationevents` — the 58 park reasons are exactly the four fixed bugs. SB-05 gained the event-level evidence + a regression test. |
+| 2026-09-27 (final pass) | **Register worked end to end; nothing committed or deployed.** **SB-09** (dead `applyToAdzuna` deleted) and **SB-15** (`.gitignore` policy inverted; the "3 untracked" count corrected to 2) closed. **SB-08** fixed by the `reason`/`operatorReason` channel split across the state machine, `processApplication`, `applicationWorker` and `unifiedApplyService` — the live leak was `automationUnavailable()` interpolating a raw Playwright error, which the register had missed. **SB-07** fixed with a Mongo lease (`CronLock`) plus a documented fail-open path. **SB-06** swept: **86 sites / 46 files → 0**, after fixing the scanner's barrel-import blind spot (the first pass reported 44 and was wrong — the tool could not open the very file that was the known bug). **SB-02** verified by probe (401, not 503) rather than assumed. **SB-18** (daily-summary counted `statusHistory`, a path that never exists — now `appliedAt`) and **SB-19** (six discarded `countDocuments` per user, deleted) found and fixed along the way. Full suite: `670 passed | 5 failed`, exactly the documented pre-existing set. `tsc -p tsconfig.pipeline.json` clean. |
+
+---
+
+## Appendix — verification state at the end of the 2026-09-27 final pass
+
+| Check | Result |
+| --- | --- |
+| `node .verify/scan-mixed-id-queries.mjs` | `0` sites / `0` files (was `86` / `46`) |
+| `npx tsc -p tsconfig.pipeline.json --noEmit` | exit 0, no output |
+| `npx vitest run` | `670 passed | 5 failed | 31 skipped` — the 5 are the documented pre-existing set (`applicationWorker` correlation ×2, `pdfService`/`docxService` import ×3) |
+| Committed | **no** — the tree is dirty; see the change log |
+| Deployed | **no** — and note SB-01b: deploying will *not* update the worker without the manual `service update --force` |
+
+**Coverage caveat.** `tsconfig.pipeline.json` does not include `src/workers/**`, `src/app/api/interview/**`
+or most of the swept route files, so many of the files changed in this pass were **not** type-checked by the
+targeted config, and the repo-wide `tsconfig.json` run dies at exit 137 in this environment. Several of the
+swept route files also carry `// @ts-nocheck`. The edits are mechanical (`{ id }` → `{ id: mixedIdFilter(id) }`),
+which limits the risk, but this is the honest state of the verification.
