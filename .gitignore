@@ -124,3 +124,7 @@ venv/
 .e2e-entry.ts
 .e2e-bundle.mjs
 
+/brag-output/
+
+# Verification scratch output (esbuild bundles from .verify/*.ts)
+.verify/build/
