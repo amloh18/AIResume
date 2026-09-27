@@ -9,12 +9,40 @@ Companion to `dokploy-worker-migration-plan.md` (the analysis). This is the **do
 longer runs the Next.js build. That is what makes a second application cheap rather than doubling the
 build cost under Dokploy's `cleanCache = t`.
 
-**Time:** budget ~40 minutes. The build is a few minutes, not the usual ~18 — the worker target skips the
-Next.js build entirely.
+**Time:** budget ~40 minutes. The build itself is **~9 minutes**, not the ~18 the app tier costs — see the
+measured breakdown below. I originally wrote "a few minutes" here, which was wrong; the real numbers are
+worth having before you start.
 
 **Nothing here is irreversible.** The cutover (step 4) *scales* the old worker to zero rather than removing
 it, and it happens only after the new worker has been seen draining real work. Deleting the old service is
 a separate, optional, no-rush housekeeping step.
+
+### Measured build, first real run (2026-09-27, commit `f9b89440`)
+
+| Stage | Step | Time |
+| --- | --- | --- |
+| `deps` | `npm ci --legacy-peer-deps` | **88.2 s** |
+| `source` | `COPY --from=deps /app/node_modules` | **163.0 s** |
+| `source` | `COPY . .` | 7.8 s |
+| `worker-bundle` | `npm run build:worker` | **4.2 s** |
+| `worker` | `COPY --from=source /app/node_modules` | **74.5 s** |
+| `worker` | `COPY package.json` / `COPY dist` | 3.0 s |
+| `worker` | `RUN date … > /app/.build-time` | **0.8 s** |
+| — | image export + unpack | **187.7 s** |
+
+Three things this shows:
+
+- **`next build` is genuinely gone.** There is no `builder` stage in the log at all — the split works, and
+  that is where the ~9 minutes saved versus the app tier comes from.
+- **The build stamp costs 0.8 s.** Negligible, as intended.
+- **`node_modules` is copied twice — 163 s + 74.5 s ≈ 4 minutes of the build.** That is pre-existing (the
+  original `worker` stage copied it from `builder`, which had copied it from `deps`), not something the
+  split introduced. It is fixable: `worker` and `worker-bundle` could both be `FROM deps`, with
+  `worker-bundle` copying only `scripts/`, `src/` and `package.json` instead of the whole tree. That would
+  remove both copies. Not done yet — it is a separate change and needs its own verification.
+
+Expect the number to move with host load: this box has 7.2 GiB and was already into swap, which is why the
+`COPY` and export steps are as slow as they are.
 
 **Risk to users: none.** You have no live users. The old worker keeps draining the queue until step 4.
 
@@ -54,16 +82,32 @@ cut -d= -f1 ~/worker-env.txt    # sanity-check the names; do NOT paste this into
 > ⚠️ `~/worker-env.txt` holds the real secrets. Delete it at the end of step 6
 > (`shred -u ~/worker-env.txt` on Linux, `rm -P ~/worker-env.txt` on macOS).
 
-**Note the exact values of the two URLs — the new app must reuse them verbatim:**
+**Note the exact values of the two URLs.** The existing app and the old daemon both use `172.17.0.1`:
 
 ```
 INGESTION_SERVICE_URL=http://172.17.0.1:4001
 INGESTION_WORKER_URL=http://172.17.0.1:8790
 ```
 
-Do **not** "tidy" these to `10.0.1.1`. That was measured: both `:4001/health` and `:8790/health` **fail**
-on the `dokploy-network` gateway, while `172.17.0.1` and `172.19.0.1` return `200` from inside the worker
-container. The plan's §11.3 has the raw output.
+**Do not "tidy" these to `10.0.1.1`.** That was measured: both `:4001/health` and `:8790/health` **fail**
+on the `dokploy-network` gateway. The plan's §11.3 has the raw output.
+
+**`172.19.0.1` works equally well**, and is what the live worker application actually uses — verified from
+inside the new container on 2026-09-27:
+
+```
+OK   200  INGESTION_SERVICE_URL 172.19.0.1:4001  {"status":"healthy", …}
+FAIL 401  INGESTION_WORKER_URL  172.19.0.1:8790  {"error":"unauthorised"}
+OK   200  INGESTION_SERVICE_URL 172.17.0.1:4001  {"status":"healthy", …}
+FAIL 401  INGESTION_WORKER_URL  172.17.0.1:8790  {"error":"unauthorised"}
+```
+
+The `401` on `:8790` is the **correct** healthy response — that gateway rejects unauthenticated requests,
+so a reachable gateway looks like a 401 and an unreachable one looks like a connection error. Do not read
+the 401 as a failure.
+
+So either host-gateway address is fine. **Do not change a working value** — if you have already deployed
+with `172.19.0.1`, leave it.
 
 ---
 
@@ -201,6 +245,19 @@ That last call is the one that matters most, and it is new. It should return:
 > Dokploy exposes no build arg for it and `.dockerignore` excludes `.git`, so it cannot be derived either.
 > `buildTime` is stamped by the Dockerfile itself and therefore always populated.
 
+**Confirmed on the first real deploy (2026-09-27, commit `f9b89440`).** Every check above passed:
+
+```json
+{ "ok": true, "role": "worker", "commit": "unknown",
+  "buildTime": "2026-09-27T18:42:17Z",
+  "loops": ["email","emailIngestion","applicationQueue","reconciliation"] }
+```
+
+plus `ls /app/dist` → `worker.mjs`, `ls /app/.next` → *No such file or directory*, and
+`printenv WORKER_ROLE` → `worker` (baked by the image, not set in Dokploy). The service came up on its
+**own** image tag (`buildairesume-resumebuilerworker-jpqtby:latest`), not the app's — which is the whole
+point: it is a real worker image that Dokploy manages.
+
 **Sanity-check the tier split is still right:**
 
 ```bash
@@ -265,11 +322,19 @@ insurance until you have seen the new worker survive a deploy.
 On the **app** (`resumebuiler`), not the new worker app, set:
 
 ```
-WORKER_HEALTH_URL=http://<new worker service name>:8791
+WORKER_HEALTH_URL=http://buildairesume-resumebuilerworker-jpqtby:8791
 ```
+
+That is the live value — the service name Dokploy generated for the worker application created on
+2026-09-27. Substitute your own if you named the application differently (read it from the app's General
+page as `appName`, or from `docker service ls`).
 
 Redeploy the app for it to take effect. This is the first time the panel's `workerLoop` section will
 populate — it is `configured: false` today because the variable has never been set on either service.
+
+> The app redeploy is the **full ~18-minute** build, because the app tier still runs `next build`. The
+> worker build being cheap does not make the app build cheap. Set the variable and redeploy once, rather
+> than testing and redeploying twice.
 
 ---
 
