@@ -875,6 +875,79 @@ is nothing left for the sanitiser to catch.)
 
 ---
 
+### SB-20 · The apply URL never reaches the detector — 42,338 jobs carry it in a field nothing reads · `OPEN — measured 2026-09-27`
+
+**The largest single cause of "most jobs come in as manual apply", and it is not an ATS problem.**
+
+SB-03 established that the **apply URL** — not the discovery source — decides routing, and
+`detectAtsFromUrl()` was written to be the authority. It is correct, and it already resolves `workday`.
+It is simply **never given the URL** for 87 % of the corpus.
+
+Measured on production:
+
+| Probe | Value |
+| --- | --- |
+| `jobs` total | 48,812 |
+| `jobs` from `source.primary: 'feashliaa'` | **42,338 (86.7 %)** |
+| …with `source.applicationUrl` populated | **42,338 (100 %)** |
+| …with `jobs.applyUrl` populated | **0 (0 %)** |
+
+The chain, with the line that breaks it:
+
+```
+feashliaa job   jobs.applyUrl = ""                                    ← always empty
+                jobs.source.applicationUrl = "https://saxobank.wd3.myworkdayjobs.com/…"
+
+GET /api/jobs/discover
+    discover/route.ts:680,802   applyUrl: candidate.applyUrl          ← forwards the EMPTY field
+    discover/route.ts:923,933   applyUrl || source.applicationUrl     ← the fallback EXISTS, but only
+                                                                        inside the saved-jobs filter,
+                                                                        so it is computed then discarded
+
+client posts back
+    JobsDashboard.tsx:937          jobUrl: job.applyUrl
+    TopJobMatchesSection.tsx:483   jobUrl: targetJob.applyUrl
+    JobSidebar.tsx:1625            jobUrl: job.jobUrl || ''
+
+POST /api/jobs/auto-apply
+    route.ts:78   detectAtsFromUrl('') → null
+                  → falls back to the client's aggregator `atsType` → not in `validAtsTypes` → 'unknown'
+
+JobApplication.atsType = 'unknown' → isPlaywrightAutomatable('unknown') → false
+    → parked: "ATS type \"unknown\" is not automatable. Manual submission required."
+```
+
+**Corroborated by the data:** `jobapplications.atsType` is greenhouse 57, **`unknown` 27**, ashby 7,
+null 5, lever 1, workable 1, naukri 1. `unknown` is the **second-largest bucket**, and **no `workday`
+row has ever existed** — even though 25,584 Workday jobs are sitting in `jobs`.
+
+**What the same field reveals about the ATS mix** (all of it currently invisible to routing):
+
+| ATS in `source.applicationUrl` | jobs | today |
+| --- | --- | --- |
+| **workday** | **25,584** | detected, gated off, no handler |
+| **icims** | **4,442** | not detected, no handler |
+| **paylocity** | **2,524** | not detected, no handler |
+| **bamboohr** | **1,733** | not detected, no handler |
+| greenhouse | 5,406 | **already automatable** |
+| lever | 1,652 | **already automatable** |
+| ashby | 997 | **already automatable** |
+| | **42,338** | 16,754 + 25,584 — the arithmetic closes |
+
+**Fix direction.** Resolve the URL **server-side** in `POST /api/jobs/auto-apply` from `jobId`, rather
+than trusting a client-supplied string — a client cannot be the authority on a security-relevant
+routing decision, and this is the third appearance of this class. Minimum fix: one expression in
+`discover/route.ts`'s response mapping (`applyUrl || source?.applicationUrl || ''`), which the same
+file already computes 250 lines earlier.
+
+**Effect of the fix alone, with no new adapter: 8,055 jobs become auto-appliable**
+(greenhouse 5,406 + lever 1,652 + ashby 997).
+
+**Full analysis, per-platform difficulty and the recommended sequence:**
+`docs/ats-coverage-and-adapter-scoping.md`.
+
+---
+
 ## 7. Open questions for you
 
 1. **What is the cron cadence on the VPS?** It sets `QUEUE_STALL_SECONDS` (SB-13) and the batch size
@@ -899,15 +972,29 @@ is nothing left for the sanitiser to catch.)
    deliberate test rather than a discovery during an incident.
    **Gotcha to remember:** a single-line log file makes `head`/`tail` meaningless. Count entries with
    `grep -oE '"timestamp":"[^"]+"' | tail -1`.
-5. **NEW — should the `Mixed` id stores be normalised?** Every string value measured in SB-06 is a genuine
-   24-hex `ObjectId`. A one-shot migration per collection (`jobapplications.userId`,
-   `applicationqueues.userId`, `coverletters.jobId|journeyId|cvId`, …) would remove the entire defect class
-   rather than guard it. It is a production write, so it needs your sign-off. **Recommended**, and the
-   guard should stay regardless (it is what makes the migration safe to do incrementally).
-6. **Is Workday intended to be supported?** (SB-04) — currently 3 of the 12 parked applications
-   (syneoshealth, tiketdotcom ×2) are Workday, i.e. correctly manual.
-7. **Which ATSes are actually in the user's funnel?** Paylocity and BambooHR also appeared in the parked
-   set (SB-03) and have no adapter. If those boards matter, they are new-adapter work, not a bug.
+5. ~~**Should the `Mixed` id stores be normalised?**~~ **ANSWERED 2026-09-27 — no, and the proposal was
+   wrong.** Every string value measured in SB-06 *is* a genuine 24-hex `ObjectId`, which is why a bulk
+   rewrite looked safe — but the shapes are **per-path consistent with the writers**, not corruption.
+   `ApplicationQueue.create()` passes `userId`/`jobId` as **string** and `applicationId` as **ObjectId**;
+   `JobApplication.create()` passes `userId: userObjId` (**ObjectId**) everywhere except the naukri and
+   indeed routes (**string** — which are exactly the 15 string rows of 99). A bulk rewrite to `objectId`
+   therefore **fights the writers** and the drift returns on the next submission. `ApplicationQueue.jobId`
+   is the *external* job id and is not always a 24-hex ObjectId, so canonicalising it is not merely
+   useless but wrong. **The correct fix is at the writer** (make the two minority routes pass an ObjectId)
+   **and keep `mixedIdFilter` on reads permanently.** Secondary reason it cannot precede a deploy: the
+   worker still runs pre-`47d46c30` code, whose raw-equality reads would go from partial to *total* misses
+   (e.g. `journeyDocumentService` querying `CoverLetter.journeyId` with `.toString()`). See
+   `docs/deployment/dokploy-worker-migration-plan.md` §10.
+6. ~~**Is Workday intended to be supported?**~~ **ANSWERED 2026-09-27 — there are 25,584 Workday jobs
+   already in the corpus** (52 % of all `jobs`), all invisible to routing because of SB-20. This is no
+   longer a 3-application edge case. The blocker is a **product decision**, not code: most Workday tenants
+   require account creation with email verification before the form is reachable, which unattended
+   automation cannot complete. Decide that before any Workday handler is written.
+7. ~~**Which ATSes are actually in the user's funnel?**~~ **ANSWERED 2026-09-27 — measured.** Paylocity
+   **2,524** and BambooHR **1,733** are real and both lack a detector and a handler. **iCIMS is 4,442 —
+   larger than the two of them combined and was never mentioned.** In total **34,283 jobs (70 % of the
+   corpus)** need a new adapter or a gate change. Sequence and difficulty in
+   `docs/ats-coverage-and-adapter-scoping.md`.
 8. **How many app replicas?** >1 is now *handled* (SB-07), but the lease is worth knowing about when you
    size the deployment.
 9. ~~**Should `docs/` be version-controlled?**~~ **Answered 2026-09-27: yes** — the policy is inverted
@@ -924,6 +1011,7 @@ is nothing left for the sanitiser to catch.)
 | 2026-09-27 (later) | **Second deploy `3EL11R6lODg6YMZd6LP73` finished `15:31:41Z`** → image `029e44d7f146` from `aa1ce364`; app task recreated `15:31:46Z`. **SB-01b resolved for this release**: the worker-daemon was identified as the *primary* drainer (cron log: 245 runs, all `processedCount: 0`) and force-updated `15:32:52Z` onto the same digest, so it no longer runs 09-25 code. Root-cause tally confirmed against `applicationevents` — the 58 park reasons are exactly the four fixed bugs. SB-05 gained the event-level evidence + a regression test. |
 | 2026-09-27 (final pass) | **Register worked end to end; nothing committed or deployed.** **SB-09** (dead `applyToAdzuna` deleted) and **SB-15** (`.gitignore` policy inverted; the "3 untracked" count corrected to 2) closed. **SB-08** fixed by the `reason`/`operatorReason` channel split across the state machine, `processApplication`, `applicationWorker` and `unifiedApplyService` — the live leak was `automationUnavailable()` interpolating a raw Playwright error, which the register had missed. **SB-07** fixed with a Mongo lease (`CronLock`) plus a documented fail-open path. **SB-06** swept: **86 sites / 46 files → 0**, after fixing the scanner's barrel-import blind spot (the first pass reported 44 and was wrong — the tool could not open the very file that was the known bug). **SB-02** verified by probe (401, not 503) rather than assumed. **SB-18** (daily-summary counted `statusHistory`, a path that never exists — now `appliedAt`) and **SB-19** (six discarded `countDocuments` per user, deleted) found and fixed along the way. Full suite: `670 passed | 5 failed`, exactly the documented pre-existing set. `tsc -p tsconfig.pipeline.json` clean. |
 | 2026-09-27 (shipped) | Committed `47d46c30` (66 files) and deployed by the operator. **§7 item 4 resolved — and this register's own earlier claim about it was wrong**: the `auto-apply` cron log was never quiet; it is a single-line file (no newlines), so `head`/`tail` both returned the whole file and the *first* timestamp was misread as the last. The cron fires every 5 min (last `17:05:01Z`), and **all 264 runs have `processedCount: 0`** — it is an unexercised backstop, which is the real risk. |
+| 2026-09-27 (coverage pass) | **SB-20 opened** — the apply URL never reaches `detectAtsFromUrl` for 42,338 jobs (87 % of the corpus), which is the largest single cause of manual-apply parking and is **not** an ATS problem. Measured the real ATS mix behind `source.applicationUrl`: workday 25,584 · icims 4,442 · paylocity 2,524 · bamboohr 1,733 · greenhouse 5,406 · lever 1,652 · ashby 997. **§7 items 5–7 answered**: the `Mixed` normalisation is **withdrawn** (it fights the writers — see the migration plan §10), Workday is a **product decision** at 52 % of the corpus, and iCIMS turns out to be the biggest unmentioned platform. Full scoping in `docs/ats-coverage-and-adapter-scoping.md`. Also confirmed SB-01b on the running container: the worker still executes `029e44d7f146` (started `15:32:52Z`) with **no `/app/dist/worker.mjs`**, while the app image is `36ace7eb4437` (22:47 IST). |
 
 ---
 
