@@ -7,10 +7,13 @@
   "include": [
     "next-env.d.ts",
     "src/types/**/*.d.ts",
+    "src/types/automation-schema.ts",
     "src/models/PortalConnection.ts",
     "src/models/PortalJobSyncTask.ts",
     "src/lib/portals/**/*.ts",
     "src/lib/services/portal-connection-service.ts",
+    "src/lib/services/portal-fetcher-service.ts",
+    "src/lib/jobs/autoApplySupport.ts",
     "src/hooks/useJobSourceConnections.ts",
     "src/components/dashboard/settings/ConnectedJobAccounts.tsx",
     "src/components/dashboard/settings/PortalManageDialog.tsx",
