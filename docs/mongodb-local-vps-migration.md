@@ -50,7 +50,7 @@ Then in the **Dokploy UI**, list every service that defines `MONGODB_URI` / `MON
 ```bash
 ssh -f -N -L 27017:127.0.0.1:27017 <vps>          # tunnel: local 27017 → VPS loopback
 # temporarily point .env.local at the path-less local URI:
-#   MONGODB_URI=mongodb://buildai:<pw>@127.0.0.1:27017/?directConnection=true
+#   MONGODB_URI=mongodb://<user>:<password>@127.0.0.1:27017/?directConnection=true
 #   MONGODB_DB=airesume
 node scripts/recover-split-db-documents.mjs --apply --with-history
 # restore .env.local from backup, kill the tunnel
@@ -177,7 +177,7 @@ mongodump --version | head -1        # mongodump version: 100.10.0
 Smoke test (loopback, authenticated, replica-set-direct):
 
 ```bash
-mongosh "mongodb://buildai:${APP_DB_PASSWORD}@127.0.0.1:27017/?authSource=admin&directConnection=true" --quiet --eval 'db.adminCommand({ping:1}).ok && rs.status().myState'
+mongosh "mongodb://<user>:<password>@127.0.0.1:27017/?authSource=admin&directConnection=true" --quiet --eval 'db.adminCommand({ping:1}).ok && rs.status().myState'
 ```
 
 ---
@@ -191,7 +191,7 @@ umask 077
 mkdir -p /home/amloh/mongodb/backups/precut
 # Atlas credentials in a mode-600 file — never on the command line / in history:
 cat > /home/amloh/mongodb/.atlas.env <<'EOF'
-ATLAS_URI='mongodb+srv://<user>:<REDACTED>@cluster0.ta7jxv7.mongodb.net/?appName=Cluster0'
+ATLAS_URI='mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?appName=Cluster0'
 EOF
 chmod 600 /home/amloh/mongodb/.atlas.env
 set -a; . /home/amloh/mongodb/.atlas.env; . /home/amloh/mongodb/.env; set +a   # ATLAS_URI + APP_DB_PASSWORD
@@ -225,7 +225,7 @@ cd /home/amloh/mongodb && ./restore.sh
 ⚠ **Gotcha found the hard way:** `mongorestore --dir backups/precut/airesume` (a *per-db* directory) prints `don't know what to do with file "…/activitylogs.bson.gz", skipping...` for every file and **exits 0** — silently restoring nothing. Pass the dump **root** (`--dir backups/precut`, which contains the db subdirectories):
 
 ```bash
-mongorestore --uri="mongodb://buildai:${APP_DB_PASSWORD}@127.0.0.1:27017/?authSource=admin&directConnection=true" \
+mongorestore --uri="mongodb://<user>:<password>@127.0.0.1:27017/?authSource=admin&directConnection=true" \
   --gzip --dir backups/precut --numParallelCollections=4
 # → Restored 258030 documents in 56 seconds; failures: 0 (indexes restored from the metadata files)
 ```
@@ -267,7 +267,7 @@ Everything below is scripted in **`/home/amloh/mongodb/cutover.sh`** (chmod 700)
    with:
 
    ```
-   MONGODB_URI=mongodb://buildai:<APP_DB_PASSWORD>@mongodb:27017/airesume?authSource=admin&replicaSet=rs0&appName=buildairesume
+   MONGODB_URI=mongodb://<user>:<password>@mongodb:27017/airesume?authSource=admin&replicaSet=rs0&appName=buildairesume
    MONGODB_DB=airesume
    ```
 
@@ -277,14 +277,14 @@ Everything below is scripted in **`/home/amloh/mongodb/cutover.sh`** (chmod 700)
 
    ### Incident: the CLI flip was reverted by Dokploy deploys (2026-09-25, fixed)
 
-   The flip above was **silently reverted twice** — by the Dokploy deploys that finished at 11:33 and 13:11 UTC. Root cause: Dokploy stores this application's env **encrypted** in `application.env` (value prefix `enc:v1:` — AES-256-GCM keyed by `HMAC-SHA256(BETTER_AUTH_SECRET, "dokploy:db-encryption:v1")`), so plain SQL greps for `MONGODB_URI` match nothing and the original "Dokploy holds no `MONGODB_*` entries" check gave a **false negative**. The row did contain `MONGODB_URI=mongodb+srv://…cluster0.ta7jxv7.mongodb.net…`, and every deploy of `resumebuiler` re-applied it to the swarm spec, overwriting the CLI flip. Symptom: the app went back to writing against the quota-blocked Atlas cluster → user-visible *"you are over your space quota … Writes are blocked"* errors in the Jobs Hub.
+   The flip above was **silently reverted twice** — by the Dokploy deploys that finished at 11:33 and 13:11 UTC. Root cause: Dokploy stores this application's env **encrypted** in `application.env` (value prefix `enc:v1:` — AES-256-GCM keyed by `HMAC-SHA256(BETTER_AUTH_SECRET, "dokploy:db-encryption:v1")`), so plain SQL greps for `MONGODB_URI` match nothing and the original "Dokploy holds no `MONGODB_*` entries" check gave a **false negative**. The row did contain `MONGODB_URI=<redacted>`, and every deploy of `resumebuiler` re-applied it to the swarm spec, overwriting the CLI flip. Symptom: the app went back to writing against the quota-blocked Atlas cluster → user-visible *"you are over your space quota … Writes are blocked"* errors in the Jobs Hub.
 
    **Durable fix (applied & verified same day):**
 
    1. Backup ciphertext → `/home/amloh/mongodb/dokploy-app-env.enc.bak` (10 056 bytes).
    2. Decrypt in the Dokploy container (node, scheme above), replace the `MONGODB_URI` value with `$LOCAL_URI`, re-encrypt.
    3. `UPDATE application SET env = … WHERE "applicationId"='oPUp7wDfZxKMv6SFV6hx_'` → `UPDATE 1`.
-   4. Read back + decrypt → `MONGODB_URI=mongodb://…@mongodb:27017/airesume?…`, `ATLAS_GONE`, all 134 env lines preserved; `buildArgs`/`buildSecrets`/`previewEnv`/`previewBuildArgs` checked empty (no second copy).
+   4. Read back + decrypt → `MONGODB_URI=<redacted>`, `ATLAS_GONE`, all 134 env lines preserved; `buildArgs`/`buildSecrets`/`previewEnv`/`previewBuildArgs` checked empty (no second copy).
 
    Deploys now apply the **local** URI themselves, so the flip survives every future redeploy. `buildairesume-worker-daemon` is not a Dokploy application (CLI-managed only) and job-ingestion is compose-managed (`.env` file) — neither needed this fix.
 
@@ -338,7 +338,7 @@ STATE=$(docker exec mongodb mongosh -u root -p "$MONGO_INITDB_ROOT_PASSWORD" --a
         --quiet --eval 'try{rs.status().myState}catch(e){-1}')
 [ "$STATE" = "1" ] || { echo "FATAL: replica set state=$STATE (expected 1)"; exit 1; }
 
-mongodump --uri="mongodb://buildai:${APP_DB_PASSWORD}@127.0.0.1:27017/?authSource=admin&directConnection=true" \
+mongodump --uri="mongodb://<user>:<password>@127.0.0.1:27017/?authSource=admin&directConnection=true" \
   --gzip --out "$BK/dump-$STAMP" --numParallelCollections=4
 
 # retention: keep last 7 nightlies
@@ -383,7 +383,7 @@ Restore drill (do this **once** after go-live, per rule 62): restore the nightli
 **After go-live:** Atlas is frozen at cutover time; rolling back means moving writes back:
 
 1. Stop all writers (same as cutover step 2).
-2. Dump the **local** DB (`mongodump --uri="mongodb://buildai:${APP_DB_PASSWORD}@127.0.0.1:27017/?authSource=admin&directConnection=true" --gzip --out /home/amloh/mongodb/backups/rollback`).
+2. Dump the **local** DB (`mongodump --uri="mongodb://<user>:<password>@127.0.0.1:27017/?authSource=admin&directConnection=true" --gzip --out /home/amloh/mongodb/backups/rollback`).
 3. Restore into **Atlas** with `mongorestore --uri="$ATLAS_URI" --gzip --drop --dir .../airesume` (and `/test`).
    ⚠ **Blocked while the quota is full:** Atlas refused *all* writes during the migration (that is what froze it). Rollback to Atlas first requires freeing/upgrading the M0 (delete the stale cluster data or raise the tier), otherwise the restore fails exactly like the recovery script did.
    ⚠ This replaces the Atlas contents — re-verify counts first, and know that anything written to Atlas between cutover and rollback (there should be nothing — writers point only at local) is irrelevant.
@@ -449,7 +449,7 @@ Deviations from the original plan (all folded into the sections above): image `m
 | Surface | State | Evidence |
 |---|---|---|
 | Dokploy stored env (encrypted `application.env`) | Atlas URI replaced **in place** with the local URI — this was the durable fix for the §5 revert incident (the stored env re-applied Atlas on every deploy until then) | read-back `ATLAS_GONE` (134 lines preserved); re-verified after the 15:33 / 17:46 / 18:17 UTC deploys: spec stayed local, 0 quota errors; backup `dokploy-app-env.enc.bak` |
-| App + worker service specs | `MONGODB_URI=mongodb://…@mongodb:27017/airesume?authSource=admin&replicaSet=rs0&appName=buildairesume` | post-deploy check (§5) run after each deploy |
+| App + worker service specs | `MONGODB_URI=<redacted>` | post-deploy check (§5) run after each deploy |
 | VPS filesystem (`/home/amloh/mongodb`) | `.atlas.env` deleted; zero Atlas references left; `dump.sh` / `counts.sh` now inert (they sourced the deleted file) | detach script 2026-09-25 |
 | Container envs (app, worker, ingestion) | no `mongodb+srv` / `cluster0` / Atlas URIs | env scan 2026-09-25 |
 | Repo (git-tracked files) | credentials redacted to `<REDACTED>` in docs; only `${APP_DB_PASSWORD}` placeholders remain; `dist/worker.mjs` rebuilt clean | `git grep` credential-pattern scan 2026-09-25 |
@@ -467,7 +467,7 @@ ssh -N -L 27017:127.0.0.1:27017 amloh@192.168.1.8
 `.env.local` (value lives only in the untracked file, never in git):
 
 ```
-mongodb://buildai:<password>@127.0.0.1:27017/airesume?authSource=admin&directConnection=true
+mongodb://<user>:<password>@127.0.0.1:27017/airesume?authSource=admin&directConnection=true
 ```
 
 `directConnection=true` is required: without it the driver tries to resolve the replica-set host `mongodb`, which only exists inside the VPS Docker network.

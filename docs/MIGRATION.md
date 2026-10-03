@@ -84,7 +84,7 @@ npm run dev
 Ensure your `MONGODB_URI` is set in `.env.local`:
 
 ```bash
-MONGODB_URI="mongodb+srv://username:<REDACTED>@cluster0.ta7jxv7.mongodb.net/cvcircle?retryWrites=true&w=majority"
+MONGODB_URI="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/cvcircle?retryWrites=true&w=majority"
 ```
 
 ### Step 2: Run Migration
