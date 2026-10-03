@@ -18,15 +18,33 @@ next-env.d.ts
 coverage/
 
 # ── Environment Variables ───────────────────────────────────────────────
-.env
-.env.*
-!.env.example
-!.env.example.*
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.sentry-build-plugin
+# POLICY: all configuration and secrets live in env files. Env files are NEVER committed —
+# only the `.example` templates are. Every rule is written with an explicit `**/` so a new
+# project added under apps/ cannot slip past a root-only rule.
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
+**/.env.sentry-build-plugin
+# Templates ARE committed. Negations must come last, and a negation cannot re-include a file
+# whose parent directory is excluded — no project directory is excluded here, so these work.
+!**/.env.example
+!**/.env.example.*
+!**/*.env.example
+!env.example
+
+# ── Local databases & data dumps ────────────────────────────────────────
+# A local MongoDB data directory was tracked in this repo once: .tmp-mongo/, 367 files and
+# 47 MB of WiredTiger data that can contain real documents. Never commit a database directory
+# or a dump — they are data, not source.
+.tmp-mongo/
+**/.tmp-mongo/
+mongodb-data/
+**/mongodb-data/
+dump/
+**/dump/
+*.bson
+*.wt
 
 # ── Sensitive Files ─────────────────────────────────────────────────────
 firebase-key.json
@@ -72,6 +90,15 @@ Thumbs.db
 !AGENTS.md
 !server_bugs.md
 !refactor_audit.md
+# Release-facing documents. These MUST be visible: a public repository with no README, no
+# SECURITY.md and no CONTRIBUTING.md looks abandoned, and the blanket `*.md` rule above would
+# have dropped all three silently — no error, no diff, nothing to notice. Same failure mode as
+# SB-15. Add any future top-level release document here.
+!README.md
+!SECURITY.md
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+!CHANGELOG.md
 !/docs/**
 # The `!/docs/**` negation above re-includes *everything* under docs/, including the OS metadata
 # the earlier `.DS_Store` rule would otherwise have caught (verified: `git check-ignore docs/.DS_Store`
