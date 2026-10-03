@@ -12,8 +12,8 @@ import DownloadModal from '@/components/ui/DownloadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X,
-  Info, LayoutTemplate, FileJson, ChevronLeft, ChevronRight
+  Eye, Plus, Shuffle,
+  LayoutTemplate, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -38,8 +38,8 @@ import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from '@/lib/hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
-import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
-import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
+import MoriChatDock from '@/components/resume-enhancer/panels/MoriChatDock';
+import UtilityPanelRail, { type UtilityPanelId } from '@/components/resume-enhancer/components/UtilityPanelRail';
 import { usePillEngine } from '@/hooks/usePillEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
@@ -608,20 +608,29 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       }
     }, [state.cvType, state.journeyId, state.jobData, jdText]);
 
-    const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<'mori' | 'design' | 'json' | 'layout' | 'analysis' | null>(null);
-    const isControlPanelOpen = activeUtilityPanel && activeUtilityPanel !== 'analysis';
+    // Which utility panel (tile) is open next to the canvas. The tile rail owns
+    // opening/closing; these listeners just mirror the canvas-engine events so
+    // the rail, the 60:40 column and the canvas all agree on the active panel.
+    const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<UtilityPanelId | null>(null);
+    // Mori lives in the always-visible dock below the canvas instead of a tile.
+    const [isMoriOpen, setIsMoriOpen] = React.useState(false);
+
+    const closeUtilityPanel = React.useCallback(() => {
+      setActiveUtilityPanel(null);
+      window.dispatchEvent(new CustomEvent('close-utility-panel'));
+    }, []);
 
     React.useEffect(() => {
       const handleSidebar = (e: Event) => {
         const detail = (e as CustomEvent).detail;
         if (detail === 'design') {
-          setActiveUtilityPanel(curr => curr === 'design' ? null : 'design');
+          setActiveUtilityPanel('design');
         } else if (detail === 'data') {
-          setActiveUtilityPanel(curr => curr === 'json' ? null : 'json');
+          setActiveUtilityPanel('json');
         }
       };
       const handleTemplates = () => {
-        setActiveUtilityPanel(curr => curr === 'layout' ? null : 'layout');
+        setActiveUtilityPanel('layout');
       };
       const handleClose = () => {
         setActiveUtilityPanel(null);
@@ -641,6 +650,39 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       };
     }, []);
 
+    // Desktop keeps the panel inline (canvas:panel = 60:40). Below md the panel
+    // becomes an off-canvas drawer, exactly like the previous editor shell.
+    const [isDesktopLayout, setIsDesktopLayout] = React.useState(true);
+    React.useEffect(() => {
+      const mq = window.matchMedia('(min-width: 768px)');
+      const onChange = () => setIsDesktopLayout(mq.matches);
+      onChange();
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    // Panel width is derived from the measured row so the canvas keeps ~60% of
+    // the usable width without relying on brittle CSS percentages.
+    const rowRef = React.useRef<HTMLDivElement>(null);
+    const [rowWidth, setRowWidth] = React.useState(0);
+    React.useEffect(() => {
+      const el = rowRef.current;
+      if (!el) return;
+      const observer = new ResizeObserver((entries) => {
+        const width = entries[0]?.contentRect?.width || 0;
+        setRowWidth(Math.round(width));
+      });
+      observer.observe(el);
+      setRowWidth(Math.round(el.getBoundingClientRect().width));
+      return () => observer.disconnect();
+    }, []);
+    const panelWidthPx = React.useMemo(() => {
+      const RAIL_PX = 80; // tile rail (4.5rem 1:1 tiles + 1.5 padding) — see UtilityPanelRail
+      const reserved = RAIL_PX + 24; // + 2 x 12px flex gaps
+      const usable = Math.max(320, rowWidth - reserved);
+      return Math.max(340, Math.round(usable * 0.4));
+    }, [rowWidth]);
+
     React.useEffect(() => {
       // Keep the context paperSize (single source for exports) in sync with the
       // canvas page-size toggle. The canvas owns design.pageSize; this mirrors it.
@@ -654,30 +696,27 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       return () => window.removeEventListener('cv-paper-size-changed', handlePaperSizeChange);
     }, [dispatch]);
 
+    // Opening the Mori dock also enables CV targeting mode (hover/click a field
+    // to focus Mori on it), mirroring the old Mori panel contract.
+    const handleMoriOpenChange = React.useCallback(
+      (open: boolean) => {
+        setIsMoriOpen(open);
+        dispatch({ type: 'SET_MORI_CHAT_MODE', payload: open });
+      },
+      [dispatch]
+    );
+
     React.useEffect(() => {
-      if (state.moriChatMode) {
-        setActiveUtilityPanel('mori');
-      } else if (activeUtilityPanel === 'mori') {
-        setActiveUtilityPanel(null);
-      }
+      // External triggers ("Improve this bullet", "Ask Mori", …) set moriChatMode
+      // then dispatch open-mori-chat; make sure the dock reflects that state.
+      if (state.moriChatMode) setIsMoriOpen(true);
     }, [state.moriChatMode]);
 
     React.useEffect(() => {
-      if (activeUtilityPanel === 'mori') {
-        if (!state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
-      } else {
-        if (state.moriChatMode) dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
-      }
-    }, [activeUtilityPanel, dispatch]);
-
-    React.useEffect(() => {
-      const handleOpenMoriChat = () => {
-        dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
-        setActiveUtilityPanel('mori');
-      };
+      const handleOpenMoriChat = () => handleMoriOpenChange(true);
       window.addEventListener('open-mori-chat', handleOpenMoriChat);
       return () => window.removeEventListener('open-mori-chat', handleOpenMoriChat);
-    }, [dispatch]);
+    }, [handleMoriOpenChange]);
 
     const lastSelectedPathRef = React.useRef<string | null>(null);
     const pathClickCountRef = React.useRef<number>(0);
@@ -1317,22 +1356,40 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       activeSection: 'personal'
     }));
 
-
+    // The panel body is ALWAYS mounted: CVCanvasEngine portals the Design /
+    // Template / JSON bodies into #builder-utility-panel-portal, so the target
+    // node must exist before a tile is clicked (see docs/plan_fix_side_panels.md).
+    // Only its width is animated, which is what keeps the 60:40 split smooth.
+    const utilityPanelBody = (
+      <div className="h-full w-full flex flex-col overflow-hidden rounded-2xl border border-[var(--border-primary)] bg-white dark:bg-[var(--bg-secondary)] shadow-sm">
+        <div className={activeUtilityPanel === 'analysis' ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : 'hidden'}>
+          <div className="flex-1 min-h-0">
+            <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={closeUtilityPanel} />
+          </div>
+        </div>
+        <div
+          id="builder-utility-panel-portal"
+          className={`flex-1 min-h-0 ${activeUtilityPanel === 'analysis' ? 'hidden' : 'flex'} flex-col overflow-hidden`}
+        />
+      </div>
+    );
 
     return (
-      <div className="h-full flex-1 min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#0a0a0a]">
+      <div className="h-full flex-1 min-h-0 relative overflow-hidden bg-[var(--bg-secondary)]">
         {/* Main Container */}
-        <div className="h-full w-full flex overflow-hidden relative px-3 pt-1.5 pb-3 gap-3">
+        <div className="h-full w-full flex flex-col overflow-hidden relative">
+        {/* Row: canvas + utility panel + tile rail */}
+        <div ref={rowRef} className="flex-1 min-h-0 flex flex-col md:flex-row gap-3 px-3 pt-1.5 pb-1 overflow-hidden">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
-          <div 
-            className="flex-1 lg:flex-none lg:w-[60%] min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30"
-            style={{ order: isControlPanelOpen ? 2 : 1 }}
+          <div
+            ref={cvPreviewRef}
+            className="flex-1 min-w-0 min-h-0 relative flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-[var(--bg-primary)] shadow-sm shadow-black/10 dark:shadow-black/30 ring-1 ring-black/[0.05] dark:ring-[var(--border-primary)]"
           >
-            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden">
               {!state.cvData ? (
                 /* CV sheet skeleton — mimics the document that will render here */
                 <div className="w-full h-full flex items-start justify-center overflow-y-auto p-6">
-                  <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[#141810] rounded-xl border border-gray-200 dark:border-white/[0.04] shadow-sm p-8 flex flex-col gap-6">
+                  <div className="w-full max-w-[560px] aspect-[1/1.414] bg-white dark:bg-[var(--bg-primary)] rounded-xl border border-[var(--border-primary)] shadow-sm p-8 flex flex-col gap-6">
                     {/* Header Skeleton */}
                     <div className="space-y-3">
                       <Skeleton className="h-6 w-1/3" />
@@ -1383,85 +1440,64 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
                   moriChatMode={state.moriChatMode}
                   isGuestMode={isGuestMode}
+                  spread={!activeUtilityPanel}
                 />
               )}
             </div>
           </div>
-          
-          {/* Mobile Backdrop Overlay when a panel is open */}
-          {activeUtilityPanel && (
-            <div 
-              onClick={() => {
-                setActiveUtilityPanel(null);
-                window.dispatchEvent(new CustomEvent('close-utility-panel'));
-              }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[75] md:hidden transition-opacity"
-            />
-          )}
 
-          {/* Right rail: AI analysis */}
-          <div 
-            className={`
-              fixed inset-y-0 right-0 z-[80] w-[95%] bg-white dark:bg-[#0a0a0a] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
-              ${isControlPanelOpen
-                ? 'hidden lg:hidden'
-                : 'lg:static lg:w-[40%] lg:min-w-0 lg:shadow-none lg:border lg:border-white/20 lg:dark:border-white/10 lg:rounded-xl lg:flex lg:z-10 lg:p-0 lg:overflow-hidden lg:bg-transparent lg:panel-glass overflow-hidden'}
-              ${activeUtilityPanel === 'analysis' ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-            `}
-            style={{ order: isControlPanelOpen ? 1 : 2 }}
+          {/* Mobile backdrop for the drawer form of the panel */}
+          <AnimatePresence>
+            {!isDesktopLayout && activeUtilityPanel && (
+              <motion.div
+                key="utility-panel-backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={closeUtilityPanel}
+                className="fixed inset-0 z-[75] bg-black/40 backdrop-blur-xs"
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Utility panel — desktop column (canvas:panel = 60:40) / mobile drawer.
+              A SINGLE element renders both forms so the portal target inside keeps
+              its DOM identity when the canvas engine portals design/template/json. */}
+          <motion.div
+            initial={false}
+            animate={
+              isDesktopLayout
+                ? // Desktop only animates width — mixing a percentage `x` transform in
+                  // the same target makes framer-motion (v12) keep the element pinned
+                  // at its initial `width: 0`, so the 60:40 split never opens.
+                  { width: activeUtilityPanel ? panelWidthPx : 0 }
+                : { width: '95%', x: activeUtilityPanel ? '0%' : '100%' }
+            }
+            transition={{ type: 'spring', stiffness: 280, damping: 32, mass: 0.9 }}
+            className={
+              isDesktopLayout
+                ? 'relative shrink-0 min-h-0 overflow-hidden'
+                : 'fixed inset-y-0 right-0 z-[80]'
+            }
           >
-            <div className="flex-1 min-h-0">
-              <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={() => setActiveUtilityPanel(null)} />
-            </div>
-          </div>
-
-          {/* Unified Utility Panel (Mori Chat, Design, JSON, Layout) */}
-          <div 
-            className={`
-              fixed inset-y-0 right-0 z-[80] w-[95%] bg-white dark:bg-[var(--bg-secondary)] flex flex-col h-full gap-3 min-h-0 shadow-2xl transition-all duration-300
-              ${isControlPanelOpen 
-                ? 'translate-x-0 flex lg:static lg:w-[40%] lg:min-w-0 lg:shadow-sm lg:border lg:border-gray-200 lg:dark:border-white/[0.06] lg:rounded-xl lg:z-10 lg:overflow-hidden' 
-                : 'translate-x-full hidden lg:hidden w-0'}
-            `}
-            style={{ order: 3 }}
-          >
-            {/* Mori Chat — always in DOM, visibility toggled via CSS to keep portal target stable */}
-            <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${activeUtilityPanel === 'mori' ? '' : 'hidden'}`}>
-              {/* Mori Chat Header */}
-              <div className="sticky top-0 z-20 bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm">
-                <UtilityPanelPill activePanel="mori" />
-                <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <h3 className="text-xs font-extrabold uppercase tracking-wider">Mori Chat</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false })}
-                    className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-colors"
-                    title="Close Mori Chat"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                </div>
-              </div>
-              
-              {/* Mori Chat Interface */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <MoriChatInterface />
-              </div>
-            </div>
-
-            {/* Portal target — always mounted so CVCanvasEngine's React portals never lose their target */}
             <div
-              id="builder-utility-panel-portal"
-              className={`flex-grow flex flex-col h-full overflow-hidden ${activeUtilityPanel === 'mori' ? 'hidden' : ''}`}
-            />
-          </div>
+              className={isDesktopLayout ? 'absolute inset-y-0 right-0' : 'h-full w-full p-3'}
+              style={isDesktopLayout ? { width: panelWidthPx } : undefined}
+            >
+              {utilityPanelBody}
+            </div>
+          </motion.div>
+
+          {/* Tile rail — Analysis · Design · Template · JSON. The active tile becomes a close button. */}
+          <UtilityPanelRail activePanel={activeUtilityPanel} />
+
+        </div>
+
+        {/* Always-visible Mori chat bar; grows into an overlay above the canvas */}
+        <MoriChatDock open={isMoriOpen} onOpenChange={handleMoriOpenChange} />
 
           {/* Mobile unified bottom navigation pill */}
-          <div data-editor-bottom-pill className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[#141810]/95 backdrop-blur-md border border-lime-200 dark:border-lime-900/30 rounded-2xl p-1.5 shadow-2xl">
+          <div data-editor-bottom-pill className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] md:hidden flex items-center gap-1.5 bg-white/95 dark:bg-[var(--bg-primary)] backdrop-blur-md border border-[var(--border-primary)] rounded-2xl p-1.5 shadow-2xl">
             {/* Previous Step Button */}
             <button
               onClick={() => window.dispatchEvent(new CustomEvent('editor-back-step'))}
@@ -1474,105 +1510,29 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
             <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
 
-            {/* Zoom & Page Size controls (hidden if a panel is open) */}
-            {!activeUtilityPanel && (
-              <>
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('canvas-toggle-page-size'))}
-                  className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-all border-none bg-transparent"
-                  title="Toggle Page Size"
-                >
-                  <LayoutTemplate size={16} />
-                </button>
-                <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
-              </>
-            )}
+            {/* Page size toggle */}
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('canvas-toggle-page-size'))}
+              className="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-150 dark:hover:bg-white/5 transition-all border-none bg-transparent"
+              title="Toggle Page Size"
+            >
+              <LayoutTemplate size={16} />
+            </button>
 
-            {/* Panel Buttons */}
-            <div className="flex items-center gap-0.5">
-              {/* Analysis Panel */}
-              <button
-                onClick={() => setActiveUtilityPanel(curr => curr === 'analysis' ? null : 'analysis')}
-                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
-                  activeUtilityPanel === 'analysis'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
-                title="Analysis"
-              >
-                <Target size={16} />
-              </button>
+            <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
 
-              {/* Mori Chat */}
-              <button
-                onClick={() => setActiveUtilityPanel(curr => curr === 'mori' ? null : 'mori')}
-                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
-                  activeUtilityPanel === 'mori'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
-                title="Mori Chat"
-              >
-                <Sparkles size={16} />
-              </button>
-
-              {/* Design */}
-              <button
-                onClick={() => {
-                  if (activeUtilityPanel === 'design') {
-                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
-                  } else {
-                    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'design' }));
-                  }
-                }}
-                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
-                  activeUtilityPanel === 'design'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
-                title="Design"
-              >
-                <Palette size={16} />
-              </button>
-
-              {/* Layout */}
-              <button
-                onClick={() => {
-                  if (activeUtilityPanel === 'layout') {
-                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
-                  } else {
-                    window.dispatchEvent(new CustomEvent('open-templates'));
-                  }
-                }}
-                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
-                  activeUtilityPanel === 'layout'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
-                title="Layout"
-              >
-                <Component size={16} />
-              </button>
-
-              {/* Raw JSON */}
-              <button
-                onClick={() => {
-                  if (activeUtilityPanel === 'json') {
-                    window.dispatchEvent(new CustomEvent('close-utility-panel'));
-                  } else {
-                    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'data' }));
-                  }
-                }}
-                className={`p-2 rounded-xl transition-all border-none bg-transparent ${
-                  activeUtilityPanel === 'json'
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-                }`}
-                title="Raw JSON"
-              >
-                <FileJson size={16} />
-              </button>
-            </div>
+            {/* Mori chat — expands the dock below the canvas. Panels live in the tile rail. */}
+            <button
+              onClick={() => handleMoriOpenChange(!isMoriOpen)}
+              className={`p-2 rounded-xl transition-all border-none bg-transparent ${
+                isMoriOpen
+                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+              }`}
+              title="Mori Chat"
+            >
+              <Sparkles size={16} />
+            </button>
 
             <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-0.5" />
 

@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { UtilityPanelPill } from '../components/UtilityPanelPill';
 import {
   Sparkles, Loader2, RefreshCw, AlertTriangle, CheckCircle2, Award, Zap, FileText, ShieldAlert, ChevronDown, ChevronUp, Check, X, HelpCircle, Briefcase, Palette, LayoutTemplate, FileJson, ArrowRight
 } from 'lucide-react';
@@ -806,8 +805,7 @@ const ATSMeterPanelBody: React.FC<ATSMeterPanelProps> = ({ isUtilityPanelOpen = 
 
       {/* ── Header ── */}
       <div className="sticky top-0 z-20 relative bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-sm">
-        <UtilityPanelPill activePanel="analysis" />
-        <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
+        <div className="flex md:hidden items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/[0.04]">
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-200">Analysis</h3>
         </div>

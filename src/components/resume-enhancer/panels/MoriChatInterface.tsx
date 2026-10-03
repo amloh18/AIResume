@@ -8,7 +8,7 @@ import { MoriMessageBubble, MoriLoadingIndicator, MoriSuggestionChips } from '@/
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
-  Send, Sparkles, Trash2, ChevronRight, MessageSquare, History, Edit2, X, Plus, MousePointer2
+  Send, Sparkles, Trash2, ChevronRight, ChevronDown, ChevronUp, MessageSquare, History, Edit2, X, Plus, MousePointer2, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -35,6 +35,24 @@ interface ChatHistoryItem {
   title: string;
   updatedAt: string;
   cvId?: string;
+}
+
+/**
+ * Dock controls.
+ *
+ * When `collapsed` is true the interface renders only its input as a slim bar
+ * and asks the parent (MoriChatDock) to grow it into the full chat overlay
+ * instead of owning the transition itself — that keeps a single chat state
+ * across the collapsed ↔ expanded states.
+ */
+export interface MoriChatDockControls {
+  collapsed: boolean;
+  onRequestExpand?: () => void;
+  onRequestCollapse?: () => void;
+}
+
+interface MoriChatInterfaceProps {
+  dock?: MoriChatDockControls;
 }
 
 const SUGGESTIONS = [
@@ -70,7 +88,8 @@ const FOLLOW_UP_SUGGESTIONS: Record<string, Array<{ label: string; prompt: strin
   ],
 };
 
-const MoriChatInterface: React.FC = () => {
+const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
+  const collapsed = !!dock?.collapsed;
   const { state, updateCVData } = useResumeEnhancer();
   const { data: session, status: sessionStatus } = useSession();
   const { openModal } = useAuthModalStore();
@@ -466,6 +485,27 @@ const MoriChatInterface: React.FC = () => {
   };
 
   if (isGuestMode) {
+    // Collapsed dock: a slim sign-up bar instead of the full promo card, so the
+    // bottom bar keeps its height and the editor layout never shifts.
+    if (collapsed) {
+      return (
+        <button
+          type="button"
+          onClick={() => openModal({ view: 'signup', callbackUrl: window.location.href })}
+          className="w-full h-full flex items-center gap-3 px-4 text-left group"
+        >
+          <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span className="flex-1 min-w-0 text-[11.5px] text-slate-500 dark:text-slate-400 truncate">
+            Sign up to edit your CV with Mori AI
+          </span>
+          <span className="shrink-0 flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+            Sign Up
+            <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </button>
+      );
+    }
+
     return (
       <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
         {/* Header Bar */}
@@ -474,6 +514,15 @@ const MoriChatInterface: React.FC = () => {
             <MessageSquare className="w-4 h-4 text-emerald-500" />
             Mori AI Assistant
           </div>
+          {dock?.onRequestCollapse && (
+            <button
+              onClick={dock.onRequestCollapse}
+              className="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              title="Collapse Mori"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Guest Info Card Container */}
@@ -560,7 +609,7 @@ const MoriChatInterface: React.FC = () => {
     <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
       
       {/* Header Bar */}
-      <div className="px-4 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+      <div className={`px-4 py-2 border-b border-slate-200 dark:border-white/10 items-center justify-between bg-white dark:bg-transparent shrink-0 ${collapsed ? 'hidden' : 'flex'}`}>
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
           <MessageSquare className="w-4 h-4 text-emerald-500" />
           {chatId ? chatHistory.find(c => c._id === chatId)?.title || 'Current Chat' : 'New Chat'}
@@ -581,11 +630,20 @@ const MoriChatInterface: React.FC = () => {
           >
             <History className="w-3.5 h-3.5" /> History
           </button>
+          {dock?.onRequestCollapse && (
+            <button
+              onClick={dock.onRequestCollapse}
+              className="p-1.5 ml-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              title="Collapse Mori"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className={`flex-1 relative overflow-hidden ${collapsed ? 'hidden' : ''}`}>
         
         {/* History Overlay Panel */}
         <AnimatePresence>
@@ -709,12 +767,18 @@ const MoriChatInterface: React.FC = () => {
         </div>
       </div>
 
-      {/* Input Area Overlay (sticks to bottom) */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 pt-0 bg-gradient-to-t from-white via-white to-transparent dark:from-[var(--bg-secondary)] dark:via-[var(--bg-secondary)] z-10 pointer-events-none">
+      {/* Input Area — overlay while expanded, the whole surface while collapsed */}
+      <div
+        className={
+          collapsed
+            ? 'relative z-10 h-full flex items-center'
+            : 'absolute bottom-0 left-0 right-0 p-3 pt-0 bg-gradient-to-t from-white via-white to-transparent dark:from-[var(--bg-secondary)] dark:via-[var(--bg-secondary)] z-10 pointer-events-none'
+        }
+      >
         
         {/* Selection Banner directly above input */}
         <AnimatePresence>
-          {currentSelection && (
+          {currentSelection && !collapsed && (
             <motion.div 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -739,25 +803,80 @@ const MoriChatInterface: React.FC = () => {
         </AnimatePresence>
 
         {limitExhausted ? (
-          <MoriChatLimitPanel />
+          collapsed ? (
+            <button
+              type="button"
+              onClick={dock?.onRequestExpand}
+              className="w-full h-full flex items-center justify-center gap-2 text-[11.5px] font-semibold text-amber-600 dark:text-amber-400"
+            >
+              <Sparkles className="w-4 h-4" /> Mori AI limit reached — tap to view options
+            </button>
+          ) : (
+            <MoriChatLimitPanel />
+          )
         ) : (
-          <div className={`pointer-events-auto relative group shadow-xl shadow-slate-200/50 dark:shadow-none bg-white dark:bg-[var(--bg-primary)] border border-slate-200 dark:border-white/10 transition-all ${currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl'}`}>
+          <div className={`pointer-events-auto relative group transition-all bg-white dark:bg-[var(--bg-primary)] ${collapsed ? 'h-full w-full flex items-center' : 'shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-white/10 ' + (currentSelection ? 'rounded-b-xl rounded-t-none border-t-0' : 'rounded-2xl')}`}>
+            {collapsed && (
+              <Sparkles className="w-4 h-4 text-emerald-500 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            )}
+            {/* Chevron-up: brings the chat up from the collapsed bar. Without it
+                the only way back into an ongoing conversation is to start typing. */}
+            {collapsed && dock?.onRequestExpand && (
+              <button
+                type="button"
+                onClick={dock.onRequestExpand}
+                title="Bring up chat"
+                aria-label="Bring up Mori chat"
+                className="absolute left-11 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            )}
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                // Typing in the collapsed bar grows the dock into the chat overlay
+                // so the conversation (and Mori's thinking state) is visible while
+                // composing — the overlay never affects the editor layout.
+                if (collapsed && e.target.value.length > 0) dock?.onRequestExpand?.();
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
+                  dock?.onRequestExpand?.();
                   handleSend();
                 }
               }}
-              placeholder={currentSelection ? "Instruct Mori to update selection or whole CV..." : "Ask Mori to edit your CV..."}
+              placeholder={
+                collapsed
+                  ? (currentSelection ? 'Instruct Mori to update the selection…' : 'Ask or do anything')
+                  : (currentSelection ? "Instruct Mori to update selection or whole CV..." : "Ask Mori to edit your CV...")
+              }
               rows={1}
-              className="w-full bg-transparent px-4 py-3.5 pr-12 text-[11.5px] placeholder:text-[11.5px] placeholder:text-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none dark:text-white"
-              style={{ minHeight: '48px', maxHeight: '120px' }}
+              className={`w-full bg-transparent text-[11.5px] placeholder:text-[11.5px] placeholder:text-slate-400 dark:placeholder-slate-500 focus:outline-none resize-none dark:text-white ${collapsed ? 'h-full pl-[4.5rem] pr-24 py-3' : 'px-4 py-3.5 pr-12'}`}
+              style={collapsed ? undefined : { minHeight: '48px', maxHeight: '120px' }}
             />
+            {/* Compact state chips inside the collapsed bar */}
+            {collapsed && (
+              <div className="absolute right-11 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                {isLoading ? (
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Thinking
+                  </span>
+                ) : currentSelection ? (
+                  <span className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold max-w-[140px]">
+                    <MousePointer2 className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Selection</span>
+                  </span>
+                ) : null}
+              </div>
+            )}
             <button
-              onClick={() => handleSend()}
+              onClick={() => {
+                dock?.onRequestExpand?.();
+                handleSend();
+              }}
               disabled={!input.trim() || isLoading}
               className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${
                 input.trim() && !isLoading 
