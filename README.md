@@ -11,8 +11,12 @@ Licensed under the [MIT License](LICENSE).
 
 | Project | Path | Description |
 | --- | --- | --- |
-| **app** | repo root (`src/`, `next.config.ts`) | The Next.js web application — resume builder, job discovery, matching, tailoring, tracking. |
-| **resumebuilder-worker** | `buildairesume-job-ingestion/` | The job-ingestion service. Owns the source adapters, normalisation, deduplication and its scheduler. Deployed on its own VPS. |
+| **app** | `apps/app/` | The Next.js web application — resume builder, job discovery, matching, tailoring, tracking. |
+| **resumebuilder-worker** | `apps/resumebuilder-worker/` | The job-ingestion service. Owns the source adapters, normalisation, deduplication and its scheduler. Deployed on its own VPS. |
+
+Each project is self-contained: its own `package.json`, its own lockfile, its own `.env.example` and
+its own `Dockerfile`. There is no workspace root lockfile, so installing or deploying one project
+never drags in the other's dependencies.
 
 > The **admin panel** is maintained in a separate **private** repository. Its source is intentionally
 > not part of this public repository.
@@ -22,17 +26,29 @@ Licensed under the [MIT License](LICENSE).
 Requires **Node.js 22** and **MongoDB**.
 
 ```bash
-# app  (repository root)
-cp env.example .env.local     # fill in your own values
-npm install
-npm run dev                   # http://localhost:3000
+# app
+cd apps/app
+cp .env.example .env.local     # fill in your own values
+npm ci
+npm run dev                    # http://localhost:3000
 
 # resumebuilder-worker
-cd buildairesume-job-ingestion
+cd apps/resumebuilder-worker
 cp .env.example .env
-npm install
+npm ci
 npm run dev
 ```
+
+The repository root carries a thin task runner that delegates to both projects:
+
+```bash
+npm run dev          # → apps/app dev server
+npm run build        # → apps/app production build
+npm run build:worker # → bundle the app's background worker
+npm run test         # → apps/app test suite
+npm install:all      # → npm ci in both projects
+```
+
 
 ## Environment files
 
@@ -47,15 +63,24 @@ See [SECURITY.md](SECURITY.md) for the full policy and the incident-response pro
 
 ## Deployment
 
-The app and the worker build from their own Dockerfiles. Deployment configuration lives in `deploy/`
-and is documented under `docs/deployment/`.
+Two independent Docker builds:
+
+- **app** — `Dockerfile` at the repository root, build context `.` (the repository root). It produces
+  two targets: `runner` (the Next.js web tier, the default) and `worker` (the app's own background
+  loops). Build it with `--target worker` for the background tier. Because the context is the
+  repository root, the sources are read from `apps/app/` and then flattened back to `/app` in the
+  runtime stages — see the header comment in the Dockerfile for why.
+- **resumebuilder-worker** — `apps/resumebuilder-worker/Dockerfile`, build context
+  `apps/resumebuilder-worker`. Fully self-contained.
+
+Deployment configuration lives in `deploy/` and is documented under `docs/deployment/`.
 
 ## Roadmap
 
-The repository is being restructured into an `apps/*` workspace monorepo (`apps/app`,
-`apps/resumebuilder-worker`) so each project installs and deploys independently. Until that lands, the
-app lives at the repository root and the worker in `buildairesume-job-ingestion/`. See
-`docs/deployment/public-release.md`.
+Each project installs and deploys independently from its own directory. The next step is extracting
+the admin panel into its own deployable app; the measured plan is in
+`docs/deployment/admin-split-plan.md`. See `docs/deployment/public-release.md` for the release
+checklist.
 
 ## Contributing
 

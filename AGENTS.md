@@ -155,6 +155,29 @@ R2/object storage is used for generated/user files.
 
 DO NOT put large binary files such as PDFs into MongoDB unnecessarily.
 
+## Repository layout
+
+The repository is a monorepo with two independent projects. Each has its own `package.json`,
+lockfile, `.env.example` and `Dockerfile`, and installs and deploys on its own.
+
+| Path | What it is |
+| --- | --- |
+| `apps/app/` | The Next.js web application. All application source lives here (`apps/app/src`). |
+| `apps/resumebuilder-worker/` | The standalone job-ingestion microservice (its own Dockerfile, port 4001). |
+| `scripts/` | Repository- and host-level tooling only: the VPS setup/install scripts, the JobSpy and LinkedIn worker scripts, the worker gateway, and audit tooling. |
+| `docs/`, `deploy/` | Documentation and deployment configuration. |
+| `Dockerfile` (root) | The **app's** image, build context `.` (repository root). Targets `runner` (web) and `worker` (the app's own background loops). |
+
+Two rules that are easy to get wrong:
+
+- **`apps/app/scripts/` is not the same as `scripts/`.** App-owned tooling that imports `../src/...`
+  or is invoked by `apps/app/package.json` lives in `apps/app/scripts/` (the worker bundler, the
+  database migrations). Host tooling stays at the repository root `scripts/`.
+- **`process.cwd()` is the app directory, not the repository root.** The app runs with
+  `apps/app` as its working directory (and `/app` in the image, with no `docs/` or `scripts/`
+  beside it). Code that needs a repository-level file must resolve it by walking up — see
+  `apps/app/src/lib/utils/find-up-dir.ts` — and must tolerate not finding it.
+
 ---
 
 # 5. DATABASE

@@ -4,6 +4,13 @@
 
 Written 2026-10-04 from a read-only measurement of the working tree on `refactor/simple`.
 
+> **Reconciliation with the monorepo move (later the same day).** The web app has since moved to
+> **`apps/app/`**, not `apps/web/` — read every `apps/web` below as `apps/app`. The move was done
+> *without* npm workspaces (see `docs/deployment/public-release.md` §4 for why), so §3's workspace
+> layout and §6's Phase 1 also need that adjustment. The measured boundary in §2 is unchanged and
+> still holds: re-running `.verify/scan-admin-boundary.mjs` after the move reports the same **118
+> admin-only / 998 web-only / 0 closure violations**.
+
 ## 0. Decisions locked
 
 | Question | Decision |

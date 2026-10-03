@@ -6,6 +6,21 @@
 # They share the dependency and build stages, so the expensive part is built once. `runner` is the
 # Dockerfile default, so an existing build configuration that does not pass `--target` is unaffected.
 #
+# Build context is the REPOSITORY ROOT (`.`), not `apps/app`. The app's sources are read from
+# `apps/app/` and are installed there; the *runtime* stages then flatten the app back to `/app` so the
+# container layout is byte-for-byte what it was before the monorepo move. That matters because several
+# route handlers resolve paths against `process.cwd()`:
+#
+#   src/app/images/[filename]/route.ts   → <cwd>/public/images/...
+#   src/app/api/cv/parse/route.ts        → <cwd>/package.json, <cwd>/node_modules/pdfjs-dist/...
+#
+# so `<cwd>` must keep containing `public/`, `package.json` and `node_modules/`.
+#
+# NOT to be confused with `apps/resumebuilder-worker/` — that is the standalone job-ingestion
+# microservice (its own Dockerfile, its own build context, port 4001). The `worker` target *here* is
+# the Next.js app's own background tier: email delivery, inbound mail, the application queue and the
+# reconciliation watchdog.
+#
 # The web tier runs the Next.js application and nothing else. Everything that needs a browser or Python
 # lives on the VPS host as a systemd service, reached over HTTP / CDP:
 #
@@ -35,9 +50,12 @@
 FROM node:22-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9 AS base
 
 # ── deps ───────────────────────────────────────────────────────────────────────
+# Installs into the app's own directory (`/app/apps/app/node_modules`) rather than hoisting to `/app`.
+# Keeping the install where the app expects it means the app tree stays self-contained — nothing here
+# depends on a workspace-aware root lockfile.
 FROM base AS deps
-WORKDIR /app
-COPY package.json package-lock.json* .npmrc* ./
+WORKDIR /app/apps/app
+COPY apps/app/package.json apps/app/package-lock.json apps/app/.npmrc* ./
 # Neither browser engine is downloaded: the runtime reaches a browser on another host, and shipping a
 # ~300 MB cache into the image would defeat the point of this file.
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -64,11 +82,12 @@ RUN node -e "const req=['next','react','mongoose','mammoth','tesseract.js'];cons
 # a 4-core / 7 GB box. Splitting the stage is what makes that second application cheap.
 FROM base AS source
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/app/node_modules ./apps/app/node_modules
 COPY . .
 
 # ── builder ────────────────────────────────────────────────────────────────────
 FROM source AS builder
+WORKDIR /app/apps/app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -96,9 +115,11 @@ RUN date -u +%Y-%m-%dT%H:%M:%SZ > /app/.build-time
 # external specifier in the output resolves under plain Node, so an unresolvable import fails the
 # image build instead of the deploy.
 FROM source AS worker-bundle
+WORKDIR /app/apps/app
 # Re-declared because this stage no longer inherits `builder`'s ENV block, and the bundle must be
 # built for production. `npm run build:worker` is esbuild over `src/workers/entry.ts` and needs
-# neither `.next` nor the Next.js runtime.
+# neither `.next` nor the Next.js runtime. `scripts/build-worker.mjs` derives its project root from
+# its own location (`apps/app/scripts/`), so it needs no path overrides here.
 ENV NODE_ENV=production
 RUN npm run build:worker
 
@@ -125,9 +146,9 @@ RUN groupadd --system --gid 1001 nodejs && \
 
 # Everything comes from `source`, not `builder` — so Docker never schedules the Next.js build for
 # this target. That is the whole point of the split above.
-COPY --from=source --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=source --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=worker-bundle --chown=nextjs:nodejs /app/dist ./dist
+COPY --from=source --chown=nextjs:nodejs /app/apps/app/node_modules ./node_modules
+COPY --from=source --chown=nextjs:nodejs /app/apps/app/package.json ./package.json
+COPY --from=worker-bundle --chown=nextjs:nodejs /app/apps/app/dist ./dist
 
 # Same build identity as `runner`, for the same reason — see the note there. Written while still root,
 # then handed to `nextjs` so the unprivileged process can read it.
@@ -162,11 +183,13 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
-# Application files. No apt, no Python, no browser binaries, no `scripts/`.
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+# Application files, flattened back to /app. No apt, no Python, no browser binaries, no `scripts/`.
+# The flattening is deliberate: `<cwd>` (= /app) must contain `public/`, `package.json` and
+# `node_modules/` for the `process.cwd()`-relative route handlers listed at the top of this file.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/apps/app/package.json ./package.json
 # The build stamp, so `/api/health` can report when this image was built.
 COPY --from=builder --chown=nextjs:nodejs /app/.build-time ./.build-time
 

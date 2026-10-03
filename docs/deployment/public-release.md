@@ -94,15 +94,13 @@ Rotate **first**, then purge. Purging first only removes the text, not the acces
 
 ---
 
-## 4. What remains — the restructure
+## 4. The restructure — done, except the admin extraction
 
-Deferred on purpose: moving ~1,300 files without a green build is exactly the kind of unverified
-change that breaks a production app. Each step below ends with a gate.
+### Step A — extract the admin panel out of the app — NOT DONE
 
-### Step A — extract the admin panel out of the app
-
-The admin source currently lives **inside** the app (`src/app/admin`, `src/components/admin`,
-`src/app/api/admin`, 67 API routes). Because admin must not be public, it has to come out first.
+The admin source currently lives **inside** the app (`apps/app/src/app/admin`,
+`apps/app/src/components/admin`, `apps/app/src/app/api/admin`, 67 API routes). Because admin must not
+be public, it has to come out before this repository can be published as-is.
 
 The measured boundary is in `docs/deployment/admin-split-plan.md`: **118 admin-only files move, 150
 shared files become a package, 998 stay in the app.** The shared set is closed — verified, zero
@@ -110,36 +108,52 @@ leaks — so the extraction is clean.
 
 **Gate:** both apps build; admin login → dashboard → a data-backed tab works.
 
-### Step B — move the app to `apps/app`
+### Step B — move the app to `apps/app` — DONE
 
-`git mv src public next.config.ts tsconfig*.json vitest* eslint.config.mjs tests package.json apps/app/`
+`apps/app/` holds the Next.js app: `src/`, `public/`, `tests/`, `scripts/` (app-owned tooling), and
+every config (`next.config.ts`, `tsconfig*.json`, `vitest*`, `eslint.config.mjs`, `tailwind.config.js`,
+`postcss.config.js`, `components.json`, `.npmrc`, `.env.example`, `package.json`, `package-lock.json`).
 
-Then update every path reference: `Dockerfile`, `scripts/build-worker.mjs` (it bundles
-`src/workers/entry.ts`), `.dockerignore`, `deploy/`, and the `tsconfig.*.json` / `vitest.config.ts`
-path aliases.
+Two things had to be handled that the original plan missed:
 
-**Gate:** `npm run build`, `npx tsc -p tsconfig.*.json`, `npx vitest run` (5 documented pre-existing
-failures is the baseline), and a real Docker build of the `runner` target.
+1. **`scripts/build-worker.mjs` needed no edit at all.** It derives its project root from
+   `import.meta.url`, so moving it to `apps/app/scripts/` alongside `src/` kept every derived path
+   (`src/workers/entry.ts`, `dist/worker.mjs`, `tsconfig.json`, the shims) correct. Verified by
+   running it.
+2. **The app-owned scripts had to move with `src/`, not stay at the root.** Twenty-nine of them
+   import `../src/...`, so `scripts/` and `src/` must remain siblings. The root `scripts/` now holds
+   only host/VPS tooling (the JobSpy and LinkedIn workers, the worker gateway, `vps-*.sh`, audit
+   scripts).
 
-### Step C — move the worker to `apps/resumebuilder-worker`
+**Verified:** `npm run build:worker` (947 KB bundle, externals resolved), `next build` (full route
+manifest, exit 0), `npx vitest run` → **5 failures in 3 files, 677 passing — identical to the
+pre-move baseline.**
 
-`git mv buildairesume-job-ingestion apps/resumebuilder-worker`
+### Step C — move the worker to `apps/resumebuilder-worker` — DONE
 
-It is self-contained — it never imports the app's `src/` — so its Dockerfile and compose file stay
-valid. Update only the deploy references and its path in `deploy/`.
+Self-contained; it never imports the app's `src/`, so its Dockerfile and compose file stayed valid
+and needed no changes.
 
-**Gate:** the service builds and its `/health` responds.
+**One real defect fixed:** the service had **no committed `package-lock.json`**, so its Dockerfile's
+`npm ci` could never have succeeded. A lockfile is now committed (272 packages) and `npm ci` +
+`npm run build` were both run to confirm.
 
-### Step D — introduce npm workspaces
+### Step D — introduce npm workspaces — DELIBERATELY NOT DONE
 
-Root `package.json` gains `"workspaces": ["apps/*", "packages/*"]`; per-app `package.json` files are
-trimmed to their own dependencies. A single root lockfile replaces the two current ones.
+The plan called for `"workspaces": ["apps/*", "packages/*"]` and a single root lockfile. That was
+dropped after measuring, for two reasons:
 
-**Gate:** `npm ci` at the root, then each app's build.
+- **npm workspaces hoist to one root `node_modules` and one root lockfile.** The job-ingestion
+  service builds from its **own** Docker context (`apps/resumebuilder-worker`), where the root
+  lockfile is not present — so a workspace root lockfile would break its image build. Its runtime is
+  also different (Node 20 Alpine vs Node 22 Bookworm) and it shares no source with the app.
+- The two projects share **zero** code, so workspaces would buy deduplication that never happens
+  while adding real coupling.
 
-> ⚠️ **Build cost.** Two apps means two `next build` runs per deploy on a 4-core / 7 GB box — the same
-> OOM risk `dokploy-worker-migration-plan.md` §4 flags. Share the `deps` layer across Docker targets
-> and measure `free`/`df` before enabling `autoDeploy` on the second application.
+Instead each project keeps its own lockfile and the root `package.json` is a thin task runner that
+delegates via `npm --prefix`. Each project installs and deploys independently, which is the actual
+goal. If the admin app is later extracted into `apps/admin`, revisit this: the app and admin *would*
+share code, and that is the case workspaces are for.
 
 ---
 
