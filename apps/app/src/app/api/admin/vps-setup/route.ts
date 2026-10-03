@@ -19,6 +19,7 @@ import authOptions from '@/lib/auth-config';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { findUpDir } from '@/lib/utils/find-up-dir';
 import {
   probeWorkerGateway,
   getWorkerExecutionMode,
@@ -110,9 +111,12 @@ function resolveProjectRoot(): string {
     return process.env.PROJECT_DIR;
   }
 
-  // 2. process.cwd() — most common in Docker containers and local dev
-  if (fs.existsSync(path.join(process.cwd(), SCRIPT_REL))) {
-    return process.cwd();
+  // 2. process.cwd() and its ancestors — most common in Docker containers and local dev.
+  //    `scripts/` stays at the repository root while the app's working directory is `apps/app/`, so a
+  //    single-level check would silently miss the script in local development.
+  const cwdRoot = findUpDir(SCRIPT_REL);
+  if (cwdRoot) {
+    return cwdRoot;
   }
 
   // 3. Common Docker WORKDIR paths

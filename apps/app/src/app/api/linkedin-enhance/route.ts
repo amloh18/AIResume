@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 import LinkedInSnapshot from '@/models/LinkedInSnapshot';
 import { LINKEDIN_ENHANCER_PROMPT } from '@/lib/prompts/linkedin-enhancer-prompt';
+import { findUpDir } from '@/lib/utils/find-up-dir';
 import fs from 'fs';
 import path from 'path';
 
@@ -338,9 +339,12 @@ function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?:
   // source-of-truth markdown are picked up without a rebuild.
   let promptTemplate = LINKEDIN_ENHANCER_PROMPT;
   try {
-    const filePath = path.join(process.cwd(), 'docs', 'lindkedin_prompt.md');
-    if (fs.existsSync(filePath)) {
-      promptTemplate = fs.readFileSync(filePath, 'utf8');
+    // Walk up from the working directory rather than assuming the repository root is it: the app
+    // lives in `apps/app/` while `docs/` stays at the repository root. In the image neither exists,
+    // so the bundled template above is used — which is why the markdown read is best-effort.
+    const docsDir = findUpDir(path.join('docs', 'lindkedin_prompt.md'));
+    if (docsDir) {
+      promptTemplate = fs.readFileSync(path.join(docsDir, 'docs', 'lindkedin_prompt.md'), 'utf8');
     }
   } catch (err) {
     console.error('Failed to read docs/lindkedin_prompt.md, using bundled prompt', err);
