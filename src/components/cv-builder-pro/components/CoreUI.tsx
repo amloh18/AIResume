@@ -4,6 +4,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
+import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { AnimatePresence } from 'framer-motion';
 import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
@@ -244,75 +245,132 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     );
   };
   
+  /**
+   * Re-invoke `cb` whenever the canvas zoom changes. The canvas applies zoom as
+   * an inline `transform: scale()` on a wrapper above the pages, so watching that
+   * wrapper's style is how toolbar placement stays correct while zooming.
+   */
+  const observeCanvasZoom = (node: HTMLElement | null, cb: () => void) => {
+    if (!node) return () => {};
+    let cur: HTMLElement | null = node.parentElement;
+    let scaled: HTMLElement | null = null;
+    while (cur && cur !== document.body) {
+      const t = window.getComputedStyle(cur).transform;
+      if (t && t !== 'none') { scaled = cur; break; }
+      cur = cur.parentElement;
+    }
+    if (!scaled) return () => {};
+    const observer = new MutationObserver(() => cb());
+    observer.observe(scaled, { attributes: true, attributeFilter: ['style'] });
+    return () => observer.disconnect();
+  };
+
+  /* The formatting toolbar is a vertical rail parked just outside the page
+     edge, level with the section being edited. It used to be a horizontal bar
+     floating directly over the text it formats. */
+  const TOOLBAR_WIDTH = 44;
+  const TOOLBAR_GAP = 12;
+
   export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
     const [pos, setPos] = useState({ top: -1000, left: 0 });
     const [canSuggest, setCanSuggest] = useState(false);
     const [canSuggestSkills, setCanSuggestSkills] = useState(false);
+    const toolbarRef = useRef<HTMLDivElement | null>(null);
   
+    // Which AI affordances the focused field supports.
     useEffect(() => {
-      const updatePos = () => {
-        if (targetNode) {
-          const rect = targetNode.getBoundingClientRect();
-          setPos({ top: rect.top - 45, left: rect.left + rect.width / 2 });
-          const isBulletContext = targetNode.tagName === 'LI' || targetNode.closest('li') || targetNode.closest('ul') || (targetNode.getAttribute('data-path') || '').includes('description');
-          const isSkillContext = (targetNode.getAttribute('data-path') || '').toLowerCase().includes('skills');
-          const isSummaryContext = (targetNode.getAttribute('data-path') || '').toLowerCase().includes('summary');
-          setCanSuggest(!!isBulletContext || !!isSummaryContext);
-          setCanSuggestSkills(!!isSkillContext);
-        } else {
-          setPos({ top: -1000, left: 0 });
-          setCanSuggest(false);
-          setCanSuggestSkills(false);
+      if (!targetNode) {
+        setCanSuggest(false);
+        setCanSuggestSkills(false);
+        return;
+      }
+      const path = (targetNode.getAttribute('data-path') || '').toLowerCase();
+      const isBulletContext = targetNode.tagName === 'LI' || !!targetNode.closest('li') || !!targetNode.closest('ul') || path.includes('description');
+      setCanSuggest(isBulletContext || path.includes('summary'));
+      setCanSuggestSkills(path.includes('skills'));
+    }, [targetNode]);
+
+    // Position: vertically outside the page, aligned with the owning section.
+    useEffect(() => {
+      if (!targetNode) {
+        setPos({ top: -1000, left: 0 });
+        return;
+      }
+
+      const place = () => {
+        const sectionEl = (targetNode.closest('[data-block-id]') || targetNode) as HTMLElement;
+        const pageEl = targetNode.closest('.cv-page') as HTMLElement | null;
+        const sectionRect = sectionEl.getBoundingClientRect();
+        const pageRect = (pageEl || sectionEl).getBoundingClientRect();
+
+        const height = toolbarRef.current?.offsetHeight || 260;
+        const maxTop = Math.max(8, window.innerHeight - height - 8);
+        const top = Math.max(8, Math.min(sectionRect.top, maxTop));
+
+        // Prefer just outside the right page edge; fall back to the left edge
+        // when there is no room before the viewport (e.g. the tile rail).
+        const outsideRight = pageRect.right + TOOLBAR_GAP;
+        const outsideLeft = pageRect.left - TOOLBAR_GAP - TOOLBAR_WIDTH;
+        let left = outsideRight;
+        if (outsideRight + TOOLBAR_WIDTH > window.innerWidth - 8) {
+          left = outsideLeft >= 8
+            ? outsideLeft
+            : Math.max(8, window.innerWidth - TOOLBAR_WIDTH - 8);
         }
+        setPos({ top, left });
       };
 
-      updatePos();
+      place();
+      // The rail is height-dependent on the AI buttons, so measure once painted.
+      const raf = requestAnimationFrame(place);
 
       const scrollContainers = document.querySelectorAll('.overflow-auto');
-      const handleScroll = () => updatePos();
-      
-      scrollContainers.forEach(c => c.addEventListener('scroll', handleScroll, { passive: true }));
-      window.addEventListener('resize', handleScroll);
-      
+      scrollContainers.forEach(c => c.addEventListener('scroll', place, { passive: true }));
+      window.addEventListener('resize', place);
+      const stopZoomWatch = observeCanvasZoom(targetNode as HTMLElement, place);
+
       return () => {
-        scrollContainers.forEach(c => c.removeEventListener('scroll', handleScroll));
-        window.removeEventListener('resize', handleScroll);
+        cancelAnimationFrame(raf);
+        scrollContainers.forEach(c => c.removeEventListener('scroll', place));
+        window.removeEventListener('resize', place);
+        stopZoomWatch();
       };
-    }, [targetNode]);
+    }, [targetNode, canSuggest, canSuggestSkills]);
   
     const execCmd = (e: React.MouseEvent, cmd: string) => { e.preventDefault(); document.execCommand('styleWithCSS', false, 'true'); document.execCommand(cmd, false); };
   
   if (!targetNode) return null;
   return (
     <div
-      className="fixed z-[200] bg-white backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-gray-200 rounded-2xl flex items-center px-2 py-1.5 gap-0 transform -translate-x-1/2 transition-all duration-200 text-gray-800"
-      style={{ top: pos.top, left: pos.left }}
+      ref={toolbarRef}
+      className="fixed z-[200] bg-white backdrop-blur-sm shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-gray-200 rounded-2xl flex flex-col items-center px-1.5 py-2 gap-0.5 transition-all duration-200 text-gray-800"
+      style={{ top: pos.top, left: pos.left, width: TOOLBAR_WIDTH }}
       onMouseDown={(e) => e.preventDefault()}
     >
       {canSuggestSkills && (
         <>
           <button
             onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }}
-            className="h-7 px-2.5 text-emerald-600 flex items-center gap-1 font-bold text-[10px] bg-emerald-50 hover:bg-emerald-100 transition-all duration-150 rounded-xl mr-1 border border-emerald-200/60"
+            className="w-8 h-9 text-emerald-600 flex flex-col items-center justify-center gap-0.5 font-bold text-[8px] bg-emerald-50 hover:bg-emerald-100 transition-all duration-150 rounded-xl border border-emerald-200/60"
             title="AI Skills suggestions"
           >
-            <Wand2 size={11} className="animate-pulse" />
+            <Wand2 size={12} className="animate-pulse" />
             Skills
           </button>
-          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <div className="h-px w-5 bg-gray-200 my-0.5" />
         </>
       )}
       {canSuggest && !canSuggestSkills && (
         <>
           <button
             onClick={(e) => { e.preventDefault(); onSuggestPoint(); }}
-            className="h-7 px-2.5 text-emerald-600 flex items-center gap-1 font-bold text-[10px] bg-emerald-50 hover:bg-emerald-100 transition-all duration-150 rounded-xl mr-1 border border-emerald-200/60"
+            className="w-8 h-9 text-emerald-600 flex flex-col items-center justify-center gap-0.5 font-bold text-[8px] bg-emerald-50 hover:bg-emerald-100 transition-all duration-150 rounded-xl border border-emerald-200/60"
             title="Suggest contextual AI point"
           >
-            <Wand2 size={11} className="animate-pulse" />
+            <Wand2 size={12} className="animate-pulse" />
             AI
           </button>
-          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <div className="h-px w-5 bg-gray-200 my-0.5" />
         </>
       )}
       {([
@@ -329,7 +387,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
           <Icon size={14} />
         </button>
       ))}
-      <div className="w-px h-4 bg-gray-200 mx-1" />
+      <div className="h-px w-5 bg-gray-200 my-0.5" />
       <button
         onClick={(e) => execCmd(e, 'insertUnorderedList')}
         className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-all duration-150 rounded-xl hover:bg-gray-100 hover:scale-110 active:scale-95"
@@ -337,7 +395,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
       >
         <List size={14} />
       </button>
-      <div className="w-px h-4 bg-gray-200 mx-1" />
+      <div className="h-px w-5 bg-gray-200 my-0.5" />
       {([
         { cmd: 'justifyLeft', Icon: AlignLeft, title: 'Align Left' },
         { cmd: 'justifyCenter', Icon: AlignCenter, title: 'Center' },
@@ -392,6 +450,69 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     const timer = window.setTimeout(() => setConfirmingRemove(false), 3000);
     return () => window.clearTimeout(timer);
   }, [confirmingRemove]);
+
+  // Section controls render as a vertical rail parked OUTSIDE the page, level
+  // with this section — they used to sit inside the page above it. Same pattern
+  // as the hook above: keep it above the conditional returns (rules-of-hooks);
+  // placement simply no-ops until the section element exists.
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
+  const [controlsPos, setControlsPos] = useState({ top: -1000, left: 0 });
+
+  const placeControls = React.useCallback(() => {
+    const el = controlsRef.current;
+    const sectionEl = sectionRef.current;
+    const pageEl = sectionEl?.closest('.cv-page') as HTMLElement | null;
+    if (!el || !sectionEl || !pageEl) return;
+
+    // This rail lives inside the canvas' zoom-scaled wrapper, so `fixed`
+    // resolves against that wrapper (not the viewport) and the rail is scaled
+    // with it. Calibrate the mapping from the element's *current* placement so
+    // the maths holds at any zoom level (the origin is a pure translation, so
+    // one pass converges).
+    const rect = el.getBoundingClientRect();
+    const scaleX = rect.width > 0 ? rect.width / (el.offsetWidth || 44) : 1;
+    const scaleY = rect.height > 0 ? rect.height / (el.offsetHeight || 1) : 1;
+    const originX = rect.left - (parseFloat(el.style.left) || 0) * scaleX;
+    const originY = rect.top - (parseFloat(el.style.top) || 0) * scaleY;
+
+    const sectionRect = sectionEl.getBoundingClientRect();
+    const pageRect = pageEl.getBoundingClientRect();
+    const railW = rect.width || 44;
+    const railH = rect.height || 0;
+    const gap = 10;
+
+    // Prefer outside the page's left edge, then its right edge.
+    let wantX = pageRect.left - gap - railW;
+    if (wantX < 8) wantX = pageRect.right + gap;
+    if (wantX + railW > window.innerWidth - 8) wantX = Math.max(8, pageRect.left + gap);
+
+    const maxTop = Math.max(8, window.innerHeight - railH - 8);
+    const wantY = Math.max(8, Math.min(sectionRect.top, maxTop));
+
+    setControlsPos({
+      top: (wantY - originY) / scaleY,
+      left: (wantX - originX) / scaleX,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (readOnly) return undefined;
+    placeControls();
+    // The rail's height depends on which buttons render, so measure once painted.
+    const raf = requestAnimationFrame(placeControls);
+    const scrollContainers = document.querySelectorAll('.overflow-auto');
+    scrollContainers.forEach(c => c.addEventListener('scroll', placeControls, { passive: true }));
+    window.addEventListener('resize', placeControls);
+    const stopZoomWatch = observeCanvasZoom(sectionRef.current, placeControls);
+    return () => {
+      cancelAnimationFrame(raf);
+      scrollContainers.forEach(c => c.removeEventListener('scroll', placeControls));
+      window.removeEventListener('resize', placeControls);
+      stopZoomWatch();
+    };
+  }, [readOnly, placeControls]);
+
   if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
@@ -488,9 +609,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const isHeaderPage = assignedPage === pageIdx;
 
   const showInlineControls = !readOnly && primaryTitleKey && isHeaderPage;
+  const SECTION_RAIL_WIDTH = 44;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References', 'Languages', 'Interests', 'Skills'].includes(SnippetComponent.category);
   const controls = showInlineControls ? (
-    <div className="absolute opacity-0 group-hover/inner:opacity-100 transition-all duration-200 flex items-center gap-0.5 z-[200] no-print top-[-24px] right-1 bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded px-1 py-0.5">
+    <div
+      ref={controlsRef}
+      className="fixed opacity-0 pointer-events-none group-hover/inner:opacity-100 group-hover/inner:pointer-events-auto transition-all duration-200 flex flex-col items-center gap-0.5 z-[200] no-print bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-200 rounded-xl px-0.5 py-1"
+      style={{ top: controlsPos.top, left: controlsPos.left, width: SECTION_RAIL_WIDTH }}
+    >
       {/* Action icons group */}
       {isHeader && instance.type !== 'header-accent' && instance.type !== 'header-minimal' && (
         <button
@@ -538,7 +664,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         </button>
       )}
       {isHeader && (
-        <div className="flex items-center gap-0.5 border-r border-gray-200 pr-1 mr-1">
+        <div className="flex flex-col items-center gap-0.5 border-b border-gray-200 pb-1 mb-1">
           <button
             onClick={() => ctx?.setDesign?.({ ...ctx.design, headerAlign: 'left' })}
             className={`w-7 h-7 flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 bg-transparent ${
@@ -584,7 +710,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       </button>
       {!isHeader && (
         <>
-          <div className="w-[1.5px] h-4 bg-gray-200 mx-1" />
+          <div className="h-px w-6 bg-gray-200 my-0.5" />
           {/* Layout-aware directional arrow controls */}
           {(() => {
             const tplType: string = activeTemplate?.type || '1-col';
@@ -634,7 +760,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
             const btnCls = 'w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 active:scale-90 transition-all duration-150 cursor-pointer select-none';
 
             return (
-              <div className="flex items-center gap-0">
+              <div className="grid grid-cols-2 justify-items-center gap-0.5">
                 {showLeft && (
                   <button
                     onClick={() => onMoveToZone?.(index, leftZone)}
@@ -669,7 +795,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
                 )}
                  {tplType === 'hybrid-split' && (
                   <>
-                    <div className="w-[1px] h-3 bg-gray-200 mx-1" />
+                    <div className="h-px w-6 bg-gray-200 my-0.5" />
                     {bareZoneId === 'main' ? (
                       <button
                         onClick={() => onMoveToZone?.(index, 'left')}
@@ -714,6 +840,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   return (
     <SnippetContext.Provider value={{ blockId: instance.id, pageIdx, pageAssignments: ctx?.pageAssignments || {} }}>
       <div
+        ref={sectionRef}
         data-block-id={instance.id}
         className={`relative group/snippet cv-section-wrapper ${showDropLine ? 'mt-10' : 'mt-0'} ${moriHoverClass}`}
         data-json-section={SNIPPET_CATEGORY_JSON_PATH[SnippetComponent.category] || ''}
@@ -962,6 +1089,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
         </div>
       );
     case 'sidebar-right':
+    case 'sidebar-right-dark':
       return (
         <div className={`w-full h-full flex relative cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
           <div className="absolute right-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>

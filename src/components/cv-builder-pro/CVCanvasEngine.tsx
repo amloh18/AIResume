@@ -14,6 +14,7 @@ import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './help
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
+import { buildHybridBands, legacyHybridOrders, moveToEndOfHybridFlow, nextHybridOrder, type HybridBand } from './hybrid-flow';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { LayoutDebugOverlay, type DebugBlock, type LayoutDebugInfo } from './LayoutDebugOverlay';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
@@ -24,7 +25,6 @@ import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import toast from '@/lib/hot-toast';
 import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
 import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
-import UtilityPanelPill from '@/components/resume-enhancer/components/UtilityPanelPill';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -88,6 +88,12 @@ export interface CVCanvasBuilderProps {
   role?: string | null;
   moriChatMode?: boolean;
   isGuestMode?: boolean;
+  /**
+   * When true and the document has 2+ pages, the canvas lays pages out two per
+   * row (a "spread") instead of a single centered column. The editor uses this
+   * for its wide, panel-closed state.
+   */
+  spread?: boolean;
 }
 
 export interface CVCanvasBuilderRef {
@@ -386,6 +392,32 @@ const templateLayoutFlows: Record<string, { global: string[]; columns: string[][
   'hybrid-split': { global: ['header', 'main'], columns: [['left'], ['right']] },
 };
 
+/**
+ * Resolve any stored/prop template to a real canvas template whose `type` the
+ * layout switch understands.
+ *
+ * `cvData.metadata.canvasTemplate` can hold a legacy or malformed object (e.g.
+ * `{ id: 'modern' }` with no `type`), and the render switch falls through to
+ * "Layout not found" whenever `type` isn't one of the known layouts. That made
+ * the editor fail to render only for *some* saved documents — depending on what
+ * was in metadata. Normalising here means the canvas always has a renderable
+ * layout, and a missing/unknown template degrades to the default one instead of
+ * a blank page.
+ */
+const resolveCanvasTemplate = (candidate: any, fallback?: any) => {
+  const known = (candidate?: any) =>
+    !!candidate && typeof candidate.type === 'string' && !!templateLayoutFlows[candidate.type];
+
+  if (known(candidate)) return candidate;
+
+  const id = candidate?.id || candidate?._id;
+  const byId = id ? CANVAS_TEMPLATES.find((item) => item.id === id || (item as any)._id === id) : undefined;
+  if (byId) return byId;
+
+  if (known(fallback)) return fallback;
+  return CANVAS_TEMPLATES.find((item) => item.type === '1-col') || CANVAS_TEMPLATES[0];
+};
+
 const bareCanvasZoneId = (zoneId?: string) => (zoneId || 'main').replace(/_page_\d+$/, '');
 
 const cloneZoneMap = (zones: Record<string, any[]>): Record<string, any[]> => {
@@ -409,13 +441,29 @@ const pickAddTargetZone = (zones: Record<string, any[]>, templateType?: string) 
   return keys.find((key) => key !== 'header') || keys[0] || 'main';
 };
 
-const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }, ref) => {
+const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false, spread = false }, ref) => {
+  // Page count and viewport are tracked before the fit hook below so auto-fit
+  // can account for the doubled document width when pages are laid out side by
+  // side.
+  const [totalPagesCount, setTotalPagesCount] = useState(1);
+  const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window === 'undefined' ? 1440 : window.innerWidth,
+    height: typeof window === 'undefined' ? 1080 : window.innerHeight,
+    devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
+  }));
   const isInternalLayoutChange = React.useRef(false);
   const layoutWriteLock = React.useRef(false);
   const zonesRef = React.useRef<Record<string, any[]>>({});
   const { userData } = useUserData();
 
-  const [activeTemplate, setActiveTemplate] = useState(template || cvData?.metadata?.canvasTemplate || CANVAS_TEMPLATES[0]);
+  const [activeTemplate, setActiveTemplate] = useState(() =>
+    resolveCanvasTemplate(template || cvData?.metadata?.canvasTemplate)
+  );
+  // Keep the very latest candidate so the normaliser can fall back to it when a
+  // previously stored template turns out to be legacy/malformed.
+  const requestedTemplateRef = React.useRef<any>(template || cvData?.metadata?.canvasTemplate);
+  requestedTemplateRef.current = template || cvData?.metadata?.canvasTemplate;
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [focusedJsonPath, setFocusedJsonPath] = useState<string | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
@@ -430,7 +478,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         return true;
       });
     });
-    return deduped;
+    // Legacy CVs have no per-section `order`; backfilling it reproduces today's
+    // hybrid layout exactly (full-width first, then rows) while making an
+    // arbitrary single → 2-col → single sequence expressible from now on.
+    return legacyHybridOrders(deduped);
   });
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
   const [design, setDesign] = useState(cvData?.metadata?.canvasDesign || { 
@@ -472,8 +523,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   // a Letter document stops being auto-fit against the fixed A4 width.
   const activePageWidthPx = getPageDimensions(design.pageSize).widthPx;
   const activePageHeightPx = getPageDimensions(design.pageSize).heightPx;
+  // Two-up only makes sense with more than one page, and only in the wide
+  // (panel-closed) editor state.
+  const isSpread = spread && totalPagesCount > 1;
+  // Mirrors the responsive `--cv-page-gap` produced by computeCanvasLayoutMetrics
+  // so the auto-fit width matches the rendered spread exactly.
+  const spreadGapPx = viewport.width < 768 ? 24 : viewport.width < 1280 ? 32 : 40;
+  const documentFitWidthPx = isSpread ? activePageWidthPx * 2 + spreadGapPx : activePageWidthPx;
   const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
-    documentPixelWidth: activePageWidthPx,
+    documentPixelWidth: documentFitWidthPx,
     documentPixelHeight: activePageHeightPx,
     paddingPx: 64, // 32px padding per side
     maxScale: 2.0,
@@ -519,8 +577,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     };
   }, [setZoom]);
 
-  const [totalPagesCount, setTotalPagesCount] = useState(1);
-  const [pageAssignments, setPageAssignments] = useState<Record<string, number>>({});
   const [debugMode, setDebugMode] = useState(false);
   const [debugInfo, setDebugInfo] = useState<LayoutDebugInfo | null>(null);
 
@@ -537,12 +593,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     }
   }, [isAdmin]);
 
-  const [viewport, setViewport] = useState(() => ({
-    width: typeof window === 'undefined' ? 1440 : window.innerWidth,
-    height: typeof window === 'undefined' ? 1080 : window.innerHeight,
-    devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1,
-  }));
-
   // Sync local state with cvData prop changes (external updates like "Fix Now" or "Mori Chat")
   useEffect(() => {
     if (!cvData) return;
@@ -556,7 +606,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const isEchoOfLocalWrite = incoming === pendingWrite || incoming === current;
 
       if (!isEchoOfLocalWrite) {
-        setZones(cloneZoneMap(raw));
+        setZones(legacyHybridOrders(cloneZoneMap(raw)));
       }
     }
 
@@ -571,7 +621,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     // 3. Sync active template if metadata changed externally
     if (cvData.metadata?.canvasTemplate && cvData.metadata.canvasTemplate.id !== activeTemplate.id) {
-      setActiveTemplate(cvData.metadata.canvasTemplate);
+      setActiveTemplate(resolveCanvasTemplate(cvData.metadata.canvasTemplate, requestedTemplateRef.current));
     }
   }, [cvData.metadata]);
 
@@ -611,9 +661,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   useEffect(() => {
     if (readOnly) return;
+    // The tile rail owns open/close decisions and dispatches `close-utility-panel`
+    // for closing, so these handlers always *open* — toggling here would fight
+    // the rail's active state.
     const handleSetSidebar = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setActiveSidebar(active => active === detail ? null : detail);
+      setActiveSidebar(detail);
       setIsTemplateModalOpen(false);
     };
     const handleOpenTemplates = () => {
@@ -952,7 +1005,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   const loadTemplate = (template: any) => {
     if (!template) return;
-    setActiveTemplate(template);
+    // Normalise before storing so the layout switch always has a known `type`
+    // (a legacy `{ id }`-only template would otherwise render "Layout not found").
+    const resolved = resolveCanvasTemplate(template);
+    template = resolved;
+    setActiveTemplate(resolved);
     const initialZones: Record<string, any[]> = {};
     if (template?.zones) {
       Object.keys(template.zones).forEach((zoneId: string) => {
@@ -1251,6 +1308,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       }
       isInternalLayoutChange.current = true;
       window.setTimeout(() => { isInternalLayoutChange.current = false; }, 800);
+      if (activeTemplate?.type === 'hybrid-split' && dragData?.source === 'canvas' && sourceZone !== destZone) {
+        // Moving a section across zones (e.g. main → left, or the "Convert to
+        // Full Width" button) puts it at the end of the hybrid flow so it can't
+        // silently jump above a 2-column row it was previously below.
+        return moveToEndOfHybridFlow(newZones, dragData.instance?.id);
+      }
       return newZones;
     });
   };
@@ -1348,14 +1411,20 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
     const snippetDef = SNIPPETS[newType];
     const targetZoneId = bareCanvasZoneId(addContext.zoneId);
-    const newBlock = { id: generateId(), type: newType };
-    const newZones = cloneZoneMap(zonesRef.current);
+    const newBlock: any = { id: generateId(), type: newType };
+    const newZones = legacyHybridOrders(cloneZoneMap(zonesRef.current));
     if (!newZones[targetZoneId]) newZones[targetZoneId] = [];
+    // In the hybrid flow a new section always takes the next slot *after* the
+    // last one, so adding a full-width section after a 2-column row keeps the
+    // 2-column row above it (single → 2-col → single).
+    if (activeTemplate?.type === 'hybrid-split') {
+      newBlock.order = nextHybridOrder(newZones);
+    }
     const list = [...newZones[targetZoneId]];
     const allBlocks = Object.values(newZones).flat();
 
     if (addContext.isAdd) {
-      const alreadyPresent = allBlocks.some((block) => block.type === newType || SNIPPETS[block.type]?.category === snippetDef?.category);
+      const alreadyPresent = allBlocks.some((block) => block?.type === newType || SNIPPETS[block?.type]?.category === snippetDef?.category);
       if (alreadyPresent) {
         layoutWriteLock.current = false;
         return;
@@ -1374,6 +1443,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         });
       }
     } else if (typeof addContext.index === 'number' && list[addContext.index]) {
+      // Replacing a section in place keeps its slot, so a replaced section never
+      // jumps position in the hybrid flow.
+      if (activeTemplate?.type === 'hybrid-split') {
+        newBlock.order = list[addContext.index].order;
+      }
       list[addContext.index] = newBlock;
       if (isTabletOrBigger) {
         setReplacingSnippet((prev: any) => (prev ? { ...prev, currentType: newType } : null));
@@ -1508,10 +1582,13 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
       // ---- Hybrid One-Pager: unified single-width / split-row flow ----
       // Sections flow top-to-bottom on each page as whole units (respecting each
-      // section's full height): full-width sections first, then paired 50/50 rows
-      // from left/right. A section that doesn't fit the remaining space moves to the
-      // next page whole, so a single-column section is never shown split across two
-      // pages with a split-row in between, and nothing overlaps.
+      // section's full height), in the order stored per section by
+      // `hybrid-flow.ts`. Bands are either a full-width section or a 50/50 row
+      // from two sections, so an arbitrary sequence such as
+      // single → 2-column → single is supported. A section that doesn't fit the
+      // remaining space moves to the next page whole, so a full-width section is
+      // never shown split across two pages with a split-row in between, and
+      // nothing overlaps.
       if (layoutType === 'hybrid-split') {
         const sectionInfo = (block: any): { isList: boolean; total: number; headerH: number; entryGap: number; entries: any[] } => {
           const snippetDef = SNIPPETS[block.type];
@@ -1541,13 +1618,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           }
         };
 
-        const fullWidthBlocks: any[] = [];
-        ['header', 'main'].forEach((z: string) => {
-          (safeZones[z] || []).forEach((b: any) => fullWidthBlocks.push(b));
-        });
-        const rowLeftBlocks = safeZones['left'] || [];
-        const rowRightBlocks = safeZones['right'] || [];
-        const maxRows = Math.max(rowLeftBlocks.length, rowRightBlocks.length);
+        const bands = buildHybridBands(safeZones);
 
         let page = 0;
         let used = 0;
@@ -1625,10 +1696,13 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           used += (used > 0 ? sectionGap : 0) + rowH;
         };
 
-        fullWidthBlocks.forEach(placeFullWidth);
-        for (let i = 0; i < maxRows; i++) {
-          placeRow(rowLeftBlocks[i], rowRightBlocks[i]);
-        }
+        bands.forEach((band) => {
+          if (band.kind === 'full' && band.full) {
+            placeFullWidth(band.full);
+          } else {
+            placeRow(band.left || null, band.right || null);
+          }
+        });
       } else {
       // 2a. First, paginate global stacked zones sequentially
       const globalHeightOnPage: Record<number, number> = {};
@@ -1923,6 +1997,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
   const renderCanvasLayout = () => {
     const layoutType = activeTemplate.type;
     const safeZones = zones || {};
+    // Rendered band list for the hybrid flow — built from the shared ordering
+    // helper so pagination, the interactive canvas and the print renderer all
+    // agree on section order.
+    const hybridBands = layoutType === 'hybrid-split' ? buildHybridBands(safeZones) : [];
 
     const isColorDark = (hex: string) => {
       if (!hex || hex[0] !== '#') return false;
@@ -1940,9 +2018,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     };
     const isDarkSidebar = isColorDark(design.sidebarBgColor || '#f8fafc');
 
-    const getPageBlocks = (zoneId: string, pageIdx: number) => {
+    const getPageBlocks = (zoneId: string, pageIdx: number, onlyBlockIds?: string[]) => {
       const blocks = safeZones[zoneId] || [];
       return blocks.filter(block => {
+        // The hybrid flow renders one band at a time, so it can request a single
+        // section out of a zone that holds several.
+        if (onlyBlockIds && !onlyBlockIds.includes(block.id)) return false;
         const snippetDef = SNIPPETS[block.type];
         const isList = snippetDef && LIST_SNIPPET_CATEGORIES.includes(snippetDef.category);
 
@@ -1964,8 +2045,8 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       });
     };
 
-    const renderPageZone = (zoneId: string, pageIdx: number, className: string, isDark = false) => {
-      const pageBlocks = getPageBlocks(zoneId, pageIdx);
+    const renderPageZone = (zoneId: string, pageIdx: number, className: string, isDark = false, onlyBlockIds?: string[]) => {
+      const pageBlocks = getPageBlocks(zoneId, pageIdx, onlyBlockIds);
       
       const getGlobalIndex = (pageSpecificIdx: number) => {
         const globalBlocks = safeZones[zoneId] || [];
@@ -2068,7 +2149,19 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     const pages = Array.from({ length: totalPages }, (_, i) => i);
 
     return (
-      <div id="cv-document-root" className={`flex flex-col items-center gap-[var(--cv-page-gap)] cv-document ${formatClass}`} style={{ width: 'var(--cv-page-width)' }}>
+      <div
+        id="cv-document-root"
+        className={`cv-document ${formatClass} ${
+          isSpread
+            ? 'grid grid-cols-2 items-start justify-items-center gap-[var(--cv-page-gap)]'
+            : 'flex flex-col items-center gap-[var(--cv-page-gap)]'
+        }`}
+        style={{
+          width: isSpread
+            ? 'calc(var(--cv-page-width) * 2 + var(--cv-page-gap))'
+            : 'var(--cv-page-width)',
+        }}
+      >
         {pages.map(pageIdx => {
           const renderLayout = () => {
             switch (layoutType) {
@@ -2119,6 +2212,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                   </div>
                 );
               case 'sidebar-right': 
+              case 'sidebar-right-dark': 
                 return (
                   <div className="h-full w-full flex relative" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>
                     <div className="absolute right-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
@@ -2169,30 +2263,52 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                   </div>
                 );
               case 'hybrid-split': {
-                // Render only the zone wrappers that actually have content on this page so the
-                // DOM spacing matches the unified pagination model (which budgets gaps only
-                // *between* content groups and reserves one page-margin at the top of a page).
-                const headerOnPage = getPageBlocks('header', pageIdx).length > 0;
-                const mainOnPage = getPageBlocks('main', pageIdx).length > 0;
-                const rowsOnPage = getPageBlocks('left', pageIdx).length > 0 || getPageBlocks('right', pageIdx).length > 0;
+                // Render the hybrid bands that actually have content on this page, in
+                // the per-section order from `hybrid-flow.ts`. A band is either a
+                // full-width section or a 50/50 row from two sections, so
+                // single → 2-col → single renders correctly. Only bands with content
+                // are mounted, which keeps the DOM spacing identical to the unified
+                // pagination model (gaps only *between* bands, one page margin at the
+                // top of the page).
+                const bandHasContent = (band: HybridBand) => {
+                  if (band.kind === 'full') {
+                    return getPageBlocks(band.full!.zone || 'main', pageIdx).some((b: any) => b.id === band.full!.id);
+                  }
+                  return (
+                    (band.left ? getPageBlocks('left', pageIdx).some((b: any) => b.id === band.left!.id) : false) ||
+                    (band.left ? getPageBlocks('right', pageIdx).some((b: any) => b.id === band.left!.id) : false) ||
+                    (band.right ? getPageBlocks('right', pageIdx).some((b: any) => b.id === band.right!.id) : false)
+                  );
+                };
+                const bandsOnPage = hybridBands.filter(bandHasContent);
+
                 return (
-                  <div className="h-full w-full flex flex-col" style={{ minHeight: 'var(--cv-page-height)' }}>
-                    {headerOnPage && (
-                      <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
-                        {renderPageZone('header', pageIdx, 'w-full min-w-0')}
-                      </div>
-                    )}
-                    {mainOnPage && (
-                      <div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)', paddingBottom: 0 }}>
-                        {renderPageZone('main', pageIdx, 'w-full min-w-0')}
-                      </div>
-                    )}
-                    {rowsOnPage && (
-                      <div className="flex flex-1 items-start gap-[var(--cv-column-gap)]" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: mainOnPage || headerOnPage ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}>
-                        <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max')}</div>
-                        <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max')}</div>
-                      </div>
-                    )}
+                  <div
+                    className="h-full w-full flex flex-col"
+                    style={{
+                      minHeight: 'var(--cv-page-height)',
+                      paddingTop: 'var(--cv-page-margin)',
+                      paddingBottom: 'var(--cv-page-margin)',
+                      paddingLeft: 'var(--cv-page-margin)',
+                      paddingRight: 'var(--cv-page-margin)',
+                      rowGap: 'var(--cv-section-gap, 16px)',
+                    }}
+                  >
+                    {bandsOnPage.map((band, bandIdx) => {
+                      if (band.kind === 'full') {
+                        return (
+                          <div key={`band-${bandIdx}`} className="w-full min-w-0">
+                            {renderPageZone(band.full!.zone || 'main', pageIdx, 'w-full min-w-0', false, [band.full!.id])}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={`band-${bandIdx}`} className="flex items-start gap-[var(--cv-column-gap)]">
+                          <div className="flex-1 min-w-0">{renderPageZone('left', pageIdx, 'h-max', false, band.left ? [band.left.id] : [])}</div>
+                          <div className="flex-1 min-w-0">{renderPageZone('right', pageIdx, 'h-max', false, band.right ? [band.right.id] : [])}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               }
@@ -2296,7 +2412,14 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             </div>
           ) : (
             <div key={templateAnimKey} className="transform origin-top h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
-              <div className="cv-document-wrapper relative" style={canvasStyleVars}>
+              <div
+                className="cv-document-wrapper relative"
+                style={
+                  isSpread
+                    ? { ...canvasStyleVars, width: 'calc(var(--cv-page-width) * 2 + var(--cv-page-gap))' }
+                    : canvasStyleVars
+                }
+              >
                 {renderCanvasLayout()}
                 {debugMode && debugInfo && (
                   <LayoutDebugOverlay
@@ -2421,8 +2544,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           const panelContent = (
             <div className="flex-grow flex flex-col h-full overflow-hidden">
               <div className={`shrink-0 ${bgNav}`}>
-                <UtilityPanelPill activePanel="design" />
-                <div className={`lg:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
+                <div className={`md:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
                 <button onClick={() => {
                     setActiveSidebar(null);
@@ -2523,8 +2645,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           const panelContent = (
             <div className="flex-grow flex flex-col h-full overflow-hidden">
               <div className={`shrink-0 ${bgNav}`}>
-                <UtilityPanelPill activePanel="json" />
-                <div className={`lg:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
+                <div className={`md:hidden p-5 border-b flex items-center justify-between ${bgNav}`}>
                 <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
                   <FileJson size={18} className={brandGreen} /> Raw JSON
                 </h3>
@@ -2690,8 +2811,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         const content = (
           <div className="flex-grow flex flex-col h-full overflow-hidden">
             <div className={`shrink-0 ${bgNav}`}>
-              <UtilityPanelPill activePanel="layout" />
-              <div className={`lg:hidden p-5 border-b flex justify-between items-center ${bgNav}`}>
+              <div className={`md:hidden p-5 border-b flex justify-between items-center ${bgNav}`}>
               <div className="flex items-center gap-3">
                 <LayoutTemplate size={18} className="text-emerald-500"/>
                 <div>
@@ -2885,15 +3005,19 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           word-break: normal;
           hyphens: none;
         }
-        /* Specific handle for name in header - allow shrinking */
+        /* Name / job title in the header. These must WRAP, not stay on one line:
+           in the Full-Sidebar layouts the same header renders in a 32%-wide
+           column, where nowrap pushed the title straight over the main
+           content. Keep this identical to the print rules in
+           CVSnapshotDocument so the canvas is WYSIWYG. */
         .cv-header-name, .cv-header-role {
           display: inline-block;
           max-width: 100%;
           overflow: visible !important;
           text-overflow: clip;
-          white-space: nowrap !important;
+          white-space: normal !important;
           word-break: normal;
-          overflow-wrap: normal;
+          overflow-wrap: break-word;
         }
         .cv-page {
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 

@@ -17,6 +17,8 @@ interface CVBuilderProAdapterProps {
   role?: string | null;
   moriChatMode?: boolean;
   isGuestMode?: boolean;
+  /** Lay pages out two per row when the document has 2+ pages (wide editor state). */
+  spread?: boolean;
 }
 
 const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
@@ -26,7 +28,7 @@ const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
 // builders used there, and keeping both sides in one module stops the
 // canvas ↔ Unified round trip from drifting apart.
 
-const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false }: CVBuilderProAdapterProps, ref) => {
+const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role, moriChatMode = false, isGuestMode = false, spread = false }: CVBuilderProAdapterProps, ref) => {
   const canvasData = useMemo(() => normalizeCvDataForCanvas(cvData), [cvData]);
 
   const handleDataChange = useCallback((rawData: any) => {
@@ -327,6 +329,7 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       role={role}
       moriChatMode={moriChatMode}
       isGuestMode={isGuestMode}
+      spread={spread}
     />
   );
 });

@@ -1698,10 +1698,11 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
       {/* Top job matches */}
       <TopJobMatchesSection />
 
-      {/* Mobile-only reorder container: Continue → Profile Analytics → Recent Jobs → My CVs → Cover Letters */}
+      {/* Mobile-only reorder container: Continue → Profile Analytics → Needs Attention → Recent Jobs → My CVs → Cover Letters */}
       <div className="lg:hidden space-y-6">
         <ContinuePanel />
         <ProfileAnalyticsPanel />
+        <NeedsAttentionWidget limit={3} />
         <RecentJobsPanel />
         <MyCvsPanel />
         <CoverLettersPanel />
@@ -1721,11 +1722,12 @@ export default function RedesignedDashboardView({ hideGreeting = false }: { hide
           <UpgradeSuggestionCard />
           <ContinuePanel />
           <ProfileAnalyticsPanel />
+          {/* Needs attention — sits directly under Profile Analytics so the rail
+              reads: setup → progress → what needs you. Renders nothing when the
+              list is empty. */}
+          <NeedsAttentionWidget limit={3} />
         </div>
       </div>
-
-      {/* Needs attention — items requiring user intervention */}
-      <NeedsAttentionWidget limit={3} />
     </div>
   );
 }

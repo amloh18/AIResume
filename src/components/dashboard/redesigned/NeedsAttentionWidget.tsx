@@ -172,22 +172,10 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
     }
   };
 
-  const getTypeBg = (type: AttentionItem['type']) => {
-    switch (type) {
-      case 'needs_input':
-        return 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-800/30';
-      case 'failed':
-        return 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-800/30';
-      case 'captcha':
-        return 'bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-800/30';
-      case 'unanswered':
-        return 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-800/30';
-      case 'email_failed':
-        return 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-800/30';
-      default:
-        return 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10';
-    }
-  };
+  // Items sit on the same neutral surface as every other dashboard card; the
+  // semantic colour lives in the type icon so the card does not read as a
+  // differently-themed block inside the dashboard grid.
+  const itemSurface = 'bg-[var(--bg-tertiary)] border-[var(--border-primary)]';
 
   // No loading skeleton on purpose. The widget is purely additive — it either
   // has something the user must act on, or it renders nothing (see the
@@ -196,13 +184,13 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
   // panel on every load, then collapse it when the list came back empty.
   if (error) {
     return (
-      <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] p-4">
+      <section className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm overflow-hidden p-5">
         <div className="flex items-center gap-2 mb-3">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Needs Attention</h3>
+          <h2 className="dashboard-panel-title text-[var(--text-primary)]">Needs Attention</h2>
         </div>
         <div className="text-center py-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">{error}</p>
+          <p className="text-xs text-[var(--text-secondary)]">{error}</p>
           <button
             onClick={() => fetchAttentionItems()}
             className="mt-2 px-3 py-1 rounded-lg bg-gray-100 dark:bg-white/5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
@@ -210,7 +198,7 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
             Retry
           </button>
         </div>
-      </div>
+      </section>
     );
   }
 
@@ -219,35 +207,37 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
   }
 
   return (
-    <div className="rounded-xl border border-amber-200/50 dark:border-amber-800/30 bg-gradient-to-br from-amber-50/50 to-white dark:from-amber-950/20 dark:to-[#141810] p-4">
+    /* Matches the shared dashboard `Panel` chrome (bg-secondary + border-primary
+       + rounded-xl + header rule) so this card reads as a sibling of the others. */
+    <section className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-xl shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
+      <header className="px-5 pt-4 pb-3 flex items-center justify-between gap-4 border-b border-[var(--border-primary)]">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">Needs Attention</h3>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+          <h2 className="dashboard-panel-title text-[var(--text-primary)]">Needs Attention</h2>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 tabular-nums">
             {items.length}
           </span>
         </div>
         {items.length > 3 && (
           <button
             onClick={() => router.push('/dashboard/jobs?tab=applications&filter=needs_attention')}
-            className="text-[11px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-0.5"
+            className="text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-0.5 shrink-0"
           >
             View all <ChevronRight className="w-3 h-3" />
           </button>
         )}
-      </div>
+      </header>
 
       {/* Items */}
-      <div className="space-y-2">
+      <div className="p-5 space-y-2">
         {items.map((item) => (
           <div
             key={item._id}
             onClick={() => router.push(item.actionUrl)}
-            className={`flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${getTypeBg(item.type)}`}
+            className={`flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${itemSurface}`}
           >
             {/* Icon */}
             <div className="shrink-0 mt-0.5">
@@ -257,7 +247,7 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                <span className="text-xs font-semibold text-[var(--text-primary)] truncate">
                   {item.jobTitle}
                 </span>
               </div>
@@ -268,24 +258,24 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
                   logoUrl={item.companyLogo}
                   jobId={item.jobId}
                 />
-                <span className="text-[11px] text-gray-600 dark:text-gray-400 truncate">
+                <span className="text-[11px] text-[var(--text-secondary)] truncate">
                   {item.company}
                 </span>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+              <p className="text-[11px] text-[var(--text-secondary)] mt-1 line-clamp-2">
                 {item.message}
               </p>
             </div>
 
             {/* Action */}
             <div className="shrink-0">
-              <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold bg-[var(--bg-primary)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
                 {item.actionLabel}
               </span>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
