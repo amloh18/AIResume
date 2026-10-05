@@ -17,7 +17,7 @@ const ENTRY = path.join(OUTDIR, 'vps-status-entry.ts');
 const OUTFILE = path.join(OUTDIR, 'vps-status-bundle.mjs');
 
 const ROUTE = `
-import { GET } from '@/app/api/admin/vps-setup/route';
+import { GET } from '@admin/app/api/admin/vps-setup/route';
 export async function runStatus() {
   const url = new URL('http://localhost/api/admin/vps-setup?action=status');
   const req = { url: url.toString(), nextUrl: url, headers: new Headers() };
@@ -38,7 +38,9 @@ if (useStubs) {
   const { startStubs } = await import('./remote-stubs.mjs');
   stubs = startStubs();
   process.env.INGESTION_WORKER_URL = 'http://127.0.0.1:8790';
-  process.env.INGESTION_WORKER_TOKEN = 'vps_worker_secure_secret_2026';
+  // Fixture token, not a credential. Must be assigned BEFORE `remote-stubs.mjs` is imported —
+  // that module reads it at load time. (This previously hardcoded the production token.)
+  process.env.INGESTION_WORKER_TOKEN = process.env.STUB_WORKER_TOKEN || 'local-stub-token';
   process.env.INGESTION_SERVICE_URL = 'http://127.0.0.1:4001';
   process.env.WORKER_HEALTH_URL = 'http://127.0.0.1:8791';
   process.env.STALWART_SMTP_HOST = '172.19.0.1';
@@ -98,7 +100,11 @@ await esbuild.build({
   platform: 'node',
   target: 'node22',
   packages: 'external',
-  tsconfig: path.join(ROOT, 'tsconfig.json'),
+  // Bundle against the ADMIN tsconfig. The route moved to the operations app with the admin
+  // split, and the admin tsconfig's `paths` are what make `@/` (the shared codebase) and
+  // `@admin/` (the operations app) resolve. This used to point at a repo-root `tsconfig.json`,
+  // which has not existed since `src/` moved to `apps/airesume_app` — so the probe was already stale.
+  tsconfig: path.join(ROOT, 'apps', 'admin', 'tsconfig.json'),
   alias: {
     'server-only': path.join(ROOT, 'scripts', 'server-only-shim.js'),
     'next/headers': path.join(ROOT, 'scripts', 'next-headers-shim.mjs'),

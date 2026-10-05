@@ -1,0 +1,105 @@
+# ── AIResume · app ─────────────────────────────────────────────────────
+# Written to stand alone: apps/airesume_app can be pushed as its own repository without inheriting the
+# monorepo root's rules.
+
+# ── Dependencies ───────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ───────────────────────────────────────────────────────
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Environment files ──────────────────────────────────────────────────
+# Only the template is committed. Real values never are.
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+!.env.example.*
+!*.env.example
+
+# ── Documentation ──────────────────────────────────────────────────────
+# Deny by default: an internal document that defaults to public is a leak, and a public document
+# that defaults to internal is a two-second fix. So `*.md` is ignored, and the published set is
+# allowlisted below.
+*.md
+# `!README.md` has no slash, so it re-includes README.md at every depth. Intended.
+!README.md
+# The repository-level public documents.
+!SECURITY.md
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+!CHANGELOG.md
+# The published product documentation. These are linked from README.md, so ignoring them would
+# ship a README full of dead links. Internal docs live OUTSIDE this repository entirely.
+!docs/*.md
+
+# ⚠️ These are NOT documentation — they are build inputs the running app serves:
+#   buildairesume.com/seo-llm-content.md  and  buildairesume.com/seo-meta-content.md
+# Untracking them 404s those live URLs and no build step complains.
+!public/**/*.md
+
+# ⚠️ GitHub's PR and issue templates ARE markdown, so the blanket `*.md` rule above eats them.
+# They are not documentation — GitHub only renders them from exactly these paths. A missing
+# PR template fails silently: the repository simply has no template.
+!.github/**
+
+# ── Test / coverage ────────────────────────────────────────────────────
+coverage/
+
+# ── Sensitive files ────────────────────────────────────────────────────
+# Nothing here is expected to exist today; these are the shapes that must never be committed.
+# If a legitimate fixture ever needs one of these extensions, allowlist that exact path rather
+# than deleting the rule.
+firebase-key.json
+*.pem
+*.key
+*.p8
+*.csv
+cookies.txt
+*.cookies
+*.cookie
+.browser-profile/
+
+# ── Local data ─────────────────────────────────────────────────────────
+*.bson
+*.wt
+.tmp-mongo/
+mongodb-data/
+
+# ── Logs / scratch ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+*.tmp
+*.bak
+*.backup
+*.orig
+*.rej
+*.diff
+*.patch
+.e2e-entry.ts
+.e2e-bundle.mjs
+
+# ── Tool / IDE caches ──────────────────────────────────────────────────
+.vercel/
+.claude/
+.freebuff/
+.kilo/
+.wrangler/
+.shipstudio/
+.posthog/
+.vscode/
+.idea/
+
+# ── OS / editor ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

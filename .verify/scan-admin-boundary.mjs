@@ -18,11 +18,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-// The app's source lives at `apps/app/src` in the monorepo. Resolve it from the repository root so
+// The app's source lives at `apps/airesume_app/src` in the monorepo. Resolve it from the repository root so
 // this stays runnable as `node .verify/scan-admin-boundary.mjs` without a `cd`.
 const REPO_ROOT = process.cwd();
-const ROOT = fs.existsSync(path.join(REPO_ROOT, 'apps', 'app', 'src'))
-  ? path.join(REPO_ROOT, 'apps', 'app')
+const ROOT = fs.existsSync(path.join(REPO_ROOT, 'apps', 'airesume_app', 'src'))
+  ? path.join(REPO_ROOT, 'apps', 'airesume_app')
   : REPO_ROOT;
 const SRC = path.join(ROOT, 'src');
 const EXTS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json'];

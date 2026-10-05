@@ -1,0 +1,97 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Two things before you start:
+
+        - **Do not paste secrets.** No API keys, connection strings, tokens or real account details —
+          redact them. See [SECURITY.md](../SECURITY.md).
+        - **A security vulnerability does not belong here.** Report it privately instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you observed, in concrete terms.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps. If it is not reproducible, say so — that is useful too.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See the error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: project
+    attributes:
+      label: Which project?
+      options:
+        - app (the Next.js web application)
+        - resumebuilder-worker (job ingestion)
+        - Both / not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the product?
+      options:
+        - BUILD — resume creation and editing
+        - MATCH — job discovery and matching
+        - TAILOR — per-job tailoring and cover letters
+        - APPLY — applying to a job (incl. auto-apply)
+        - TRACK — application tracking and email
+        - LEARN — analytics
+        - Account, auth or billing
+        - Self-hosting / deployment
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The tag, commit SHA, or image tag you are running. `/api/health` reports the build.
+      placeholder: e.g. main @ a1b2c3d, or the image tag
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error output
+      description: Redact secrets, tokens, connection strings and email addresses first.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have redacted every secret, token and real account detail from this report.
+          required: true
+        - label: This is not a security vulnerability (those are reported privately — see SECURITY.md).
+          required: true

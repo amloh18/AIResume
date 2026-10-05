@@ -1,0 +1,57 @@
+# ── resumebuilder-worker — Docker build context ────────────────────────
+# The build context is this directory, so anything listed here is neither sent to the daemon nor
+# available to a COPY. Two of these are not merely size optimisations:
+#
+#   * `.env` — the real environment file. `COPY` is explicit in the Dockerfile so it would not be
+#     picked up by accident today, but a future `COPY . .` would bake production secrets into a
+#     layer. Excluding it here makes that mistake impossible rather than unlikely.
+#   * `.git` — this directory is now its own repository, so the context would otherwise carry the
+#     whole object database on every build.
+#
+# `node_modules` and `dist` are excluded because the image installs and compiles its own: a host
+# `node_modules` built on macOS/arm64 would be copied over the Linux one and break the runtime.
+
+# ── Dependencies ───────────────────────────────────────────────────────
+node_modules
+npm-debug.log*
+
+# ── Build output ───────────────────────────────────────────────────────
+dist
+build
+*.tsbuildinfo
+
+# ── Environment files ──────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Version control ────────────────────────────────────────────────────
+.git
+.gitignore
+
+# ── Documentation and repo metadata ────────────────────────────────────
+*.md
+.github
+LICENSE
+.editorconfig
+
+# ── Tests and coverage ─────────────────────────────────────────────────
+tests
+coverage
+vitest.config.ts
+
+# ── Local data / logs / scratch ────────────────────────────────────────
+*.log
+*.bson
+*.wt
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# ── Tool / IDE caches ──────────────────────────────────────────────────
+.claude
+.shipstudio
+.vscode
+.idea
+.DS_Store

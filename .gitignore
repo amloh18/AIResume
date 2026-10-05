@@ -165,3 +165,11 @@ venv/
 
 # Verification scratch output (esbuild bundles from .verify/*.ts)
 .verify/build/
+
+# ── Admin Panel (Private - lives in ../cvcircle_admin) ───────────────────
+/apps/admin
+apps/admin/
+
+# ── Nested sub-repo backups & agent memory ──────────────────────────────
+**/.git-bak/
+.workbuddy-ai/

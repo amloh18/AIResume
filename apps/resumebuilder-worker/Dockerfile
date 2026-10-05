@@ -1,10 +1,15 @@
 # ==========================================
 # BuildAIResume Job Ingestion Microservice
 # Multi-Stage Production Dockerfile
+#
+# Build context is THIS directory — not a repository root.
+#   docker build -t resumebuilder-worker .
 # ==========================================
 
 # 1. Build Stage
-FROM node:20-alpine AS builder
+# Node 22, matching `engines` in package.json and the @types/node major pinned there.
+# The image used to be node:20-alpine, which silently disagreed with the declared toolchain.
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -24,7 +29,7 @@ RUN npm run build
 RUN npm prune --production
 
 # 2. Production Runner Stage
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 

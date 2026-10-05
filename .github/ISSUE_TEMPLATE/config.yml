@@ -1,0 +1,15 @@
+# Issue chooser configuration.
+#
+# `blank_issues_enabled: false` routes people through the templates above, which is what makes the
+# secret-redaction checkbox actually get seen.
+#
+# TODO once the public repository URL is known: add a `contact_links` entry pointing at the private
+# security advisory form, so a vulnerability has an obvious home that is not the public tracker.
+# The shape is:
+#
+#   contact_links:
+#     - name: Report a security vulnerability
+#       url: https://github.com/<owner>/<repo>/security/advisories/new
+#       about: Report privately — please do not open a public issue. See SECURITY.md.
+
+blank_issues_enabled: false
