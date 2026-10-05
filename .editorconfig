@@ -1,0 +1,36 @@
+# EditorConfig — https://editorconfig.org
+#
+# Editors that honour this file (VS Code with the EditorConfig extension, JetBrains IDEs, Vim, Emacs)
+# will match the existing style without anyone having to configure it per-machine. That matters more
+# than usual here: the repository has both a Next.js app and a plain Node service, and mixing their
+# conventions is how a diff ends up full of whitespace noise.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Trailing whitespace is meaningful in Markdown — two trailing spaces are a hard line break.
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json,jsonc}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+# Makefiles require real tabs; a space-indented recipe silently fails.
+[Makefile]
+indent_style = tab
+
+[*.{sh,bash,zsh}]
+indent_size = 2
+
+[*.go]
+indent_style = tab

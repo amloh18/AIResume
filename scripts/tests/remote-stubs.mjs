@@ -7,7 +7,10 @@
  */
 import { createServer } from 'node:http';
 
-const TOKEN = 'vps_worker_secure_secret_2026';
+// Fixture token, shared with `vps-status-probe.mjs`. Overridable so the probe can set it before
+// this module is imported. Deliberately NOT a real credential — the live worker token exists only
+// in the deployment's environment. (This previously hardcoded the production token.)
+const TOKEN = process.env.STUB_WORKER_TOKEN || 'local-stub-token';
 
 function json(res, body, status = 200) {
   const payload = JSON.stringify(body);

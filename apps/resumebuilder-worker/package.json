@@ -22,7 +22,10 @@
     "mongodb"
   ],
   "author": "BuildAIResume Team",
-  "license": "ISC",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "dotenv": "^16.4.7",
     "mongodb": "^6.12.0",

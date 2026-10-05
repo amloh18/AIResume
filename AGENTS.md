@@ -162,7 +162,7 @@ lockfile, `.env.example` and `Dockerfile`, and installs and deploys on its own.
 
 | Path | What it is |
 | --- | --- |
-| `apps/app/` | The Next.js web application. All application source lives here (`apps/app/src`). |
+| `apps/airesume_app/` | The Next.js web application. All application source lives here (`apps/airesume_app/src`). |
 | `apps/resumebuilder-worker/` | The standalone job-ingestion microservice (its own Dockerfile, port 4001). |
 | `scripts/` | Repository- and host-level tooling only: the VPS setup/install scripts, the JobSpy and LinkedIn worker scripts, the worker gateway, and audit tooling. |
 | `docs/`, `deploy/` | Documentation and deployment configuration. |
@@ -170,13 +170,13 @@ lockfile, `.env.example` and `Dockerfile`, and installs and deploys on its own.
 
 Two rules that are easy to get wrong:
 
-- **`apps/app/scripts/` is not the same as `scripts/`.** App-owned tooling that imports `../src/...`
-  or is invoked by `apps/app/package.json` lives in `apps/app/scripts/` (the worker bundler, the
+- **`apps/airesume_app/scripts/` is not the same as `scripts/`.** App-owned tooling that imports `../src/...`
+  or is invoked by `apps/airesume_app/package.json` lives in `apps/airesume_app/scripts/` (the worker bundler, the
   database migrations). Host tooling stays at the repository root `scripts/`.
 - **`process.cwd()` is the app directory, not the repository root.** The app runs with
-  `apps/app` as its working directory (and `/app` in the image, with no `docs/` or `scripts/`
+  `apps/airesume_app` as its working directory (and `/app` in the image, with no `docs/` or `scripts/`
   beside it). Code that needs a repository-level file must resolve it by walking up — see
-  `apps/app/src/lib/utils/find-up-dir.ts` — and must tolerate not finding it.
+  `apps/airesume_app/src/lib/utils/find-up-dir.ts` — and must tolerate not finding it.
 
 ---
 

@@ -1,26 +1,34 @@
 {
-  "name": "airesume",
+  "name": "airesume-workspace",
   "version": "1.0.0",
   "private": true,
-  "description": "AIResume (BuildAIResume.com) — an AI-powered career platform. Monorepo: the Next.js app and the job-ingestion worker.",
+  "description": "BuildAIResume — AI-powered career platform repository containing the user-centric application (apps/airesume_app) and ingestion worker (apps/resumebuilder-worker). The operations admin panel is maintained separately in cvcircle_admin.",
   "license": "MIT",
   "author": "Morigrid Labs",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "app": "npm --prefix apps/app",
+    "app": "npm --prefix apps/airesume_app",
     "worker": "npm --prefix apps/resumebuilder-worker",
+    "admin": "npm --prefix apps/admin",
 
-    "dev": "npm --prefix apps/app run dev",
-    "build": "npm --prefix apps/app run build",
-    "build:worker": "npm --prefix apps/app run build:worker",
-    "start": "npm --prefix apps/app run start",
-    "lint": "npm --prefix apps/app run lint",
-    "test": "npm --prefix apps/app run test",
-    "type-check": "npm --prefix apps/app run type-check",
+    "dev": "npm --prefix apps/airesume_app run dev",
+    "build": "npm --prefix apps/airesume_app run build",
+    "build:worker": "npm --prefix apps/airesume_app run build:worker",
+    "start": "npm --prefix apps/airesume_app run start",
+    "lint": "npm --prefix apps/airesume_app run lint",
+    "test": "npm --prefix apps/airesume_app run test",
+    "type-check": "npm --prefix apps/airesume_app run type-check",
 
-    "install:all": "npm --prefix apps/app ci && npm --prefix apps/resumebuilder-worker ci",
-    "build:all": "npm --prefix apps/app run build && npm --prefix apps/resumebuilder-worker run build"
+    "dev:admin": "npm --prefix apps/admin run dev",
+    "build:admin": "npm --prefix apps/admin run build",
+    "check:styles": "npm --prefix apps/admin run check:styles",
+
+    "dev:worker": "npm --prefix apps/resumebuilder-worker run dev",
+    "build:worker-service": "npm --prefix apps/resumebuilder-worker run build",
+
+    "install:all": "npm --prefix apps/airesume_app ci --legacy-peer-deps && npm --prefix apps/resumebuilder-worker ci && npm --prefix apps/admin install",
+    "verify:publish": "bash scripts/publish/verify-public-repos.sh"
   }
 }
