@@ -176,8 +176,8 @@ October 05–06, 2026: Repo Split, KPI Telemetry & Design Modernization
 ### October 05, 2026 (Evening): Admin Repository Split
 - **Workspace Restructure**:
   - Separated the private administrative operations panel into its own dedicated repository at `/Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_admin`.
-  - Re-consolidated the user-centric application (`apps/airesume_app`) and ingestion worker (`apps/resumebuilder-worker`) into `cvcircle_app`.
-  - Maintained workspace convenience by symlinking `apps/admin -> ../../cvcircle_admin` and gitignoring it in `cvcircle_app`, keeping local builds intact while ensuring zero admin code leaks into public repositories.
+  - Re-consolidated the user-centric application (`apps/airesume_app`) and ingestion worker (`apps/resumebuilder-worker`) into `AIResume`.
+  - Maintained workspace convenience by symlinking `apps/admin -> ../../cvcircle_admin` and gitignoring it in `AIResume`, keeping local builds intact while ensuring zero admin code leaks into public repositories.
 
 ### October 05, 2026 (Night): Telemetry KPI Strip Integration & Modernization
 - **Job Intelligence Overview Strip**:

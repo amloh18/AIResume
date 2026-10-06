@@ -14,11 +14,11 @@ This repository houses the user-facing web application and the job ingestion mic
 
 | Document | Primary Audience | Description |
 | :--- | :--- | :--- |
-| **[`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/DEV_LOGS.md)** | All Engineers | Comprehensive chronological development logs, audits, phase rollouts, triage reports, and defect registers from project inception through October 2026. |
-| **[`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/INFRASTRUCTURE.md)** | DevOps / Backend | VPS specifications, Dokploy container orchestration, Docker multi-stage builds, self-hosted MongoDB, Stalwart mail server, and background workers. |
-| **[`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/SCHEMA.md)** | Backend / Data | Exhaustive database schema catalog for all MongoDB collections, field types, validation rules, index strategies, and Candidate Evidence Engine principles. |
-| **[`SITEMAP.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/SITEMAP.md)** | Frontend / Fullstack | Complete directory of App Router pages, interactive views, API endpoints, NextAuth auth guards, and `src/proxy.ts` middleware logic. |
-| **[`sensitive.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/sensitive.md)** | Security / Ops | Security registry for sensitive configuration variables, secret classification, rotation protocols, and sanitization guardrails. |
+| **[`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/DEV_LOGS.md)** | All Engineers | Comprehensive chronological development logs, audits, phase rollouts, triage reports, and defect registers from project inception through October 2026. |
+| **[`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/INFRASTRUCTURE.md)** | DevOps / Backend | VPS specifications, Dokploy container orchestration, Docker multi-stage builds, self-hosted MongoDB, Stalwart mail server, and background workers. |
+| **[`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/SCHEMA.md)** | Backend / Data | Exhaustive database schema catalog for all MongoDB collections, field types, validation rules, index strategies, and Candidate Evidence Engine principles. |
+| **[`SITEMAP.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/SITEMAP.md)** | Frontend / Fullstack | Complete directory of App Router pages, interactive views, API endpoints, NextAuth auth guards, and `src/proxy.ts` middleware logic. |
+| **[`sensitive.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/sensitive.md)** | Security / Ops | Security registry for sensitive configuration variables, secret classification, rotation protocols, and sanitization guardrails. |
 
 ---
 
@@ -56,7 +56,7 @@ BuildAIResume is **not** a simple resume generator or generic chatbot. It is a c
 The repository is organized into independent services sharing deployment tooling:
 
 ```
-cvcircle_app/
+AIResume/
 ├── apps/
 │   ├── airesume_app/              # Next.js 16 Web Application (User-Facing)
 │   │   ├── src/app/              # App Router pages and API routes
@@ -78,16 +78,16 @@ cvcircle_app/
 ## 4. Reading Guides by Role
 
 ### Frontend Engineers
-- Review [`SITEMAP.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/SITEMAP.md) for page hierarchy, modal layouts, dynamic parameters, and query parameters.
-- Check [`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/SCHEMA.md) for `CV` and `JobApplication` structures utilized in the editor and tracker.
-- Consult the editor layout section in [`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/DEV_LOGS.md) for canvas zoom, pagination, and Mori AI dock specifications.
+- Review [`SITEMAP.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/SITEMAP.md) for page hierarchy, modal layouts, dynamic parameters, and query parameters.
+- Check [`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/SCHEMA.md) for `CV` and `JobApplication` structures utilized in the editor and tracker.
+- Consult the editor layout section in [`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/DEV_LOGS.md) for canvas zoom, pagination, and Mori AI dock specifications.
 
 ### Backend & Data Engineers
-- Consult [`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/SCHEMA.md) for all MongoDB collections, indexing guidelines, and locking mechanisms.
-- Review [`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/INFRASTRUCTURE.md) for the queue architecture (`ApplicationQueue`, `ApplicationEmailQueue`) and worker communication.
-- Review [`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/DEV_LOGS.md) regarding database migration history and MongoDB split-database recovery procedures.
+- Consult [`SCHEMA.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/SCHEMA.md) for all MongoDB collections, indexing guidelines, and locking mechanisms.
+- Review [`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/INFRASTRUCTURE.md) for the queue architecture (`ApplicationQueue`, `ApplicationEmailQueue`) and worker communication.
+- Review [`DEV_LOGS.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/DEV_LOGS.md) regarding database migration history and MongoDB split-database recovery procedures.
 
 ### DevOps & Infrastructure Specialists
-- Read [`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/INFRASTRUCTURE.md) for Dokploy container setup, Stalwart mail server network configuration, and Checkmate monitoring.
-- Read [`sensitive.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/cvcircle_app/docs/sensitive.md) for secret management, credential rotation procedures, and sanitization checklists.
+- Read [`INFRASTRUCTURE.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/INFRASTRUCTURE.md) for Dokploy container setup, Stalwart mail server network configuration, and Checkmate monitoring.
+- Read [`sensitive.md`](file:///Users/amlohsl/Documents/VScode_projects/PROJECTS/AIResume/docs/sensitive.md) for secret management, credential rotation procedures, and sanitization checklists.
 - Follow deployment runbooks in `deploy/` and verification scripts in `scripts/`.
