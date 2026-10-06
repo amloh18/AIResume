@@ -5,8 +5,7 @@ const GEMINI_API_KEY =
   process.env.gemini_api_key ||
   process.env.GEMINI_API_KEY ||
   process.env.gemini_api_key1 ||
-  process.env.GEMINI_API_KEY1 ||
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY1;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const OLLAMA_TIMEOUT_MS = 60000;
 

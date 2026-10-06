@@ -99,11 +99,9 @@ Thumbs.db
 !CONTRIBUTING.md
 !CODE_OF_CONDUCT.md
 !CHANGELOG.md
-!/docs/**
-# The `!/docs/**` negation above re-includes *everything* under docs/, including the OS metadata
-# the earlier `.DS_Store` rule would otherwise have caught (verified: `git check-ignore docs/.DS_Store`
-# pointed at the negation). Later rules win, so re-assert it here rather than relying on the top rule.
-**/.DS_Store
+# Internal documentation (MUST NOT be committed)
+docs/
+
 
 # ── Logs ────────────────────────────────────────────────────────────────
 npm-debug.log*

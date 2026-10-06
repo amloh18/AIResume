@@ -7,8 +7,7 @@ function getGeminiApiKey(): string {
     process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1 ||
-    process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY1;
 
   if (!key) throw new Error('No Gemini API key configured');
 
