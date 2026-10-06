@@ -1,0 +1,94 @@
+[Unit]
+Description=BuildAIResume Browser Service (headless Chrome over CDP for ATS automation + PDF rendering)
+Documentation=file:///opt/buildairesume/docs/deployment/vps-automation-workers.md
+After=network.target
+Wants=network.target
+StartLimitBurst=10
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+
+# Same unprivileged user as the worker gateway: it already owns the browser profiles under
+# /var/lib/buildairesume and the Playwright Chromium build that vps-setup.sh installed.
+User=buildairesume
+Group=buildairesume
+WorkingDirectory=/var/lib/buildairesume
+
+# The binary is rewritten by scripts/vps-install-browser-service.sh to the Chromium it actually found
+# (system package or Playwright's cached build). /usr/bin/chromium is the Debian default.
+EnvironmentFile=-/opt/buildairesume/.env
+Environment=HOME=/var/lib/buildairesume
+ExecStartPre=/bin/mkdir -p /var/lib/buildairesume/browser/cdp
+# The flags below deliberately mirror Playwright's curated Chromium arguments. Playwright documents
+# that connecting over CDP to a browser launched with a different argument set can break parts of its
+# API, so changing these is a compatibility change, not a tuning change.
+ExecStart=/usr/bin/chromium \
+    --headless=new \
+    --remote-debugging-address=172.17.0.1 \
+    --remote-debugging-port=9222 \
+    --user-data-dir=/var/lib/buildairesume/browser/cdp \
+    --no-sandbox \
+    --disable-setuid-sandbox \
+    --disable-dev-shm-usage \
+    --disable-gpu \
+    --no-first-run \
+    --no-default-browser-check \
+    --no-service-autorun \
+    --allow-pre-commit-input \
+    --password-store=basic \
+    --use-mock-keychain \
+    --disable-background-networking \
+    --disable-background-timer-throttling \
+    --disable-backgrounding-occluded-windows \
+    --disable-renderer-backgrounding \
+    --disable-back-forward-cache \
+    --disable-breakpad \
+    --disable-client-side-phishing-detection \
+    --disable-component-update \
+    --disable-default-apps \
+    --disable-extensions \
+    --disable-field-trial-config \
+    --disable-hang-monitor \
+    --disable-popup-blocking \
+    --disable-prompt-on-repost \
+    --disable-sync \
+    --disable-translate \
+    --export-tagged-pdf \
+    --metrics-recording-only \
+    --mute-audio \
+    --hide-scrollbars \
+    --window-size=1920,1080 \
+    --font-render-hinting=none \
+    --force-color-profile=srgb \
+    --remote-allow-origins=*
+
+Restart=always
+RestartSec=5
+
+# Browser automation and PDF rendering are the heaviest thing on the VPS. These ceilings keep a runaway
+# page from taking the host (and therefore the app and MongoDB) down with it.
+MemoryMax=4G
+CPUQuota=200%
+TasksMax=256
+LimitNOFILE=8192
+
+# Hardening. Chrome needs to write its profile and temp data and nothing else; the project checkout is
+# mounted read-only so a compromised page cannot modify the application.
+# Deliberately NOT NoNewPrivileges: Chrome is started with --no-sandbox, which already forgoes its
+# setuid/namespace sandbox, and enabling it here would break any future switch to a sandboxed launch.
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/buildairesume
+ReadOnlyPaths=/opt/buildairesume /opt/ms-playwright
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=buildairesume-browser
+
+[Install]
+WantedBy=multi-user.target

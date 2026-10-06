@@ -1,0 +1,90 @@
+# robots.txt — https://buildairesume.com
+#
+# SERVED BY NEXT.JS FROM THIS PATH: apps/airesume_app/public/robots.txt
+# The copy at the repository root is a mirror kept for visibility only and is NOT served. If you
+# change the rules here, change them there too — or delete that copy.
+#
+# Policy: the marketing site and every public tool are crawlable, AI crawlers included. /llms.txt is
+# published on purpose so assistants describe the product accurately; blocking them would not remove
+# the information, only make it less accurate. Authenticated surfaces, API routes and the build
+# output are not crawlable.
+
+# ── Default ──────────────────────────────────────────────────────────────
+User-agent: *
+Allow: /
+
+# Authenticated / private surfaces.
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /editor/
+# Both redirect a signed-out visitor to /sign-in, so they are not indexable pages.
+Disallow: /interview-coach/
+Disallow: /linkedin-enhancer/
+Disallow: /profile/
+Disallow: /welcome/
+Disallow: /shared/candidate/
+
+# Auth flows — nothing here is useful in an index, and some carry tokens.
+Disallow: /auth/
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /force-logout/
+
+# API and checkout.
+Disallow: /api/
+Disallow: /razorpay/
+
+# Build output and internal scripts — not pages.
+Disallow: /_next/
+Disallow: /theme-init.js
+Disallow: /wallet-error-suppressor.js
+
+# Error and internal preview pages.
+Disallow: /403
+Disallow: /design-system
+
+# ── AI / assistant crawlers ──────────────────────────────────────────────
+# Explicitly welcome, and pointed at /llms.txt. One group, because the rules are identical for all
+# of them — consecutive User-agent lines share the rule set that follows.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: Claude-User
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: Amazonbot
+User-agent: meta-externalagent
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: cohere-ai
+User-agent: DuckAssistBot
+User-agent: YouBot
+User-agent: MistralAI-User
+User-agent: Timpibot
+Allow: /
+Allow: /llms.txt
+Allow: /llm.txt
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /editor/
+Disallow: /interview-coach/
+Disallow: /linkedin-enhancer/
+Disallow: /profile/
+Disallow: /shared/candidate/
+Disallow: /auth/
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /api/
+Disallow: /razorpay/
+Disallow: /_next/
+
+# ── Sitemap ──────────────────────────────────────────────────────────────
+Sitemap: https://buildairesume.com/sitemap.xml
+
+# Host is a legacy Yandex directive, kept for compatibility. Harmless elsewhere.
+Host: https://buildairesume.com

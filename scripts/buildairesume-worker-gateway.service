@@ -1,0 +1,49 @@
+[Unit]
+Description=BuildAIResume Worker Gateway (HTTP front end for JobSpy + LinkedIn workers)
+Documentation=file:///opt/buildairesume/docs/deployment/vps-automation-workers.md
+After=network.target mongod.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=buildairesume
+Group=buildairesume
+WorkingDirectory=/opt/buildairesume
+
+# Serves the one-shot Python workers over HTTP so the Next.js application image does not need Python,
+# Playwright or JobSpy. Binds to the Docker bridge gateway by default so the app container can reach it;
+# WORKER_GATEWAY_TOKEN is mandatory for any non-loopback bind.
+EnvironmentFile=-/opt/buildairesume/.env
+Environment=WORKER_PROJECT_DIR=/opt/buildairesume
+Environment=WORKER_GATEWAY_HOST=172.17.0.1
+Environment=WORKER_GATEWAY_PORT=8790
+Environment=WORKER_GATEWAY_TIMEOUT_SECONDS=900
+Environment=WORKER_GATEWAY_MAX_LOG_CHARS=8000
+ExecStart=/usr/bin/python3 /opt/buildairesume/scripts/worker-gateway.py
+
+Restart=always
+RestartSec=5
+StartLimitBurst=10
+StartLimitIntervalSec=300
+
+# The gateway shells out to the workers, which each launch Chromium.
+MemoryMax=4G
+CPUQuota=200%
+TasksMax=64
+
+# Security hardening. The gateway must read the project tree and the worker browser profiles, and write
+# nothing outside them.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/buildairesume
+ReadOnlyPaths=/opt/buildairesume
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=buildairesume-worker-gateway
+
+[Install]
+WantedBy=multi-user.target
