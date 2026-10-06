@@ -1,0 +1,57 @@
+import mongoose, { Document, Schema, Model } from 'mongoose';
+
+export interface IMoriChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  selection?: {
+    path: string;
+    text: string;
+  };
+  options?: Array<{
+    label: string;
+    prompt: string;
+  }>;
+  isError?: boolean;
+}
+
+export interface IMoriChat extends Document {
+  userId: string | mongoose.Types.ObjectId;
+  cvId?: string | mongoose.Types.ObjectId;
+  title: string;
+  messages: IMoriChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const moriChatMessageSchema = new Schema<IMoriChatMessage>({
+  id: { type: String, required: true },
+  role: { type: String, enum: ['user', 'assistant'], required: true },
+  content: { type: String, required: true },
+  timestamp: { type: Number, required: true },
+  selection: {
+    path: { type: String },
+    text: { type: String }
+  },
+  options: [{
+    label: { type: String },
+    prompt: { type: String }
+  }],
+  isError: { type: Boolean, default: false }
+});
+
+const moriChatSchema = new Schema<IMoriChat>({
+  userId: { type: Schema.Types.Mixed, ref: 'User', required: true },
+  cvId: { type: Schema.Types.Mixed, ref: 'CV' },
+  title: { type: String, required: true, default: 'New Chat' },
+  messages: { type: [moriChatMessageSchema], default: [] }
+}, {
+  timestamps: true
+});
+
+moriChatSchema.index({ userId: 1, updatedAt: -1 });
+moriChatSchema.index({ userId: 1, cvId: 1 });
+
+const MoriChat: Model<IMoriChat> = mongoose.models.MoriChat || mongoose.model<IMoriChat>('MoriChat', moriChatSchema);
+export default MoriChat;

@@ -1,0 +1,158 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { startApplicationWorker, stopApplicationWorker } from './applicationWorker';
+import { claimNextApplication, completeQueueItem, failQueueItem, releaseStuckItems } from '@/lib/worker/claimNext';
+import { processApplication } from '@/lib/worker/processApplication';
+import { notifyApplicationNeedsAction } from '@/lib/worker/applicationActionNotifier';
+import { getCorrelationId } from '@/lib/observability/correlation';
+
+vi.mock('@/lib/worker/claimNext', () => ({
+  claimNextApplication: vi.fn(),
+  completeQueueItem: vi.fn().mockResolvedValue(undefined),
+  failQueueItem: vi.fn().mockResolvedValue(undefined),
+  releaseStuckItems: vi.fn().mockResolvedValue(0),
+}));
+vi.mock('@/lib/worker/processApplication', () => ({
+  processApplication: vi.fn(),
+}));
+vi.mock('@/lib/database', () => ({
+  getConnection: vi.fn().mockResolvedValue(undefined),
+  ensureConnection: vi.fn().mockResolvedValue(undefined),
+  closeConnection: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('@/models/ApplicationQueue', () => ({
+  __esModule: true,
+  default: { countDocuments: vi.fn().mockResolvedValue(0) },
+}));
+vi.mock('@/lib/structured-logger', () => ({
+  setLogContextProvider: vi.fn(),
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    performance: vi.fn(),
+  },
+}));
+vi.mock('@/lib/worker/applicationActionNotifier', () => ({
+  classifyApplicationAlert: vi.fn(),
+  notifyApplicationNeedsAction: vi.fn().mockResolvedValue(undefined),
+}));
+
+const claimMock = claimNextApplication as ReturnType<typeof vi.fn>;
+const processMock = processApplication as ReturnType<typeof vi.fn>;
+const completeMock = completeQueueItem as ReturnType<typeof vi.fn>;
+const failMock = failQueueItem as ReturnType<typeof vi.fn>;
+const notifyMock = notifyApplicationNeedsAction as ReturnType<typeof vi.fn>;
+const QUEUE_ITEM = {
+  _id: 'q1',
+  attempts: 1,
+  maxAttempts: 3,
+  correlationId: 'trace-from-request',
+  mode: 'auto',
+};
+
+const JOB_APP = {
+  _id: '507f1f77bcf86cd799439022',
+  userId: '507f1f77bcf86cd799439011',
+  currentStage: 'saved',
+};
+
+/** Run one worker tick by starting the loop and stopping it right after the first pass. */
+async function runOneTick(): Promise<void> {
+  startApplicationWorker();
+  // The first tick is fired synchronously by startApplicationWorker; give it a macrotask to finish.
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+  stopApplicationWorker();
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  claimMock.mockResolvedValue(null);
+  processMock.mockResolvedValue({ success: true, stage: 'applied', status: 'applied', message: 'ok' });
+});
+
+describe('applicationWorker — correlation handoff', () => {
+  it('processes the claimed item inside the correlation context stored on the queue document', async () => {
+    claimMock.mockResolvedValue({ queueItem: QUEUE_ITEM, jobApplication: JOB_APP });
+    let seenDuringProcessing: string | undefined;
+
+    processMock.mockImplementation(async () => {
+      seenDuringProcessing = getCorrelationId();
+      return { success: true, stage: 'applied', status: 'applied', message: 'ok' };
+    });
+
+    await runOneTick();
+
+    expect(seenDuringProcessing).toBe('trace-from-request');
+    expect(completeMock).toHaveBeenCalledWith('q1');
+    expect(failMock).not.toHaveBeenCalled();
+  });
+
+  it('still runs (with a fresh trace) for queue documents written before correlation existed', async () => {
+    claimMock.mockResolvedValue({
+      queueItem: { ...QUEUE_ITEM, correlationId: undefined },
+      jobApplication: JOB_APP,
+    });
+    let seenDuringProcessing: string | undefined;
+
+    processMock.mockImplementation(async () => {
+      seenDuringProcessing = getCorrelationId();
+      return { success: true, stage: 'staging', status: 'review_required', message: 'held' };
+    });
+
+    await runOneTick();
+
+    expect(seenDuringProcessing).toBeTruthy();
+    expect(seenDuringProcessing).not.toBe('trace-from-request');
+    // A parked application must alert the user inside the same traced context.
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ applicationId: JOB_APP._id, status: 'review_required', reason: 'held' })
+    );
+  });
+
+  it('fails the queue item (and keeps the trace) when processing throws', async () => {
+    claimMock.mockResolvedValue({ queueItem: QUEUE_ITEM, jobApplication: JOB_APP });
+    let seenDuringFailure: string | undefined;
+
+    processMock.mockImplementation(async () => {
+      seenDuringFailure = getCorrelationId();
+      throw new Error('playwright exploded');
+    });
+
+    await runOneTick();
+
+    expect(seenDuringFailure).toBe('trace-from-request');
+    // The thrown error is caught by processApplication's own handler in production; here the tick's
+    // catch path runs, which must not mark the item complete.
+    expect(completeMock).not.toHaveBeenCalled();
+
+    /*
+      …and the user hears about the failure even on the escaping-exception path.
+
+      This assertion used to read `reason: expect.stringContaining('playwright exploded')`, i.e. it
+      pinned the leak: the notification body is rendered to the customer, so it must carry no raw
+      error text (SB-08). The technical string now goes to the queue item's `lastError` instead,
+      which only operators read.
+    */
+    const alert = notifyMock.mock.calls[0][0] as { status: string; reason: string };
+    expect(alert.status).toBe('automation_failed');
+    expect(alert.reason).not.toContain('playwright exploded');
+    expect(alert.reason).toMatch(/apply on the employer/i);
+    expect(failMock).toHaveBeenCalledWith(
+      QUEUE_ITEM._id,
+      expect.stringContaining('playwright exploded'),
+      true
+    );
+  });
+
+  it('does nothing when the queue is empty', async () => {
+    claimMock.mockResolvedValue(null);
+
+    await runOneTick();
+
+    expect(processMock).not.toHaveBeenCalled();
+    expect(completeMock).not.toHaveBeenCalled();
+    expect(failMock).not.toHaveBeenCalled();
+  });
+});

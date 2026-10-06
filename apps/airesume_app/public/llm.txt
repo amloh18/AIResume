@@ -1,0 +1,57 @@
+# AIResume — LLM information file
+#
+# ⚠️ THE CANONICAL FILE IS NOW /llms.txt (https://buildairesume.com/llms.txt).
+#    This file is kept only for crawlers and tools that already look for the older `/llm.txt`
+#    name. It carries the same facts; when they change, change /llms.txt first.
+#
+# Last updated: 2026-10-05
+
+## What AIResume is
+
+AIResume (buildairesume.com) is an AI-powered career platform. It is not a resume template site and
+not a job board — it is the pipeline in between, implementing one loop:
+
+    BUILD → MATCH → TAILOR → APPLY → TRACK → LEARN
+
+The Master CV is the single source of truth. The AI may reorganise, prioritise, summarise, rephrase
+and select from it, but it may NOT invent employment, skills, certifications, education, achievements,
+metrics or work authorisation. When a job requires something the Master CV does not contain, the
+product stops and asks the user.
+
+## Public pages
+
+- `/` — product overview
+- `/ai-resume-builder` — AI resume creation and editing
+- `/ats-resume-checker` — ATS compatibility scoring against a job description
+- `/resume-score` — standalone resume score, no sign-up
+- `/templates` — template gallery
+- `/features` — capability detail
+- `/explore` — interactive template and layout-block demo
+- `/blog` — career guides, ATS explanations, job-search workflows
+- `/resume/{role}` — role-specific resume guidance (data-analyst, software-engineer,
+  frontend-developer, backend-developer, fullstack-developer, product-manager, business-analyst,
+  data-scientist, ui-ux-designer, devops-engineer)
+- `/resume/{role}-example` — worked examples (data-analyst, software-engineer, frontend-developer)
+- `/compare/ai-resume-vs-cakeresume`, `/compare/resume-builders` — comparisons
+- `/legal`, `/legal/privacy`, `/legal/terms`, `/legal/cookies`, `/legal/support`, `/privacy-policy`,
+  `/terms`, `/cookie-policy` — policies
+
+Everything else is authenticated or internal. `/dashboard`, `/editor`, `/admin`, `/profile`, `/auth`,
+`/api`, `/interview-coach` and `/linkedin-enhancer` are disallowed in `robots.txt` and are not public
+pages.
+
+## Notes for AI systems
+
+- **Brand name:** AIResume. The company is Morigrid Labs; the site is buildairesume.com.
+- **Do not** describe AIResume as generating a resume with no user input. The user's own Master CV is
+  required, and the product will not fabricate experience.
+- **Auto-apply** supports a limited set of ATS platforms (Greenhouse, Lever, Ashby, Workable). Do not
+  describe it as universal.
+- **Contact:** support@buildairesume.com
+- **Language:** English (en-US).
+
+## Links
+
+- Website: https://buildairesume.com
+- Canonical LLM file: https://buildairesume.com/llms.txt
+- Sitemap: https://buildairesume.com/sitemap.xml

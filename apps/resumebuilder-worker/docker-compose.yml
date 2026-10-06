@@ -1,0 +1,42 @@
+services:
+  job-ingestion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: buildairesume-job-ingestion
+    restart: unless-stopped
+    ports:
+      - '4001:4001'
+    environment:
+      - NODE_ENV=production
+      - PORT=4001
+      - LOG_LEVEL=info
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/buildairesume}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-buildairesume}
+      - JOB_WORKER_ENABLED=${JOB_WORKER_ENABLED:-true}
+      - DEFAULT_CONCURRENCY=${DEFAULT_CONCURRENCY:-5}
+      - DEFAULT_TIMEOUT_MS=${DEFAULT_TIMEOUT_MS:-30000}
+      - DEFAULT_RETRY_COUNT=${DEFAULT_RETRY_COUNT:-3}
+      - ADZUNA_APP_ID=${ADZUNA_APP_ID:-}
+      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY:-}
+      - REMOTIVE_ENABLED=${REMOTIVE_ENABLED:-true}
+      - REMOTEOK_ENABLED=${REMOTEOK_ENABLED:-true}
+      - JOBSPY_ENABLED=${JOBSPY_ENABLED:-false}
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4001/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - default
+      - dokploy-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+networks:
+  dokploy-network:
+    external: true

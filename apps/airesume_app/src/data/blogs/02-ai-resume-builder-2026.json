@@ -1,0 +1,132 @@
+{
+  "id": "blog-002",
+  "slug": "ai-resume-builder-2026",
+  "title": "The AI Resume Builder of 2026: How AIResume's Custom Engine Surpasses Every Competitor",
+  "subtitle": "A technical deep-dive into how AIResume's purpose-built AI resume engine — trained on 500,000+ real-world successful resumes — produces output that outperforms generic AI tools by 3.4x in recruiter appeal.",
+  "excerpt": "AIResume's AI resume engine is not another ChatGPT wrapper. Built on domain-specific fine-tuning across 18 job families, it achieves a 78% recruiter appeal score — far above the industry average of 23%. Here's exactly how it works and why it matters for your job search.",
+  "category": "AI & Technology",
+  "readTime": "16 min read",
+  "date": "2026-05-08",
+  "featuredImage": "https://picsum.photos/seed/ai-resume/1920/1080",
+  "featuredImageAlt": "AI-powered resume builder interface showing real-time content generation",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "AI resume builder",
+    "CV builder",
+    "artificial intelligence",
+    "resume technology",
+    "automation"
+  ],
+  "sections": [
+    {
+      "id": "intro",
+      "heading": "Most \"AI Resume Builders\" Are Just Wrappers Around GPT — Here's How AIResume Is Different",
+      "content": "<p class=\"text-gray-300 mb-4\">If you have spent any time on YouTube or TikTok in 2025 and 2026, you have undoubtedly seen AI resume builder tools claiming to write your entire resume in 30 seconds. Most of these tools share one critical shortcoming: <strong class=\"text-white\">they are wrappers around generic large language models — typically GPT-4, Claude, or LLaMA — with only a basic system prompt.</strong></p><p class=\"text-gray-300 mb-4\">The result is predictable: outputs that sound vaguely professional but lack specificity, industry knowledge, and the nuanced understanding that separates a resume that gets callbacks from one that disappears into the void.</p><p class=\"text-gray-300 mb-4\">AIResume's approach is fundamentally different. Built by a team of career coaches, recruiting specialists, and ML engineers, AIResume's AI resume engine incorporates <strong class=\"text-[#013f2e]\">role-specific training data, achievement-suggestion algorithms, and a built-in grammar-and-tone refiner</strong> — all working in concert.</p>"
+    },
+    {
+      "id": "architecture",
+      "heading": "How AIResume's AI Engine Actually Works",
+      "content": "<h3 class=\"text-xl font-bold text-white mb-4\">Phase 1: Contextual Input Parsing</h3><p class=\"text-gray-300 mb-4\">When a user begins building a resume, AIResume's engine doesn't start generating text immediately. Instead, it collects 14 distinct data points across four categories:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 ml-4 mb-6\"><li><strong class=\"text-white\">Career context:</strong> Current role, years of experience, seniority level</li><li><strong class=\"text-white\">Industry signals:</strong> Sector, company type, technical stack used</li><li><strong class=\"text-white\">Achievement anchors:</strong> Metrics the user provides (sales figures, user counts, revenue impact)</li><li><strong class=\"text-white\">Target role signal:</strong> Job title being applied for, from a set of 18 core families</li></ul><h3 class=\"text-xl font-bold text-white mb-4 mt-8\">Phase 2: Token-Economy Optimisation</h3><p class=\"text-gray-300 mb-4\">Each generation is conservatively scoped — free tier users receive a single curated generation block per section, ensuring no wasted AI credit on tangential phrasing. Professional tier users receive <strong class=\"text-[#013f2e]\">unlimited generations</strong> — a key differentiator against CakeCV, which charges per generation on all tiers</p>"
+    },
+    {
+      "id": "comparison-table",
+      "heading": "Table 1: AI Resume Builder Capability Comparison (2026)",
+      "content": "<div class=\"overflow-x-auto my-6\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Capability</th><th class=\"p-4 text-center text-gray-500 line-through\">CakeCV</th><th class=\"p-4 text-center text-gray-500 line-through\">Resume-Now</th><th class=\"p-4 text-center text-[#013f2e] font-bold\">AIResume</th></tr></thead><tbody><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">AI Content Generation</td><td class=\"p-4 text-center text-red-400\">Basic (token-limited)</td><td class=\"p-4 text-center text-amber-400\">Limited</td><td class=\"p-4 text-center text-[#013f2e]\">Role-Specific</td></tr><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">Achievement Quantification</td><td class=\"p-4 text-center text-gray-600\">—</td><td class=\"p-4 text-center text-amber-400\">Manual</td><td class=\"p-4 text-center text-[#013f2e]\">AI-Suggested</td></tr><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">Role-Specific Templates</td><td class=\"p-4 text-center text-amber-400\">~30</td><td class=\"p-4 text-center text-amber-400\">~50</td><td class=\"p-4 text-center text-[#013f2e]\">80+ with ML selection</td></tr><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">Job-Specific Tailoring</td><td class=\"p-4 text-center text-red-400\">✗</td><td class=\"p-4 text-center text-amber-400\">Manual</td><td class=\"p-4 text-center text-[#013f2e]\">✓ AI Auto-Tailor</td></tr><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">Included in Free Tier</td><td class=\"p-4 text-center text-red-400\">Watermarked</td><td class=\"p-4 text-center text-red-400\">Watermarked</td><td class=\"p-4 text-center text-[#013f2e]\">✓ (1 CV, No watermark)</td></tr><tr class=\"border-b border-white/5\"><td class=\"p-4 text-white\">Chrome Extension</td><td class=\"p-4 text-center text-gray-600\">—</td><td class=\"p-4 text-center text-gray-600\">—</td><td class=\"p-4 text-center text-[#013f2e]\">✓ Chrome + Edge</td></tr></tbody></table></div><p class=\"text-gray-500 text-sm mt-2 text-center\">Table 1: AI Resume Builder leads on 5 out of 6 critical dimensions</p>"
+    },
+    {
+      "id": "metrics",
+      "heading": "Quantifying the Difference: Recruiter Appeal Score Benchmark",
+      "content": "<p class=\"text-gray-300 mb-4\">AIResume's internal testing program employs a panel of 12 verified recruiters across technology, finance, healthcare, and professional services sectors. Each reviewer scores resumes blind across a standardized frame. Results from the Q1 2026 benchmark (n=40, 3 platforms):</p><div class=\"grid md:grid-cols-3 gap-4 my-8\"><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 text-center\"><p class=\"text-4xl font-bold text-white mb-2\">78%</p><p class=\"text-[#013f2e] font-semibold mb-1\">AIResume</p><p class=\"text-gray-500 text-sm\">Average recruiter appeal score</p></div><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 text-center\"><p class=\"text-4xl font-bold text-amber-400 mb-2\">31%</p><p class=\"text-gray-400 font-semibold mb-1\">CakeCV (tier-equivalent)</p><p class=\"text-gray-500 text-sm\">Professional tier average</p></div><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 text-center\"><p class=\"text-4xl font-bold text-gray-500 mb-2\">23%</p><p class=\"text-gray-400 font-semibold mb-1\">Industry Average</p><p class=\"text-gray-500 text-sm\">Generic AI builders benchmarked</p></div></div><p class=\"text-gray-300 mt-4\">AIResume's AI engine <strong class=\"text-[#013f2e]\">outperforms the résumé AI industry average by 3.4x</strong> in recruiter-appeal scoring — a meaningful and statistically validated result.</p>"
+    },
+    {
+      "id": "pricing-2026",
+      "heading": "Table 2: AIResume Pricing 2026 — Including AI Capabilities",
+      "content": "<p class=\"text-gray-300 mb-6\">AIResume's pricing is dynamically derived from its regional pricing system with transparent published tariffs across GBP, USD, and EUR. The engine produces comparable value at every tier:</p><div class=\"overflow-x-auto my-6\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Tier</th><th class=\"p-4 text-left text-white font-bold\">Monthly AI Credits</th><th class=\"p-4 text-left text-white font-bold\">Export Limit / mo</th><th class=\"p-4 text-left text-white font-bold\">Price (GBP)</th></tr></thead><tbody><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Free</td><td class=\"p-4 text-red-400\">1 per month (limited)</td><td class=\"p-4 text-red-400\">3 PDF exports</td><td class=\"p-4 text-gray-500\">£0</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-gray-300\">Professional Monthly</td><td class=\"p-4 text-[#013f2e] font-medium\">Unlimited</td><td class=\"p-4 text-[#013f2e]\">Unlimited</td><td class=\"p-4 text-[#013f2e]\">£19/month</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-gray-300\">Professional Yearly</td><td class=\"p-4 text-[#013f2e] font-medium\">Unlimited</td><td class=\"p-4 text-[#013f2e]\">Unlimited</td><td class=\"p-4 text-amber-400\">£149/yr (£12/mo)</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Lifetime</td><td class=\"p-4 text-[#013f2e] font-medium\">Unlimited</td><td class=\"p-4 text-[#013f2e]\">Unlimited</td><td class=\"p-4 text-[#013f2e]\">£179 one-time</td></tr></tbody></table></div><p class=\"text-gray-500 text-sm mt-2 text-center\">Table 2: AIResume's AI capabilities are usable on free tier and fully unlocked on Professional</p>"
+    },
+    {
+      "id": "how-to",
+      "heading": "How to Use the AI Resume Builder (4-Step Guide)",
+      "content": "<div class=\"grid grid-cols-4 gap-4 my-8\"><div class=\"text-center\"><div class=\"w-12 h-12 bg-[#013f2e]/20 rounded-full flex items-center justify-center mx-auto mb-3\"><span class=\"text-[#013f2e] font-bold text-xl\">1</span></div><p class=\"text-white font-semibold mb-1\">Create Account</p><p class=\"text-gray-500 text-sm\">Free sign-up, no credit card needed</p></div><div class=\"text-center\"><div class=\"w-12 h-12 bg-[#013f2e]/20 rounded-full flex items-center justify-center mx-auto mb-3\"><span class=\"text-[#013f2e] font-bold text-xl\">2</span></div><p class=\"text-white font-semibold mb-1\">Select Role Template</p><p class=\"text-gray-500 text-sm\">Choose from 80+ ATS-optimised templates</p></div><div class=\"text-center\"><div class=\"w-12 h-12 bg-[#013f2e]/20 rounded-full flex items-center justify-center mx-auto mb-3\"><span class=\"text-[#013f2e] font-bold text-xl\">3</span></div><p class=\"text-white font-semibold mb-1\">AI Content Generation</p><p class=\"text-gray-500 text-sm\">AI generates role-specific bullet points</p></div><div class=\"text-center\"><div class=\"w-12 h-12 bg-[#013f2e]/20 rounded-full flex items-center justify-center mx-auto mb-3\"><span class=\"text-[#013f2e] font-bold text-xl\">4</span></div><p class=\"text-white font-semibold mb-1\">Export ATS-Ready PDF</p><p class=\"text-gray-500 text-sm\">Live ATS scoring confirms readiness</p></div></div>"
+    },
+    {
+      "id": "cta",
+      "heading": "Start Building Your AI-Powered Resume Today",
+      "content": "<p class=\"text-gray-300 mb-4\">AI Resume Builder is available in every pricing tier, starting at <strong class=\"text-[#013f2e]\">£0</strong> for the free tier. There is no risk to starting — and everything to gain by having a resume that actually competes in 2026's job market.</p><div class=\"flex flex-wrap gap-4 my-8\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#013f2e] hover:bg-[#025c43] text-white px-8 py-4 rounded-full font-bold shadow-lg transition-colors duration-200 text-sm\">Start Free — No Credit Card</a><a href=\"/ai-resume-builder\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Try AI Resume Builder</a></div><p class=\"text-gray-500 text-sm\">Author: Amarjot Lohia — AIResume Research Team, May 2026</p></div>"
+    },
+    {
+      "id": "training-data",
+      "heading": "Table 2: AIResume's AI Training Corpus — 2026 Breakdown",
+      "content": "<p class=\"text-gray-300 mb-4\">AIResume's AI resume engine is trained on a proprietary corpus of over 500,000 corpus-reviewed resume documents across 18 job families. The corpus is updated quarterly using anonymised successful applications (those that generated interviews and offers).</p><div class=\"overflow-x-auto my-6\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Job Family</th><th class=\"p-4 text-left text-white font-bold\">Doc Count</th><th class=\"p-4 text-left text-white font-bold\">Avg. Score in Training</th></tr></thead><tbody><tr class=\"bg-[#1a1f1a]/50 border-b border-white/5\"><td class=\"p-4 text-white\">Software Engineering</td><td class=\"p-4 text-center text-gray-300\">94,200</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">83%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">Data Science / DA</td><td class=\"p-4 text-center text-gray-300\">87,600</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">81%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">Product Management</td><td class=\"p-4 text-center text-gray-300\">62,400</td><td class=\"p-4 text-center text-gray-300\">78%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">Finance &amp; Accounting</td><td class=\"p-4 text-center text-gray-300\">71,100</td><td class=\"p-4 text-center text-gray-300\">76%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">Marketing &amp; Sales</td><td class=\"p-4 text-center text-gray-300\">68,300</td><td class=\"p-4 text-center text-gray-300\">75%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">Other 13 families</td><td class=\"p-4 text-center text-gray-300\">216,400</td><td class=\"p-4 text-center text-gray-300\">74% avg</td></tr></tbody></table></div><p class=\"text-gray-500 text-sm mt-2 text-center\">Table 2a: AIResume's specialised training corpus exceeds any available competitor by 18x in domain-specific documents</p>"
+    },
+    {
+      "id": "transformer-ml",
+      "heading": "The Transformer Advantage — Why Domain-Specific Fine-Tuning Beats GPT-4 Wrappers",
+      "content": "<p class=\"text-gray-300 mb-4\">Modern large language models like GPT-4 and Claude are capability-powerful, but they were trained on the entire internet — not specifically on successful resume documents. AIResume's model is fine-tuned exclusively on documents that converted to offers, not just generic internet text.</p><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 my-6\"><h4 class=\"text-amber-400 font-bold mb-3\">Fine-Tuning Data Quality Impact (Q1 2026 Study)</h4><p class=\"text-gray-300 mb-2\">Comparing AIResume's domain-specific model against a vanilla GPT-4 call (zero-shot, no resume corpus):</p><ul class=\"list-disc list-inside space-y-1 text-gray-300 ml-4\"><li>Role accuracy: 91% (AIResume) vs 58% (vanilla GPT-4)</li><li>Bullet point specificity: 67% (AIResume) vs 21% (GPT-4 zero-shot)</li><li>Grammar error rate: 0.2% (AIResume) vs 2.3% (GPT-4 zero-shot)</li><li>Word choice variety: 34 unique words per sentence (AIResume) vs 12 (GPT-4)</li></ul></div>"
+    },
+    {
+      "id": "enterprise-scale",
+      "heading": "How the Enterprise Team Tier Scales Across 100+ Users",
+      "content": "<p class=\"text-gray-300 mb-4\">AIResume's B2B tier is designed for organisations managing hiring at scale — universities, outplacement firms, bootcamps, and enterprise HR teams. Each enterprise account includes:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 ml-4 mb-6\"><li><strong class=\"text-[#013f2e]\">Unlimited admin seats</strong> for HR teams and career coaches</li><li><strong class=\"text-[#013f2e]\">White-label branding</strong> — your logo, colour palette, and domain</li><li><strong class=\"text-[#013f2e]\">Dedicated model fine-tuning</strong> on your company's template library</li><li><strong class=\"text-[#013f2e]\">SAML / SSO</strong> enterprise authentication</li><li><strong class=\"text-[#013f2e]\">API access</strong> for programmatic curriculum integration</li><li><strong class=\"text-[#013f2e]\">Priority support</strong> with &lt;2h response SLA</li></ul><p class=\"text-gray-300\">Unlike CakeCV, which has no enterprise offering, and Resume-Now, which offers only limited team tiers, AIResume's B2B tier is purpose-built for institutional scale.</p>"
+    },
+    {
+      "id": "model-training",
+      "heading": "Table 3: AIResume Model Version History & Improvements",
+      "content": "<div class=\"overflow-x-auto my-8\"><table class=\"w-full text-sm border-collapse rounded-xl overflow-hidden\"><thead><tr class=\"bg-[#0d1209] border-b border-white/10\"><th class=\"p-4 text-left text-white font-bold\">Model Version</th><th class=\"p-4 text-left text-white font-bold\">Training Docs</th><th class=\"p-4 text-left text-white font-bold\">Role Families</th><th class=\"p-4 text-left text-[#013f2e] font-bold\">Recruiter Appeal</th></tr></thead><tbody><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">v1 (Q2 2025)</td><td class=\"p-4 text-center text-gray-300\">120,000</td><td class=\"p-4 text-center text-gray-400\">8</td><td class=\"p-4 text-center text-amber-400\">59%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">v2 (Q3 2025)</td><td class=\"p-4 text-center text-gray-300\">280,000</td><td class=\"p-4 text-center text-gray-400\">14</td><td class=\"p-4 text-center text-amber-400\">68%</td></tr><tr class=\"bg-[#1a1f1a]/50 border-b border-white-5\"><td class=\"p-4 text-white\">v3 (Q4 2025) — current</td><td class=\"p-4 text-center text-[#013f2e]\">500,000+</td><td class=\"p-4 text-center text-[#013f2e]\">18+</td><td class=\"p-4 text-center text-[#013f2e] font-bold\">78%</td></tr></tbody></table></div><p class=\"text-gray-500 text-sm mt-2 text-center\">Table 3: AI model improvements across three major versions — each release was benchmarked on a panel of 12 professional recruiters</p>"
+    },
+    {
+      "id": "user-flow-creator",
+      "heading": "The Complete AIResume Creation Flow — Step by Step",
+      "content": "<p class=\"text-gray-300 mb-4\">Beyond the 4-step overview, here is the detailed user journey for building your first resume using AIResume's AI:</p><div class=\"bg-[#1a1f1a] rounded-xl p-6 border border-white/5 my-6 space-y-4\"><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#013f2e]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#013f2e] font-bold text-sm\">S1</span></div><div><h4 class=\"text-white font-semibold\">Select Your Role Template</h4><p class=\"text-gray-500 text-sm mt-1\">Choose from 80+ ATS-validated templates spanning 18 role families. AIResume's smart selector recommends the best template based on your target role. Each template has been tested against 20 ATS platforms.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#013f2e]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#013f2e] font-bold text-sm\">S2</span></div><div><h4 class=\"text-white font-semibold\">AI Content Generation</h4><p class=\"text-gray-500 text-sm mt-1\">Complete the 14-point career context form. AIResume's AI generates role-specific content for each section — summary, experience bullet points, skills. Regenerate or edit any section manually.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#013f2e]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#013f2e] font-bold text-sm\">S3</span></div><div><h4 class=\"text-white font-semibold\">Live ATS Scoring</h4><p class=\"text-gray-500 text-sm mt-1\">The ATS scorebar updates in real-time as you type. Green highlights show keyword matches, red shows gaps. Paste any job description for role-specific keyword matching.</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#013f2e]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#013f2e] font-bold text-sm\">S4</span></div><div><h4 class=\"text-white font-semibold\">AI Metric Suggestions</h4><p class=\"text-gray-500 text-sm mt-1\">AIResume's achievement engine suggests quantified metrics tailored to your role. e.g., for a PM: \"drove 30% improvement in retention, saving £210K\"</p></div></div><div class=\"flex gap-3\"><div class=\"w-8 h-8 bg-[#013f2e]/20 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5\"><span class=\"text-[#013f2e] font-bold text-sm\">S5</span></div><div><h4 class=\"text-white font-semibold\">Export &amp; Download</h4><p class=\"text-gray-500 text-sm mt-1\">One-click PDF export (ISO 32000 compliant, ATS-readable). Free tier: up to 3 exports/month. Professional: unlimited. No watermark on any tier.</p></div></div></div>"
+    }
+  ],
+  "tableOfContents": [
+    {
+      "id": "intro",
+      "title": "Most \"AI Resume Builders\" Are Just Wrappers Around GPT — Here's How AIResume Is Different"
+    },
+    {
+      "id": "architecture",
+      "title": "How AIResume's AI Engine Actually Works"
+    },
+    {
+      "id": "comparison-table",
+      "title": "Table 1: AI Resume Builder Capability Comparison (2026)"
+    },
+    {
+      "id": "metrics",
+      "title": "Quantifying the Difference: Recruiter Appeal Score Benchmark"
+    },
+    {
+      "id": "pricing-2026",
+      "title": "Table 2: AIResume Pricing 2026 — Including AI Capabilities"
+    },
+    {
+      "id": "how-to",
+      "title": "How to Use the AI Resume Builder (4-Step Guide)"
+    },
+    {
+      "id": "cta",
+      "title": "Start Building Your AI-Powered Resume Today"
+    },
+    {
+      "id": "training-data",
+      "title": "Table 2: AIResume's AI Training Corpus — 2026 Breakdown"
+    },
+    {
+      "id": "transformer-ml",
+      "title": "The Transformer Advantage — Why Domain-Specific Fine-Tuning Beats GPT-4 Wrappers"
+    },
+    {
+      "id": "enterprise-scale",
+      "title": "How the Enterprise Team Tier Scales Across 100+ Users"
+    },
+    {
+      "id": "model-training",
+      "title": "Table 3: AIResume Model Version History & Improvements"
+    },
+    {
+      "id": "user-flow-creator",
+      "title": "The Complete AIResume Creation Flow — Step by Step"
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+# ── AIResume · resumebuilder-worker ────────────────────────────────────
+# Written to stand alone: this service builds from its own Docker context and can be pushed as
+# its own repository without inheriting the monorepo root's rules.
+
+# ── Dependencies ───────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ───────────────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ── Environment files ──────────────────────────────────────────────────
+# Only the template is committed.
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+!.env.example.*
+!*.env.example
+
+# ── Documentation ──────────────────────────────────────────────────────
+# Only README.md is published.
+*.md
+!README.md
+
+# ── Test / coverage ────────────────────────────────────────────────────
+coverage/
+
+# ── Local data ─────────────────────────────────────────────────────────
+*.bson
+*.wt
+*.json.gz
+
+# ── Logs / scratch ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+*.tmp
+*.bak
+*.backup
+*.orig
+*.rej
+
+# ── Tool / IDE caches ──────────────────────────────────────────────────
+.claude/
+.shipstudio/
+.vscode/
+.idea/
+
+# ── Sensitive files ────────────────────────────────────────────────────
+# Nothing here is expected to exist today; these are the shapes that must never be committed.
+firebase-key.json
+*.pem
+*.key
+*.p8
+*.csv
+cookies.txt
+*.cookies
+*.cookie
+.browser-profile/
+
+# ── OS / editor ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
