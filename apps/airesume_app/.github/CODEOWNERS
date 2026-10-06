@@ -1,0 +1,19 @@
+# Default owner for everything in this repository.
+#
+# ⚠️ ACTION REQUIRED: replace @your-github-handle with a real GitHub username or team. GitHub
+# silently ignores owners that do not resolve, so until this is replaced the file has no effect and
+# nothing will appear broken.
+#
+# This only takes effect once "Require review from Code Owners" is enabled in the branch protection
+# rules for the default branch.
+
+*                       @your-github-handle
+
+# Highest blast radius: CI and the production image.
+/.github/               @your-github-handle
+/Dockerfile             @your-github-handle
+/.dockerignore          @your-github-handle
+
+# The secrets policy and the ignore rules are security-relevant.
+/SECURITY.md            @your-github-handle
+/.gitignore             @your-github-handle

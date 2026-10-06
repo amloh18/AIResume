@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/types/**/*.d.ts",
+    "src/types/automation-schema.ts",
+    "src/models/PortalConnection.ts",
+    "src/models/PortalJobSyncTask.ts",
+    "src/lib/portals/**/*.ts",
+    "src/lib/services/portal-connection-service.ts",
+    "src/lib/services/portal-fetcher-service.ts",
+    "src/lib/jobs/autoApplySupport.ts",
+    "src/hooks/useJobSourceConnections.ts",
+    "src/components/dashboard/settings/ConnectedJobAccounts.tsx",
+    "src/components/dashboard/settings/PortalManageDialog.tsx",
+    "src/components/dashboard/settings/PortalConnectModal.tsx",
+    "src/components/jobs/AutoApplyPanel.tsx",
+    "src/components/dashboard/JobsDashboard.tsx",
+    "src/app/api/portal-connections/**/*.ts"
+  ],
+  "exclude": ["node_modules", "scripts", "scratch"]
+}
