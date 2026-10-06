@@ -20,6 +20,7 @@ export async function GET() {
       },
       razorpay: {
         enabled: settings?.razorpay?.enabled ?? true,
+        keyId: settings?.razorpay?.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || null,
       },
     });
   } catch (error: any) {

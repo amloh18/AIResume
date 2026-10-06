@@ -39,16 +39,32 @@ function RazorpayCheckoutContent() {
   useEffect(() => {
     if (status !== 'ready' || !subscriptionId) return;
 
-    const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    if (!razorpayKey) {
-      setStatus('error');
-      setError('Razorpay is not configured');
-      return;
-    }
+    let isMounted = true;
 
-    // Auto-open Razorpay checkout
-    const rzp = new (window as any).Razorpay({
-      key: razorpayKey,
+    async function initRazorpay() {
+      let razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+
+      if (!razorpayKey) {
+        try {
+          const res = await fetch('/api/payment/provider');
+          const data = await res.json();
+          razorpayKey = data.razorpay?.keyId;
+        } catch (err) {
+          console.error('Failed to load razorpay key from provider API:', err);
+        }
+      }
+
+      if (!isMounted) return;
+
+      if (!razorpayKey) {
+        setStatus('error');
+        setError('Razorpay is not configured');
+        return;
+      }
+
+      // Auto-open Razorpay checkout
+      const rzp = new (window as any).Razorpay({
+        key: razorpayKey,
       subscription_id: subscriptionId,
       name: 'BuildAIResume',
       description: `Subscription: ${planKey}`,
@@ -75,7 +91,14 @@ function RazorpayCheckoutContent() {
       setError(response.error?.description || 'Payment failed');
     });
 
-    rzp.open();
+      rzp.open();
+    }
+
+    initRazorpay();
+
+    return () => {
+      isMounted = false;
+    };
   }, [status, subscriptionId, planKey, billingCycle, router]);
 
   if (status === 'loading') {

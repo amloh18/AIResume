@@ -9,7 +9,6 @@
  *   2. GEMINI_API_KEY
  *   3. gemini_api_key1
  *   4. GEMINI_API_KEY1
- *   5. NEXT_PUBLIC_GEMINI_API_KEY
  *
  * Hard-fails at startup if none of the above is configured.
  *
