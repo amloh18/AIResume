@@ -1,0 +1,58 @@
+# Continuous integration — the AIResume web application.
+#
+# The build is the expensive step (it asks for a 4 GB heap). It runs without any runtime secret by
+# design: the auth config and the cron guard are lazily evaluated, so a build never needs production
+# configuration. If that ever stops being true, this job is where it will show up first.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch cancels the previous run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      # ⚠️ NON-BLOCKING ON PURPOSE. `tsc --noEmit` over this tree is known not to be a clean signal
+      # yet — the project type-checks in slices (tsconfig.chips.json / .pipeline.json / .portal.json)
+      # because a repo-wide run is slow and noisy. This step reports without failing the build so it
+      # can be promoted to a required check once the noise is cleared.
+      - name: Type-check
+        run: npm run type-check
+        continue-on-error: true
+
+      # ⚠️ NON-BLOCKING ON PURPOSE. `npx vitest run` currently exits 1 on 5 pre-existing failures.
+      # They are real and worth fixing. Until they are, this step reports without failing the build —
+      # otherwise a known-red suite trains everyone to ignore a red CI, and a NEW failure hides in it.
+      # Remove `continue-on-error` and make this a required check once the suite is green.
+      - name: Test
+        run: npm test
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096

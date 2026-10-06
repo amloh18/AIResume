@@ -67,10 +67,21 @@ class LinkedInConfig:
         self.max_runtime_seconds = int(os.environ.get("LINKEDIN_MAX_RUNTIME_SECONDS", "600"))
         self.cooldown_seconds = int(os.environ.get("LINKEDIN_COOLDOWN_SECONDS", "60"))
 
-        # Ingestion API
+        # Ingestion API.
+        #
+        # ⚠️ Two mismatches here, both pre-existing rather than caused by the admin split:
+        #
+        #   1. The endpoint moved. `/api/admin/ingest` is served by the operations app (3001),
+        #      not by the web app (3000).
+        #   2. The guard does not match the caller. The route is wrapped in `withAdminAuth`,
+        #      which requires a NextAuth **browser session**, while this worker sends
+        #      `CRON_SECRET` as a bearer token. So the call returns 401 whichever port it uses.
+        #
+        # Before relying on direct ingest from this worker, give the route a token-based guard
+        # and point this URL at the operations origin.
         self.ingest_api_url = os.environ.get(
             "LINKEDIN_INGEST_API_URL",
-            "http://127.0.0.1:3000/api/admin/ingest",
+            "http://127.0.0.1:3001/api/admin/ingest",
         )
         self.ingest_api_secret = os.environ.get("CRON_SECRET", "")
 

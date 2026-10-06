@@ -1,0 +1,338 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getConnection } from '@/lib/database';
+import { CV } from '@/models';
+import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import * as crypto from 'crypto';
+
+/**
+ * Generate a hash of CV content for cache invalidation
+ */
+function generateContentHash(cvData: any, jobData?: any): string {
+  const contentToHash = {
+    basics: cvData?.basics,
+    work: cvData?.work,
+    education: cvData?.education,
+    skills: cvData?.skills,
+    projects: cvData?.projects,
+    certificates: cvData?.certificates,
+    languages: cvData?.languages,
+    volunteer: cvData?.volunteer,
+    // Include job data in hash if present
+    jobDescription: jobData?.description || jobData?.jobDescription || jobData?.jd || null,
+    jobTitle: jobData?.title || jobData?.jobTitle || null
+  };
+  
+  return crypto
+    .createHash('md5')
+    .update(JSON.stringify(contentToHash))
+    .digest('hex');
+}
+
+/**
+ * Generate a hash of job data for separate tracking
+ */
+function generateJobDataHash(jobData?: any): string | null {
+  if (!jobData) return null;
+  
+  const jobContent = {
+    description: jobData?.description || jobData?.jobDescription || jobData?.jd || null,
+    title: jobData?.title || jobData?.jobTitle || null,
+    company: jobData?.company || null
+  };
+  
+  // Only generate hash if there's meaningful job data
+  if (!jobContent.description && !jobContent.title) return null;
+  
+  return crypto
+    .createHash('md5')
+    .update(JSON.stringify(jobContent))
+    .digest('hex');
+}
+
+/**
+ * Check if cached analysis is still valid
+ */
+function isCacheValid(
+  cachedAnalysis: any,
+  currentContentHash: string,
+  targetRole: string,
+  seniorityLevel: string
+): boolean {
+  if (!cachedAnalysis) return false;
+  if (!cachedAnalysis.contentHash) return false;
+  if (!cachedAnalysis.analyzedAt) return false;
+  
+  // Check if content has changed
+  if (cachedAnalysis.contentHash !== currentContentHash) {
+    console.log('🔄 Surgeon analysis cache invalid: content changed');
+    return false;
+  }
+  
+  // Check if role context has changed
+  if (cachedAnalysis.targetRole !== targetRole || cachedAnalysis.seniorityLevel !== seniorityLevel) {
+    console.log('🔄 Surgeon analysis cache invalid: role context changed');
+    return false;
+  }
+  
+  // Cache is valid for 24 hours max
+  const cacheAge = Date.now() - new Date(cachedAnalysis.analyzedAt).getTime();
+  const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
+  if (cacheAge > maxCacheAge) {
+    console.log('🔄 Surgeon analysis cache invalid: expired (>24h)');
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * GET - Fetch cached surgeon analysis
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await getConnection();
+    
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    // Ownership comes from the session, not from `?userId=`. The query parameter is ignored: trusting
+    // it let any caller read any user's cached analysis by guessing a CV id.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = authResult.userId;
+    const targetRole = searchParams.get('targetRole') || '';
+    const seniorityLevel = searchParams.get('seniorityLevel') || '';
+    const jobDataParam = searchParams.get('jobData');
+    
+    let jobData = null;
+    if (jobDataParam) {
+      try {
+        jobData = JSON.parse(jobDataParam);
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
+    const cvId = toObjectId(id);
+    const cv = await CV.findOne({ _id: cvId, userId }).lean() as any;
+    
+    if (!cv) {
+      return NextResponse.json(
+        { success: false, error: 'CV not found' },
+        { status: 404 }
+      );
+    }
+
+    const cachedAnalysis = cv.metadata?.surgeonAnalysis;
+    
+    if (!cachedAnalysis) {
+      return NextResponse.json({
+        success: true,
+        cached: false,
+        analysis: null,
+        message: 'No cached analysis found'
+      });
+    }
+
+    // Generate current content hash for validation
+    const currentContentHash = generateContentHash(cv.cvData, jobData);
+    
+    // Check if cache is valid
+    const isValid = isCacheValid(cachedAnalysis, currentContentHash, targetRole, seniorityLevel);
+    
+    if (!isValid) {
+      return NextResponse.json({
+        success: true,
+        cached: false,
+        analysis: null,
+        message: 'Cache invalidated - content or context changed'
+      });
+    }
+
+    console.log('✅ Returning cached surgeon analysis for CV:', id);
+    
+    return NextResponse.json({
+      success: true,
+      cached: true,
+      analysis: {
+        score: cachedAnalysis.score,
+        fixes: cachedAnalysis.fixes || [],
+        annotations: cachedAnalysis.annotations || [],
+        analyzedAt: cachedAnalysis.analyzedAt,
+        isRestricted: cachedAnalysis.isRestricted,
+        scoreReport: cachedAnalysis.scoreReport || null
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Get surgeon analysis error:', error);
+    const errorResponse = createErrorResponse(error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode || 500 });
+  }
+}
+
+/**
+ * POST - Save surgeon analysis to cache
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await getConnection();
+    
+    const { id } = await params;
+    const body = await request.json();
+    const { 
+      score, 
+      fixes, 
+      annotations,
+      targetRole,
+      seniorityLevel,
+      jobData,
+      isRestricted,
+      scoreReport
+    } = body;
+
+    // Ownership comes from the session, not from the body. `userId` in the payload is ignored.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = authResult.userId;
+
+    if (score === undefined || !Array.isArray(fixes) || !Array.isArray(annotations)) {
+      return NextResponse.json(
+        { success: false, error: 'Score, fixes, and annotations are required' },
+        { status: 400 }
+      );
+    }
+
+    const cvId = toObjectId(id);
+    const cv = await CV.findOne({ _id: cvId, userId });
+    
+    if (!cv) {
+      return NextResponse.json(
+        { success: false, error: 'CV not found' },
+        { status: 404 }
+      );
+    }
+
+    // Generate content hash for future cache validation
+    const contentHash = generateContentHash(cv.cvData, jobData);
+    const jobDataHash = generateJobDataHash(jobData);
+
+    // Save surgeon analysis to metadata
+    const surgeonAnalysis = {
+      score,
+      fixes,
+      annotations,
+      targetRole: targetRole || '',
+      seniorityLevel: seniorityLevel || '',
+      analyzedAt: new Date(),
+      contentHash,
+      jobDataHash,
+      isRestricted,
+      scoreReport: scoreReport || null
+    };
+
+    // Canonical score: the deterministic score computed by CentralScoreManager
+    // (client side) must drive the persisted roots. The LLM review
+    // (scoreReport.overall_score) lives only inside metadata.surgeonAnalysis
+    // and must never overwrite the deterministic cv_score_* / atsScore values.
+    const finalScore = typeof score === 'number' ? score : (scoreReport?.overall_score ?? 0);
+
+    cv.metadata = cv.metadata || {} as any;
+    (cv.metadata as any).surgeonAnalysis = surgeonAnalysis;
+
+    // NOTE: this endpoint no longer propagates any score to the CV's root
+    // `cv_score_*` fields, to `metadata.atsScore`, or to
+    // `ApplicationJourney.atsScore`.
+    //
+    // `score` arrives in the request body, so propagating it made the persisted
+    // ATS score client-authoritative — a caller could POST any number and have
+    // it shown as the CV's ATS score everywhere. This endpoint now caches the
+    // surgeon *analysis* only. The single ATS writer is
+    // POST /api/ats/calculate-score, which recomputes from CV content with the
+    // shared CentralScoreManager and the CV's template context. The review score
+    // remains available at metadata.surgeonAnalysis.score / .scoreReport for
+    // surfaces that explicitly want a labelled review score.
+
+    cv.markModified('metadata.surgeonAnalysis');
+    cv.markModified('metadata');
+    
+    await cv.save();
+
+    console.log('✅ Saved surgeon analysis to CV:', id, {
+      reviewScore: finalScore,
+      fixCount: fixes.length,
+      propagatedToAtsScore: false,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Surgeon analysis saved successfully',
+      data: {
+        analyzedAt: surgeonAnalysis.analyzedAt,
+        contentHash
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Save surgeon analysis error:', error);
+    const errorResponse = createErrorResponse(error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode || 500 });
+  }
+}
+
+/**
+ * DELETE - Clear cached surgeon analysis
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await getConnection();
+    
+    const { id } = await params;
+    // Ownership comes from the session, not from `?userId=`.
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = authResult.userId;
+
+    const cvId = toObjectId(id);
+    // Use $unset to clear the nested object reliably (avoid casting/validation issues)
+    const result = await CV.updateOne(
+      { _id: cvId, userId },
+      { $unset: { 'metadata.surgeonAnalysis': 1 } }
+    );
+
+    if (!result.matchedCount) {
+      return NextResponse.json(
+        { success: false, error: 'CV not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ Cleared surgeon analysis cache for CV:', id);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Surgeon analysis cache cleared'
+    });
+
+  } catch (error: any) {
+    console.error('Clear surgeon analysis error:', error);
+    const errorResponse = createErrorResponse(error);
+    return NextResponse.json(errorResponse, { status: errorResponse.statusCode || 500 });
+  }
+}
+
