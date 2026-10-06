@@ -794,6 +794,45 @@ export class UnifiedAuthService {
           // Return the cleaned session - this is what gets stored in the cookie
           return cleanedSession as any;
         },
+
+        async redirect({ url, baseUrl }) {
+          const envUrl = process.env.NEXTAUTH_URL;
+          let canonicalOrigin = baseUrl;
+          if (envUrl) {
+            try {
+              const parsedEnv = envUrl.startsWith('http://') || envUrl.startsWith('https://')
+                ? envUrl
+                : `https://${envUrl}`;
+              canonicalOrigin = new URL(parsedEnv).origin;
+            } catch {
+              // fallback to baseUrl
+            }
+          }
+
+          if (url) {
+            // NextAuth accepts relative values — prefer relative when possible.
+            if (url.startsWith('/') && !url.startsWith('//')) {
+              return url;
+            }
+
+            // Return an absolute URL only when one is supplied and matches trusted origins
+            try {
+              const parsed = new URL(url);
+              if (
+                parsed.origin === canonicalOrigin ||
+                parsed.origin === baseUrl ||
+                parsed.hostname === 'localhost' ||
+                parsed.hostname === '127.0.0.1'
+              ) {
+                return new URL(parsed.pathname + parsed.search + parsed.hash, canonicalOrigin).toString();
+              }
+            } catch {
+              // invalid URL
+            }
+          }
+
+          return '/';
+        },
       },
 
       pages: {
