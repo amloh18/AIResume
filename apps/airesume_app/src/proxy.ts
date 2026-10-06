@@ -79,6 +79,21 @@ const cronApiRoutes = ['/api/cron'];
 const STATIC_EXTENSION =
   /\.(?:js|mjs|css|map|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|otf|eot|txt|xml|pdf|mp4|webm|mp3|wav)$/;
 
+function getPublicOrigin(req: NextRequest): string {
+  const envUrl = process.env.NEXTAUTH_URL;
+  if (envUrl) {
+    try {
+      const url = envUrl.startsWith('http://') || envUrl.startsWith('https://')
+        ? envUrl
+        : `https://${envUrl}`;
+      return new URL(url).origin;
+    } catch {
+      // Fallback if NEXTAUTH_URL is malformed
+    }
+  }
+  return req.nextUrl.origin;
+}
+
 export default async function proxy(req: NextRequest) {
   const startTime = Date.now();
   const pathname = req.nextUrl.pathname;
@@ -265,8 +280,10 @@ export default async function proxy(req: NextRequest) {
         pathname,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
       }));
-      const loginUrl = new URL('/admin/login', req.url);
-      loginUrl.searchParams.set('callbackUrl', req.url);
+      const origin = getPublicOrigin(req);
+      const loginUrl = new URL('/admin/login', origin);
+      const callbackUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, origin).toString();
+      loginUrl.searchParams.set('callbackUrl', callbackUrl);
       return redirect(loginUrl);
     }
 
@@ -277,7 +294,8 @@ export default async function proxy(req: NextRequest) {
         role: token.role,
         type: token.type || 'none',
       }));
-      return redirect(new URL('/admin/unauthorized', req.url));
+      const origin = getPublicOrigin(req);
+      return redirect(new URL('/admin/unauthorized', origin));
     }
 
     log.debug('Admin access granted', {
@@ -292,19 +310,20 @@ export default async function proxy(req: NextRequest) {
   if (isProtectedRoute(req)) {
     if (!isAuth) {
       log.debug('Unauthenticated access to protected route, redirecting to login', { pathname });
-      return redirect(new URL('/sign-in', req.url));
+      const origin = getPublicOrigin(req);
+      return redirect(new URL('/sign-in', origin));
     }
 
     if (pathname === '/dashboard' || pathname === '/dashboard/') {
-      const url = req.nextUrl.clone();
-      url.pathname = '/dashboard/jobs';
-      return redirect(url);
+      const origin = getPublicOrigin(req);
+      return redirect(new URL('/dashboard/jobs', origin));
     }
 
     if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/settings')) {
       const expiredParam = req.nextUrl.searchParams.get('expired');
       if (expiredParam === 'true') {
-        return redirect(new URL('/dashboard/settings?tab=membership&expired=true', req.url));
+        const origin = getPublicOrigin(req);
+        return redirect(new URL('/dashboard/settings?tab=membership&expired=true', origin));
       }
     }
 
