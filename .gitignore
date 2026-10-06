@@ -173,3 +173,7 @@ apps/admin/
 # ── Nested sub-repo backups & agent memory ──────────────────────────────
 **/.git-bak/
 .workbuddy-ai/
+
+# ── Sensitive Documentation ─────────────────────────────────────────────
+docs/sensitive.md
+sensitive.md
