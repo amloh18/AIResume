@@ -491,8 +491,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   // The section the user clicked. While set, that section gets the solid lime
   // "spotlight" frame and every other section on the sheet is blurred/dimmed
   // (see the `cv-has-selection` rules in the style block). Cleared by Escape or
-  // by a click anywhere that is not a section.
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const selectedBlockIdRef = useRef<string | null>(selectedBlockId);
+  selectedBlockIdRef.current = selectedBlockId;
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
     // Deduplicate blocks within each zone to prevent React duplicate-key warnings
@@ -546,8 +547,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
    * shell has published the node; storing it in state re-renders the panel. */
   const [utilityPortal, setUtilityPortal] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    setUtilityPortal(document.getElementById('builder-utility-panel-portal'));
-  }, []);
+    const el = document.getElementById('builder-utility-panel-portal');
+    if (el) setUtilityPortal(el);
+  }, [activeSidebar, isTemplateModalOpen, replacingSnippet]);
 
   // ─── Move animation — representation only ────────────────────────────────
   // `moveSnippet` reorders a zone array and that is the entire model change.
@@ -846,20 +848,29 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     // the rail's active state.
     const handleSetSidebar = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setActiveSidebar(detail);
+      if (detail === 'sections') {
+        setActiveSidebar('sections');
+        setReplacingSnippet((prev: any) => prev || { zoneId: pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type), isAdd: true });
+      } else {
+        setActiveSidebar(detail);
+        setReplacingSnippet(null);
+      }
       setIsTemplateModalOpen(false);
     };
     const handleOpenTemplates = () => {
       setIsTemplateModalOpen(true);
       setActiveSidebar(null);
+      setReplacingSnippet(null);
     };
     const handleCloseUtility = () => {
       setActiveSidebar(null);
       setIsTemplateModalOpen(false);
+      setReplacingSnippet(null);
     };
     const handleOpenMori = () => {
       setActiveSidebar(null);
       setIsTemplateModalOpen(false);
+      setReplacingSnippet(null);
     };
     const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + ZOOM_STEP));
     const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - ZOOM_STEP));
@@ -903,7 +914,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest('[data-block-id], .no-print, [data-mori-selection-bar], [data-mori-ask-bar], [role="dialog"], [data-radix-popper-content-wrapper]')) return;
+      if (target.closest('.no-print, [data-mori-selection-bar], [data-mori-ask-bar], [role="dialog"], [data-radix-popper-content-wrapper], [data-canvas-toolrail], [data-section-rail], .entry-controls')) return;
+
+      const activeId = selectedBlockIdRef.current;
+      if (activeId) {
+        const inSelectedBlock = Boolean(target.closest(`[data-block-id="${CSS.escape(activeId)}"]`));
+        if (!inSelectedBlock) {
+          // When in focused section, clicking outside (including on another section)
+          // closes the focus from the section rather than activating it on the other section.
+          e.stopPropagation();
+          e.preventDefault();
+          setSelectedBlockId(null);
+          window.dispatchEvent(new CustomEvent('mori-close-menus'));
+          return;
+        }
+        return;
+      }
+
+      if (target.closest('[data-block-id]')) return;
 
       setSelectedBlockId(null);
 
@@ -1278,7 +1306,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   useImperativeHandle(ref, () => ({
     openTemplateSelector: () => setIsTemplateModalOpen(true),
-    openAddSection: () => setReplacingSnippet({ zoneId: pickAddTargetZone(zones, activeTemplate?.type), isAdd: true }),
+    openAddSection: () => {
+      setReplacingSnippet({ zoneId: pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type), isAdd: true });
+      window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
+    },
   }));
 
   const loadTemplate = (template: any) => {
@@ -1684,9 +1715,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
   const handleReplaceClick = (zoneId: string, index: number, currentType: string) => {
     const category = SNIPPETS[currentType]?.category;
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), index, currentType, category, isAdd: false });
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
   const handleAddClick = (zoneId: string, insertIndex?: number) => {
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), isAdd: true, insertIndex });
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
 
   const handleAddListEntry = (type: string) => {
@@ -1722,11 +1755,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     });
   };
 
-  const executeReplaceOrAdd = (newType: string) => {
-    if (!replacingSnippet || layoutWriteLock.current) return;
+  const executeReplaceOrAdd = (newType: string, customContext?: any) => {
+    const addContext = customContext || replacingSnippet;
+    if (!addContext || layoutWriteLock.current) return;
     layoutWriteLock.current = true;
-
-    const addContext = replacingSnippet;
     const isTabletOrBigger = typeof window !== 'undefined' && window.innerWidth >= 768;
 
     if (!isTabletOrBigger) {
@@ -1822,7 +1854,8 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     containerRef: workspaceRef,
     zoomRef,
     setZoom,
-    scaleFor: (distancePx) => (distancePx / 300) * 100,
+    scaleFor: (distancePx) => (distancePx / 100) * 100,
+    speedMultiplier: 1.5,
     minZoom: 50,
     maxZoom: 200,
   });
@@ -2666,6 +2699,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         setDesign,
         handleDataChange,
         setFocusedNode,
+        focusedNode,
         setFocusedJsonPath,
         focusedJsonPath,
         selectedBlockId,
@@ -2821,7 +2855,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           </div>
 
           {!readOnly && (
-            <div className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
+            <div data-canvas-page-controls className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
               <div className={`px-2 md:px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 md:gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="hidden md:flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
@@ -2932,7 +2966,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         </div>
 
         {!readOnly && activeSidebar === 'design' && (() => {
-          const portalTarget = utilityPortal;
+          const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
           if (!portalTarget) return null;
           const panelContent = (
             <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -3099,7 +3133,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         })()}
 
         {!readOnly && activeSidebar === 'data' && (() => {
-          const portalTarget = utilityPortal;
+          const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
           if (!portalTarget) return null;
           const panelContent = (
             <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -3265,7 +3299,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
       {/* TEMPLATE PANEL (rendered as portal if target exists, otherwise fall back to modal) */}
       {isTemplateModalOpen && (() => {
-        const portalTarget = utilityPortal;
+        const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
         if (!portalTarget) return null;
         const content = (
           <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -3302,14 +3336,19 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         return createPortal(content, portalTarget);
       })()}
 
-      {/* REPLACE / ADD SNIPPET MODAL */}
-      {replacingSnippet && (() => {
+      {/* REPLACE / ADD SNIPPET PANEL */}
+      {!readOnly && (activeSidebar === 'sections' || replacingSnippet) && (() => {
+        const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
+        if (!portalTarget) return null;
+
+        const currentZone = replacingSnippet?.zoneId || pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type);
+        const snippetContext = replacingSnippet || { zoneId: currentZone, isAdd: true };
         const previewData = getCanvasSnippetPreviewData(cvData);
-        const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
+        const currentCategories = Object.values(zonesRef.current || zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
 
         // Calculate Recommended Family
         const getRecommendedFamily = () => {
-          const allTypes = Object.values(zones).flat().map((z: any) => z.type);
+          const allTypes = Object.values(zonesRef.current || zones).flat().map((z: any) => z.type);
           const familyCounts: Record<string, number> = {};
           
           allTypes.forEach(type => {
@@ -3335,15 +3374,15 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
         // Filter and Sort Snippets
         const filteredSnippets = Object.values(SNIPPETS).filter(s => 
-          replacingSnippet.isAdd 
-            ? (!currentCategories.includes(s.category) && (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory)) 
-            : s.category === replacingSnippet.category
+          snippetContext.isAdd 
+            ? (!currentCategories.includes(s.category) && (!snippetContext.filterCategory || s.category === snippetContext.filterCategory)) 
+            : s.category === snippetContext.category
         ).filter(Boolean);
 
         // Sort: Recommended first -> Current -> Others
         const sortedSnippets = [...filteredSnippets].sort((a, b) => {
-          const isACurrent = a.id === replacingSnippet.currentType;
-          const isBCurrent = b.id === replacingSnippet.currentType;
+          const isACurrent = a.id === snippetContext.currentType;
+          const isBCurrent = b.id === snippetContext.currentType;
           if (isACurrent) return -1;
           if (isBCurrent) return 1;
           
@@ -3356,81 +3395,135 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           return 0;
         });
 
-        return (
-          <>
-            {/* Backdrop Overlay */}
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[110] transition-opacity duration-300"
-              onClick={() => setReplacingSnippet(null)}
-            />
-            {/* Right Side Panel - follows app sidebar pattern: margin all around + rounded corners, two-column layout */}
-            <div className={`fixed right-3 top-3 bottom-3 h-auto w-full max-w-[760px] shadow-2xl z-[120] flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border border-[#2a2a2a]' : 'bg-white border border-gray-200'}`}>
-              <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-                <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
-                <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
-              </div>
-              {replacingSnippet.isAdd && (
-                <div className={`px-4 py-3 flex flex-wrap gap-1.5 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'} bg-[#f9f9f9] dark:bg-[#0d0d0d]`}>
-                  {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
-                    .filter(cat => cat === 'All' || !currentCategories.includes(cat))
-                    .map(cat => (
-                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#1e1e1e] text-gray-400 border-[#2a2a2a] hover:bg-[#252525]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}`}>{cat}</button>
-                  ))}
-                  {(!replacingSnippet.filterCategory || replacingSnippet.filterCategory === 'Skills') && (
-                    <button
-                      type="button"
-                      onClick={() => void openSkillsSuggestions()}
-                      className="w-full mt-2 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all"
-                    >
-                      <Sparkles size={12} />
-                      AI Skill Recommendations
-                    </button>
-                  )}
-                </div>
-              )}
-              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {sortedSnippets.map(snippet => {
-                  const targetZoneId = replacingSnippet.zoneId;
-                  const isTargetDark = false; // Always light theme for snippet previews
-                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
-                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
-                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-                  
-                  const isCurrent = snippet.id === replacingSnippet.currentType;
-                  const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
-                  const isATS = ATS_SNIPPETS.includes(snippet.id);
-                  
-                  const isHeader = snippet.category === 'Header';
-                  const scale = isHeader ? 0.36 : 0.40;
+        const SnippetPreviewReadOnly = (props: any) => (
+          <EditableField {...props} data={props.data || previewData} readOnly={true} />
+        );
+        const previewContext = { cvData: previewData, design, readOnly: true };
 
-                  return (
-                    <div key={snippet.id} onClick={(e) => { e.stopPropagation(); executeReplaceOrAdd(snippet.id); }} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg min-w-0 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
-                      <div className={`p-2.5 flex flex-col gap-1 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
-                        <div className="flex justify-between items-start gap-1">
-                          <div className="min-w-0">
-                            <div className={`font-bold text-xs truncate ${textPrimary}`}>{snippet.name}</div>
-                            <div className={`text-[8px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
-                          </div>
-                          <div className="flex flex-col gap-1 items-end shrink-0">
-                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
-                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={7}/> RECOMMEND</span>}
-                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={7}/> ATS</span>}
-                          </div>
+        const panelContent = (
+          <div className="flex-grow flex flex-col h-full overflow-hidden bg-[#f3f2ee] dark:bg-[#1a1a1a]">
+            {snippetContext.isAdd && (
+              <div className="px-3.5 py-2.5 flex flex-wrap gap-1.5 border-b border-black/5 dark:border-white/5 bg-[#eae8e1] dark:bg-[#141414]">
+                {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
+                  .filter(cat => cat === 'All' || !currentCategories.includes(cat))
+                  .map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setReplacingSnippet({...snippetContext, filterCategory: cat === 'All' ? null : cat})}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${
+                      snippetContext.filterCategory === cat || (!snippetContext.filterCategory && cat === 'All')
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 shadow-xs'
+                        : 'bg-white dark:bg-[#222] text-gray-600 dark:text-gray-300 border-black/10 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-[#2a2a2a]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+                {(!snippetContext.filterCategory || snippetContext.filterCategory === 'Skills') && (
+                  <button
+                    type="button"
+                    onClick={() => void openSkillsSuggestions()}
+                    className="w-full mt-1.5 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 hover:bg-emerald-500/15 transition-all shadow-xs"
+                  >
+                    <Sparkles size={12} />
+                    AI Skill Recommendations
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="p-3.5 overflow-y-auto flex-1 custom-scrollbar bg-[#f3f2ee] dark:bg-[#1a1a1a]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {sortedSnippets.map(snippet => {
+                const targetZoneId = snippetContext.zoneId;
+                const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                
+                const isCurrent = snippet.id === snippetContext.currentType;
+                const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
+                const isATS = ATS_SNIPPETS.includes(snippet.id);
+                
+                const isHeader = snippet.category === 'Header';
+                const scale = isHeader ? 0.36 : 0.40;
+
+                return (
+                  <div
+                    key={snippet.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      executeReplaceOrAdd(snippet.id, snippetContext);
+                      setReplacingSnippet(null);
+                      setActiveSidebar(null);
+                      window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                    }}
+                    className={`group relative rounded-xl cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg min-w-0 bg-white dark:bg-[#202020] ${
+                      isCurrent
+                        ? 'border border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                        : isRecommended
+                        ? 'border border-emerald-500/60 dark:border-emerald-500/50 ring-1 ring-emerald-500/20 shadow-xs hover:border-emerald-500'
+                        : 'border border-black/10 dark:border-white/10 hover:border-emerald-500/40 dark:hover:border-emerald-500/40'
+                    }`}
+                  >
+                    <div className="p-2.5 flex flex-col gap-1 z-10 bg-white dark:bg-[#202020] border-b border-black/5 dark:border-white/5">
+                      <div className="flex justify-between items-start gap-1">
+                        <div className="min-w-0">
+                          <div className={`font-bold text-xs truncate ${textPrimary}`}>{snippet.name}</div>
+                          <div className={`text-[8px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          {isCurrent && (
+                            <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">
+                              CURRENT
+                            </span>
+                          )}
+                          {isRecommended && !isCurrent && (
+                            <span className="bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5">
+                              <Sparkles size={7}/> RECOMMEND
+                            </span>
+                          )}
+                          {isATS && (
+                            <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5">
+                              <Check size={7}/> ATS
+                            </span>
+                          )}
                         </div>
                       </div>
-                      
-                      <SnippetPreviewFrame scale={scale} design={design}>
-                        <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={isSidebar ? 'sidebar' : 'main'} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark} showIcons={design?.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
-                      </SnippetPreviewFrame>
                     </div>
-                  );
-                })}
-                </div>
+                    
+                    <CanvasContext.Provider value={previewContext}>
+                      <SnippetPreviewFrame scale={scale} design={design}>
+                        <snippet.render
+                          data={previewData}
+                          Editable={SnippetPreviewReadOnly}
+                          zoneId={isSidebar ? 'sidebar' : 'main'}
+                          isDark={false}
+                          design={design}
+                          showIcons={true}
+                          layoutZones={zones}
+                          Title={({ titleKey }: any) => {
+                            const fallbackTitle = typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section';
+                            const titleVal = getNestedValue(previewData, `sectionTitles.${titleKey}`) || fallbackTitle;
+                            return (
+                              <TitleRenderer isDark={false} showIcons={design?.showHeaderIcons} titleKey={titleKey}>
+                                <SnippetPreviewReadOnly path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap />
+                              </TitleRenderer>
+                            );
+                          }}
+                          moveEntry={() => {}}
+                          deleteEntry={() => {}}
+                          readOnly={true}
+                        />
+                      </SnippetPreviewFrame>
+                    </CanvasContext.Provider>
+                  </div>
+                );
+              })}
               </div>
             </div>
-          </>
+          </div>
         );
+
+        return createPortal(panelContent, portalTarget);
       })()}
 
 

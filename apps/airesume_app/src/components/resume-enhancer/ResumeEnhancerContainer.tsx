@@ -3145,7 +3145,7 @@ export default function ResumeEnhancerContainer({
     setTemplateOverlayOpen(false);
     resetState();
     initializedRef.current = null;
-    router.push('/editor');
+    router.push('/dashboard/jobs?tab=docs');
   };
 
   const handleStepNavigation = async (
@@ -3681,10 +3681,10 @@ export default function ResumeEnhancerContainer({
                 <button
                   onClick={handleHomeStepClick}
                   className="lg:hidden shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 dark:text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors bg-transparent border-none outline-none shadow-none focus:ring-0"
-                  title="Back to Step 1"
-                  aria-label="Back to Step 1"
+                  title="Back to Documents"
+                  aria-label="Back to Documents"
                 >
-                  <Home className="w-4 h-4" />
+                  <Home className="w-5 h-5" />
                 </button>
               )}
 
@@ -3694,9 +3694,9 @@ export default function ResumeEnhancerContainer({
                   <button
                     onClick={handleHomeStepClick}
                     className="flex items-center gap-1 text-gray-400 dark:text-gray-500 hover:text-lime-600 dark:hover:text-lime-400 transition-all hover:scale-105 shrink-0 bg-transparent border-none outline-none p-0 shadow-none focus:ring-0"
-                    title="Back to Step 1"
+                    title="Back to Documents"
                   >
-                    <Home className="w-3.5 h-3.5" />
+                    <Home className="w-5 h-5" />
                   </button>
                 )}
                 <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600 shrink-0" />

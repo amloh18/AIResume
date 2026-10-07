@@ -63,7 +63,7 @@ type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
  * `json` is the only one: a letter has no editable JSON document behind it, so
  * the tile would open an empty panel.
  */
-const COVER_LETTER_DISABLED_PANELS: UtilityPanelId[] = ['json'];
+const COVER_LETTER_DISABLED_PANELS: UtilityPanelId[] = ['sections', 'json'];
 
 const DEFAULT_SECTION_TITLES: Record<string, string> = {
   summary: 'Professional Summary',
@@ -681,6 +681,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           setActiveUtilityPanel('design');
         } else if (detail === 'data') {
           setActiveUtilityPanel('json');
+        } else if (detail === 'sections') {
+          setActiveUtilityPanel('sections');
         }
       };
       const handleTemplates = () => {
@@ -692,15 +694,20 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       const handleOpenAnalysis = () => {
         setActiveUtilityPanel('analysis');
       };
+      const handleOpenAddSnippet = () => {
+        setActiveUtilityPanel('sections');
+      };
       window.addEventListener('set-builder-sidebar', handleSidebar);
       window.addEventListener('open-templates', handleTemplates);
       window.addEventListener('close-utility-panel', handleClose);
       window.addEventListener('open-analysis-panel', handleOpenAnalysis);
+      window.addEventListener('open-add-snippet', handleOpenAddSnippet);
       return () => {
         window.removeEventListener('set-builder-sidebar', handleSidebar);
         window.removeEventListener('open-templates', handleTemplates);
         window.removeEventListener('close-utility-panel', handleClose);
         window.removeEventListener('open-analysis-panel', handleOpenAnalysis);
+        window.removeEventListener('open-add-snippet', handleOpenAddSnippet);
       };
     }, []);
 

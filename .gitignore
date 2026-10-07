@@ -101,6 +101,11 @@ Thumbs.db
 !CHANGELOG.md
 # Internal documentation (MUST NOT be committed)
 docs/
+apps/airesume_app/docs/
+
+# ── Scripts & Tooling ───────────────────────────────────────────────────
+/scripts/
+scripts/
 
 
 # ── Logs ────────────────────────────────────────────────────────────────

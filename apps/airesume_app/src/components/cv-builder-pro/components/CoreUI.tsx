@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
@@ -40,6 +40,23 @@ export const SnippetContext = React.createContext<{
 export const SECTION_FRAME_INSET_X = 8;
 export const SECTION_FRAME_INSET_Y = 6;
 
+/** Rendered height of the rail's bar (`h-9`) — used when it has not been measured yet. */
+export const TOOLRAIL_HEIGHT_PX = 36;
+/**
+ * Clearance between the bar and the top edge of the section it acts on. Has to
+ * clear the section frame's outward expansion (see SECTION_FRAME_INSET_*) plus
+ * the 4px halo on that frame, or the bar reads as a second border on it.
+ */
+export const TOOLRAIL_GAP_PX = 14;
+/** Smallest distance kept between the bar and the edge of the visible canvas. */
+export const TOOLRAIL_EDGE_X_PX = 8;
+/**
+ * Vertical equivalent, deliberately smaller: when the section sits right under
+ * the canvas' top edge there is no room above it, so the bar pins itself here.
+ * Anything larger starts overlapping the section's own first line of text.
+ */
+export const TOOLRAIL_EDGE_Y_PX = 4;
+
 /**
  * Geometry of the "Add Section" divider (`InsertSnippetHandle`).
  *
@@ -57,10 +74,106 @@ export const SECTION_FRAME_INSET_Y = 6;
  */
 const SNIPPET_STRIP_H = 6; // h-[6px]
 const SNIPPET_STRIP_OVERLAP = SNIPPET_STRIP_H / 2; // my-[-3px]
-const PILL_BORDER_CLEARANCE = 6;
+export const PILL_BORDER_CLEARANCE = 6;
 /** `top` is relative to the strip's top, so discount the strip's own height. */
-const PILL_TOP_OFFSET_PX =
+export const PILL_TOP_OFFSET_PX =
   SNIPPET_STRIP_OVERLAP + SECTION_FRAME_INSET_Y + PILL_BORDER_CLEARANCE - SNIPPET_STRIP_H; // = 9
+
+/**
+ * When the section BELOW this handle is selected (`isNextSelected`), that section
+ * has the top format rail (`CanvasToolRail`, height 36px, gap 14px) mounted above it.
+ * The "+ Add Section" pill must sit OUTSIDE of the section and be offset ABOVE the
+ * format rail so the top format rail and section content remain completely visible.
+ */
+export const PILL_ABOVE_TOOLRAIL_OFFSET_PX =
+  TOOLRAIL_GAP_PX + TOOLRAIL_HEIGHT_PX + 4; // = 14 + 36 + 4 = 54px
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
+export const DEFAULT_SECTION_TITLES: Record<string, string> = {
+  summary: 'Professional Summary',
+  experience: 'Professional Experience',
+  work: 'Work Experience',
+  education: 'Education',
+  projects: 'Projects',
+  skills: 'Skills',
+  certifications: 'Certifications',
+  certificates: 'Certifications',
+  awards: 'Awards',
+  languages: 'Languages',
+  interests: 'Interests',
+  publications: 'Publications',
+  volunteer: 'Volunteer Experience',
+  references: 'References',
+  header: 'Header',
+  contact: 'Contact',
+};
+
+export const getFormattedDisplayValue = (
+  value: any,
+  isDate: boolean,
+  dateFormat: string,
+  multiline: boolean,
+  aiIssues: any[],
+  activeIssueId: any,
+  path: string
+) => {
+  let displayValue = typeof value === 'string' ? value : '';
+
+  if (isDate) {
+    displayValue = formatCVDate(value, dateFormat);
+  }
+
+  // Fix pasted white text issues by removing bad tags and inline styles, while preserving text alignments.
+  // Multiline fields must keep their block tags: contentEditable Enter
+  // produces <div>/<br> line breaks, and stripping them here made every
+  // non-editing render (blur, prop change) concatenate the lines back
+  // into one — the next keystroke then saved the merged text.
+  if (displayValue) {
+    displayValue = multiline
+      ? displayValue.replace(/<\/?(?:span|font|label)[^>]*>/gi, '')
+      : displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
+    displayValue = displayValue.replace(/style=(["'])(.*?)\1/gi, (match, quote, styleContent) => {
+      const alignMatch = styleContent.match(/text-align\s*:\s*(left|center|right|justify)/i);
+      return alignMatch ? `style="text-align: ${alignMatch[1].toLowerCase()};"` : '';
+    });
+  }
+
+  const relevantIssues = aiIssues ? aiIssues.filter((i: any) => i.path === path) : [];
+  if (relevantIssues.length > 0) {
+    relevantIssues.forEach((issue: any) => {
+      if (issue.targetText && typeof issue.targetText === 'string' && issue.targetText.trim() !== '') {
+        const escaped = escapeRegExp(issue.targetText);
+        if (escaped) {
+          // Tag-safe replacement: match any HTML tag OR the word. If we match a tag, return it unchanged.
+          const regex = new RegExp(`(<[^>]+>)|(${escaped})`, 'g');
+          if (regex.test('')) return;
+
+          const typeColors: Record<string, string> = {
+            complex_word: 'rgba(168, 85, 247, 0.4)',
+            weakening: 'rgba(59, 130, 246, 0.4)',
+            passive_voice: 'rgba(34, 197, 94, 0.4)',
+            lengthy_sentence: 'rgba(234, 179, 8, 0.4)',
+            complex_sentence: 'rgba(239, 68, 68, 0.4)',
+            spelling_variant: 'rgba(239, 68, 68, 0.4)'
+          };
+          const bg = typeColors[issue.type] || 'rgba(234, 179, 8, 0.35)';
+          const highlightClass = issue.id === activeIssueId ? 'text-black shadow-sm' : 'border-b-2 border-white/30 cursor-pointer text-gray-900';
+          const title = issue.suggestion ? `${issue.message || ''} Fix: ${issue.suggestion}` : (issue.message || 'Suggestion');
+
+          const safeSuggestion = (issue.suggestion || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+          const safeTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+          displayValue = displayValue.replace(regex, (match, tag, word) => {
+            if (tag) return tag; // Return HTML tag unchanged
+            return `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" style="background-color:${bg}" data-issue="${issue.id}" data-suggestion="${safeSuggestion}" title="${safeTitle}">${word}</mark>`;
+          });
+        }
+      }
+    });
+  }
+  return displayValue;
+};
 
 export const EditableField = ({ data: explicitData, path, multiline, onChange: explicitOnChange, setFocusedRef: explicitSetFocusedRef, readOnly, nowrap, breakAll, aiIssues: explicitAiIssues, activeIssueId: explicitActiveIssueId, onIssueClick: explicitOnIssueClick, isDate = false, dateFormat: explicitDateFormat, overrideValue, arrayIndex, className = '' }: any) => {
   const ctx = React.useContext(CanvasContext);
@@ -80,66 +193,17 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
 
   const isEditable = !readOnly;
 
-  useEffect(() => {
-    if (contentRef.current) {
-      let displayValue = typeof value === 'string' ? value : '';
-      
-      if (isDate) {
-        displayValue = formatCVDate(value, dateFormat);
-      }
-      
-      // Fix pasted white text issues by removing bad tags and inline styles, while preserving text alignments.
-      // Multiline fields must keep their block tags: contentEditable Enter
-      // produces <div>/<br> line breaks, and stripping them here made every
-      // non-editing render (blur, prop change) concatenate the lines back
-      // into one — the next keystroke then saved the merged text.
-      if (displayValue) {
-        displayValue = multiline
-          ? displayValue.replace(/<\/?(?:span|font|label)[^>]*>/gi, '')
-          : displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
-        displayValue = displayValue.replace(/style=(["'])(.*?)\1/gi, (match, quote, styleContent) => {
-          const alignMatch = styleContent.match(/text-align\s*:\s*(left|center|right|justify)/i);
-          return alignMatch ? `style="text-align: ${alignMatch[1].toLowerCase()};"` : '';
-        });
-      }
+  const renderedHtml = useMemo(() => {
+    return getFormattedDisplayValue(value, isDate, dateFormat, multiline, aiIssues, activeIssueId, path);
+  }, [value, isDate, dateFormat, multiline, aiIssues, activeIssueId, path]);
 
-      const relevantIssues = aiIssues.filter((i: any) => i.path === path);
-      if (isEditing) return; // Prevent cursor jumping/caret reset while actively editing
-      if (relevantIssues.length > 0) {
-        relevantIssues.forEach((issue: any) => {
-          if (issue.targetText && typeof issue.targetText === 'string' && issue.targetText.trim() !== '') {
-            const escaped = escapeRegExp(issue.targetText);
-            if (escaped) {
-              // Tag-safe replacement: match any HTML tag OR the word. If we match a tag, return it unchanged.
-              const regex = new RegExp(`(<[^>]+>)|(${escaped})`, 'g');
-              if (regex.test('')) return;
-
-              const typeColors: Record<string, string> = {
-                complex_word: 'rgba(168, 85, 247, 0.4)',
-                weakening: 'rgba(59, 130, 246, 0.4)',
-                passive_voice: 'rgba(34, 197, 94, 0.4)',
-                lengthy_sentence: 'rgba(234, 179, 8, 0.4)',
-                complex_sentence: 'rgba(239, 68, 68, 0.4)',
-                spelling_variant: 'rgba(239, 68, 68, 0.4)'
-              };
-              const bg = typeColors[issue.type] || 'rgba(234, 179, 8, 0.35)';
-              const highlightClass = issue.id === activeIssueId ? 'text-black shadow-sm' : 'border-b-2 border-white/30 cursor-pointer text-gray-900';
-              const title = issue.suggestion ? `${issue.message || ''} Fix: ${issue.suggestion}` : (issue.message || 'Suggestion');
-              
-              const safeSuggestion = (issue.suggestion || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-              const safeTitle = title.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-              
-              displayValue = displayValue.replace(regex, (match, tag, word) => {
-                if (tag) return tag; // Return HTML tag unchanged
-                return `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" style="background-color:${bg}" data-issue="${issue.id}" data-suggestion="${safeSuggestion}" title="${safeTitle}">${word}</mark>`;
-              });
-            }
-          }
-        });
+  useIsomorphicLayoutEffect(() => {
+    if (contentRef.current && !isEditing) {
+      if (contentRef.current.innerHTML !== renderedHtml) {
+        contentRef.current.innerHTML = renderedHtml;
       }
-      contentRef.current.innerHTML = displayValue;
     }
-  }, [value, isEditing, aiIssues, activeIssueId, path]);
+  }, [renderedHtml, isEditing]);
 
   const handleInput = () => {
     if (!isEditable || !contentRef.current) return;
@@ -174,7 +238,93 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
       onChange(path, cleanHtml);
     }
   };
-  const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!multiline && e.key === 'Enter') {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      const sel = typeof window !== 'undefined' ? window.getSelection() : null;
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+
+        // Find enclosing <li> if any
+        let node: Node | null = range.startContainer;
+        let liNode: HTMLElement | null = null;
+        while (node && node !== contentRef.current) {
+          if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'LI') {
+            liNode = node as HTMLElement;
+            break;
+          }
+          node = node.parentNode;
+        }
+
+        if (liNode) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const newLi = document.createElement('li');
+
+          // Split contents of current li after cursor
+          const afterRange = document.createRange();
+          afterRange.setStart(range.endContainer, range.endOffset);
+          afterRange.setEndAfter(liNode.lastChild || liNode);
+          const fragment = afterRange.extractContents();
+
+          if (fragment.childNodes.length > 0 && fragment.textContent?.trim() !== '') {
+            newLi.appendChild(fragment);
+          } else {
+            newLi.innerHTML = '<br>';
+          }
+
+          if (liNode.nextSibling) {
+            liNode.parentNode?.insertBefore(newLi, liNode.nextSibling);
+          } else {
+            liNode.parentNode?.appendChild(newLi);
+          }
+
+          // Move cursor into newLi
+          const newRange = document.createRange();
+          newRange.setStart(newLi, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+
+          handleInput();
+          return;
+        }
+
+        // If not directly inside <li>, but container has <ul> (or is entry description with bullets)
+        const isDescription = path?.toLowerCase().includes('description');
+        const containerUl = contentRef.current?.querySelector('ul');
+        if (containerUl) {
+          e.preventDefault();
+          e.stopPropagation();
+          const newLi = document.createElement('li');
+          newLi.innerHTML = '<br>';
+          containerUl.appendChild(newLi);
+
+          const newRange = document.createRange();
+          newRange.setStart(newLi, 0);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+
+          handleInput();
+          return;
+        }
+
+        if (isDescription) {
+          e.preventDefault();
+          e.stopPropagation();
+          document.execCommand('insertUnorderedList', false);
+          handleInput();
+          return;
+        }
+      }
+    }
+  };
   const handleFocus = () => {
     if (!isEditable) return;
     setIsEditing(true);
@@ -383,23 +533,6 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
    * ListEntry's side rail uses the same buttons. */
   export const TOOLRAIL_BTN = 'w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white';
   const TOOLRAIL_DIVIDER = 'w-px h-5 mx-1 bg-gray-200 dark:bg-white/10';
-
-  /** Rendered height of the rail's bar (`h-9`) — used when it has not been measured yet. */
-  export const TOOLRAIL_HEIGHT_PX = 36;
-  /**
-   * Clearance between the bar and the top edge of the section it acts on. Has to
-   * clear the section frame's outward expansion (see SECTION_FRAME_INSET_*) plus
-   * the 4px halo on that frame, or the bar reads as a second border on it.
-   */
-  export const TOOLRAIL_GAP_PX = 14;
-  /** Smallest distance kept between the bar and the edge of the visible canvas. */
-  export const TOOLRAIL_EDGE_X_PX = 8;
-  /**
-   * Vertical equivalent, deliberately smaller: when the section sits right under
-   * the canvas' top edge there is no room above it, so the bar pins itself here.
-   * Anything larger starts overlapping the section's own first line of text.
-   */
-  export const TOOLRAIL_EDGE_Y_PX = 4;
 
   /** A viewport-space rect (the subset of DOMRect this maths needs). */
   type RailRect = { top: number; bottom: number; left: number; width: number };
@@ -968,11 +1101,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
 
+    const fallbackTitle = DEFAULT_SECTION_TITLES[titleKey] || (typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section');
+    const titleVal = getNestedValue(ctx?.cvData, `sectionTitles.${titleKey}`) || fallbackTitle;
+
     if (overrideClass) {
-      return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3>;
+      return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></h3>;
     }
 
-    return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
+    return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></Renderer>;
   };
 
   const headerUnitId = `${instance.id}_header`;
@@ -1195,6 +1331,13 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const handleSectionClick = (e: React.MouseEvent) => {
     if (readOnly) return;
+    if (ctx?.selectedBlockId && ctx.selectedBlockId !== instance.id) {
+      // When in focused section, clicking outside should close the focus from
+      // the section rather than activating it on the other section.
+      e.stopPropagation();
+      ctx.setSelectedBlockId(null);
+      return;
+    }
     // Clicking anywhere inside the section makes it the focused OBJECT: solid
     // lime frame, every other section on the sheet blurred and dimmed, and its
     // own rail pinned open. (Alt-click keeps the old "hand this section to the
@@ -1295,7 +1438,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   );
 };
 
-const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = false }: any) => {
+export const InsertSnippetHandle = ({
+  onAddSnippet,
+  zoneId,
+  index,
+  alwaysVisible = false,
+  isNextSelected = false,
+  isPrevSelected = false,
+}: any) => {
   return (
     // z-[160], not z-40. This strip is a SIBLING of the section wrappers, and a
     // selected section wrapper carries `z-[60]` — so at z-40 the pill was
@@ -1303,27 +1453,30 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
     // straight across the pill. 160 also clears the `hover:z-[150]` that a
     // section's inner wrapper takes while the pointer is over it.
     //
-    // The button hangs BELOW the line rather than being centred on it (it used
-    // to be vertically centred by the strip's `items-center`, which put half the
-    // pill on either side of the border — it read as sitting *on* the divider).
-    // `top` is now derived from the section frame's real overhang, so the pill
-    // clears the lime border by PILL_BORDER_CLEARANCE — see the constants above.
+    // The button hangs BELOW the line for the bottom pill (`isPrevSelected` or default),
+    // clearing the section's lime frame by PILL_BORDER_CLEARANCE.
     //
-    // The gap this leaves between the strip and the pill is not dead space: the
-    // pointer crosses it in far less than the 150ms `transition-all`, so the
-    // pill never actually fades out from under the cursor on the way down.
+    // When the section BELOW is selected (`isNextSelected`), that section has the top
+    // format rail (CanvasToolRail) mounted above it. The pill is offset ABOVE that format
+    // rail (`PILL_ABOVE_TOOLRAIL_OFFSET_PX`) so the top format rail, section frame, and
+    // section content remain completely visible and unoccluded.
     <div className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-[160] transition-all no-print">
       <div className="absolute inset-0 cursor-pointer" />
       <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
       <button
         type="button"
+        data-insert-snippet-btn
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           onAddSnippet(zoneId, index);
         }}
-        style={{ top: `calc(100% + ${PILL_TOP_OFFSET_PX}px)` }}
-        className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
+        style={
+          isNextSelected
+            ? { bottom: `calc(100% + ${PILL_ABOVE_TOOLRAIL_OFFSET_PX}px)`, top: 'auto' }
+            : { top: `calc(100% + ${PILL_TOP_OFFSET_PX}px)` }
+        }
+        className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all duration-200 delay-150 group-hover/insert:delay-0 hover:!opacity-100 hover:!scale-100 flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
       >
         <Plus size={11} /> Add Section
       </button>
@@ -1332,6 +1485,8 @@ const InsertSnippetHandle = ({ onAddSnippet, zoneId, index, alwaysVisible = fals
 };
 
 export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", isDropAllowed, onMoveToZone }: any) => {
+  const ctx = React.useContext(CanvasContext);
+  const selectedBlockId = ctx?.selectedBlockId || ctx?.focusedNode?.closest?.('[data-block-id]')?.getAttribute('data-block-id');
   const [isOverZone, setIsOverZone] = useState(false);
   const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
   const bareZoneId = (zoneId || '').replace(/_page_\d+$/, '');
@@ -1425,6 +1580,8 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                     zoneId={zoneId}
                     index={index + 1}
                     alwaysVisible={false}
+                    isNextSelected={Boolean(selectedBlockId && blocks[index + 1]?.id === selectedBlockId)}
+                    isPrevSelected={Boolean(selectedBlockId && instance?.id === selectedBlockId)}
                   />
                 )}
               </React.Fragment>
@@ -1461,7 +1618,11 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
           const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
           const styleKey = isSidebar && template.sidebarTitleStyle ? template.sidebarTitleStyle : template.titleStyle;
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-          const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
+          const Title = ({ titleKey, overrideClass }: any) => {
+            const fallbackTitle = DEFAULT_SECTION_TITLES[titleKey] || (typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section');
+            const titleVal = getNestedValue(cvData, `sectionTitles.${titleKey}`) || fallbackTitle;
+            return overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></TitleRenderer>;
+          };
           const isLastSnippet = index === snippets.length - 1;
           return (
             <div key={index} className="flex flex-col">

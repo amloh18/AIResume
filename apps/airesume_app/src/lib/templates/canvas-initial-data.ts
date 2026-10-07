@@ -82,13 +82,13 @@ export const initialData = {
         }
     ],
     certifications: [
-        { id: "cert1", name: "AWS Certified Data Analytics", issuer: "Amazon Web Services", date: "2023" },
-        { id: "cert2", name: "Google Professional Data Engineer", issuer: "Google Cloud", date: "2021" },
-        { id: "cert3", name: "Certified Kubernetes Administrator", issuer: "CNCF", date: "2020" }
+        { id: "cert1", name: "AWS Certified Solutions Architect", issuer: "Amazon Web Services", date: "2023", startDate: "2023", endDate: "Present" },
+        { id: "cert2", name: "Google Professional Data Engineer", issuer: "Google Cloud", date: "2021", startDate: "2021", endDate: "2024" },
+        { id: "cert3", name: "Certified Kubernetes Administrator", issuer: "CNCF", date: "2020", startDate: "2020", endDate: "2023" }
     ],
     awards: [
-        { id: "awd1", name: "Excellence in Analytics Award", issuer: "Innovate AI", date: "2019" },
-        { id: "awd2", name: "Top Contributor", issuer: "Open Source Data Org", date: "2018" }
+        { id: "awd1", name: "Excellence in Analytics Award", title: "Excellence in Analytics Award", issuer: "Innovate AI", date: "2019", startDate: "2019", endDate: "" },
+        { id: "awd2", name: "Top Contributor Award", title: "Top Contributor Award", issuer: "Open Source Data Org", date: "2018", startDate: "2018", endDate: "" }
     ],
     skills: [
         {
@@ -126,16 +126,16 @@ export const initialData = {
         { id: "int5", name: "Machine Learning Research" }
     ],
     publications: [
-        { id: "pub1", title: "Predictive Analytics in Modern E-commerce", publisher: "Journal of Data Science", date: "Oct 2022", description: "Co-authored a comprehensive paper detailing modern algorithmic approaches to cart abandonment." },
-        { id: "pub2", title: "Scaling Node.js Microservices", publisher: "Tech Architecture Weekly", date: "Jan 2020", description: "Published a guide on effectively utilizing Docker and Kubernetes for high-availability systems." }
+        { id: "pub1", title: "Predictive Analytics in Modern E-commerce", name: "Predictive Analytics in Modern E-commerce", publisher: "Journal of Data Science", date: "Oct 2022", startDate: "Oct 2022", endDate: "", description: "Co-authored a comprehensive paper detailing modern algorithmic approaches to cart abandonment." },
+        { id: "pub2", title: "Scaling Node.js Microservices", name: "Scaling Node.js Microservices", publisher: "Tech Architecture Weekly", date: "Jan 2020", startDate: "Jan 2020", endDate: "", description: "Published a guide on effectively utilizing Docker and Kubernetes for high-availability systems." }
     ],
     volunteer: [
-        { id: "vol1", organization: "Data for Good", role: "Lead Mentor", date: "2019 - Present", description: "<ul><li>Mentoring underprivileged students in fundamental programming and data visualization skills.</li></ul>" },
-        { id: "vol2", organization: "Global Tech Rescue", role: "IT Consultant", date: "2017 - 2019", description: "<ul><li>Provided pro-bono database management solutions for international disaster relief NGOs.</li></ul>" }
+        { id: "vol1", organization: "Data for Good", role: "Lead Mentor", position: "Lead Mentor", date: "2019 - Present", startDate: "2019", endDate: "Present", description: "<ul><li>Mentoring underprivileged students in fundamental programming and data visualization skills.</li></ul>" },
+        { id: "vol2", organization: "Global Tech Rescue", role: "IT Consultant", position: "IT Consultant", date: "2017 - 2019", startDate: "2017", endDate: "2019", description: "<ul><li>Provided pro-bono database management solutions for international disaster relief NGOs.</li></ul>" }
     ],
     references: [
-        { id: "ref1", name: "Dr. Jonathan Crane", role: "CTO at TechNova Solutions", contact: "j.crane@technova.com | +1 555-0192" },
-        { id: "ref2", name: "Sarah Jenkins", role: "VP of Engineering at Innovate AI", contact: "s.jenkins@innovateai.io | +1 555-9012" }
+        { id: "ref1", name: "Dr. Jonathan Crane", role: "CTO at TechNova Solutions", position: "CTO", contact: "j.crane@technova.com | +1 555-0192" },
+        { id: "ref2", name: "Sarah Jenkins", role: "VP of Engineering at Innovate AI", position: "VP of Engineering", contact: "s.jenkins@innovateai.io | +1 555-9012" }
     ]
 };
 

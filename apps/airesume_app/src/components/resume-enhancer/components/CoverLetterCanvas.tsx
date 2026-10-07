@@ -7,7 +7,8 @@ import CoverLetterLayoutEngine, {
 } from '@/components/cover-letter-engine/CoverLetterLayoutEngine';
 import { CanvasToolRail, TOOLRAIL_BTN } from '@/components/cv-builder-pro/components/CoreUI';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
-import { useCanvasFit, ZOOM_STEP } from '@/hooks/useCanvasFit';
+import { useCanvasFit, ZOOM_STEP, ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanvasFit';
+import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import { TOP_SANS_SERIF_FONTS, TOP_SERIF_FONTS } from '@/lib/templates/document-fonts';
 
 /**
@@ -120,6 +121,40 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
     maxScale: 2,
     minScale: 0.4,
   });
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+
+  // Pinch-to-zoom for mobile touch gestures
+  useCanvasPinchZoom({
+    containerRef,
+    zoomRef,
+    setZoom,
+    scaleFor: (distancePx) => (distancePx / 100) * 100,
+    speedMultiplier: 1.5,
+    minZoom: 40,
+    maxZoom: 200,
+  });
+
+  // Trackpad / wheel swipe-to-zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? container.clientHeight : 1;
+      const deltaPx = e.deltaY * unit;
+      setZoom((prev: number) => {
+        const next = prev * Math.exp(-deltaPx * ZOOM_WHEEL_SENSITIVITY);
+        return Math.min(200, Math.max(40, next));
+      });
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [containerRef, setZoom]);
 
   const [workspaceHeight, setWorkspaceHeight] = useState(0);
   useEffect(() => {
