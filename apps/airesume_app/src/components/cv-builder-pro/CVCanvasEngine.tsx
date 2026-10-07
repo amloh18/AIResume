@@ -903,12 +903,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest('[data-block-id], .no-print, [data-mori-selection-bar], [role="dialog"], [data-radix-popper-content-wrapper]')) return;
+      if (target.closest('[data-block-id], .no-print, [data-mori-selection-bar], [data-mori-ask-bar], [role="dialog"], [data-radix-popper-content-wrapper]')) return;
 
       setSelectedBlockId(null);
 
       if (target.closest('.cv-page, .cv-document-wrapper, [data-cv-workspace]')) {
         window.dispatchEvent(new CustomEvent('mori-open-document-menu'));
+      } else {
+        window.dispatchEvent(new CustomEvent('mori-close-menus'));
       }
     };
 
@@ -925,6 +927,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [readOnly]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    if (selectedBlockId) {
+      window.dispatchEvent(
+        new CustomEvent('mori-open-section-menu', { detail: { blockId: selectedBlockId } })
+      );
+    }
+  }, [selectedBlockId, readOnly]);
 
   const [aiIssues, setAiIssues] = useState<any[]>([]);
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);

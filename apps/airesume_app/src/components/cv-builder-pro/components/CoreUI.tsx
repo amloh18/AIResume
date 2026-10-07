@@ -376,13 +376,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
    * colour, so the dark surface is a literal rather than
    * `dark:bg-[var(--bg-secondary)]/95`.
    */
-  export const TOOLRAIL_SURFACE = 'rounded-full border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#23271f]/95 shadow-[0_8px_24px_rgba(0,0,0,0.10)] backdrop-blur-sm';
+  export const TOOLRAIL_SURFACE = 'rounded-xl border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 shadow-xl shadow-black/20 backdrop-blur-md';
 
-  /* Chrome for a button inside a rail. Matches the reference: no pill
-   * backgrounds, grey glyphs, and a light grey hover — the rail itself carries
-   * the surface, so the buttons stay quiet. Exported because ListEntry's side
-   * rail uses the same buttons. */
-  export const TOOLRAIL_BTN = 'w-7 h-7 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white';
+  /* Chrome for a button inside a rail. Matches the page controls: subtle
+   * rounded corners, grey glyphs, and a light hover tint. Exported because
+   * ListEntry's side rail uses the same buttons. */
+  export const TOOLRAIL_BTN = 'w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white';
   const TOOLRAIL_DIVIDER = 'w-px h-5 mx-1 bg-gray-200 dark:bg-white/10';
 
   /** Rendered height of the rail's bar (`h-9`) — used when it has not been measured yet. */
@@ -702,28 +701,27 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         style={{ top: pos?.top ?? 0, left: pos?.left ?? 0 }}
       >
         <div ref={barRef} className={`pointer-events-auto flex flex-row items-center gap-0.5 h-9 pl-1.5 pr-1.5 ${TOOLRAIL_SURFACE}`}>
-          {/* AI — one entry point for the AI menu. With a section selected it
-              acts on that section; with nothing selected it acts on the whole CV. */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onAiClick) {
-                onAiClick(selectedBlockId ?? null);
-                return;
-              }
-              window.dispatchEvent(
-                selectedBlockId
-                  ? new CustomEvent('mori-open-section-menu', { detail: { blockId: selectedBlockId } })
-                  : new CustomEvent('mori-open-document-menu')
-              );
-            }}
-            className="h-7 pl-1.5 pr-2.5 flex flex-row items-center gap-1.5 rounded-full bg-[#013f2e] text-white text-[10px] font-black uppercase tracking-wider transition-transform duration-150 hover:scale-[1.04] active:scale-95"
-            title={selectedBlockId ? 'AI actions for this section' : 'AI actions for this CV'}
-          >
-            <Sparkles size={12} className="shrink-0" />
-            AI
-          </button>
+          {/* AI — one entry point for the AI menu. Hidden in focus mode (when a section
+              is selected or focused) because the bottom Mori AI navigation bar is kept active
+              directly below the section. */}
+          {!selectedBlockId && !focusNode?.closest?.('[data-block-id]') && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAiClick) {
+                  onAiClick(null);
+                  return;
+                }
+                window.dispatchEvent(new CustomEvent('mori-open-document-menu'));
+              }}
+              className="h-7 pl-1.5 pr-2.5 flex flex-row items-center gap-1.5 rounded-lg bg-[#013f2e] text-white text-[10px] font-black uppercase tracking-wider transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+              title="AI actions for this CV"
+            >
+              <Sparkles size={12} className="shrink-0" />
+              AI
+            </button>
+          )}
 
           {/* Filled by the focused field: text formatting, plus its AI action. */}
           <div id={TOOLRAIL_FORMAT_SLOT} className="flex flex-row items-center gap-0.5">{formatControls}</div>
@@ -774,13 +772,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
 
     /* Labelled AI button, matching the reference ("Improve writing" / "Ask AI"):
        a sparkle plus a word, not an icon-only square. */
-    const aiBtnCls = 'h-7 pl-1.5 pr-2.5 flex flex-row items-center gap-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors duration-150';
+    const aiBtnCls = 'h-7 pl-1.5 pr-2.5 flex flex-row items-center gap-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider whitespace-nowrap text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors duration-150';
 
     if (!slot || !targetNode) return null;
 
+    const isFocusMode = Boolean(anchorBlockId || targetNode.closest('[data-block-id]'));
+
     return createPortal(
       <>
-        {canSuggest && (
+        {canSuggest && !isFocusMode && (
           <>
             <button
               onClick={(e) => { e.preventDefault(); onSuggestPoint(); }}
