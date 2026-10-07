@@ -9,7 +9,9 @@ import { navLinks } from '@/data/navigation';
 import { CHIP_INLINE, chipStateDark } from '@/components/ui/chip-styles';
 
 export const metadata: Metadata = {
-  title: 'Blog — Career Advice, CV Tips & ATS Optimization | AIResume',
+  // No "| AIResume" suffix here — the root layout's `title.template` already appends it, and a
+  // manual suffix rendered the brand twice ("… | AIResume | AIResume") in SERPs.
+  title: 'Blog — Career Advice, CV Tips & ATS Optimization',
   description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AIResume. Learn how to build a resume that gets callbacks in 2026.',
   keywords: ['CV blog', 'resume tips', 'ATS optimization', 'career advice', 'job search 2026', 'AI resume'],
   alternates: { canonical: '/blog' },
