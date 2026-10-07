@@ -12,7 +12,12 @@ import {
   HeaderSnippetProps 
 } from './snippets/headers/HeaderSnippets';
 import WYSIWYGEditor from '@/components/ui/WYSIWYGEditor';
+import {
+  SECTION_FRAME_INSET_X,
+  SECTION_FRAME_INSET_Y,
+} from '@/components/cv-builder-pro/components/CoreUI';
 import { Sparkles, Type, Layout, Baseline, MoveHorizontal, LayoutTemplate, X, ChevronDown, Check, ShieldCheck } from 'lucide-react';
+import { getDocumentFontStack, DOCUMENT_GOOGLE_FONTS_URL } from '@/lib/templates/document-fonts';
 
 const TEMPLATES = [
   { id: 'modern', name: 'Modern', icon: Sparkles, desc: 'Professional, lime accents' },
@@ -30,43 +35,73 @@ export interface CoverLetterDesignProps {
   lineHeight: number;
   pageMargin: number;
   accentColor: string;
-  fontFamily: 'font-sans' | 'font-serif' | 'font-mono';
+  fontFamily: string;
 }
 
+/**
+ * One focusable region of the letter, wrapped in the CV editor's focus-mode
+ * chrome.
+ *
+ * The letter has exactly two of these — the header and the body — so this is the
+ * direct analogue of a CV section, and it deliberately reuses the CV's
+ * `SECTION_FRAME_INSET_*` values and its frame treatment: a faint dashed lime
+ * outline on hover of an unselected unit ("clickable object"), and ONE solid
+ * lime frame with the same halo once selected. The blur/dim of everything else
+ * is the `.cl-has-selection` rule below, which mirrors `.cv-has-selection`.
+ *
+ * The unit also carries `data-block-id` / `data-selected`, which is what lets
+ * the shared `CanvasToolRail` find it as its anchor.
+ */
 interface CanvasSectionWrapperProps {
   children: React.ReactNode;
   isEditing: boolean;
-  controls?: React.ReactNode;
   className?: string;
   onClick?: () => void;
+  /** Which region this is — becomes its `data-block-id` (`cl-<unit>`). */
+  unit?: 'header' | 'body';
+  /** True while this unit is the focused object. */
+  selected?: boolean;
 }
 
 const CanvasSectionWrapper: React.FC<CanvasSectionWrapperProps> = ({
   children,
   isEditing,
-  controls,
   className = '',
-  onClick
+  onClick,
+  unit,
+  selected = false,
 }) => {
   if (!isEditing) {
     return <div className={className}>{children}</div>;
   }
 
   return (
-    <div 
-      className={`relative group/inner w-full transition-all duration-200 p-2 -mx-2 rounded-md hover:z-30 cursor-pointer ${className}`}
+    <div
+      data-block-id={unit ? `cl-${unit}` : undefined}
+      data-selected={selected ? 'true' : 'false'}
+      className={`cl-unit relative group/inner w-full transition-all duration-200 p-2 -mx-2 rounded-md cursor-pointer ${selected ? 'z-[60]' : 'hover:z-30'} ${className}`}
       onClick={onClick}
     >
-      {/* Top right tight toolbar */}
-      {controls && (
-        <div className="absolute -top-3.5 right-0 opacity-0 group-hover/inner:opacity-100 focus-within:opacity-100 transition-all duration-200 flex items-center bg-white dark:bg-[#141810] border border-slate-200 dark:border-white/10 shadow-lg rounded-xl p-0.5 gap-0.5 z-[50] no-print font-sans select-none">
-          {controls}
-        </div>
-      )}
-      
-      {/* Hover border and background layer */}
-      <div className="absolute inset-0 bg-emerald-500/[0.03] opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-0 border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none animate-fade-in-up"></div>
-      
+      {/* The frame. `maxWidth: none` is load-bearing for the same reason it is
+          in the CV: `.cl-document *` caps descendants at `max-width: 100%`, and
+          a clamped frame silently drops its trailing inset, snapping the right
+          border onto the text. An inline max-width outranks that rule. */}
+      <div
+        data-unit-frame={selected ? 'selected' : 'hover'}
+        className={`pointer-events-none absolute rounded-lg transition-all duration-200 ${
+          selected
+            ? 'z-20 border-2 border-[#84cc16] shadow-[0_0_0_4px_rgba(132,204,22,0.20),0_12px_32px_rgba(0,0,0,0.16)]'
+            : 'z-[-1] border border-dashed border-transparent bg-[#84cc16]/[0.05] opacity-0 group-hover/inner:opacity-100 group-hover/inner:border-[#84cc16]'
+        }`}
+        style={{
+          top: -SECTION_FRAME_INSET_Y,
+          right: -SECTION_FRAME_INSET_X,
+          bottom: -SECTION_FRAME_INSET_Y,
+          left: -SECTION_FRAME_INSET_X,
+          maxWidth: 'none',
+        }}
+      />
+
       <div className="relative z-10 pointer-events-auto w-full">
         {children}
       </div>
@@ -91,6 +126,9 @@ interface CoverLetterLayoutEngineProps {
   sessionRedoStack?: unknown[];
   onSessionUndo?: () => void;
   onSessionRedo?: () => void;
+  /** The letter's focused object — the analogue of the CV's `selectedBlockId`. */
+  selectedUnit?: 'header' | 'body' | null;
+  onSelectUnit?: (unit: 'header' | 'body' | null) => void;
 }
 
 const splitHtmlIntoBlocks = (html: string): string[] => {
@@ -152,13 +190,20 @@ export default function CoverLetterLayoutEngine({
   design = {},
   onTemplateTypeChange,
   showMoriChat,
+  // Kept in the contract (the canvas still passes them) but no longer consumed
+  // here: the header-style switch and "Ask Mori" are now actions in the shared
+  // focus-mode rail, which `CoverLetterCanvas` renders. A hover toolbar pinned to
+  // each unit was the letter's ad-hoc version of that rail, and two places to
+  // reach the same action is what the CV's merged rail exists to prevent.
   onToggleMoriChat,
   onChangeHeaderStyle,
   zoom = 100,
   sessionUndoStack,
   sessionRedoStack,
   onSessionUndo,
-  onSessionRedo
+  onSessionRedo,
+  selectedUnit = null,
+  onSelectUnit
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -188,11 +233,10 @@ export default function CoverLetterLayoutEngine({
     lineHeight: 1.6,
     pageMargin: 6,
     accentColor: '#013f2e',
-    fontFamily: templateType === 'classic' ? 'font-serif' : 'font-sans'
+    fontFamily: templateType === 'classic' ? 'Garamond' : 'Calibri'
   };
 
   const activeDesign = { ...defaultDesign, ...design };
-  const fontClass = activeDesign.fontFamily;
 
   // Unify body content into block units (HTML tags or double newlines)
   const letterBlocks = useMemo(() => {
@@ -312,9 +356,14 @@ export default function CoverLetterLayoutEngine({
   const activePages = isEditing ? [0] : pages;
 
   return (
-    <div id="cl-document-root" className="flex flex-col items-center gap-6 cover-letter-wrapper" style={{ width }}>
+    <div
+      id="cl-document-root"
+      className={`flex flex-col items-center gap-6 cover-letter-wrapper ${selectedUnit ? 'cl-has-selection' : ''}`}
+      style={{ width }}
+    >
       <style>
         {`
+          @import url('${DOCUMENT_GOOGLE_FONTS_URL}');
           .cl-document *, .cl-page * {
             min-width: 0 !important;
             max-width: 100% !important;
@@ -322,13 +371,45 @@ export default function CoverLetterLayoutEngine({
             word-break: normal !important;
             hyphens: none !important;
           }
+          .cover-letter-document {
+            font-family: var(--cv-font) !important;
+          }
+          .cover-letter-document * {
+            font-family: inherit !important;
+          }
+          /* ─── FOCUS MODE — the letter's half of the CV spotlight ────────
+           * The selected unit keeps full contrast; the other one is blurred and
+           * dimmed so the focused object reads as the thing in focus. Applied per
+           * UNIT rather than to the page, for the same reason the CV does it that
+           * way: a filter on an ancestor cannot be undone by a descendant, so
+           * blurring the page would blur the selected unit too. */
+          .cl-has-selection .cl-unit {
+            filter: blur(2px);
+            opacity: 0.4;
+            transition: filter 0.2s ease, opacity 0.2s ease;
+          }
+          .cl-has-selection .cl-unit[data-selected="true"] {
+            filter: none;
+            opacity: 1;
+          }
+          /* ONE border on the selected unit: the frame owns the only lime box, so
+           * a focused contenteditable inside it must not add a second one. The
+           * grey "this is editable" hover border is deliberately kept — it is an
+           * affordance, not a selection border, and only ever on the field under
+           * the pointer. */
+          .cl-has-selection .cl-unit[data-selected="true"] [contenteditable]:focus,
+          .cl-has-selection .cl-unit[data-selected="true"] [contenteditable]:focus-visible {
+            box-shadow: none !important;
+            outline: none !important;
+            border-color: transparent !important;
+          }
         `}
       </style>
       {activePages.map(pageIdx => {
         return (
           <div 
             key={pageIdx}
-            className={`bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document ${fontClass}`}
+            className="bg-white dark:bg-white shadow-2xl flex flex-col text-black transition-all duration-500 ease-in-out relative cover-letter-document cv-document"
             style={{ 
               width,
               height: minHeight,
@@ -336,7 +417,9 @@ export default function CoverLetterLayoutEngine({
               containerType: 'inline-size',
               fontSize: `${activeDesign.fontSize}px`,
               lineHeight: activeDesign.lineHeight,
+              fontFamily: getDocumentFontStack(activeDesign.fontFamily),
               '--cv-accent': activeDesign.accentColor,
+              '--cv-font': getDocumentFontStack(activeDesign.fontFamily),
               boxSizing: 'border-box',
               overflowWrap: 'break-word',
               whiteSpace: 'normal',
@@ -361,21 +444,9 @@ export default function CoverLetterLayoutEngine({
                 <div data-unit-id="header" className="w-full">
                   <CanvasSectionWrapper
                     isEditing={isEditing}
-                    onClick={() => onChangeHeaderStyle && onChangeHeaderStyle()}
-                    controls={
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onChangeHeaderStyle) onChangeHeaderStyle();
-                        }}
-                        className="flex items-center gap-1.5 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
-                        title="Change Header Style"
-                      >
-                        <LayoutTemplate size={12}/> 
-                        <span>Change</span>
-                      </button>
-                    }
+                    unit="header"
+                    selected={selectedUnit === 'header'}
+                    onClick={() => onSelectUnit?.('header')}
                   >
                     <HeaderComponent {...headerProps} />
                   </CanvasSectionWrapper>
@@ -387,25 +458,14 @@ export default function CoverLetterLayoutEngine({
                 {isEditing ? (
                   <CanvasSectionWrapper
                     isEditing={isEditing}
-                    controls={
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onToggleMoriChat) onToggleMoriChat();
-                        }}
-                        className="flex items-center gap-1 h-7 px-2.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold text-[11px] transition-all duration-200 rounded-lg hover:scale-105 active:scale-95 bg-transparent" 
-                        title="Ask Mori to improve"
-                      >
-                        <Sparkles size={12}/> 
-                        <span>Ask Mori</span>
-                      </button>
-                    }
+                    unit="body"
+                    selected={selectedUnit === 'body'}
+                    onClick={() => onSelectUnit?.('body')}
                   >
                     <WYSIWYGEditor
                       value={bodyContent}
                       onChange={onBodyChange || (() => {})}
-                      className={`w-full ${fontClass} text-black bg-transparent mt-2`}
+                      className="w-full text-black bg-transparent mt-2"
                       showToolbar={true}
                       reviewMode={false}
                       grammarLocale="us"

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import DocumentTabs, { type EditorDocument } from './DocumentTabs';
 
 /**
  * Utility panel ids that can be opened as a side panel from the tile rail.
@@ -17,6 +18,25 @@ interface UtilityPanelRailProps {
   activePanel: UtilityPanelId | null;
   /** Optional class override for the rail container. */
   className?: string;
+  /**
+   * Document switch (CV ⇄ Cover Letter), rendered as the first tiles in the
+   * rail. Omit `onActiveDocumentChange` to leave the switch out entirely.
+   */
+  activeDocument?: EditorDocument;
+  onActiveDocumentChange?: (document: EditorDocument) => void;
+  /** Cover letters are not offered for Profile (master) CVs. */
+  documentSwitchEnabled?: boolean;
+  /** A cover letter already exists for this CV/session. */
+  hasCoverLetter?: boolean;
+  /**
+   * Tiles that do not apply to the open document. They render greyed out and
+   * inert rather than disappearing, so the rail keeps a stable width and the
+   * user can see *why* a panel is unavailable.
+   *
+   * The cover letter passes `['json']`: a letter has no editable JSON document
+   * behind it, so the tile would open an empty panel.
+   */
+  disabledPanels?: UtilityPanelId[];
 }
 
 /**
@@ -119,6 +139,9 @@ const TILES: TileDef[] = [
   { id: 'json', label: 'JSON', Preview: JsonPreview },
 ];
 
+/** Stable default for `disabledPanels` — a fresh `[]` each render would defeat memoisation. */
+const EMPTY_DISABLED: UtilityPanelId[] = [];
+
 /**
  * Step navigation, mobile only. It used to be a separate floating pill pinned
  * over the canvas, which overlapped this rail; folding the two actions in here
@@ -158,6 +181,37 @@ const RAIL_STYLES = `
     0 12px 24px -12px rgba(16,185,129,.65);
 }
 .up-tile[aria-selected="true"]:hover { transform: translateX(-3px) translateY(-3px); }
+
+/* ---------- Disabled tile (e.g. JSON while a cover letter is open) ----------
+   Declared AFTER the hover/active rules on purpose: same specificity (0,2,0),
+   so source order is what lets these win. The tile stays in the rail so the
+   rail keeps a stable width and the unavailability is visible. */
+.up-tile--disabled,
+.up-tile--disabled:hover,
+.up-tile--disabled:active {
+  transform: none;
+  box-shadow: none;
+  opacity: .45;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+.up-tile--disabled .up-pv { animation-play-state: paused; }
+.up-tile--disabled .up-json i,
+.up-tile--disabled .up-caret { animation: none; }
+.up-disabled-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  font-size: 6.5px;
+  line-height: 1.4;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+}
 
 /* active tile gets a slow sheen so the open state reads as "live" */
 .up-tile[aria-selected="true"]::after {
@@ -253,14 +307,7 @@ const RAIL_STYLES = `
 .up-gauge-value {
   stroke: #10b981;
   stroke-dasharray: 88;
-  stroke-dashoffset: 88;
-  animation: up-gauge 3.2s cubic-bezier(.65,0,.35,1) infinite;
-}
-@keyframes up-gauge {
-  0%   { stroke-dashoffset: 88; }
-  45%  { stroke-dashoffset: 22; }
-  78%  { stroke-dashoffset: 22; }
-  100% { stroke-dashoffset: 88; }
+  stroke-dashoffset: 22;
 }
 .up-rows {
   position: absolute;
@@ -277,15 +324,11 @@ const RAIL_STYLES = `
   border-radius: 3px;
   background: color-mix(in srgb, var(--text-secondary) 65%, transparent);
   transform-origin: left center;
-  animation: up-row 2.4s ease-in-out infinite;
+  opacity: .85;
 }
 .up-rows i:nth-child(1) { width: 82%; }
-.up-rows i:nth-child(2) { width: 58%; animation-delay: .28s; }
-.up-rows i:nth-child(3) { width: 70%; animation-delay: .56s; }
-@keyframes up-row {
-  0%, 100% { opacity: .3; transform: scaleX(.62); }
-  50%      { opacity: 1;  transform: scaleX(1); }
-}
+.up-rows i:nth-child(2) { width: 58%; }
+.up-rows i:nth-child(3) { width: 70%; }
 
 /* ---------- Design: document with cycling accent ---------- */
 .up-doc {
@@ -418,7 +461,7 @@ const RAIL_STYLES = `
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .up-tile, .up-pv, .up-gauge-value, .up-rows i, .up-doc-hd, .up-doc-ln,
+  .up-tile, .up-pv, .up-doc-hd, .up-doc-ln,
   .up-doc-chips i, .up-tpl span, .up-json i, .up-caret,
   .up-tile[aria-selected="true"]::after, .up-close {
     animation: none !important;
@@ -426,7 +469,15 @@ const RAIL_STYLES = `
 }
 `;
 
-export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel, className = '' }) => {
+export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
+  activePanel,
+  className = '',
+  activeDocument,
+  onActiveDocumentChange,
+  documentSwitchEnabled = false,
+  hasCoverLetter = false,
+  disabledPanels = EMPTY_DISABLED,
+}) => {
   const handleClick = (panel: UtilityPanelId) => {
     if (activePanel === panel) {
       closePanel();
@@ -442,15 +493,34 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
     // (an opacity modifier cannot resolve an arbitrary `var()` colour), so use a
     // flat token or a literal rgba value instead.
     <div
-      className={`shrink-0 flex flex-row md:flex-col items-center justify-start gap-2 p-1.5 md:h-fit md:self-start overflow-x-auto md:overflow-visible scrollbar-hide ${className}`}
+      className={`shrink-0 flex flex-row md:flex-col items-center justify-start gap-2 p-1.5 md:h-fit md:max-h-full md:overflow-y-auto md:self-start scrollbar-hide ${className}`}
       role="tablist"
       aria-label="Editor panels"
     >
       <style>{RAIL_STYLES}</style>
 
+      {/* On mobile the PANEL tiles scroll horizontally while the step tiles are
+          pinned after them (see the sibling below), so "Next" is always on
+          screen. On desktop this wrapper is a plain vertical passthrough, so the
+          rail still reads as one column. */}
+      <div className="flex flex-row md:flex-col items-center gap-2 min-w-0 flex-1 md:flex-none overflow-x-auto md:overflow-visible scrollbar-hide">
+
+      {/* Document switch. Lives here (rather than on the canvas' left edge) so
+          the whole editor navigation surface is one rail, and so it inherits the
+          `up-tile` chrome declared above. */}
+      {onActiveDocumentChange && (
+        <DocumentTabs
+          active={activeDocument ?? 'cv'}
+          onChange={onActiveDocumentChange}
+          enabled={documentSwitchEnabled}
+          hasCoverLetter={hasCoverLetter}
+        />
+      )}
+
       {TILES.map((tab, index) => {
         const { Preview } = tab;
-        const isActive = activePanel === tab.id;
+        const isDisabled = disabledPanels.includes(tab.id);
+        const isActive = !isDisabled && activePanel === tab.id;
 
         return (
           <button
@@ -458,19 +528,39 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
             type="button"
             role="tab"
             aria-selected={isActive}
-            onClick={() => handleClick(tab.id)}
-            title={isActive ? `Close ${tab.label}` : `Open ${tab.label}`}
+            disabled={isDisabled}
+            aria-disabled={isDisabled || undefined}
+            // No onClick at all when disabled — a `disabled` button already
+            // swallows clicks, but keeping the handler off means no panel event
+            // can fire even if something re-enables pointer events via CSS.
+            onClick={isDisabled ? undefined : () => handleClick(tab.id)}
+            title={
+              isDisabled
+                ? `${tab.label} is not available for cover letters`
+                : isActive
+                  ? `Close ${tab.label}`
+                  : `Open ${tab.label}`
+            }
             style={{ animationDelay: `${index * 80 + 120}ms` }}
             className={`up-tile group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border ${
-              isActive
-                ? 'bg-emerald-500/[0.16] border-emerald-500/60 text-emerald-600 dark:text-emerald-400'
-                : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
+              isDisabled
+                ? 'up-tile--disabled cursor-not-allowed bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)]'
+                : isActive
+                  ? 'bg-emerald-500/[0.16] border-emerald-500/60 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
             }`}
           >
             {/* mini animated preview of the panel this tile opens */}
             <Preview />
 
             <span className="up-label">{tab.label}</span>
+
+            {isDisabled && (
+              // Small "unavailable" badge. Reads as information, not an error.
+              <span className="up-disabled-badge" aria-hidden="true">
+                n/a
+              </span>
+            )}
 
             {isActive && (
               <span className="up-close" aria-hidden="true">
@@ -481,6 +571,11 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
         );
       })}
 
+      </div>
+
+      {/* Step tiles — pinned AFTER the scrolling tabs, and outside the scroller on mobile.
+          On desktop, the Next button is positioned directly at the bottom of the tab list. */}
+      <div className="flex flex-row md:flex-col items-center gap-2 shrink-0">
       {STEP_TILES.map((step, index) => {
         const { Icon } = step;
         const isNext = step.id === 'next';
@@ -492,20 +587,18 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
             title={isNext ? 'Next step' : 'Previous step'}
             aria-label={isNext ? 'Next step' : 'Previous step'}
             style={{ animationDelay: `${(TILES.length + index) * 80 + 120}ms` }}
-            // `order-first` so the step tiles lead the mobile row: the rail
-            // scrolls horizontally, and leaving them last hid "Next" — the
-            // primary forward action — past the right edge.
-            className={`up-tile md:hidden order-first group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border flex items-center justify-center ${
+            className={`up-tile ${isNext ? '' : 'md:hidden'} group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border flex items-center justify-center ${
               isNext
-                ? 'bg-[#013f2e] border-[#013f2e] text-white dark:bg-emerald-600 dark:border-emerald-600'
+                ? 'bg-[#013f2e] border-[#013f2e] text-white dark:bg-emerald-600 dark:border-emerald-600 hover:bg-[#02523c] dark:hover:bg-emerald-500 shadow-md shadow-emerald-950/20 active:scale-95'
                 : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
             }`}
           >
-            <Icon className="w-6 h-6 stroke-[2.5]" aria-hidden="true" />
+            <Icon className="w-6 h-6 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
             <span className="up-label">{step.label}</span>
           </button>
         );
       })}
+      </div>
     </div>
   );
 };

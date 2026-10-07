@@ -56,8 +56,11 @@ export const SnippetPreviewFrame = ({
           ['--cv-base-size']: `${design?.fontSize || 12}px`,
           ['--cv-spacing']: String(design?.spacing ?? 1),
           ['--cv-accent']: design?.accentColor || '#22c55e',
-          ['--cv-section-gap']: `${design?.sectionGap || 16}px`,
-          ['--cv-item-gap']: `${design?.itemGap || 12}px`,
+          // `??`, not `||`: 0 is a legal gap (the Design panel's sliders go down
+          // to 0) and `||` would replace it with the fallback — the preview would
+          // then disagree with the canvas about a document that has no gaps.
+          ['--cv-section-gap']: `${design?.sectionGap ?? 16}px`,
+          ['--cv-item-gap']: `${design?.itemGap ?? 12}px`,
         } as React.CSSProperties}
       >
         {children}
