@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import DocumentTabs, { type EditorDocument } from './DocumentTabs';
 
 /**
  * Utility panel ids that can be opened as a side panel from the tile rail.
@@ -10,13 +11,32 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
  * the id is kept as `layout` so the existing canvas events
  * (`open-templates` / `set-builder-sidebar`) keep working unchanged.
  */
-export type UtilityPanelId = 'analysis' | 'design' | 'layout' | 'json';
+export type UtilityPanelId = 'analysis' | 'sections' | 'design' | 'layout' | 'json';
 
 interface UtilityPanelRailProps {
   /** Currently open panel, or null when the canvas is in its wide (tiles-only) state. */
   activePanel: UtilityPanelId | null;
   /** Optional class override for the rail container. */
   className?: string;
+  /**
+   * Document switch (CV ⇄ Cover Letter), rendered as the first tiles in the
+   * rail. Omit `onActiveDocumentChange` to leave the switch out entirely.
+   */
+  activeDocument?: EditorDocument;
+  onActiveDocumentChange?: (document: EditorDocument) => void;
+  /** Cover letters are not offered for Profile (master) CVs. */
+  documentSwitchEnabled?: boolean;
+  /** A cover letter already exists for this CV/session. */
+  hasCoverLetter?: boolean;
+  /**
+   * Tiles that do not apply to the open document. They render greyed out and
+   * inert rather than disappearing, so the rail keeps a stable width and the
+   * user can see *why* a panel is unavailable.
+   *
+   * The cover letter passes `['json']`: a letter has no editable JSON document
+   * behind it, so the tile would open an empty panel.
+   */
+  disabledPanels?: UtilityPanelId[];
 }
 
 /**
@@ -31,6 +51,10 @@ const openPanel = (panel: UtilityPanelId) => {
   }
   if (panel === 'layout') {
     window.dispatchEvent(new CustomEvent('open-templates'));
+    return;
+  }
+  if (panel === 'sections') {
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
     return;
   }
   window.dispatchEvent(
@@ -50,14 +74,20 @@ const closePanel = () => {
 
 const AnalysisPreview: React.FC = () => (
   <span className="up-pv">
-    <svg className="up-gauge" viewBox="0 0 36 36" aria-hidden="true">
-      <circle className="up-gauge-track" cx="18" cy="18" r="14" />
-      <circle className="up-gauge-value" cx="18" cy="18" r="14" />
-    </svg>
-    <span className="up-rows" aria-hidden="true">
-      <i />
-      <i />
-      <i />
+    <span className="up-score" aria-hidden="true">
+      <span className="up-score-top">
+        <span className="up-score-val">
+          <span className="up-score-num" />
+        </span>
+        <span className="up-score-tag" />
+      </span>
+      <span className="up-score-meter">
+        <i className="up-score-fill" />
+      </span>
+      <span className="up-score-bars">
+        <i className="up-sbar a" />
+        <i className="up-sbar b" />
+      </span>
     </span>
   </span>
 );
@@ -106,6 +136,23 @@ const JsonPreview: React.FC = () => (
   </span>
 );
 
+const SectionsPreview: React.FC = () => (
+  <span className="up-pv">
+    <span className="up-sec" aria-hidden="true">
+      <span className="up-sec-row">
+        <i className="up-sec-bar" />
+        <i className="up-sec-badge" />
+      </span>
+      <span className="up-sec-row s">
+        <i className="up-sec-bar" />
+      </span>
+      <span className="up-sec-row">
+        <i className="up-sec-bar" />
+      </span>
+    </span>
+  </span>
+);
+
 interface TileDef {
   id: UtilityPanelId;
   label: string;
@@ -114,10 +161,14 @@ interface TileDef {
 
 const TILES: TileDef[] = [
   { id: 'analysis', label: 'Analysis', Preview: AnalysisPreview },
+  { id: 'sections', label: 'Add Section', Preview: SectionsPreview },
   { id: 'design', label: 'Design', Preview: DesignPreview },
   { id: 'layout', label: 'Template', Preview: TemplatePreview },
   { id: 'json', label: 'JSON', Preview: JsonPreview },
 ];
+
+/** Stable default for `disabledPanels` — a fresh `[]` each render would defeat memoisation. */
+const EMPTY_DISABLED: UtilityPanelId[] = [];
 
 /**
  * Step navigation, mobile only. It used to be a separate floating pill pinned
@@ -158,6 +209,37 @@ const RAIL_STYLES = `
     0 12px 24px -12px rgba(16,185,129,.65);
 }
 .up-tile[aria-selected="true"]:hover { transform: translateX(-3px) translateY(-3px); }
+
+/* ---------- Disabled tile (e.g. JSON while a cover letter is open) ----------
+   Declared AFTER the hover/active rules on purpose: same specificity (0,2,0),
+   so source order is what lets these win. The tile stays in the rail so the
+   rail keeps a stable width and the unavailability is visible. */
+.up-tile--disabled,
+.up-tile--disabled:hover,
+.up-tile--disabled:active {
+  transform: none;
+  box-shadow: none;
+  opacity: .45;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+.up-tile--disabled .up-pv { animation-play-state: paused; }
+.up-tile--disabled .up-json i,
+.up-tile--disabled .up-caret { animation: none; }
+.up-disabled-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  font-size: 6.5px;
+  line-height: 1.4;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+}
 
 /* active tile gets a slow sheen so the open state reads as "live" */
 .up-tile[aria-selected="true"]::after {
@@ -233,58 +315,92 @@ const RAIL_STYLES = `
   to   { opacity: 1; transform: scale(1) rotate(0); }
 }
 
-/* ---------- Analysis: score gauge + issue rows ---------- */
-.up-gauge {
+/* ---------- Analysis: score meter + metric breakdown ---------- */
+.up-score {
   position: absolute;
-  left: 50%;
-  top: 5px;
-  width: 24px;
-  height: 24px;
-  transform: translateX(-50%);
-}
-.up-gauge circle {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-}
-.up-gauge-track { stroke: color-mix(in srgb, var(--text-secondary) 30%, transparent); }
-.up-gauge-value {
-  stroke: #10b981;
-  stroke-dasharray: 88;
-  stroke-dashoffset: 88;
-  animation: up-gauge 3.2s cubic-bezier(.65,0,.35,1) infinite;
-}
-@keyframes up-gauge {
-  0%   { stroke-dashoffset: 88; }
-  45%  { stroke-dashoffset: 22; }
-  78%  { stroke-dashoffset: 22; }
-  100% { stroke-dashoffset: 88; }
-}
-.up-rows {
-  position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 4px;
+  inset: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 2.5px;
+  justify-content: center;
+  gap: 3px;
 }
-.up-rows i {
-  display: block;
-  height: 2.5px;
+.up-score-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1;
+}
+.up-score-val {
+  display: inline-flex;
+  align-items: baseline;
+}
+.up-score-num {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #10b981;
+  font-family: inherit;
+  line-height: 1;
+}
+.up-score-pct {
+  font-size: 7px;
+  font-weight: 800;
+  color: #10b981;
+  opacity: .85;
+  margin-left: 0.5px;
+  line-height: 1;
+}
+.up-score-tag {
+  font-size: 6.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-secondary) 85%, transparent);
+  background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+  padding: 1px 3px;
   border-radius: 3px;
-  background: color-mix(in srgb, var(--text-secondary) 65%, transparent);
-  transform-origin: left center;
-  animation: up-row 2.4s ease-in-out infinite;
+  line-height: 1.2;
 }
-.up-rows i:nth-child(1) { width: 82%; }
-.up-rows i:nth-child(2) { width: 58%; animation-delay: .28s; }
-.up-rows i:nth-child(3) { width: 70%; animation-delay: .56s; }
-@keyframes up-row {
-  0%, 100% { opacity: .3; transform: scaleX(.62); }
-  50%      { opacity: 1;  transform: scaleX(1); }
+.up-score-meter {
+  position: relative;
+  width: 100%;
+  height: 3.5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 25%, transparent);
+  overflow: hidden;
+}
+.up-score-fill {
+  display: block;
+  height: 100%;
+  width: 92%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  animation: up-score-grow 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+  transform-origin: left center;
+}
+@keyframes up-score-grow {
+  0%   { width: 22%; opacity: .65; }
+  100% { width: 92%; opacity: 1; }
+}
+.up-score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 1px;
+}
+.up-sbar {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-secondary) 50%, transparent);
+  transform-origin: left center;
+  animation: up-sbar-grow 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.up-sbar.a { width: 80%; animation-delay: .18s; }
+.up-sbar.b { width: 62%; animation-delay: .36s; }
+@keyframes up-sbar-grow {
+  0%   { transform: scaleX(.25); opacity: .45; }
+  100% { transform: scaleX(1); opacity: .9; }
 }
 
 /* ---------- Design: document with cycling accent ---------- */
@@ -341,6 +457,126 @@ const RAIL_STYLES = `
 @keyframes up-chip {
   0%, 100% { opacity: .35; transform: scale(.8); }
   45%      { opacity: 1;   transform: scale(1.12); }
+}
+
+/* ---------- CV Document Preview ---------- */
+.up-cv-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  padding: 3px 4px;
+}
+.up-cv-hd {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  margin-bottom: 1px;
+}
+.up-cv-avatar {
+  display: block;
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 999px;
+  background: #10b981;
+  flex-shrink: 0;
+}
+.up-cv-hd-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+.up-cv-name {
+  display: block;
+  height: 2px;
+  width: 70%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.75);
+}
+.up-cv-sub {
+  display: block;
+  height: 1.5px;
+  width: 45%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.35);
+}
+.up-cv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+}
+.up-cv-sec {
+  display: block;
+  height: 2px;
+  width: 48%;
+  border-radius: 1px;
+  background: #10b981;
+  margin-top: 0.5px;
+}
+.up-cv-ln {
+  display: block;
+  height: 1.5px;
+  border-radius: 1px;
+  background: rgba(17,24,39,.25);
+  width: 95%;
+}
+.up-cv-ln.s {
+  width: 58%;
+}
+
+/* ---------- Cover Letter Document Preview ---------- */
+.up-cl-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  padding: 3px 4px;
+}
+.up-cl-hd {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 1.5px;
+}
+.up-cl-to {
+  display: block;
+  height: 2px;
+  width: 44%;
+  border-radius: 1px;
+  background: #10b981;
+}
+.up-cl-date {
+  display: block;
+  height: 1.5px;
+  width: 28%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.35);
+}
+.up-cl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+}
+.up-cl-ln {
+  display: block;
+  height: 1.5px;
+  border-radius: 1px;
+  background: rgba(17,24,39,.25);
+  width: 95%;
+}
+.up-cl-ln.s {
+  width: 60%;
+}
+.up-cl-foot {
+  display: block;
+  margin-top: auto;
+  padding-top: 1px;
+}
+.up-cl-sig {
+  display: block;
+  height: 1.5px;
+  width: 32%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.65);
 }
 
 /* ---------- Template: two page layouts cross-fading ---------- */
@@ -417,8 +653,37 @@ const RAIL_STYLES = `
   50%, 100% { opacity: .15; }
 }
 
+/* ---------- Sections: stacked snippet blocks ---------- */
+.up-sec {
+  position: absolute;
+  inset: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+.up-sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+}
+.up-sec-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-secondary) 30%, transparent);
+}
+.up-sec-row.s .up-sec-bar { width: 70%; flex: none; }
+.up-sec-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .up-tile, .up-pv, .up-gauge-value, .up-rows i, .up-doc-hd, .up-doc-ln,
+  .up-tile, .up-pv, .up-doc-hd, .up-doc-ln,
   .up-doc-chips i, .up-tpl span, .up-json i, .up-caret,
   .up-tile[aria-selected="true"]::after, .up-close {
     animation: none !important;
@@ -426,7 +691,15 @@ const RAIL_STYLES = `
 }
 `;
 
-export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel, className = '' }) => {
+export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
+  activePanel,
+  className = '',
+  activeDocument,
+  onActiveDocumentChange,
+  documentSwitchEnabled = false,
+  hasCoverLetter = false,
+  disabledPanels = EMPTY_DISABLED,
+}) => {
   const handleClick = (panel: UtilityPanelId) => {
     if (activePanel === panel) {
       closePanel();
@@ -442,15 +715,34 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
     // (an opacity modifier cannot resolve an arbitrary `var()` colour), so use a
     // flat token or a literal rgba value instead.
     <div
-      className={`shrink-0 flex flex-row md:flex-col items-center justify-start gap-2 p-1.5 md:h-fit md:self-start overflow-x-auto md:overflow-visible scrollbar-hide ${className}`}
+      className={`shrink-0 flex flex-row md:flex-col items-center justify-start gap-2 p-1.5 md:h-fit md:max-h-full md:overflow-y-auto md:self-start scrollbar-hide ${className}`}
       role="tablist"
       aria-label="Editor panels"
     >
       <style>{RAIL_STYLES}</style>
 
+      {/* On mobile the PANEL tiles scroll horizontally while the step tiles are
+          pinned after them (see the sibling below), so "Next" is always on
+          screen. On desktop this wrapper is a plain vertical passthrough, so the
+          rail still reads as one column. */}
+      <div className="flex flex-row md:flex-col items-center gap-2 min-w-0 flex-1 md:flex-none overflow-x-auto md:overflow-visible scrollbar-hide">
+
+      {/* Document switch. Lives here (rather than on the canvas' left edge) so
+          the whole editor navigation surface is one rail, and so it inherits the
+          `up-tile` chrome declared above. */}
+      {onActiveDocumentChange && (
+        <DocumentTabs
+          active={activeDocument ?? 'cv'}
+          onChange={onActiveDocumentChange}
+          enabled={documentSwitchEnabled}
+          hasCoverLetter={hasCoverLetter}
+        />
+      )}
+
       {TILES.map((tab, index) => {
         const { Preview } = tab;
-        const isActive = activePanel === tab.id;
+        const isDisabled = disabledPanels.includes(tab.id);
+        const isActive = !isDisabled && activePanel === tab.id;
 
         return (
           <button
@@ -458,19 +750,39 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
             type="button"
             role="tab"
             aria-selected={isActive}
-            onClick={() => handleClick(tab.id)}
-            title={isActive ? `Close ${tab.label}` : `Open ${tab.label}`}
+            disabled={isDisabled}
+            aria-disabled={isDisabled || undefined}
+            // No onClick at all when disabled — a `disabled` button already
+            // swallows clicks, but keeping the handler off means no panel event
+            // can fire even if something re-enables pointer events via CSS.
+            onClick={isDisabled ? undefined : () => handleClick(tab.id)}
+            title={
+              isDisabled
+                ? `${tab.label} is not available for cover letters`
+                : isActive
+                  ? `Close ${tab.label}`
+                  : `Open ${tab.label}`
+            }
             style={{ animationDelay: `${index * 80 + 120}ms` }}
             className={`up-tile group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border ${
-              isActive
-                ? 'bg-emerald-500/[0.16] border-emerald-500/60 text-emerald-600 dark:text-emerald-400'
-                : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
+              isDisabled
+                ? 'up-tile--disabled cursor-not-allowed bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)]'
+                : isActive
+                  ? 'bg-emerald-500/[0.16] border-emerald-500/60 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
             }`}
           >
             {/* mini animated preview of the panel this tile opens */}
             <Preview />
 
             <span className="up-label">{tab.label}</span>
+
+            {isDisabled && (
+              // Small "unavailable" badge. Reads as information, not an error.
+              <span className="up-disabled-badge" aria-hidden="true">
+                n/a
+              </span>
+            )}
 
             {isActive && (
               <span className="up-close" aria-hidden="true">
@@ -481,6 +793,11 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
         );
       })}
 
+      </div>
+
+      {/* Step tiles — pinned AFTER the scrolling tabs, and outside the scroller on mobile.
+          On desktop, the Next button is positioned directly at the bottom of the tab list. */}
+      <div className="flex flex-row md:flex-col items-center gap-2 shrink-0">
       {STEP_TILES.map((step, index) => {
         const { Icon } = step;
         const isNext = step.id === 'next';
@@ -492,20 +809,18 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({ activePanel,
             title={isNext ? 'Next step' : 'Previous step'}
             aria-label={isNext ? 'Next step' : 'Previous step'}
             style={{ animationDelay: `${(TILES.length + index) * 80 + 120}ms` }}
-            // `order-first` so the step tiles lead the mobile row: the rail
-            // scrolls horizontally, and leaving them last hid "Next" — the
-            // primary forward action — past the right edge.
-            className={`up-tile md:hidden order-first group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border flex items-center justify-center ${
+            className={`up-tile ${isNext ? '' : 'md:hidden'} group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border flex items-center justify-center ${
               isNext
-                ? 'bg-[#013f2e] border-[#013f2e] text-white dark:bg-emerald-600 dark:border-emerald-600'
+                ? 'bg-[#013f2e] border-[#013f2e] text-white dark:bg-emerald-600 dark:border-emerald-600 hover:bg-[#02523c] dark:hover:bg-emerald-500 shadow-md shadow-emerald-950/20 active:scale-95'
                 : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
             }`}
           >
-            <Icon className="w-6 h-6 stroke-[2.5]" aria-hidden="true" />
+            <Icon className="w-6 h-6 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
             <span className="up-label">{step.label}</span>
           </button>
         );
       })}
+      </div>
     </div>
   );
 };

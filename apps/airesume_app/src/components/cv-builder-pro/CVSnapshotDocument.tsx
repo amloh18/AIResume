@@ -5,12 +5,13 @@ import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro
 import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
 import { initialData } from '@/lib/templates/canvas-initial-data';
 import { normalizeCvDataForCanvas } from '@/lib/utils/cv-canvas-normalizer';
+import { DOCUMENT_GOOGLE_FONTS_URL, getDocumentFontStack } from '@/lib/templates/document-fonts';
 
 export const CV_SNAPSHOT_A4_WIDTH = 794;
 export const CV_SNAPSHOT_A4_HEIGHT = 1123;
 
 // Inject Google Fonts link once per document lifetime so thumbnail renders use preloaded fonts
-const GOOGLE_FONTS_URL = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap';
+const GOOGLE_FONTS_URL = DOCUMENT_GOOGLE_FONTS_URL;
 let fontsInjected = false;
 export function ensureFontsLoaded() {
   if (fontsInjected || typeof document === 'undefined') return;
@@ -31,13 +32,16 @@ export function ensureFontsLoaded() {
 export const SNAPSHOT_STYLES = `
   @import url('${GOOGLE_FONTS_URL}');
   .cv-snapshot-wrapper .cv-document {
-    font-family: var(--cv-font), sans-serif;
+    font-family: var(--cv-font) !important;
     color: #111827;
     font-size: var(--cv-base-size);
     position: relative;
     z-index: 10;
     min-height: var(--cv-page-height);
     background: #ffffff;
+  }
+  .cv-snapshot-wrapper .cv-document * {
+    font-family: inherit;
   }
   .cv-snapshot-wrapper .cv-document .text-gray-900 { color: #111827 !important; }
   .cv-snapshot-wrapper .cv-document .text-gray-800 { color: #1f2937 !important; }
@@ -202,14 +206,16 @@ export default function CVSnapshotDocument({
           width: `${CV_SNAPSHOT_A4_WIDTH}px`,
           height: `${CV_SNAPSHOT_A4_HEIGHT}px`,
           pointerEvents: 'none',
-          '--cv-font': design?.font || 'Inter',
+          '--cv-font': getDocumentFontStack(design?.font || 'Inter'),
           '--cv-base-size': `${design?.fontSize || 12}px`,
           '--cv-spacing': design?.spacing || 1.0,
           '--cv-accent': design?.accentColor || '#22c55e',
           '--cv-page-margin': `${design?.pageMargin || 40}px`,
           '--cv-sidebar-bg': design?.sidebarBgColor || '#f8fafc',
-          '--cv-section-gap': `${design?.sectionGap || 16}px`,
-          '--cv-item-gap': `${design?.itemGap || 12}px`,
+          // `??`, not `||`: 0 is a legal gap (see the Design panel's sliders), and
+          // `||` would silently put a 16px/12px gap into a document that has none.
+          '--cv-section-gap': `${design?.sectionGap ?? 16}px`,
+          '--cv-item-gap': `${design?.itemGap ?? 12}px`,
           '--cv-page-width': '210mm',
           '--cv-page-height': '297mm',
         } as React.CSSProperties}

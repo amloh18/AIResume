@@ -8,14 +8,7 @@ import {
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
 import { metricTone } from '@/components/ui/chip-styles';
-
-interface CoverLetterDesignProps {
-  fontSize: number;
-  lineHeight: number;
-  pageMargin: number;
-  accentColor: string;
-  fontFamily: 'font-sans' | 'font-serif' | 'font-mono';
-}
+import type { CoverLetterDesignProps } from '@/components/cover-letter-engine/CoverLetterLayoutEngine';
 
 interface LetterGuidePanelProps {
   onUpdateTarget?: () => void;
@@ -149,16 +142,19 @@ export const LetterGuidePanel: React.FC<LetterGuidePanelProps> = ({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm overflow-hidden">
       
-      {/* Header Bar */}
-      <div className="px-4 py-2.5 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
+      {/* Header Bar — no header AREA on desktop. The tab rail already labels
+          this panel, so the bordered title row was a redundant second header;
+          the title and the rule drop away while the "Ask Mori" control stays,
+          right-aligned, so it never becomes unreachable. */}
+      <div className="px-4 py-2.5 md:px-3 md:py-1.5 md:border-0 border-b border-gray-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
+        <div className="md:hidden flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
           <Sliders className="w-4 h-4 text-emerald-500" />
           <span>Letter Guide</span>
         </div>
         {onToggleMoriChat && (
           <button 
              onClick={onToggleMoriChat}
-             className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all flex items-center gap-1.5 ${
+             className={`px-2.5 py-1 ml-auto text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all flex items-center gap-1.5 ${
                showMoriChat 
                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
                  : 'bg-gray-50 hover:bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'

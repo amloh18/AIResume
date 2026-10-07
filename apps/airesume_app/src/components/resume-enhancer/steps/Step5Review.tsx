@@ -29,6 +29,7 @@ import {
 } from '@/lib/templates/cover-letter-templates';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
+import { ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanvasFit';
 
 function getAtsScannedText(cvData: any): string {
   if (!cvData) return 'No resume data found.';
@@ -293,7 +294,8 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
     containerRef,
     zoomRef,
     setZoom,
-    scaleFor: (distancePx) => distancePx / 300,
+    scaleFor: (distancePx) => distancePx / 100,
+    speedMultiplier: 1.5,
     minZoom: 0.4,
     maxZoom: 1.5,
   });
@@ -366,26 +368,22 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
     const container = containerRef.current;
     if (!container) return;
 
-    let accumulatedDelta = 0;
-
     const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        
-        accumulatedDelta += -e.deltaY;
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
 
-        if (Math.abs(accumulatedDelta) >= 50) {
-          const direction = Math.sign(accumulatedDelta);
-          setZoom((prev: number) => {
-            // Jump by 0.1 (10 points in decimal scale)
-            const next = prev + (direction * 0.1);
-            // Snap to nearest 0.1 for clean values
-            const snapped = Math.round(next * 10) / 10;
-            return Math.min(1.5, Math.max(0.4, snapped));
-          });
-          accumulatedDelta = 0;
-        }
-      }
+      // Normalise LINES/PAGES deltas to pixels — see the CV canvas' handler.
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? container.clientHeight : 1;
+      const deltaPx = e.deltaY * unit;
+
+      setZoom((prev: number) => {
+        // Proportional and continuous. This used to add a flat 0.1 (a tenth of a
+        // RATIO, so 10% of the page) once the wheel had accumulated 50px, which
+        // is why the review canvas jumped rather than zoomed. `zoom` here is a
+        // ratio, not a percentage, but the exponential is unit-agnostic.
+        const next = prev * Math.exp(-deltaPx * ZOOM_WHEEL_SENSITIVITY);
+        return Math.min(1.5, Math.max(0.4, next));
+      });
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });

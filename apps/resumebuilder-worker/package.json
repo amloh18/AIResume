@@ -7,9 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "lint": "eslint src/**/*.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "lint": "eslint src/**/*.ts"
   },
   "keywords": [
     "job-ingestion",
