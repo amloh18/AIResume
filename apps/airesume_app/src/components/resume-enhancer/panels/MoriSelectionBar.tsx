@@ -165,6 +165,8 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
    * of screen that is guaranteed to be "outside the CV".
    */
   const [sheetRect, setSheetRect] = useState<DOMRect | null>(null);
+  /** The bottom page controls container — used to align the full-CV bar inline with controls. */
+  const [controlsRect, setControlsRect] = useState<DOMRect | null>(null);
   const [value, setValue] = useState('');
   /** True once the search bar has grown into a conversation. */
   const [expanded, setExpanded] = useState(false);
@@ -309,6 +311,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       setRect(null);
       setCanvasRect(null);
       setSheetRect(null);
+      setControlsRect(null);
       return undefined;
     }
     const measure = () => {
@@ -338,6 +341,8 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
         || document.querySelector('.cover-letter-document')
       ) as HTMLElement | null;
       setSheetRect(sheet ? sheet.getBoundingClientRect() : null);
+      const pageControls = document.querySelector('[data-canvas-page-controls]') as HTMLElement | null;
+      setControlsRect(pageControls ? pageControls.getBoundingClientRect() : null);
     };
     measure();
 
@@ -423,11 +428,16 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     ? (canvasRect ? canvasRect.left + canvasRect.right : viewportW) / 2
     : rect.left + rect.width / 2;
 
-  const barLeft = clamp(
+  let barLeft = clamp(
     targetCentre - barW / 2,
     MARGIN,
     Math.max(MARGIN, viewportW - MARGIN - barW)
   );
+  if (isDocument && controlsRect && controlsRect.left > MARGIN + barW) {
+    if (barLeft + barW + GAP > controlsRect.left) {
+      barLeft = Math.max(MARGIN, controlsRect.left - GAP - barW);
+    }
+  }
   const panelLeft = clamp(
     targetCentre - panelW / 2,
     MARGIN,
@@ -452,9 +462,10 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
    * CHIP_MIN_W and overflows the canvas edge. That is unavoidable — no screen
    * position is outside a page that overflows its own viewport. */
   const chipRightLimit = (canvasRect ? canvasRect.right : viewportW) - MARGIN;
-  const chipsLeft = sheetRect
+  const rawChipsLeft = sheetRect
     ? sheetRect.right + GAP
     : chipRightLimit - CHIP_MAX_W;
+  const chipsLeft = Math.max(MARGIN, Math.min(rawChipsLeft, viewportW - MARGIN - CHIP_MIN_W));
   const chipStackW = Math.min(CHIP_MAX_W, Math.max(CHIP_MIN_W, chipRightLimit - chipsLeft));
 
   /* ── Vertical ──────────────────────────────────────────────────────────────
@@ -468,21 +479,36 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
   let panelHeight: number;
 
   if (isDocument) {
-    /* Pinned to the bottom centre of the canvas area; the conversation grows
+    /* Pinned inline with the bottom page controls; the conversation grows
        UPWARD from the bar, leaving the paper itself uncovered. */
-    const frame = canvasRect;
-    const bottom = frame ? frame.bottom : viewportH;
-
-    barTop = clamp(bottom - MARGIN - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
+    if (controlsRect && controlsRect.height > 0) {
+      barTop = controlsRect.top + (controlsRect.height - BAR_H) / 2;
+    } else {
+      const frame = canvasRect;
+      const bottom = frame ? frame.bottom : viewportH;
+      barTop = clamp(bottom - MARGIN - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
+    }
     panelHeight = clamp(barTop - GAP - MARGIN, PANEL_MIN_H, PANEL_MAX_H);
     panelTop = barTop - GAP - panelHeight;
   } else {
     /* Outside the section, centred on it. Prefer BELOW: the conversation then
        opens into the empty paper under the section, which is what keeps the
        section visible while the chat is expanded. Above is the fallback for a
-       section that runs past the bottom of the viewport. */
+       section that runs past the bottom of the viewport.
+       When placed ABOVE, offset so the top format rail (CanvasToolRail) remains
+       completely visible. */
+    const toolrailEl = typeof document !== 'undefined'
+      ? (document.querySelector('[data-canvas-toolrail]') as HTMLElement | null)
+      : null;
+    const isToolrailVisible = toolrailEl && !toolrailEl.classList.contains('invisible') && toolrailEl.offsetHeight > 0;
+    const toolrailRect = isToolrailVisible ? toolrailEl.getBoundingClientRect() : null;
+    const toolrailOffset = 54; // 36px bar height + 14px gap + 4px breather
+    const effectiveTopAnchor = (toolrailRect && toolrailRect.top < rect.top && toolrailRect.bottom <= rect.top + 10)
+      ? toolrailRect.top
+      : rect.top - toolrailOffset;
+
     const roomBelow = viewportH - MARGIN - rect.bottom;
-    const roomAbove = rect.top - MARGIN;
+    const roomAbove = effectiveTopAnchor - MARGIN;
     const needForPanel = expanded ? PANEL_MIN_H + GAP : 0;
     const belowFits = roomBelow >= BAR_H + GAP + needForPanel;
     const aboveFits = roomAbove >= BAR_H + GAP + needForPanel;
@@ -493,18 +519,25 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       panelTop = barTop + BAR_H + GAP;
       panelHeight = clamp(viewportH - MARGIN - panelTop, PANEL_MIN_H, PANEL_MAX_H);
     } else {
-      barTop = clamp(rect.top - GAP - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
+      barTop = clamp(effectiveTopAnchor - GAP - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
       panelHeight = clamp(barTop - GAP - MARGIN, PANEL_MIN_H, PANEL_MAX_H);
       panelTop = barTop - GAP - panelHeight;
     }
   }
 
-  /** The chips ride beside the bar, so they line up with its top edge. */
-  const chipTop = clamp(
-    barTop,
-    MARGIN,
-    Math.max(MARGIN, viewportH - MARGIN - chipsHeight)
-  );
+  /** The chips ride beside the bar for section AI, but for whole CV they
+      are centered vertically in the viewport aligned with the page right boundary. */
+  const chipTop = isDocument
+    ? clamp(
+        (viewportH - chipsHeight) / 2,
+        MARGIN,
+        Math.max(MARGIN, viewportH - MARGIN - chipsHeight)
+      )
+    : clamp(
+        barTop,
+        MARGIN,
+        Math.max(MARGIN, viewportH - MARGIN - chipsHeight)
+      );
 
   return (
     <>

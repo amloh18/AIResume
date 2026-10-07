@@ -11,7 +11,7 @@ import DocumentTabs, { type EditorDocument } from './DocumentTabs';
  * the id is kept as `layout` so the existing canvas events
  * (`open-templates` / `set-builder-sidebar`) keep working unchanged.
  */
-export type UtilityPanelId = 'analysis' | 'design' | 'layout' | 'json';
+export type UtilityPanelId = 'analysis' | 'sections' | 'design' | 'layout' | 'json';
 
 interface UtilityPanelRailProps {
   /** Currently open panel, or null when the canvas is in its wide (tiles-only) state. */
@@ -53,6 +53,10 @@ const openPanel = (panel: UtilityPanelId) => {
     window.dispatchEvent(new CustomEvent('open-templates'));
     return;
   }
+  if (panel === 'sections') {
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
+    return;
+  }
   window.dispatchEvent(
     new CustomEvent('set-builder-sidebar', { detail: panel === 'json' ? 'data' : 'design' })
   );
@@ -70,14 +74,20 @@ const closePanel = () => {
 
 const AnalysisPreview: React.FC = () => (
   <span className="up-pv">
-    <svg className="up-gauge" viewBox="0 0 36 36" aria-hidden="true">
-      <circle className="up-gauge-track" cx="18" cy="18" r="14" />
-      <circle className="up-gauge-value" cx="18" cy="18" r="14" />
-    </svg>
-    <span className="up-rows" aria-hidden="true">
-      <i />
-      <i />
-      <i />
+    <span className="up-score" aria-hidden="true">
+      <span className="up-score-top">
+        <span className="up-score-val">
+          <span className="up-score-num" />
+        </span>
+        <span className="up-score-tag" />
+      </span>
+      <span className="up-score-meter">
+        <i className="up-score-fill" />
+      </span>
+      <span className="up-score-bars">
+        <i className="up-sbar a" />
+        <i className="up-sbar b" />
+      </span>
     </span>
   </span>
 );
@@ -126,6 +136,23 @@ const JsonPreview: React.FC = () => (
   </span>
 );
 
+const SectionsPreview: React.FC = () => (
+  <span className="up-pv">
+    <span className="up-sec" aria-hidden="true">
+      <span className="up-sec-row">
+        <i className="up-sec-bar" />
+        <i className="up-sec-badge" />
+      </span>
+      <span className="up-sec-row s">
+        <i className="up-sec-bar" />
+      </span>
+      <span className="up-sec-row">
+        <i className="up-sec-bar" />
+      </span>
+    </span>
+  </span>
+);
+
 interface TileDef {
   id: UtilityPanelId;
   label: string;
@@ -134,6 +161,7 @@ interface TileDef {
 
 const TILES: TileDef[] = [
   { id: 'analysis', label: 'Analysis', Preview: AnalysisPreview },
+  { id: 'sections', label: 'Add Section', Preview: SectionsPreview },
   { id: 'design', label: 'Design', Preview: DesignPreview },
   { id: 'layout', label: 'Template', Preview: TemplatePreview },
   { id: 'json', label: 'JSON', Preview: JsonPreview },
@@ -287,48 +315,93 @@ const RAIL_STYLES = `
   to   { opacity: 1; transform: scale(1) rotate(0); }
 }
 
-/* ---------- Analysis: score gauge + issue rows ---------- */
-.up-gauge {
+/* ---------- Analysis: score meter + metric breakdown ---------- */
+.up-score {
   position: absolute;
-  left: 50%;
-  top: 5px;
-  width: 24px;
-  height: 24px;
-  transform: translateX(-50%);
-}
-.up-gauge circle {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-}
-.up-gauge-track { stroke: color-mix(in srgb, var(--text-secondary) 30%, transparent); }
-.up-gauge-value {
-  stroke: #10b981;
-  stroke-dasharray: 88;
-  stroke-dashoffset: 22;
-}
-.up-rows {
-  position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 4px;
+  inset: 4px 6px;
   display: flex;
   flex-direction: column;
-  gap: 2.5px;
+  justify-content: center;
+  gap: 3px;
 }
-.up-rows i {
-  display: block;
-  height: 2.5px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--text-secondary) 65%, transparent);
-  transform-origin: left center;
+.up-score-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1;
+}
+.up-score-val {
+  display: inline-flex;
+  align-items: baseline;
+}
+.up-score-num {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #10b981;
+  font-family: inherit;
+  line-height: 1;
+}
+.up-score-pct {
+  font-size: 7px;
+  font-weight: 800;
+  color: #10b981;
   opacity: .85;
+  margin-left: 0.5px;
+  line-height: 1;
 }
-.up-rows i:nth-child(1) { width: 82%; }
-.up-rows i:nth-child(2) { width: 58%; }
-.up-rows i:nth-child(3) { width: 70%; }
+.up-score-tag {
+  font-size: 6.5px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-secondary) 85%, transparent);
+  background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+  padding: 1px 3px;
+  border-radius: 3px;
+  line-height: 1.2;
+}
+.up-score-meter {
+  position: relative;
+  width: 100%;
+  height: 3.5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 25%, transparent);
+  overflow: hidden;
+}
+.up-score-fill {
+  display: block;
+  height: 100%;
+  width: 92%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  animation: up-score-grow 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+  transform-origin: left center;
+}
+@keyframes up-score-grow {
+  0%   { width: 22%; opacity: .65; }
+  100% { width: 92%; opacity: 1; }
+}
+.up-score-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 1px;
+}
+.up-sbar {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-secondary) 50%, transparent);
+  transform-origin: left center;
+  animation: up-sbar-grow 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.up-sbar.a { width: 80%; animation-delay: .18s; }
+.up-sbar.b { width: 62%; animation-delay: .36s; }
+@keyframes up-sbar-grow {
+  0%   { transform: scaleX(.25); opacity: .45; }
+  100% { transform: scaleX(1); opacity: .9; }
+}
 
 /* ---------- Design: document with cycling accent ---------- */
 .up-doc {
@@ -384,6 +457,126 @@ const RAIL_STYLES = `
 @keyframes up-chip {
   0%, 100% { opacity: .35; transform: scale(.8); }
   45%      { opacity: 1;   transform: scale(1.12); }
+}
+
+/* ---------- CV Document Preview ---------- */
+.up-cv-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  padding: 3px 4px;
+}
+.up-cv-hd {
+  display: flex;
+  align-items: center;
+  gap: 2.5px;
+  margin-bottom: 1px;
+}
+.up-cv-avatar {
+  display: block;
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 999px;
+  background: #10b981;
+  flex-shrink: 0;
+}
+.up-cv-hd-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+.up-cv-name {
+  display: block;
+  height: 2px;
+  width: 70%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.75);
+}
+.up-cv-sub {
+  display: block;
+  height: 1.5px;
+  width: 45%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.35);
+}
+.up-cv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+}
+.up-cv-sec {
+  display: block;
+  height: 2px;
+  width: 48%;
+  border-radius: 1px;
+  background: #10b981;
+  margin-top: 0.5px;
+}
+.up-cv-ln {
+  display: block;
+  height: 1.5px;
+  border-radius: 1px;
+  background: rgba(17,24,39,.25);
+  width: 95%;
+}
+.up-cv-ln.s {
+  width: 58%;
+}
+
+/* ---------- Cover Letter Document Preview ---------- */
+.up-cl-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  padding: 3px 4px;
+}
+.up-cl-hd {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 1.5px;
+}
+.up-cl-to {
+  display: block;
+  height: 2px;
+  width: 44%;
+  border-radius: 1px;
+  background: #10b981;
+}
+.up-cl-date {
+  display: block;
+  height: 1.5px;
+  width: 28%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.35);
+}
+.up-cl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+}
+.up-cl-ln {
+  display: block;
+  height: 1.5px;
+  border-radius: 1px;
+  background: rgba(17,24,39,.25);
+  width: 95%;
+}
+.up-cl-ln.s {
+  width: 60%;
+}
+.up-cl-foot {
+  display: block;
+  margin-top: auto;
+  padding-top: 1px;
+}
+.up-cl-sig {
+  display: block;
+  height: 1.5px;
+  width: 32%;
+  border-radius: 1px;
+  background: rgba(17,24,39,.65);
 }
 
 /* ---------- Template: two page layouts cross-fading ---------- */
@@ -458,6 +651,35 @@ const RAIL_STYLES = `
 @keyframes up-blink {
   0%, 49%   { opacity: 1; }
   50%, 100% { opacity: .15; }
+}
+
+/* ---------- Sections: stacked snippet blocks ---------- */
+.up-sec {
+  position: absolute;
+  inset: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+.up-sec-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+}
+.up-sec-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-secondary) 30%, transparent);
+}
+.up-sec-row.s .up-sec-bar { width: 70%; flex: none; }
+.up-sec-badge {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #10b981;
 }
 
 @media (prefers-reduced-motion: reduce) {

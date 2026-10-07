@@ -294,7 +294,8 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
     containerRef,
     zoomRef,
     setZoom,
-    scaleFor: (distancePx) => distancePx / 300,
+    scaleFor: (distancePx) => distancePx / 100,
+    speedMultiplier: 1.5,
     minZoom: 0.4,
     maxZoom: 1.5,
   });

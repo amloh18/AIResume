@@ -86,7 +86,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     containerRef,
     zoomRef,
     setZoom,
-    scaleFor: (distancePx) => (distancePx / 300) * 100,
+    scaleFor: (distancePx) => (distancePx / 100) * 100,
+    speedMultiplier: 1.5,
     minZoom: 50,
     maxZoom: 200,
   });

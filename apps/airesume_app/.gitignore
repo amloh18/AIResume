@@ -35,9 +35,8 @@ next-env.d.ts
 !CONTRIBUTING.md
 !CODE_OF_CONDUCT.md
 !CHANGELOG.md
-# The published product documentation. These are linked from README.md, so ignoring them would
-# ship a README full of dead links. Internal docs live OUTSIDE this repository entirely.
-!docs/*.md
+# Internal documentation
+docs/
 
 # ⚠️ These are NOT documentation — they are build inputs the running app serves:
 #   buildairesume.com/seo-llm-content.md  and  buildairesume.com/seo-meta-content.md

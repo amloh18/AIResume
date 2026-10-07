@@ -20,10 +20,9 @@ export const ZOOM_STEP = 5;
  * deltas, glide instead of stepping. It replaced a 50px accumulator that fired
  * one flat 5% jump, which is why a pinch arrived in visible lurches.
  *
- * At this value one mouse-wheel notch (~100px) is a ~7.7% change, and a
- * trackpad pinch is smooth.
+ * At this value trackpad pinch/swipe gestures glide smoothly and zoom swiftly.
  */
-export const ZOOM_WHEEL_SENSITIVITY = 0.0008;
+export const ZOOM_WHEEL_SENSITIVITY = 0.0022;
 
 interface UseCanvasFitOptions {
   /** Layout width (px) of the document to fit. Must follow the page size selected by the user. */
