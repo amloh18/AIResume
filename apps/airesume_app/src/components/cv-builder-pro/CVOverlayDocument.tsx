@@ -14,6 +14,7 @@ import {
   CV_SNAPSHOT_A4_WIDTH,
   CV_SNAPSHOT_A4_HEIGHT,
 } from '@/components/cv-builder-pro/CVSnapshotDocument';
+import { getDocumentFontStack } from '@/lib/templates/document-fonts';
 
 interface CVOverlayDocumentProps {
   cvData: any;
@@ -228,14 +229,16 @@ export default function CVOverlayDocument({
           height: renderMode === 'pages' ? CV_SNAPSHOT_A4_HEIGHT : undefined,
           overflow: renderMode === 'pages' ? 'hidden' : 'visible',
           backgroundColor: '#ffffff',
-          '--cv-font': design?.font || 'Inter',
+          '--cv-font': getDocumentFontStack(design?.font || 'Inter'),
           '--cv-base-size': `${design?.fontSize || 12}px`,
           '--cv-spacing': design?.spacing || 1.0,
           '--cv-accent': design?.accentColor || '#22c55e',
           '--cv-page-margin': `${design?.pageMargin || 40}px`,
           '--cv-sidebar-bg': design?.sidebarBgColor || '#f8fafc',
-          '--cv-section-gap': `${design?.sectionGap || 16}px`,
-          '--cv-item-gap': `${design?.itemGap || 12}px`,
+          // `??`, not `||`: 0 is a legal gap (see the Design panel's sliders), and
+          // `||` would silently put a 16px/12px gap into a document that has none.
+          '--cv-section-gap': `${design?.sectionGap ?? 16}px`,
+          '--cv-item-gap': `${design?.itemGap ?? 12}px`,
           '--cv-page-width': '210mm',
           '--cv-page-height': '297mm',
         } as React.CSSProperties}

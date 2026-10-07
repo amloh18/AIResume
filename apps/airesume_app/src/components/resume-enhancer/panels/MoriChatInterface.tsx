@@ -53,6 +53,20 @@ export interface MoriChatDockControls {
 
 interface MoriChatInterfaceProps {
   dock?: MoriChatDockControls;
+  /**
+   * Render the conversation ALONE — no header, no input bar.
+   *
+   * The section/document AI overlay grows its own search bar into an inline
+   * conversation, so it needs the messages and the engine but must not inherit
+   * the dock's chrome or a second input. With this flag the component is just
+   * the scrolling message list; the overlay's search bar stays the only place
+   * to type.
+   *
+   * The prompt contract is unchanged: the overlay still dispatches
+   * `mori-cv-selection` + `mori-chat-send-prompt`, which this component already
+   * listens for, so no chat logic is duplicated.
+   */
+  embedded?: boolean;
 }
 
 const SUGGESTIONS = [
@@ -88,7 +102,7 @@ const FOLLOW_UP_SUGGESTIONS: Record<string, Array<{ label: string; prompt: strin
   ],
 };
 
-const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
+const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock, embedded = false }) => {
   const collapsed = !!dock?.collapsed;
   const { state, updateCVData } = useResumeEnhancer();
   const { data: session, status: sessionStatus } = useSession();
@@ -537,7 +551,9 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
 
     return (
       <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
-        {/* Header Bar */}
+        {/* Header Bar — omitted when embedded: the overlay's own search bar is
+            the only chrome and the only input. */}
+        {!embedded && (
         <div className="px-4 py-2 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-white dark:bg-transparent shrink-0">
           <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
             <MessageSquare className="w-4 h-4 text-emerald-500" />
@@ -553,6 +569,7 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
             </button>
           )}
         </div>
+        )}
 
         {/* Guest Info Card Container */}
         <div className="flex-1 flex items-center justify-center p-6 bg-slate-50/50 dark:bg-transparent overflow-y-auto">
@@ -638,7 +655,7 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
     <div className="flex flex-col h-full bg-transparent relative overflow-hidden">
       
       {/* Header Bar */}
-      <div className={`px-4 py-2 border-b border-slate-200 dark:border-white/10 items-center justify-between bg-white dark:bg-transparent shrink-0 ${collapsed ? 'hidden' : 'flex'}`}>
+      <div className={`px-4 py-2 border-b border-slate-200 dark:border-white/10 items-center justify-between bg-white dark:bg-transparent shrink-0 ${collapsed || embedded ? 'hidden' : 'flex'}`}>
         <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
           <MessageSquare className="w-4 h-4 text-emerald-500" />
           {chatId ? chatHistory.find(c => c._id === chatId)?.title || 'Current Chat' : 'New Chat'}
@@ -746,7 +763,7 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
         {/* Messages Area */}
         <div 
           ref={scrollRef}
-          className="absolute inset-0 overflow-y-auto p-4 space-y-4 hide-scrollbar pb-32"
+          className={`absolute inset-0 overflow-y-auto p-4 space-y-4 hide-scrollbar ${embedded ? 'pb-4' : 'pb-32'}`}
         >
           {messages.map((m, idx) => {
             const isLatestAssistant = idx === messages.length - 1 && m.role === 'assistant' && !isLoading;
@@ -796,7 +813,9 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
         </div>
       </div>
 
-      {/* Input Area — overlay while expanded, the whole surface while collapsed */}
+      {/* Input Area — overlay while expanded, the whole surface while collapsed.
+          Omitted when embedded: the overlay owns the only input. */}
+      {!embedded && (
       <div
         className={
           collapsed
@@ -918,6 +937,7 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock }) => {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

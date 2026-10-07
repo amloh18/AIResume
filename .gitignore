@@ -161,8 +161,8 @@ venv/
 
 /brag-output/
 
-# Verification scratch output (esbuild bundles from .verify/*.ts)
-.verify/build/
+# Verification scratch scripts and output
+.verify/
 
 # ── Admin Panel (Private - lives in ../cvcircle_admin) ───────────────────
 /apps/admin

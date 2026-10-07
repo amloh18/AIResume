@@ -294,6 +294,22 @@ Please rewrite the cover letter body to fulfill the request. Return the rewritte
     }
   };
 
+  // Bridge for the section-anchored suggestion pills: they dispatch the same
+  // `mori-chat-send-prompt` window event the CV chat listens to, so a single bar
+  // drives whichever document is open.
+  const handleSendRef = useRef<((prompt?: string) => void) | null>(null);
+  handleSendRef.current = handleSend;
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      const prompt = (e as CustomEvent)?.detail?.prompt;
+      if (typeof prompt === 'string' && prompt.trim()) {
+        handleSendRef.current?.(prompt);
+      }
+    };
+    window.addEventListener('mori-chat-send-prompt', onPrompt as EventListener);
+    return () => window.removeEventListener('mori-chat-send-prompt', onPrompt as EventListener);
+  }, []);
+
   const handleLoadChat = (id: string) => {
     const chat = chatHistory.find(c => c.id === id);
     if (chat) {

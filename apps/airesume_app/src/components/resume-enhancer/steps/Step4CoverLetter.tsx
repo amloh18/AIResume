@@ -13,7 +13,9 @@ import {
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
+import { ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanvasFit';
 import CoverLetterLayoutEngine, { CoverLetterDesignProps } from '../../cover-letter-engine/CoverLetterLayoutEngine';
+import { getDocumentFontStack } from '@/lib/templates/document-fonts';
 import { 
   ClassicHeader, 
   ModernHeader, 
@@ -147,24 +149,21 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     const container = containerRef.current;
     if (!container) return;
 
-    let accumulatedDelta = 0;
-
     const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        
-        accumulatedDelta += -e.deltaY;
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
 
-        if (Math.abs(accumulatedDelta) >= 50) {
-          const direction = Math.sign(accumulatedDelta);
-          setZoom((prev: number) => {
-            const next = prev + (direction * 10);
-            const snapped = Math.round(next / 10) * 10;
-            return Math.min(200, Math.max(50, snapped));
-          });
-          accumulatedDelta = 0;
-        }
-      }
+      // Normalise LINES/PAGES deltas to pixels — see the CV canvas' handler.
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? container.clientHeight : 1;
+      const deltaPx = e.deltaY * unit;
+
+      setZoom((prev: number) => {
+        // Proportional and continuous, matching the CV canvas. This used to jump
+        // a flat 10 points once the wheel had accumulated 50px, so the letter
+        // canvas lurched in 10% steps.
+        const next = prev * Math.exp(-deltaPx * ZOOM_WHEEL_SENSITIVITY);
+        return Math.min(200, Math.max(50, next));
+      });
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });
@@ -345,7 +344,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                 onClick={() => setZoom(100)}
                 className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-600' : 'bg-transparent border-gray-500/20 hover:border-[#013f2e]/50 text-gray-500 dark:text-gray-400'}`}
               >
-                {zoom}%
+                {/* Zoom is fractional — the label rounds. */}
+                {Math.round(zoom)}%
               </button>
             </div>
           </div>
@@ -435,14 +435,18 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
                         </div>
                       </div>
                       
-                      <div className="relative w-full aspect-[16/9] overflow-hidden bg-[#f9f9f9]">
+                      {/* `zoom`, not `transform: scale()` — see the same note in
+                          CoverLetterHeaderStyles. A transform leaves layout
+                          untouched, so the old `aspect-[16/9]` box never shrank
+                          to the header and showed blank space beneath it. */}
+                      <div className="relative w-full overflow-hidden bg-[#f9f9f9]">
                         <div 
-                          className="absolute top-0 left-0 origin-top-left pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" 
+                          className="pointer-events-none p-4 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" 
                           style={{ 
                             width: '250%', 
-                            transform: 'scale(0.4)',
+                            zoom: 0.4,
                             '--cv-accent': design.accentColor || '#013f2e',
-                            '--cv-font': design.fontFamily === 'font-serif' ? 'Merriweather' : 'Inter'
+                            '--cv-font': getDocumentFontStack(design.fontFamily)
                           } as React.CSSProperties}
                         >
                           <PreviewHeaderComponent {...{

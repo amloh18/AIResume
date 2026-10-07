@@ -61,7 +61,7 @@ describe('UtilityPanelRail', () => {
     const css = container.querySelector('style')?.textContent || '';
     expect(css).toContain('.up-tile');
     expect(css).toContain('@keyframes up-in');
-    expect(css).toContain('@keyframes up-gauge');
+    expect(css).toContain('@keyframes up-hue');
     expect(css).toContain('prefers-reduced-motion');
   });
 
@@ -94,9 +94,7 @@ describe('UtilityPanelRail', () => {
     window.removeEventListener('set-builder-sidebar', sidebar);
   });
 
-  it('carries the mobile-only step tiles and dispatches the step events', () => {
-    // These replaced a separate floating pill that overlapped this rail on
-    // small screens, so they must live in the rail and stay mobile-only.
+  it('carries the step tiles and dispatches the step events', () => {
     const back = vi.fn();
     const next = vi.fn();
     window.addEventListener('editor-back-step', back);
@@ -107,8 +105,9 @@ describe('UtilityPanelRail', () => {
     const prevTile = screen.getByRole('button', { name: 'Previous step' });
     const nextTile = screen.getByRole('button', { name: 'Next step' });
     expect(prevTile.className).toContain('md:hidden');
-    expect(nextTile.className).toContain('md:hidden');
+    expect(nextTile.className).not.toContain('md:hidden');
     expect(prevTile.className).toContain('w-[4.5rem]');
+    expect(nextTile.className).toContain('w-[4.5rem]');
 
     fireEvent.click(prevTile);
     fireEvent.click(nextTile);

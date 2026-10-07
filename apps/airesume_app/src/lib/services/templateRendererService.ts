@@ -16,6 +16,7 @@ import { configService } from './configService';
 import { PerformanceMonitor } from '@/lib/monitoring';
 import { logger } from '@/lib/structured-logger';
 import { generatePageBreakCSS } from '@/lib/utils/pageBreakHelper';
+import { DOCUMENT_GOOGLE_FONTS_URL } from '@/lib/templates/document-fonts';
 import crypto from 'crypto';
 
 // Ensure React is available in global scope for SSR
@@ -101,7 +102,7 @@ export class ReactTemplateRenderer implements IRenderer {
         const templateFont = template?.globalStyles?.fontFamily || 'Calibri, Arial, Helvetica, Roboto, sans-serif';
 
         // Validate font is ATS-friendly (standard fonts only)
-        const standardFonts = ['Arial', 'Calibri', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia'];
+        const standardFonts = ['Arial', 'Calibri', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia', 'Garamond', 'Cambria', 'Lato', 'Montserrat'];
         const hasStandardFont = standardFonts.some(font =>
           templateFont.toLowerCase().includes(font.toLowerCase())
         );
@@ -138,7 +139,7 @@ export class ReactTemplateRenderer implements IRenderer {
   <meta name="format-detection" content="telephone=yes">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="${DOCUMENT_GOOGLE_FONTS_URL}" rel="stylesheet">
   <style>
     /* Critical: Define page size for PDF generation with proper print margins */
     @page {
