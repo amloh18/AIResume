@@ -12,6 +12,7 @@ type Scope = 'section' | 'document';
 interface Anchor {
   /** The element the menu is pinned to (a section, the page, or the letter). */
   el: HTMLElement;
+  blockId?: string;
   /** Section category as the AI layer knows it (data-json-section), or the document. */
   path: string;
   title: string;
@@ -103,9 +104,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi
  * the editor's dark olive in dark mode, and the brand emerald reserved for the
  * interactive accents. */
 const SURFACE =
-  'border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#23271f]/95 backdrop-blur-sm shadow-[0_8px_24px_rgba(0,0,0,0.10)]';
+  'rounded-xl border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 backdrop-blur-md shadow-xl shadow-black/20';
 const CHIP_SURFACE =
-  'border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#23271f]/95 backdrop-blur-sm shadow-[0_4px_14px_rgba(0,0,0,0.08)] text-gray-700 dark:text-gray-200 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white';
+  'border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 backdrop-blur-md shadow-md text-gray-700 dark:text-gray-200 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white';
 
 const flatten = (el: HTMLElement, max: number) =>
   (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -210,9 +211,11 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     // as the path the AI layer understands.
     const heading = block.querySelector('h1, h2, h3, h4');
     const title = (heading?.textContent || '').trim().slice(0, 60);
+    const blockId = block.getAttribute('data-block-id') || undefined;
 
     return {
       el: block,
+      blockId,
       path: block.getAttribute('data-json-section') || 'cv',
       title: title || 'this section',
       text: flatten(block, SECTION_CHARS),
@@ -271,13 +274,17 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       if (!target) return;
       // The click that opened this menu is still in flight — see openedAtRef.
       if (Date.now() - openedAtRef.current < 250) return;
-      // A click on the menu itself (any of its three boxes) or on the rail button
-      // that opened it is not "outside" — otherwise reaching for a suggestion
-      // would dismiss the menu.
+      // Interacting with the bar itself, chips, conversation, section controls or
+      // inside the focused section must keep the bottom AI nav bar active.
       if (barRef.current?.contains(target)) return;
       if (askBarRef.current?.contains(target)) return;
       if (panelRef.current?.contains(target)) return;
       if (target.closest('[data-section-rail]')) return;
+      if (target.closest('[data-canvas-toolrail]')) return;
+      if (target.closest('.entry-controls')) return;
+      if (target.closest('[data-mori-selection-bar]')) return;
+      if (target.closest('[data-mori-ask-bar]')) return;
+      if (anchor?.el?.contains(target) || target.closest('[data-block-id]')) return;
       setAnchor(null);
     };
 
@@ -306,8 +313,18 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     }
     const measure = () => {
       if (!anchor.el.isConnected) {
-        setAnchor(null);
-        return;
+        if (anchor.scope === 'section' && anchor.blockId) {
+          const fresh = document.querySelector(`[data-block-id="${CSS.escape(anchor.blockId)}"]`) as HTMLElement | null;
+          if (fresh && fresh.isConnected) {
+            anchor.el = fresh;
+          } else {
+            setAnchor(null);
+            return;
+          }
+        } else {
+          setAnchor(null);
+          return;
+        }
       }
       setRect(anchor.el.getBoundingClientRect());
       const workspace = document.querySelector('[data-cv-workspace]') as HTMLElement | null;
@@ -324,10 +341,19 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     };
     measure();
 
+    const ro = typeof ResizeObserver !== 'undefined' && anchor.el ? new ResizeObserver(measure) : null;
+    if (ro && anchor.el) ro.observe(anchor.el);
+
+    const zoomLayer = document.querySelector('[data-cv-zoom-layer]');
+    const mo = zoomLayer && typeof MutationObserver !== 'undefined' ? new MutationObserver(measure) : null;
+    if (mo && zoomLayer) mo.observe(zoomLayer, { attributes: true, attributeFilter: ['style'] });
+
     const scrollContainers = document.querySelectorAll('.overflow-auto');
     scrollContainers.forEach(c => c.addEventListener('scroll', measure, { passive: true }));
     window.addEventListener('resize', measure);
     return () => {
+      ro?.disconnect();
+      mo?.disconnect();
       scrollContainers.forEach(c => c.removeEventListener('scroll', measure));
       window.removeEventListener('resize', measure);
     };
@@ -515,7 +541,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
         }}
         ref={askBarRef}
         data-mori-ask-bar
-        className={`fixed z-[190] flex items-center gap-1.5 rounded-full pl-3.5 pr-1.5 py-1.5 no-print ${SURFACE}`}
+        className={`fixed z-[190] flex items-center gap-1.5 rounded-xl pl-3.5 pr-1.5 py-1.5 no-print ${SURFACE}`}
         style={{ top: barTop, left: barLeft, width: barW, height: BAR_H }}
       >
         <Sparkles size={14} className="shrink-0 text-emerald-500" />
@@ -529,7 +555,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
         <button
           type="submit"
           disabled={!value.trim()}
-          className="shrink-0 rounded-full p-1.5 bg-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.35)] transition-colors hover:bg-emerald-600 disabled:bg-transparent disabled:text-slate-400 disabled:shadow-none dark:disabled:text-slate-500"
+          className="shrink-0 rounded-lg p-1.5 bg-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.35)] transition-colors hover:bg-emerald-600 disabled:bg-transparent disabled:text-slate-400 disabled:shadow-none dark:disabled:text-slate-500"
           aria-label="Send"
         >
           <ChevronRight size={15} />
