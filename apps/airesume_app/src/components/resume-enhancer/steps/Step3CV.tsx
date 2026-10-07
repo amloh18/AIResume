@@ -1558,27 +1558,29 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             {!isCoverLetterDoc && state.cvType === 'standalone' && !hasJobDescription && !jdPromptDismissed && (
               <div
                 data-jd-prompt
-                className="absolute bottom-[68px] right-6 z-[50] w-[min(92%,340px)] flex items-start gap-3 rounded-2xl border border-amber-300/60 dark:border-amber-500/30 bg-amber-50/95 dark:bg-amber-950/40 backdrop-blur-sm px-3.5 py-3 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.28)] no-print"
+                className="absolute bottom-[68px] right-6 z-[50] w-[min(92%,350px)] flex items-start gap-3 rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md p-3.5 shadow-2xl shadow-black/15 dark:shadow-black/50 no-print transition-all"
               >
-                <Briefcase className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Briefcase className="w-4 h-4" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200">Add a job description</p>
-                  <p className="mt-0.5 text-[11px] leading-snug text-amber-800/90 dark:text-amber-300/90">
+                  <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">Add a job description</h4>
+                  <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
                     This CV is not linked to a job yet, so tailoring, ATS scoring and the cover letter have nothing to
                     target.
                   </p>
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowJobParserDialog(true)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-[#013f2e] hover:bg-[#02523c] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-all shadow-sm active:scale-95"
                     >
                       Add job description
                     </button>
                     <button
                       type="button"
                       onClick={() => setJdPromptDismissed(true)}
-                      className="px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-white/5 transition-colors"
+                      className="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
                     >
                       Not now
                     </button>
@@ -1588,7 +1590,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   type="button"
                   aria-label="Dismiss"
                   onClick={() => setJdPromptDismissed(true)}
-                  className="p-1 rounded-md text-amber-700/70 dark:text-amber-300/70 hover:bg-amber-100 dark:hover:bg-white/5 transition-colors"
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors -mr-1 -mt-1"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
