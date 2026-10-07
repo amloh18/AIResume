@@ -11,6 +11,8 @@ interface UseCanvasPinchZoomOptions {
   scaleFor: (pinchDistancePx: number) => number;
   /** Minimum two-finger distance (px) before a pinch is recognized. */
   minPinchDistancePx?: number;
+  /** Speed multiplier for pinch zoom gestures. Defaults to 1. */
+  speedMultiplier?: number;
   /** Lower bound for zoom values (clamped). */
   minZoom?: number;
   /** Upper bound for zoom values (clamped). */
@@ -31,6 +33,7 @@ export function useCanvasPinchZoom({
   setZoom,
   scaleFor,
   minPinchDistancePx = 40,
+  speedMultiplier = 1,
   minZoom,
   maxZoom,
 }: UseCanvasPinchZoomOptions) {
@@ -40,6 +43,8 @@ export function useCanvasPinchZoom({
   setZoomRef.current = setZoom;
   const scaleForRef = useRef(scaleFor);
   scaleForRef.current = scaleFor;
+  const speedMultiplierRef = useRef(speedMultiplier);
+  speedMultiplierRef.current = speedMultiplier;
   const clampRef = useRef<(z: number) => number>((z) => z);
   clampRef.current =
     minZoom !== undefined || maxZoom !== undefined
@@ -74,7 +79,7 @@ export function useCanvasPinchZoom({
       // Page-level pinch is already blocked; canvas owns this gesture.
       e.preventDefault();
       const targetZoom = scaleForRef.current(distance);
-      const delta = targetZoom - scaleForRef.current(initialDistanceRef.current);
+      const delta = (targetZoom - scaleForRef.current(initialDistanceRef.current)) * speedMultiplierRef.current;
       setZoomRef.current(clampRef.current(initialZoomRef.current + delta));
     };
 

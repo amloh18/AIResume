@@ -5,26 +5,42 @@ import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, u
 import { createPortal } from 'react-dom';
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck, AlertCircle, Undo, Redo, Bug } from 'lucide-react';
 import { CANVAS_TEMPLATES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
-import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
+import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasToolRail, CanvasContext } from './components/CoreUI';
 import { TemplateLibraryGrid } from './components/TemplateLibraryGrid';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
 import { SnippetPreviewFrame } from './components/SnippetPreviewFrame';
 import ListEntry from './components/ListEntry';
 import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './helpers';
+import {
+  MOVE_ANIM_MS,
+  MOVE_ANIM_EASING,
+  PAGE_KEYFRAMES,
+  SECTION_KEYFRAMES,
+  snapshotCanvasMove,
+  playCanvasMove,
+  type CanvasMoveSnapshot,
+} from './canvas-move-animation';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
-import { computeCanvasLayoutMetrics } from './layout-utils';
+import { computeCanvasLayoutMetrics, workspacePaddingYFor } from './layout-utils';
 import { buildHybridBands, legacyHybridOrders, moveToEndOfHybridFlow, nextHybridOrder, type HybridBand } from './hybrid-flow';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { LayoutDebugOverlay, type DebugBlock, type LayoutDebugInfo } from './LayoutDebugOverlay';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { getCanvasSnippetPreviewData } from '@/lib/templates/canvas-initial-data';
 import { useUserData } from '@/lib/hooks/useUserData';
-import { useCanvasFit } from '@/hooks/useCanvasFit';
+import { useCanvasFit, ZOOM_STEP, ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanvasFit';
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import toast from '@/lib/hot-toast';
 import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
 import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
+import {
+  TOP_SANS_SERIF_FONTS,
+  TOP_SERIF_FONTS,
+  ALL_DOCUMENT_FONTS,
+  getDocumentFontStack,
+  DOCUMENT_GOOGLE_FONTS_URL,
+} from '@/lib/templates/document-fonts';
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
 
@@ -472,6 +488,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   requestedTemplateRef.current = template || cvData?.metadata?.canvasTemplate;
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [focusedJsonPath, setFocusedJsonPath] = useState<string | null>(null);
+  // The section the user clicked. While set, that section gets the solid lime
+  // "spotlight" frame and every other section on the sheet is blurred/dimmed
+  // (see the `cv-has-selection` rules in the style block). Cleared by Escape or
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const selectedBlockIdRef = useRef<string | null>(selectedBlockId);
+  selectedBlockIdRef.current = selectedBlockId;
   const [zones, setZones] = useState<Record<string, any[]>>(() => {
     const raw: Record<string, any[]> = cvData?.metadata?.canvasZones || {};
     // Deduplicate blocks within each zone to prevent React duplicate-key warnings
@@ -510,6 +532,38 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
   zonesRef.current = zones;
+
+  /* The utility column is owned by the editor shell (`Step3CV`), not by this
+   * engine — the Design / Template / JSON panel bodies are portalled into
+   * `#builder-utility-panel-portal`.
+   *
+   * ⚠️ Resolve it in an EFFECT, never with a one-shot `getElementById` during
+   * render. This engine is UNMOUNTED while the cover letter is open, so on the
+   * render where it re-mounts after a cover-letter → CV switch the target node
+   * is not in the DOM yet (a render-phase `getElementById` reads the PREVIOUS
+   * commit). The panel then rendered `null`, and because nothing had changed
+   * there was no state update to try again — the TEMPLATE tile stayed blank
+   * until some unrelated re-render. An effect runs after commit, so by then the
+   * shell has published the node; storing it in state re-renders the panel. */
+  const [utilityPortal, setUtilityPortal] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = document.getElementById('builder-utility-panel-portal');
+    if (el) setUtilityPortal(el);
+  }, [activeSidebar, isTemplateModalOpen, replacingSnippet]);
+
+  // ─── Move animation — representation only ────────────────────────────────
+  // `moveSnippet` reorders a zone array and that is the entire model change.
+  // Everything here exists only to decide how the reorder LOOKS, and it never
+  // writes back to `zones`. See canvas-move-animation.ts for the rule and for
+  // why there is deliberately no scroll correction.
+  //
+  // `moveSnippet` fills this ref and bumps the tick in the SAME batch as
+  // `setZones`, so the layout effect below runs in the commit that reorders the
+  // DOM — before the browser paints it. Anything later would show one frame of
+  // the finished layout, which is exactly the jump being removed.
+  const pendingMoveRef = React.useRef<{ snapshot: CanvasMoveSnapshot; anchorId: string } | null>(null);
+  const [moveAnimTick, setMoveAnimTick] = React.useState(0);
+
   const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
   const [dragPreview, setDragPreview] = useState<any>(null);
   const dragDroppedRef = React.useRef(false); // track if a valid drop occurred
@@ -529,54 +583,173 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   // a Letter document stops being auto-fit against the fixed A4 width.
   const activePageWidthPx = getPageDimensions(design.pageSize).widthPx;
   const activePageHeightPx = getPageDimensions(design.pageSize).heightPx;
-  // Two-up only makes sense with more than one page, and only in the wide
-  // (panel-closed) editor state.
-  const isSpread = spread && totalPagesCount > 1;
   // Mirrors the responsive `--cv-page-gap` produced by computeCanvasLayoutMetrics
   // so the auto-fit width matches the rendered spread exactly.
   const spreadGapPx = viewport.width < 768 ? 24 : viewport.width < 1280 ? 32 : 40;
+
+  /* ─── Two-up needs ROOM, not just a closed panel ────────────────────────
+   * `spread` arrives from the editor shell as `!activeUtilityPanel`, i.e. it
+   * says "the panel is closed, so the canvas is wide". That is a statement about
+   * the EDITOR layout, not about the screen. On a ~1000px viewport the workspace
+   * is roughly 1000px wide while two A4 pages plus their gutter need ~1630px, so
+   * the spread was laid out into a box that could never hold it: the auto-fit
+   * fell to its 50% floor and both pages rendered too small to read.
+   *
+   * So gate it on a MEASUREMENT. `spreadHasRoom` is set by the ResizeObserver
+   * below from the same expression the fit uses for the spread width, plus the
+   * fit's own horizontal padding — so "it fits" here means exactly "the auto-fit
+   * will not have to scale the spread down to place it".
+   *
+   * Starts FALSE on purpose: the first paint is single-column and the observer
+   * promotes it a frame later. Starting optimistic would flash a two-up layout
+   * into a container that cannot hold it, which is the bug being fixed. */
+  const [spreadHasRoom, setSpreadHasRoom] = useState(false);
+  const isSpread = spread && totalPagesCount > 1 && spreadHasRoom;
   const documentFitWidthPx = isSpread ? activePageWidthPx * 2 + spreadGapPx : activePageWidthPx;
-  const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, triggerAutoFit } = useCanvasFit({
+  // Space reserved under the sheet for the zoom / page-size / undo tools, which
+  // are pinned to the bottom of the workspace. Without it they would overlap the
+  // page once the canvas shrinks to hug the content. Declared up here (rather
+  // than next to the tool strip) because the auto-fit budget below has to
+  // subtract it.
+  const CANVAS_TOOL_STRIP_PX = 64;
+  /* The auto-fit's horizontal padding (32px per side). Named because the spread
+   * gate below has to add the SAME number: if the two ever disagree, the gate
+   * would call a layout "fits" that the fit then scales down anyway. */
+  const FIT_PADDING_X_PX = 64;
+
+  // The auto-fit vertical budget equals the symmetrical padding the workspace
+  // actually renders with: `workspacePaddingY` on top AND `workspacePaddingY`
+  // underneath. Symmetrical padding guarantees the page has identical gaps on both ends.
+  const fitPaddingY =
+    workspacePaddingYFor(viewport.width, viewport.height, viewport.devicePixelRatio) * 2;
+  const { containerRef: workspaceRef, zoom, setZoom, isAutoFit, hasFitted, triggerAutoFit } = useCanvasFit({
     documentPixelWidth: documentFitWidthPx,
     documentPixelHeight: activePageHeightPx,
-    paddingPx: 64, // 32px padding per side
+    paddingPx: FIT_PADDING_X_PX,
+    paddingYPx: fitPaddingY,
     maxScale: 2.0,
     minScale: 0.5
   });
 
+  const [workspaceHeight, setWorkspaceHeight] = useState(0);
+
+  /* Keeps `spreadHasRoom` honest — see the note where it is declared.
+   *
+   * Observed on the WORKSPACE, not the window: the workspace is the element the
+   * auto-fit measures, and it is what changes when the utility panel opens. */
+  useEffect(() => {
+    const el = workspaceRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const needed = activePageWidthPx * 2 + spreadGapPx + FIT_PADDING_X_PX;
+      setSpreadHasRoom(el.clientWidth >= needed);
+      setWorkspaceHeight(el.clientHeight);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activePageWidthPx, spreadGapPx]);
+
   // Element whose measured height is the canvas' natural content height.
   const canvasContentRef = useRef<HTMLDivElement | null>(null);
+
+  const [contentNaturalHeight, setContentNaturalHeight] = useState(0);
+  useEffect(() => {
+    const el = canvasContentRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const natural = el.offsetHeight;
+      if (Number.isFinite(natural) && natural > 0) {
+        setContentNaturalHeight(natural);
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [totalPagesCount, isSpread, activePageHeightPx]);
+
+  const rows = isSpread ? Math.ceil(totalPagesCount / 2) : totalPagesCount;
+  const estimatedUnscaledHeight = rows * activePageHeightPx + Math.max(0, rows - 1) * spreadGapPx;
+  const unscaledHeight = contentNaturalHeight > 0 ? contentNaturalHeight : estimatedUnscaledHeight;
+  const scaledHeight = Math.round(unscaledHeight * (zoom / 100));
+  // CSS transform: scale() paints the element smaller/larger but leaves its DOM
+  // layout box unscaled. Compensating with negative/positive margin-bottom aligns the
+  // DOM flow with the visual painted bounds so bottom gap matches top gap at any zoom.
+  const scaleDiffY = Math.round(unscaledHeight * (1 - zoom / 100));
+  const marginBottomPx = -scaleDiffY;
+  // ⚠️ `fitsVertically` is deliberately NOT declared here, even though it belongs
+  // with the rest of this measurement block. It reads `layoutMetrics`, whose
+  // `const` does not initialise until the layout-metrics `useMemo` ~380 lines
+  // below — and a `const` read before its own declaration is a temporal dead
+  // zone ReferenceError, not `undefined`. It used to sit here and crashed the
+  // whole CV Builder the first time `workspaceHeight` went non-zero, because
+  // `workspaceHeight > 0 &&` short-circuits on the initial 0 and hid the fault
+  // until the ResizeObserver's second render. It is declared next to
+  // `layoutMetrics` instead.
+
+  // Zoom is eased with a CSS transition instead of a JS animation loop: the
+  // transform is GPU-composited, so the glide stays on the compositor and the
+  // canvas does not re-render React on every frame (which the shell's height
+  // reporting would otherwise turn into per-frame layout churn).
+  //
+  // Armed only once the auto-fit has actually landed, plus a beat — NOT on a
+  // mount timer. Arming too early would animate the very first 100% → fit
+  // settle, which reads as the canvas flying in on every page load.
+  const [zoomEased, setZoomEased] = useState(false);
+  useEffect(() => {
+    if (!hasFitted) return undefined;
+    const t = setTimeout(() => setZoomEased(true), 250);
+    return () => clearTimeout(t);
+  }, [hasFitted]);
+
+  // Play the section-move transition. Layout effect, not a passive effect: it has
+  // to land in the same frame as the reordered DOM, before paint. `moveAnimTick`
+  // is the trigger rather than an input — the pass measures everything it needs
+  // off the DOM itself, so nothing else belongs in the dependency list. A stray
+  // run with no pending move is a no-op, which also covers StrictMode's double
+  // invocation.
+  React.useLayoutEffect(() => {
+    const pending = pendingMoveRef.current;
+    if (!pending) return;
+    pendingMoveRef.current = null;
+    playCanvasMove(
+      pending.snapshot,
+      workspaceRef.current,
+      canvasContentRef.current,
+      pending.anchorId,
+    );
+  }, [moveAnimTick]);
 
   // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
   useEffect(() => {
     const workspace = workspaceRef.current;
     if (!workspace) return;
 
-    let accumulatedDelta = 0;
-
     const handleWheel = (e: WheelEvent) => {
       // If Ctrl or Cmd is held during wheel scroll, it's a zoom gesture/shortcut
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        
-        // Accumulate delta for a threshold-based jump
-        accumulatedDelta += -e.deltaY;
-        
-        // Use a threshold to determine when to jump by 10 points
-        // 50 is a good middle ground for both mouse wheels and trackpads
-        if (Math.abs(accumulatedDelta) >= 50) {
-          const direction = Math.sign(accumulatedDelta);
-          setZoom((prev: number) => {
-            // Jump by exactly 10 points
-            const next = prev + (direction * 10);
-            // Snap to nearest 10 for clean integer values
-            const snapped = Math.round(next / 10) * 10;
-            return Math.min(200, Math.max(50, snapped));
-          });
-          // Reset accumulator after a jump
-          accumulatedDelta = 0;
-        }
-      }
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+
+      // Normalise the delta to PIXELS before using it. Firefox and some mice
+      // report wheel deltas in LINES (`deltaMode === 1`) or PAGES (`2`), so a raw
+      // deltaY of 3 would otherwise be ~30x weaker than the same gesture in
+      // Chrome — the zoom would appear not to work at all.
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? workspace.clientHeight : 1;
+      const deltaPx = e.deltaY * unit;
+
+      setZoom((prev: number) => {
+        // PROPORTIONAL, not stepped. This used to accumulate deltaY until it
+        // crossed a 50px threshold and then jump a whole ZOOM_STEP (5%), so a
+        // trackpad pinch moved the canvas in visible 5% lurches and the fine
+        // control a pinch is supposed to give you simply was not there.
+        // Scaling the CURRENT zoom by an exponential of the delta makes every
+        // notch the same *proportional* change and turns a stream of small
+        // trackpad deltas into a continuous glide.
+        const next = prev * Math.exp(-deltaPx * ZOOM_WHEEL_SENSITIVITY);
+        return Math.min(200, Math.max(50, next));
+      });
     };
 
     // Use { passive: false } to allow e.preventDefault()
@@ -675,23 +848,32 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     // the rail's active state.
     const handleSetSidebar = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      setActiveSidebar(detail);
+      if (detail === 'sections') {
+        setActiveSidebar('sections');
+        setReplacingSnippet((prev: any) => prev || { zoneId: pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type), isAdd: true });
+      } else {
+        setActiveSidebar(detail);
+        setReplacingSnippet(null);
+      }
       setIsTemplateModalOpen(false);
     };
     const handleOpenTemplates = () => {
       setIsTemplateModalOpen(true);
       setActiveSidebar(null);
+      setReplacingSnippet(null);
     };
     const handleCloseUtility = () => {
       setActiveSidebar(null);
       setIsTemplateModalOpen(false);
+      setReplacingSnippet(null);
     };
     const handleOpenMori = () => {
       setActiveSidebar(null);
       setIsTemplateModalOpen(false);
+      setReplacingSnippet(null);
     };
-    const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + 10));
-    const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - 10));
+    const handleZoomIn = () => setZoom((z: number) => Math.min(200, z + ZOOM_STEP));
+    const handleZoomOut = () => setZoom((z: number) => Math.max(50, z - ZOOM_STEP));
     const handleTogglePageSize = () => {
       setDesign((d: any) => {
         const next = d?.pageSize === 'Letter' ? 'A4' : 'Letter';
@@ -718,6 +900,71 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     };
   }, [readOnly]);
 
+  // Click-outside / Escape handling for the section "spotlight".
+  //
+  // A click that lands INSIDE a section is that section's own business — its
+  // onClick selects it. A click that lands on the paper (or the workspace around
+  // it) but not on a section clears the selection AND opens the whole-CV AI menu,
+  // which is the only route to document-level AI actions. A click on editor
+  // chrome — the rails, the AI menu itself, the formatting toolbar, a dialog —
+  // only clears the selection, so operating a control can never fire the menu.
+  useEffect(() => {
+    if (readOnly) return undefined;
+
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('.no-print, [data-mori-selection-bar], [data-mori-ask-bar], [role="dialog"], [data-radix-popper-content-wrapper], [data-canvas-toolrail], [data-section-rail], .entry-controls')) return;
+
+      const activeId = selectedBlockIdRef.current;
+      if (activeId) {
+        const inSelectedBlock = Boolean(target.closest(`[data-block-id="${CSS.escape(activeId)}"]`));
+        if (!inSelectedBlock) {
+          // When in focused section, clicking outside (including on another section)
+          // closes the focus from the section rather than activating it on the other section.
+          e.stopPropagation();
+          e.preventDefault();
+          setSelectedBlockId(null);
+          window.dispatchEvent(new CustomEvent('mori-close-menus'));
+          return;
+        }
+        return;
+      }
+
+      if (target.closest('[data-block-id]')) return;
+
+      setSelectedBlockId(null);
+
+      if (target.closest('.cv-page, .cv-document-wrapper, [data-cv-workspace]')) {
+        window.dispatchEvent(new CustomEvent('mori-open-document-menu'));
+      } else {
+        window.dispatchEvent(new CustomEvent('mori-close-menus'));
+      }
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setSelectedBlockId(null);
+      window.dispatchEvent(new CustomEvent('mori-close-menus'));
+    };
+
+    document.addEventListener('pointerdown', onPointerDown, true);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [readOnly]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    if (selectedBlockId) {
+      window.dispatchEvent(
+        new CustomEvent('mori-open-section-menu', { detail: { blockId: selectedBlockId } })
+      );
+    }
+  }, [selectedBlockId, readOnly]);
+
   const [aiIssues, setAiIssues] = useState<any[]>([]);
   const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
@@ -740,10 +987,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   });
 
   const isDarkUI = theme === 'dark';
-  // Space reserved under the sheet for the zoom / page-size / undo tools, which
-  // are pinned to the bottom of the workspace. Without it they would overlap the
-  // page once the canvas shrinks to hug the content.
-  const CANVAS_TOOL_STRIP_PX = 64;
 
   const bgApp = isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100';
   const bgNav = isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200 shadow-sm';
@@ -865,28 +1108,46 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     pageSize: design.pageSize,
     pageMargin: design.pageMargin,
     sectionGap: design.sectionGap,
-    itemGap: design.itemGap || 12,
+    // `?? 12`, not `|| 12`: 0 is a legal item gap (the panel slider goes to 0),
+    // and `||` turned a deliberate 0 into 12px.
+    itemGap: design.itemGap ?? 12,
     viewportWidth: viewport.width,
     viewportHeight: viewport.height,
     devicePixelRatio: viewport.devicePixelRatio,
   }), [design.pageMargin, design.pageSize, design.sectionGap, design.itemGap, viewport.devicePixelRatio, viewport.height, viewport.width]);
 
+  /**
+   * Whether the whole document already fits the canvas height at the current
+   * zoom. Drives `items-center` vs `items-start` on the workspace, so a document
+   * shorter than the canvas is centred rather than pinned to the top.
+   *
+   * Declared HERE, immediately after `layoutMetrics`, and not up with the other
+   * measurements it belongs to. See the note there: reading a `const` before its
+   * own declaration is a ReferenceError, and this line took the whole CV Builder
+   * down the first time the canvas reported a non-zero height.
+   */
+  const fitsVertically = workspaceHeight > 0 && (scaledHeight + layoutMetrics.workspacePaddingY * 2) <= workspaceHeight;
+
   // Report the canvas' natural height so the editor shell can shrink its frame to
   // the sheet instead of leaving a tall empty region below the page. The wrapper
-  // carries the zoom transform, so its measured rect is already the visual
-  // (scaled) height — no manual zoom maths, and multi-page / spread need no
-  // special casing.
+  // carries the zoom transform, so its *rendered* height is the scaled one.
   useEffect(() => {
     if (!onCanvasContentHeightChange) return undefined;
     const el = canvasContentRef.current;
     if (!el) return undefined;
 
     const report = () => {
-      const measured = el.getBoundingClientRect().height;
-      if (!Number.isFinite(measured) || measured <= 0) return;
-      const total = measured
-        + layoutMetrics.workspacePaddingY * 2
-        + (readOnly ? 0 : CANVAS_TOOL_STRIP_PX);
+      // `offsetHeight` is a LAYOUT metric, so unlike `getBoundingClientRect()`
+      // it is immune to the zoom transform — including a transform that is still
+      // mid-transition. Measuring the rect instead reported the animated height,
+      // which made the shell's frame grow/shrink on every frame of the glide.
+      const natural = el.offsetHeight;
+      if (!Number.isFinite(natural) || natural <= 0) return;
+      // No term for the merged rail: it floats over the canvas (see
+      // fitPaddingY) and therefore takes no layout height on either side of the
+      // loop. Both sides still have to agree — they now simply agree on zero.
+      const total = natural * (readOnly ? 1 : zoom / 100)
+        + layoutMetrics.workspacePaddingY * 2;
       onCanvasContentHeightChange(Math.ceil(total));
     };
 
@@ -904,7 +1165,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   const canvasStyleVars = useMemo(() => ({
     width: 'var(--cv-page-width)',
-    '--cv-font': design.font,
+    '--cv-font': getDocumentFontStack(design.font),
     '--cv-base-size': `${design.fontSize}px`,
     '--cv-spacing': design.spacing,
     '--cv-accent': design.accentColor,
@@ -1045,7 +1306,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   useImperativeHandle(ref, () => ({
     openTemplateSelector: () => setIsTemplateModalOpen(true),
-    openAddSection: () => setReplacingSnippet({ zoneId: pickAddTargetZone(zones, activeTemplate?.type), isAdd: true }),
+    openAddSection: () => {
+      setReplacingSnippet({ zoneId: pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type), isAdd: true });
+      window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
+    },
   }));
 
   const loadTemplate = (template: any) => {
@@ -1069,6 +1333,13 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       ...(template.preferredSpacing != null ? { spacing: template.preferredSpacing } : {}),
       ...(template.preferredFontSize != null ? { fontSize: template.preferredFontSize } : {}),
       ...(template.preferredPageMargin != null ? { pageMargin: template.preferredPageMargin } : {}),
+      // Typography, accent and description layout are part of a template's
+      // identity too, not just its geometry — Minimalist Single is Playfair on
+      // black in bullets. A template that declares none of these leaves the
+      // previous values alone, so switching between the other 14 is unchanged.
+      ...(template.preferredFont != null ? { font: template.preferredFont } : {}),
+      ...(template.preferredAccentColor != null ? { accentColor: template.preferredAccentColor } : {}),
+      ...(template.preferredFormatOption != null ? { formatOption: template.preferredFormatOption } : {}),
     }));
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
@@ -1114,6 +1385,24 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       if (parentWithPath) path = parentWithPath.getAttribute('data-path');
     }
     return path || null;
+  }, [focusedNode]);
+
+  /**
+   * The SECTION that owns the focused field, as the AI layer wants it.
+   *
+   * AI targeting is section- or page-level by product rule — never field- or
+   * entry-level — so anything that hands the chat a target must resolve it here
+   * rather than passing the focused field's `data-path` (e.g.
+   * `experience[0].description`). The field path stays available for write-back;
+   * only the *selection context* is coarsened.
+   */
+  const getFocusedSection = useCallback((): { path: string; text: string } | null => {
+    const section = focusedNode?.closest('[data-block-id]') as HTMLElement | null;
+    if (!section) return null;
+    return {
+      path: section.getAttribute('data-json-section') || 'cv',
+      text: (section.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 600),
+    };
   }, [focusedNode]);
 
   const openSkillsSuggestions = useCallback(async () => {
@@ -1178,12 +1467,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     });
   }, [cvData, onDataChange]);
 
-  const handleSuggestPoint = (mode?: 'skills') => {
-    if (mode === 'skills') {
-      void openSkillsSuggestions();
-      return;
-    }
-
+  // Only the "improve this text" path remains: the `'skills'` mode existed
+  // solely for the rail's two skills buttons, which were duplicates of each
+  // other and are gone. Skill recommendations are still opened from the snippet
+  // dialog (see the "AI Skill Recommendations" action below).
+  const handleSuggestPoint = () => {
     const path = getFocusedPath();
     if (!path || (!path.includes('description') && !path.includes('summary'))) return;
     const originalText = focusedNode?.innerText || '';
@@ -1207,7 +1495,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       }
     }));
     window.dispatchEvent(new CustomEvent('mori-cv-selection', {
-      detail: { path, text: `(${sectionName}): ${originalText}` }
+      // Section-level, not the focused field's path — see getFocusedSection.
+      // Falls back to the field path only if the field somehow has no section
+      // ancestor, so the chat still gets *some* context rather than none.
+      detail: getFocusedSection() ?? { path, text: `(${sectionName}): ${originalText}` }
     }));
     window.dispatchEvent(new CustomEvent('open-mori-chat'));
   };
@@ -1365,6 +1656,25 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   const moveSnippet = (zoneId: string, index: number, dir: number) => {
     const destZone = bareCanvasZoneId(zoneId);
+    const list = zonesRef.current[destZone] || [];
+    const moved = list[index];
+    const neighbour = list[index + dir];
+    // Checked here as well as in the updater so that an out-of-range press does
+    // not leave a snapshot behind for the layout effect to play. Without this the
+    // animation pass would run against a zone that did not change and scroll the
+    // workspace for a move that never happened.
+    if (!moved || !neighbour) return;
+
+    // Everything about the move animation that has to happen BEFORE the reorder:
+    // where the section and its neighbours currently sit on screen. This is the
+    // only line in `moveSnippet` that exists for the animation — the reorder
+    // below is unchanged, and nothing here feeds back into the zone model.
+    const snapshot = snapshotCanvasMove(workspaceRef.current, canvasContentRef.current, moved.id);
+    if (snapshot) {
+      pendingMoveRef.current = { snapshot, anchorId: moved.id };
+      setMoveAnimTick(t => t + 1);
+    }
+
     setZones(prev => {
       const newZones = cloneZoneMap(prev);
       const list = [...(newZones[destZone] || [])];
@@ -1405,9 +1715,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
   const handleReplaceClick = (zoneId: string, index: number, currentType: string) => {
     const category = SNIPPETS[currentType]?.category;
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), index, currentType, category, isAdd: false });
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
   const handleAddClick = (zoneId: string, insertIndex?: number) => {
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), isAdd: true, insertIndex });
+    window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
 
   const handleAddListEntry = (type: string) => {
@@ -1443,11 +1755,10 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     });
   };
 
-  const executeReplaceOrAdd = (newType: string) => {
-    if (!replacingSnippet || layoutWriteLock.current) return;
+  const executeReplaceOrAdd = (newType: string, customContext?: any) => {
+    const addContext = customContext || replacingSnippet;
+    if (!addContext || layoutWriteLock.current) return;
     layoutWriteLock.current = true;
-
-    const addContext = replacingSnippet;
     const isTabletOrBigger = typeof window !== 'undefined' && window.innerWidth >= 768;
 
     if (!isTabletOrBigger) {
@@ -1543,7 +1854,8 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     containerRef: workspaceRef,
     zoomRef,
     setZoom,
-    scaleFor: (distancePx) => (distancePx / 300) * 100,
+    scaleFor: (distancePx) => (distancePx / 100) * 100,
+    speedMultiplier: 1.5,
     minZoom: 50,
     maxZoom: 200,
   });
@@ -1606,7 +1918,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           if (entryElements.length > 1) {
             unitHeights[`${blockId}_entryGap`] = Math.max(0, sumEntryGaps / (entryElements.length - 1));
           } else if (unitHeights[`${blockId}_entryGap`] == null) {
-            unitHeights[`${blockId}_entryGap`] = design.itemGap || 12;
+            unitHeights[`${blockId}_entryGap`] = design.itemGap ?? 12;
           }
         } else {
           unitHeights[blockId] = Math.max(unitHeights[blockId] || 0, parentHeight);
@@ -1642,7 +1954,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             const collectionName = getCollectionNameForCategory(snippetDef.category);
             const entries = cvData[collectionName] || [];
             const headerH = unitHeights[`${block.id}_header`] || 32;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap ?? 12);
             let total = headerH;
             entries.forEach((e: any, i: number) => {
               total += (i > 0 ? entryGap : 0) + (unitHeights[`${block.id}_entry_${e.id}`] || 64);
@@ -1769,7 +2081,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             const headerH = unitHeights[headerUnitId] || 32;
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 64) : 0;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap ?? 12);
 
             if (currentGlobalHeight + gapBefore() + headerH + firstEntryH > usableHeight && currentGlobalHeight > 0) {
               globalHeightOnPage[currentGlobalPage] = currentGlobalHeight;
@@ -1837,7 +2149,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             const headerH = unitHeights[headerUnitId] || 32;
             const firstEntry = entries[0];
             const firstEntryH = firstEntry ? (unitHeights[`${block.id}_entry_${firstEntry.id}`] || 64) : 0;
-            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap || 12);
+            const entryGap = unitHeights[`${block.id}_entryGap`] || (design.itemGap ?? 12);
 
             const neededH = gapBefore() + headerH + firstEntryH;
             let pUsable = getUsableHeightForPage(currentPage);
@@ -2173,7 +2485,6 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           layoutZones={safeZones}
           className={className}
           isDark={isDark}
-          onOpenSkillsSuggestions={() => void openSkillsSuggestions()}
           isDropAllowed={isSnippetDropAllowed}
           onMoveToZone={(pageSpecificIdx: number, targetZoneId: string) => {
             const gIdx = getGlobalIndex(pageSpecificIdx);
@@ -2388,9 +2699,18 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         setDesign,
         handleDataChange,
         setFocusedNode,
+        focusedNode,
         setFocusedJsonPath,
         focusedJsonPath,
+        selectedBlockId,
+        setSelectedBlockId,
         pageAssignments,
+        /* The per-entry rail portals itself OUT of the page and into the canvas
+         * workspace, which puts it beyond the reach of the `.cv-readonly
+         * .entry-controls { display: none }` rule (a portal escapes its ancestor
+         * chain). Read-only consumers therefore have to be told explicitly, or
+         * the controls would reappear in CV previews. */
+        readOnly,
         aiIssues: [...aiIssues, ...grammarIssues],
         activeIssueId,
         moriChatMode,
@@ -2430,16 +2750,19 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             onChange={handlePhotoFileChange}
           />
         )}
-        {!readOnly && <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />}
+        {/* The focused field's formatting group portals itself into the rail's
+            format slot, so it renders nothing of its own on the page. */}
+        {!readOnly && <FloatingToolbar targetNode={focusedNode} anchorBlockId={selectedBlockId} onSuggestPoint={handleSuggestPoint} />}
 
         <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col relative min-w-0">
           <div
             ref={workspaceRef}
-            className={readOnly ? 'w-full @container' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors @container ${bgWorkspace}`}
+            data-cv-workspace
+            className={readOnly ? 'w-full @container' : `flex-1 overflow-auto relative flex justify-center custom-scrollbar transition-colors @container ${bgWorkspace} ${fitsVertically ? 'items-center' : 'items-start'}`}
             style={readOnly ? undefined : {
               paddingTop: layoutMetrics.workspacePaddingY,
-              paddingBottom: layoutMetrics.workspacePaddingY + CANVAS_TOOL_STRIP_PX,
+              paddingBottom: layoutMetrics.workspacePaddingY,
               paddingLeft: layoutMetrics.workspacePaddingX,
               paddingRight: layoutMetrics.workspacePaddingX,
             }}
@@ -2456,7 +2779,48 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               )}
             </div>
           ) : (
-            <div ref={canvasContentRef} key={templateAnimKey} className="transform origin-top h-max pb-4 text-gray-900" style={{ transform: `scale(${zoom / 100})` }}>
+            /* KNOWN LIMITATION — the sheet's left overhang is unreachable at high
+             * zoom, and no flex property can fix it.
+             *
+             * The canvas content is laid out at its UNSCALED width (`--cv-page-
+             * width`, 794px) and only PAINTED at `zoom`× that, via the transform
+             * below. Flexbox sizes and centres the 794px layout box — which fits
+             * the workspace, so it is centred normally — while the paint is 1270px
+             * wide at 160%. The overflow is therefore symmetric in PAINT and
+             * invisible to layout: `scrollWidth` never covers the left half of it,
+             * so `scrollLeft` bottoms out at 0 with the sheet's left edge at a
+             * negative offset and there is no scroll position that reveals it.
+             *
+             * Measured, not theorised: replacing `justify-center` with `mx-auto`
+             * on this element (the usual cure for a centred flex item's
+             * unreachable overflow) resolved the auto margins to 111.4px each side
+             * — i.e. it centred the 794px layout box, exactly as before, and the
+             * sheet stayed at -92px. Only giving this element a layout width of
+             * `pageWidth * zoom` AND `transform-origin: top left` would make layout
+             * and paint agree, and that would break the eased zoom glide: the width
+             * would snap while the transform eases.
+             *
+             * The entry rail is unaffected — it is portalled into the workspace and
+             * clamped into the visible band, so it stays reachable either way (see
+             * `computeEntryRailPosition` in CoreUI). */
+            <div
+              ref={canvasContentRef}
+              key={templateAnimKey}
+              data-cv-zoom-layer
+              className={`transform origin-top h-max text-gray-900 ${selectedBlockId ? 'cv-has-selection' : ''} ${moriChatMode ? 'cv-chat-mode' : ''}`}
+              style={{
+                transform: `scale(${zoom / 100})`,
+                marginBottom: `${marginBottomPx}px`,
+                transition: zoomEased ? 'transform 200ms ease-out, margin-bottom 200ms ease-out' : undefined,
+              }}
+            >
+              {/* cv-chat-mode publishes the Mori-targeting state to CSS. The
+                  chat-mode focus ring lives on the field (moriHoverClass in
+                  CoreUI) and is only painted while chat mode is on, so the rule
+                  that suppresses it inside a selected section has to be able to
+                  test for chat mode. Without the marker that suppression would
+                  have to be unconditional and would also strip the ordinary
+                  "this is editable" hover tint. */}
               <div
                 className="cv-document-wrapper relative"
                 style={
@@ -2476,10 +2840,22 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               </div>
             </div>
           )}
+
+            {!readOnly && (
+              /* The merged rail — the selected section's actions, the focused
+                 field's formatting, and the AI entry point — FLOATS above the
+                 section being edited instead of sitting in one spot above the
+                 whole CV. It is absolutely positioned inside the workspace
+                 because that is the scroll container the section lives in, which
+                 is what makes it track the section while the canvas scrolls.
+                 It takes no layout height, so the auto-fit budget above does not
+                 reserve for it — see the note next to CANVAS_TOOL_STRIP_PX. */
+              <CanvasToolRail selectedBlockId={selectedBlockId} focusNode={focusedNode} zoom={zoom} />
+            )}
           </div>
 
           {!readOnly && (
-            <div className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
+            <div data-canvas-page-controls className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
               <div className={`px-2 md:px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 md:gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="hidden md:flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
@@ -2498,7 +2874,9 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               {/* Zoom Controls */}
               <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>                <div className="flex items-center gap-0.5">
                   <button 
-                    onClick={() => setZoom(Math.max(50, zoom - 10))}
+                    onClick={() => setZoom(Math.max(50, zoom - ZOOM_STEP))}
+                    title="Zoom out"
+                    aria-label="Zoom out"
                     className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom <= 50 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
                   >
                     <Search size={14} className="rotate-90" />
@@ -2511,9 +2889,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                     value={zoom} 
                     onChange={(e) => setZoom(parseInt(e.target.value))}
                     className="w-14 md:w-20 accent-emerald-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    aria-label="Zoom"
                   />
                   <button 
-                    onClick={() => setZoom(Math.min(200, zoom + 10))}
+                    onClick={() => setZoom(Math.min(200, zoom + ZOOM_STEP))}
+                    title="Zoom in"
+                    aria-label="Zoom in"
                     className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom >= 200 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
                   >
                     <Search size={14} />
@@ -2524,7 +2905,9 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                   onClick={() => setZoom(100)}
                   className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 && !isAutoFit ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
                 >
-                  {zoom}%
+                  {/* Zoom is fractional (see setZoom) — the label rounds, so a
+                      trackpad pinch does not print "87.31415%". */}
+                  {Math.round(zoom)}%
                 </button>
                 <button 
                   onClick={triggerAutoFit}
@@ -2583,7 +2966,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         </div>
 
         {!readOnly && activeSidebar === 'design' && (() => {
-          const portalTarget = document.getElementById('builder-utility-panel-portal');
+          const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
           if (!portalTarget) return null;
           const panelContent = (
             <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -2597,13 +2980,79 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                 </div>
               </div>
               <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-1">
-                <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-small rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`text-[10px] font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>
+                      Sans-Serif (Modern & Clean)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TOP_SANS_SERIF_FONTS.map(f => {
+                        const isSelected = (design.font || 'Inter').toLowerCase() === f.id.toLowerCase();
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setDesign({ ...design, font: f.id })}
+                            title={f.description}
+                            className={`p-2.5 text-left rounded-xl border transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-500/15 border-emerald-500 ring-1 ring-emerald-500/30 ' + brandGreen
+                                : isDarkUI
+                                ? 'bg-[#222] border-[#333] text-gray-300 hover:border-gray-600'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 shadow-sm'
+                            }`}
+                          >
+                            <span className="text-sm font-semibold truncate" style={{ fontFamily: f.fontFamily }}>
+                              {f.name}
+                            </span>
+                            <span className={`text-[9px] line-clamp-1 mt-0.5 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : textMuted}`}>
+                              {f.name === 'Calibri' ? 'Corporate Standard' : f.name === 'Arial' ? 'Neutral & Readable' : f.name === 'Lato' ? 'Friendly & Modern' : 'Clean & Geometric'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className={`text-[10px] font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>
+                      Serif (Classic & Formal)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TOP_SERIF_FONTS.map(f => {
+                        const isSelected = (design.font || '').toLowerCase() === f.id.toLowerCase();
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setDesign({ ...design, font: f.id })}
+                            title={f.description}
+                            className={`p-2.5 text-left rounded-xl border transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-500/15 border-emerald-500 ring-1 ring-emerald-500/30 ' + brandGreen
+                                : isDarkUI
+                                ? 'bg-[#222] border-[#333] text-gray-300 hover:border-gray-600'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 shadow-sm'
+                            }`}
+                          >
+                            <span className="text-sm font-semibold truncate" style={{ fontFamily: f.fontFamily }}>
+                              {f.name}
+                            </span>
+                            <span className={`text-[9px] line-clamp-1 mt-0.5 ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : textMuted}`}>
+                              {f.name === 'Garamond' ? 'Timeless & Elegant' : f.name === 'Cambria' ? 'Crisp & Clear' : 'Authoritative'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}px</span></label><input type="range" min="0" max="60" step="1" value={design.sectionGap} onChange={(e) => setDesign({...design, sectionGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
-                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Item Gap</span><span className={brandGreen}>{design.itemGap || 12}px</span></label><input type="range" min="0" max="24" step="1" value={design.itemGap || 12} onChange={(e) => setDesign({...design, itemGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+                  <div><label className={`text-small font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Item Gap</span><span className={brandGreen}>{design.itemGap ?? 12}px</span></label><input type="range" min="0" max="24" step="1" value={design.itemGap ?? 12} onChange={(e) => setDesign({...design, itemGap: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                   <div><label className={`text-small font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-2 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-6 h-6 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
@@ -2684,7 +3133,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         })()}
 
         {!readOnly && activeSidebar === 'data' && (() => {
-          const portalTarget = document.getElementById('builder-utility-panel-portal');
+          const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
           if (!portalTarget) return null;
           const panelContent = (
             <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -2850,7 +3299,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
       {/* TEMPLATE PANEL (rendered as portal if target exists, otherwise fall back to modal) */}
       {isTemplateModalOpen && (() => {
-        const portalTarget = document.getElementById('builder-utility-panel-portal');
+        const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
         if (!portalTarget) return null;
         const content = (
           <div className={`flex-grow flex flex-col h-full overflow-hidden ${bgWorkspace}`}>
@@ -2887,14 +3336,19 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         return createPortal(content, portalTarget);
       })()}
 
-      {/* REPLACE / ADD SNIPPET MODAL */}
-      {replacingSnippet && (() => {
+      {/* REPLACE / ADD SNIPPET PANEL */}
+      {!readOnly && (activeSidebar === 'sections' || replacingSnippet) && (() => {
+        const portalTarget = utilityPortal || (typeof document !== 'undefined' ? document.getElementById('builder-utility-panel-portal') : null);
+        if (!portalTarget) return null;
+
+        const currentZone = replacingSnippet?.zoneId || pickAddTargetZone(zonesRef.current || {}, activeTemplate?.type);
+        const snippetContext = replacingSnippet || { zoneId: currentZone, isAdd: true };
         const previewData = getCanvasSnippetPreviewData(cvData);
-        const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
+        const currentCategories = Object.values(zonesRef.current || zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
 
         // Calculate Recommended Family
         const getRecommendedFamily = () => {
-          const allTypes = Object.values(zones).flat().map((z: any) => z.type);
+          const allTypes = Object.values(zonesRef.current || zones).flat().map((z: any) => z.type);
           const familyCounts: Record<string, number> = {};
           
           allTypes.forEach(type => {
@@ -2920,15 +3374,15 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
         // Filter and Sort Snippets
         const filteredSnippets = Object.values(SNIPPETS).filter(s => 
-          replacingSnippet.isAdd 
-            ? (!currentCategories.includes(s.category) && (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory)) 
-            : s.category === replacingSnippet.category
+          snippetContext.isAdd 
+            ? (!currentCategories.includes(s.category) && (!snippetContext.filterCategory || s.category === snippetContext.filterCategory)) 
+            : s.category === snippetContext.category
         ).filter(Boolean);
 
         // Sort: Recommended first -> Current -> Others
         const sortedSnippets = [...filteredSnippets].sort((a, b) => {
-          const isACurrent = a.id === replacingSnippet.currentType;
-          const isBCurrent = b.id === replacingSnippet.currentType;
+          const isACurrent = a.id === snippetContext.currentType;
+          const isBCurrent = b.id === snippetContext.currentType;
           if (isACurrent) return -1;
           if (isBCurrent) return 1;
           
@@ -2941,89 +3395,143 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           return 0;
         });
 
-        return (
-          <>
-            {/* Backdrop Overlay */}
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[110] transition-opacity duration-300"
-              onClick={() => setReplacingSnippet(null)}
-            />
-            {/* Right Side Panel - follows app sidebar pattern: margin all around + rounded corners, two-column layout */}
-            <div className={`fixed right-3 top-3 bottom-3 h-auto w-full max-w-[760px] shadow-2xl z-[120] flex flex-col rounded-2xl overflow-hidden transition-all duration-300 ease-in-out ${isDarkUI ? 'bg-[#111111] border border-[#2a2a2a]' : 'bg-white border border-gray-200'}`}>
-              <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-                <h3 className={`font-bold text-body flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
-                <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
-              </div>
-              {replacingSnippet.isAdd && (
-                <div className={`px-4 py-3 flex flex-wrap gap-1.5 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'} bg-[#f9f9f9] dark:bg-[#0d0d0d]`}>
-                  {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
-                    .filter(cat => cat === 'All' || !currentCategories.includes(cat))
-                    .map(cat => (
-                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#1e1e1e] text-gray-400 border-[#2a2a2a] hover:bg-[#252525]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}`}>{cat}</button>
-                  ))}
-                  {(!replacingSnippet.filterCategory || replacingSnippet.filterCategory === 'Skills') && (
-                    <button
-                      type="button"
-                      onClick={() => void openSkillsSuggestions()}
-                      className="w-full mt-2 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-400/50 bg-emerald-500/10 text-emerald-500 flex items-center gap-1.5 hover:bg-emerald-500/20 transition-all"
-                    >
-                      <Sparkles size={12} />
-                      AI Skill Recommendations
-                    </button>
-                  )}
-                </div>
-              )}
-              <div className={`p-4 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-50'}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {sortedSnippets.map(snippet => {
-                  const targetZoneId = replacingSnippet.zoneId;
-                  const isTargetDark = false; // Always light theme for snippet previews
-                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
-                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
-                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-                  
-                  const isCurrent = snippet.id === replacingSnippet.currentType;
-                  const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
-                  const isATS = ATS_SNIPPETS.includes(snippet.id);
-                  
-                  const isHeader = snippet.category === 'Header';
-                  const scale = isHeader ? 0.36 : 0.40;
+        const SnippetPreviewReadOnly = (props: any) => (
+          <EditableField {...props} data={props.data || previewData} readOnly={true} />
+        );
+        const previewContext = { cvData: previewData, design, readOnly: true };
 
-                  return (
-                    <div key={snippet.id} onClick={(e) => { e.stopPropagation(); executeReplaceOrAdd(snippet.id); }} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg min-w-0 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#222] hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'))}`}>
-                      <div className={`p-2.5 flex flex-col gap-1 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'} border-b ${isDarkUI ? 'border-[#222]' : 'border-gray-100'}`}>
-                        <div className="flex justify-between items-start gap-1">
-                          <div className="min-w-0">
-                            <div className={`font-bold text-xs truncate ${textPrimary}`}>{snippet.name}</div>
-                            <div className={`text-[8px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
-                          </div>
-                          <div className="flex flex-col gap-1 items-end shrink-0">
-                            {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">CURRENT</span>}
-                            {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Sparkles size={7}/> RECOMMEND</span>}
-                            {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5"><Check size={7}/> ATS</span>}
-                          </div>
+        const panelContent = (
+          <div className="flex-grow flex flex-col h-full overflow-hidden bg-[#f3f2ee] dark:bg-[#1a1a1a]">
+            {snippetContext.isAdd && (
+              <div className="px-3.5 py-2.5 flex flex-wrap gap-1.5 border-b border-black/5 dark:border-white/5 bg-[#eae8e1] dark:bg-[#141414]">
+                {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
+                  .filter(cat => cat === 'All' || !currentCategories.includes(cat))
+                  .map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setReplacingSnippet({...snippetContext, filterCategory: cat === 'All' ? null : cat})}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-full uppercase tracking-wider border transition-all ${
+                      snippetContext.filterCategory === cat || (!snippetContext.filterCategory && cat === 'All')
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40 shadow-xs'
+                        : 'bg-white dark:bg-[#222] text-gray-600 dark:text-gray-300 border-black/10 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-[#2a2a2a]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+                {(!snippetContext.filterCategory || snippetContext.filterCategory === 'Skills') && (
+                  <button
+                    type="button"
+                    onClick={() => void openSkillsSuggestions()}
+                    className="w-full mt-1.5 justify-center px-3 py-1.5 text-xs font-bold rounded-lg uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 hover:bg-emerald-500/15 transition-all shadow-xs"
+                  >
+                    <Sparkles size={12} />
+                    AI Skill Recommendations
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="p-3.5 overflow-y-auto flex-1 custom-scrollbar bg-[#f3f2ee] dark:bg-[#1a1a1a]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {sortedSnippets.map(snippet => {
+                const targetZoneId = snippetContext.zoneId;
+                const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                
+                const isCurrent = snippet.id === snippetContext.currentType;
+                const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
+                const isATS = ATS_SNIPPETS.includes(snippet.id);
+                
+                const isHeader = snippet.category === 'Header';
+                const scale = isHeader ? 0.36 : 0.40;
+
+                return (
+                  <div
+                    key={snippet.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      executeReplaceOrAdd(snippet.id, snippetContext);
+                      setReplacingSnippet(null);
+                      setActiveSidebar(null);
+                      window.dispatchEvent(new CustomEvent('close-utility-panel'));
+                    }}
+                    className={`group relative rounded-xl cursor-pointer transition-all overflow-hidden flex flex-col hover:shadow-lg min-w-0 bg-white dark:bg-[#202020] ${
+                      isCurrent
+                        ? 'border border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                        : isRecommended
+                        ? 'border border-emerald-500/60 dark:border-emerald-500/50 ring-1 ring-emerald-500/20 shadow-xs hover:border-emerald-500'
+                        : 'border border-black/10 dark:border-white/10 hover:border-emerald-500/40 dark:hover:border-emerald-500/40'
+                    }`}
+                  >
+                    <div className="p-2.5 flex flex-col gap-1 z-10 bg-white dark:bg-[#202020] border-b border-black/5 dark:border-white/5">
+                      <div className="flex justify-between items-start gap-1">
+                        <div className="min-w-0">
+                          <div className={`font-bold text-xs truncate ${textPrimary}`}>{snippet.name}</div>
+                          <div className={`text-[8px] mt-0.5 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end shrink-0">
+                          {isCurrent && (
+                            <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase">
+                              CURRENT
+                            </span>
+                          )}
+                          {isRecommended && !isCurrent && (
+                            <span className="bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5">
+                              <Sparkles size={7}/> RECOMMEND
+                            </span>
+                          )}
+                          {isATS && (
+                            <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[7px] px-1.5 py-0.5 rounded font-bold tracking-widest uppercase flex items-center gap-0.5">
+                              <Check size={7}/> ATS
+                            </span>
+                          )}
                         </div>
                       </div>
-                      
-                      <SnippetPreviewFrame scale={scale} design={design}>
-                        <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={isSidebar ? 'sidebar' : 'main'} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark} showIcons={design?.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} readOnly={true} />
-                      </SnippetPreviewFrame>
                     </div>
-                  );
-                })}
-                </div>
+                    
+                    <CanvasContext.Provider value={previewContext}>
+                      <SnippetPreviewFrame scale={scale} design={design}>
+                        <snippet.render
+                          data={previewData}
+                          Editable={SnippetPreviewReadOnly}
+                          zoneId={isSidebar ? 'sidebar' : 'main'}
+                          isDark={false}
+                          design={design}
+                          showIcons={true}
+                          layoutZones={zones}
+                          Title={({ titleKey }: any) => {
+                            const fallbackTitle = typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section';
+                            const titleVal = getNestedValue(previewData, `sectionTitles.${titleKey}`) || fallbackTitle;
+                            return (
+                              <TitleRenderer isDark={false} showIcons={design?.showHeaderIcons} titleKey={titleKey}>
+                                <SnippetPreviewReadOnly path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap />
+                              </TitleRenderer>
+                            );
+                          }}
+                          moveEntry={() => {}}
+                          deleteEntry={() => {}}
+                          readOnly={true}
+                        />
+                      </SnippetPreviewFrame>
+                    </CanvasContext.Provider>
+                  </div>
+                );
+              })}
               </div>
             </div>
-          </>
+          </div>
         );
+
+        return createPortal(panelContent, portalTarget);
       })()}
 
 
       {/* Global CSS Variables */}
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+        @import url('${DOCUMENT_GOOGLE_FONTS_URL}');
         :root { 
-          --cv-font: ${design.font}; 
+          --cv-font: ${getDocumentFontStack(design.font)}; 
           --cv-base-size: ${design.fontSize}px; 
           --cv-spacing: ${design.spacing}; 
           --cv-accent: ${design.accentColor}; 
@@ -3038,10 +3546,13 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
         .cv-document { 
-          font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          font-family: var(--cv-font) !important; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
           overflow-wrap: break-word;
           word-wrap: break-word;
           white-space: normal;
+        }
+        .cv-document *, .cv-page * {
+          font-family: inherit;
         }
         #cv-document-root.cv-document * {
           min-width: 0;
@@ -3065,7 +3576,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           overflow-wrap: break-word;
         }
         .cv-page {
-          font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          font-family: var(--cv-font) !important; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
           background: #ffffff;
           box-sizing: border-box;
           overflow: hidden;
@@ -3145,6 +3656,67 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         .cv-readonly .entry-controls { display: none !important; }
         .cv-readonly [contenteditable]:empty:before { content: '' !important; display: none !important; }
         .cv-readonly .group-hover\/entry\:opacity-100 { opacity: 0 !important; }
+        /* ─── SECTION SPOTLIGHT ─────────────────────────────────────
+         * While a section is selected (clicked), every OTHER section on the
+         * sheet is blurred and dimmed, so the selected one reads as the object
+         * in focus — the same "spotlight" idea as a photo editor's selection
+         * mask. The blur is applied per section rather than to the page: a
+         * filter on an ancestor cannot be undone by a descendant, so blurring
+         * the page would blur the selected section too. */
+        .cv-has-selection .cv-section-wrapper {
+          filter: blur(2px);
+          opacity: 0.4;
+          transition: filter 0.2s ease, opacity 0.2s ease;
+        }
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] {
+          filter: none;
+          opacity: 1;
+        }
+        /* ─── ONE BORDER ON THE SELECTED SECTION ────────────────────
+         * The section frame owns the only lime box. Anything nested inside it
+         * that would draw a second one is neutralised while that section is the
+         * selected object: a focused field's emerald outline/border, an entry's
+         * hover ring. Without this a click landed three boxes on the same
+         * section — the frame, the field outline, and the entry ring.
+         * The grey hover border on a field is deliberately KEPT: it is a "this
+         * is editable" affordance, not a selection border, and it only appears
+         * on the one field under the pointer. */
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] [contenteditable]:focus,
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] [contenteditable]:focus-visible,
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] .cv-item:hover,
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] .cv-item:focus-within {
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] [contenteditable]:focus,
+        .cv-has-selection .cv-section-wrapper[data-selected="true"] [contenteditable]:focus-visible {
+          border-color: transparent !important;
+        }
+        /* ─── …AND THE CHAT-MODE RING, WHICH IS PAINTED ON :hover ────
+         * The rule above misses the worst case. In chat mode the field's focus
+         * ring comes from moriHoverClass (CoreUI) — a "hover:" variant, so it is
+         * live whenever the pointer is over the field, which is exactly the
+         * state you are in right after clicking an entry. A click therefore left
+         * the section frame AND the field's ring on screen together: two borders
+         * around the same entry. That is the bug this block exists to fix.
+         *
+         * BOTH properties have to go. The ring is a spread box-shadow sitting on
+         * a tinted background (bg-emerald-500/20), so neutralising the shadow
+         * alone still leaves the mint fill reading as a second box.
+         *
+         * Two scopes keep this from over-reaching:
+         *  - .cv-chat-mode — so the ordinary "this is editable" hover tint is
+         *    untouched outside chat mode. cv-chat-mode is published on the canvas
+         *    root from the moriChatMode prop.
+         *  - [data-selected="true"] — so the ring still does its job while the
+         *    section is merely hovered, where it is the only thing telling you
+         *    which entry Mori is about to act on.
+         *
+         * (No backticks in this comment — it lives inside a template literal.) */
+        .cv-chat-mode.cv-has-selection .cv-section-wrapper[data-selected="true"] [contenteditable]:hover {
+          box-shadow: none !important;
+          background-color: transparent !important;
+        }
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
@@ -3230,9 +3802,40 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           .cv-keep-with-next { break-inside: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; display: block !important; width: 100% !important; }
           .cv-item-avoid { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; }
           .cv-page-visualizer { display: none !important; }
+          .cv-has-selection .cv-section-wrapper { filter: none !important; opacity: 1 !important; }
         }
         @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
         .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
+        /* ─── SECTION MOVE ───────────────────────────────────────────
+         * Two FLIP keyframes, driven by canvas-move-animation.ts. They run as a
+         * CSS *animation* rather than a transition on purpose: a move is a
+         * one-shot gesture, and an animation cannot be re-triggered by an
+         * unrelated React re-render — which a transform transition can be, and
+         * was, because the shell re-renders from the pagination pass and the fit
+         * report while the move is still settling.
+         *
+         * --mv-y is the distance the element has to travel to appear where it was
+         * before the reorder. --mv-s exists only on the page: the wrapper already
+         * carries the zoom scale inline, and an animation overrides inline
+         * styles, so the keyframes have to rebuild it or the sheet would flash at
+         * 100% for the length of the move.
+         *
+         * No fill mode: when the animation ends the element falls back to its own
+         * styles, which is the settled layout. The "to" frames therefore have to
+         * match what the element looks like at rest, or the end of the move pops.
+         * (No backticks in this comment — it lives inside a template literal.) */
+        @keyframes cv-move-page {
+          from { transform: translateY(var(--mv-y, 0px)) scale(var(--mv-s, 1)); }
+          to   { transform: translateY(0px) scale(var(--mv-s, 1)); }
+        }
+        @keyframes cv-move-section {
+          from { transform: translateY(var(--mv-y, 0px)); }
+          to   { transform: translateY(0px); }
+        }
+        @media print {
+          /* Never let a move that was still in flight reach the printer. */
+          .cv-section-wrapper, .cv-document-wrapper { animation: none !important; transform: none !important; }
+        }
         @keyframes snippetEntrance { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         .snippet-anim { 
           animation: snippetEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; 

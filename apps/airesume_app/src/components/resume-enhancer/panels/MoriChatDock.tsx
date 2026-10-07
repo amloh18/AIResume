@@ -10,6 +10,13 @@ interface MoriChatDockProps {
   /** Whether the chat is expanded into its overlay. */
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Float the conversation as a card instead of occupying a reserved row below
+   * the canvas. The editor shell uses this now that the collapsed bar has been
+   * replaced by the section-anchored `MoriSelectionBar`; when floating, nothing
+   * renders while the chat is closed.
+   */
+  floating?: boolean;
 }
 
 /**
@@ -23,7 +30,7 @@ interface MoriChatDockProps {
  * Both states share a single MoriChatInterface instance, so chat history,
  * draft input and target selection survive collapsing the chat.
  */
-const MoriChatDock: React.FC<MoriChatDockProps> = ({ open, onOpenChange }) => {
+const MoriChatDock: React.FC<MoriChatDockProps> = ({ open, onOpenChange, floating = false }) => {
   const [expandedHeight, setExpandedHeight] = useState(440);
 
   useEffect(() => {
@@ -47,19 +54,33 @@ const MoriChatDock: React.FC<MoriChatDockProps> = ({ open, onOpenChange }) => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onOpenChange]);
 
+  if (floating && !open) return null;
+
   return (
-    <div className="shrink-0 relative z-[60] px-3 pb-3 pt-1">
+    <div
+      className={
+        floating
+          ? 'fixed z-[195] bottom-4 right-4 w-[min(92vw,420px)] no-print'
+          : 'shrink-0 relative z-[60] px-3 pb-3 pt-1'
+      }
+    >
       {/* Reserved height — keeps the content area's layout identical whether the chat is open or closed */}
-      <div className="mx-auto w-full max-w-3xl" style={{ height: BAR_HEIGHT }} aria-hidden />
+      {!floating && (
+        <div className="mx-auto w-full max-w-3xl" style={{ height: BAR_HEIGHT }} aria-hidden />
+      )}
 
       <motion.div
         initial={false}
         animate={{ height: open ? expandedHeight : BAR_HEIGHT }}
         transition={{ type: 'spring', stiffness: 300, damping: 32, mass: 0.85 }}
-        className={`absolute left-3 right-3 bottom-3 mx-auto w-auto max-w-3xl overflow-hidden bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-xl transition-colors duration-300 ${
-          open
-            ? 'rounded-2xl border border-[var(--border-primary)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.35)]'
-            : 'rounded-full border border-[var(--border-primary)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.3)] hover:border-emerald-400/50 hover:shadow-[0_14px_34px_-12px_rgba(16,185,129,0.45)]'
+        className={`overflow-hidden bg-white/95 dark:bg-[var(--bg-secondary)] backdrop-blur-xl transition-colors duration-300 ${
+          floating
+            ? 'relative rounded-2xl border border-[var(--border-primary)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.35)]'
+            : `absolute left-3 right-3 bottom-3 mx-auto w-auto max-w-3xl ${
+                open
+                  ? 'rounded-2xl border border-[var(--border-primary)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.35)]'
+                  : 'rounded-full border border-[var(--border-primary)] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.3)] hover:border-emerald-400/50 hover:shadow-[0_14px_34px_-12px_rgba(16,185,129,0.45)]'
+              }`
         }`}
       >
         <MoriChatInterface

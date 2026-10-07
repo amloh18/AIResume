@@ -1311,7 +1311,14 @@ export const ATS_SNIPPETS: string[] = [
 // 15+ PRO TEMPLATES REGISTRY
 // ==========================================
 export const CANVAS_TEMPLATES = [
-  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 1, preferredItemGap: 1, preferredSpacing: 0.625, preferredFontSize: 10.5, preferredPageMargin: 30, zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
+  // Minimalist Single — the single-column house style, and the fallback every
+  // unmapped legacy template resolves to. Its defaults are a deliberately dense,
+  // print-like setting: Playfair Display at 10px with 0.7 line spacing, a 25px
+  // page margin and NO section gap (the section headings carry their own
+  // rhythm), 1px between entries, a black accent, and bullets rather than the
+  // hybrid paragraph/bullet mix. Every one of these is a `preferred*` field so
+  // the Design panel still overrides them per document.
+  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 0, preferredItemGap: 1, preferredSpacing: 0.7, preferredFontSize: 10, preferredPageMargin: 25, preferredFont: 'Playfair Display', preferredAccentColor: '#000000', preferredFormatOption: 'bullets_only', zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
   { id: 'tpl-2', name: 'Modern Split', type: '2-col', titleStyle: 'standard', preferredSectionGap: 18, preferredItemGap: 10, zones: { header: ['header-minimal'], left: ['experience-standard', 'projects-standard', 'education-standard'], right: ['summary-highlight', 'skills-pills', 'languages-comma'] } },
   { id: 'tpl-3', name: 'Professional Sidebar Left', type: 'sidebar-left', titleStyle: 'standard', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { sidebar: ['header-avatar', 'sidebar-contact', 'skills-pills', 'languages-dots'], main: ['summary-clean', 'experience-standard', 'projects-compact', 'education-standard'] } },
   { id: 'tpl-4', name: 'Executive Sidebar Right', type: 'sidebar-right', titleStyle: 'minimal', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { main: ['header-split', 'summary-clean', 'experience-timeline', 'education-standard'], sidebar: ['sidebar-contact', 'skills-category-inline', 'interests-pills'] } },

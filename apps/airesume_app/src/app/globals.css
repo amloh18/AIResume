@@ -1,3 +1,6 @@
+/* Document Typography Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;600;700;800&family=Lato:ital,wght@0,300;0,400;0,700;1,400;1,700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Roboto+Mono:wght@300;400;500;700&display=swap');
+
 /* CV Editor drag-and-drop UI styles */
 @import '../styles/cv-editor-print-styles.css';
 
@@ -3696,6 +3699,24 @@ mark[data-type="highlight"] {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+}
+
+/* Same opt-out for the CV canvas' editable fields.
+ *
+ * They are `contenteditable` spans, so the rules above do not reach them, and
+ * they manage their own focus chrome: a single emerald border painted by
+ * `editHoverClass` in cv-builder-pro/components/CoreUI. Without this opt-out the
+ * brand outline above landed ON TOP of that border — two concentric rounded
+ * boxes separated by the outline's 2px offset, which reads as a double border
+ * rather than as one focused field. The canvas frame holds the same line: "ONE
+ * frame, never two".
+ *
+ * Scoped to the CV document rather than applied to every `[contenteditable]` in
+ * the app, so rich-text editors elsewhere keep the shared keyboard-focus ring. */
+#cv-document-root [contenteditable]:focus,
+#cv-document-root [contenteditable]:focus-visible {
   outline: none !important;
   outline-offset: 0 !important;
 }

@@ -18,7 +18,6 @@
     "build:worker": "npm --prefix apps/airesume_app run build:worker",
     "start": "npm --prefix apps/airesume_app run start",
     "lint": "npm --prefix apps/airesume_app run lint",
-    "test": "npm --prefix apps/airesume_app run test",
     "type-check": "npm --prefix apps/airesume_app run type-check",
 
     "dev:admin": "npm --prefix apps/admin run dev",
