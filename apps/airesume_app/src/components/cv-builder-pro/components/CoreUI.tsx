@@ -9,6 +9,7 @@ import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { AnimatePresence } from 'framer-motion';
 import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
+import { resolveEmptyFieldPlaceholder } from '@/lib/utils/cv-field-labels';
 
 // CORE UI COMPONENTS
 // ==========================================
@@ -376,7 +377,6 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   if (breakAll) wrapClass = 'break-all whitespace-normal';
   if (multiline) wrapClass = 'whitespace-pre-wrap';
 
-  let emptyText = "Type here...";
   const lowerPath = path?.toLowerCase() || '';
 
   // Add specific class for header name and role to allow auto-sizing
@@ -384,43 +384,19 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const isRoleField = lowerPath === 'basics.title';
   const finalClassName = `${wrapClass} ${isNameField ? 'cv-header-name' : ''} ${isRoleField ? 'cv-header-role' : ''} ${className}`;
 
-  // Specific placeholders for contact fields
-  if (lowerPath.includes('email')) emptyText = "Email";
-  else if (lowerPath.includes('phone')) emptyText = "Phone";
-  else if (lowerPath.includes('location')) emptyText = "Location";
-  else if (lowerPath.includes('website')) emptyText = "Website / Link";
-  else if (lowerPath.includes('linkedin')) emptyText = "LinkedIn";
-  else if (lowerPath.includes('.profiles.') && lowerPath.endsWith('.url')) {
-    const profilePath = path.split('.').slice(0, -1).join('.');
-    const network = String(getNestedValue(data, `${profilePath}.network`) || '').toLowerCase();
-    if (network.includes('linkedin')) emptyText = "LinkedIn";
-    else if (network.includes('github')) emptyText = "GitHub";
-    else if (network.includes('twitter')) emptyText = "Twitter";
-    else emptyText = "Profile link";
-  }
-  
-  // General placeholders
-  else if (lowerPath.includes('summary')) emptyText = "Summary/Objective";
-  else if (lowerPath.includes('description')) emptyText = "Work summary or achievements";
-  else if (lowerPath.includes('skills')) emptyText = "Skills list";
-  else if (lowerPath.includes('position')) emptyText = "Job role/Designation";
-  else if (lowerPath.includes('name') && lowerPath.includes('work')) emptyText = "Company/Employer Name";
-  else if (lowerPath.includes('name') && lowerPath.includes('education')) emptyText = "University/Institution Name";
-  else if (lowerPath.includes('name') && lowerPath.includes('projects')) emptyText = "Project Name";
-  else if (lowerPath.includes('name') && lowerPath.includes('certificates')) emptyText = "Certificate Name";
-  else if (lowerPath.includes('name')) emptyText = "Name";
-  else if (lowerPath.includes('startdate')) emptyText = "Start Date";
-  else if (lowerPath.includes('enddate')) emptyText = "End Date";
-  else if (lowerPath.includes('date')) emptyText = "Date/Year";
-  else if (lowerPath.includes('title') && lowerPath.includes('basics')) emptyText = "Professional Title";
-  else if (lowerPath.includes('title')) emptyText = "Title";
-  else if (lowerPath.includes('institution')) emptyText = "University/Institution Name";
-  else if (lowerPath.includes('area')) emptyText = "Major/Field of Study";
-  else if (lowerPath.includes('studytype')) emptyText = "Degree Type";
-  else if (lowerPath.includes('organization')) emptyText = "Organization Name";
-  else if (lowerPath.includes('awarder')) emptyText = "Awarding Organization";
-  else if (lowerPath.includes('issuer')) emptyText = "Issuing Organization";
-  else if (lowerPath.includes('publisher')) emptyText = "Publisher Name";
+  /* Empty-field label: NAME the fact that belongs in the slot.
+   *
+   * The generic "Type here..." (and the old flat ladder of path substrings,
+   * which had no idea that `experience.2.company` and `work.2.name` are the same
+   * fact) is replaced by one resolver in lib/utils/cv-field-labels.ts. It is
+   * section- and field-aware, so the blank slot reads as a labelled blank —
+   * "Company/Organisation", "Degree", "Modules summary or achievements",
+   * "Project summary or achievements", "Start"/"End" — in every template that
+   * renders the same field. The named-profile URL keeps its network lookup so
+   * the slot says "LinkedIn" for a LinkedIn row and "GitHub" for a GitHub one. */
+  const profilePath = lowerPath.includes('.profiles.') ? path.split('.').slice(0, -1).join('.') : '';
+  const profileNetwork = profilePath ? String(getNestedValue(data, `${profilePath}.network`) || '') : '';
+  const emptyText = resolveEmptyFieldPlaceholder(path, profileNetwork);
 
   /* Chat-mode focus ring — the "this is the field Mori will act on" target.
    *
@@ -461,8 +437,10 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const editHoverClass = isEditable ? 'hover:bg-emerald-50/30 focus:bg-white/80 border border-transparent hover:border-gray-200 focus:border-emerald-400 focus:text-gray-900 rounded-[3px]' : '';
   // Empty-field placeholder chrome only belongs in edit mode — readOnly previews
   // must not show "Type here..."/"END DATE" hints over real documents.
+  // The placeholder is a HINT, not content: light dashed rule + gray-300 text,
+  // so an empty document still reads as a document rather than a form.
   const emptyPlaceholderClass = isEditable
-    ? `empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:italic`
+    ? `empty:min-w-[60px] ${multiline ? 'empty:block' : 'empty:inline-block'} empty:border-dashed empty:border-gray-200 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-300 empty:after:italic`
     : '';
 
   return (
@@ -1104,11 +1082,19 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     const fallbackTitle = DEFAULT_SECTION_TITLES[titleKey] || (typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section');
     const titleVal = getNestedValue(ctx?.cvData, `sectionTitles.${titleKey}`) || fallbackTitle;
 
+    /* Section headings are renameable inline ("Work Experience" ↔ "Experience"
+       ↔ "Selected Projects"): the text is an ordinary editable field bound to
+       `sectionTitles.<key>`, persisted with the rest of the CV. `cv-section-title`
+       is the hook the canvas + snapshot stylesheets use for the title's own
+       spacing (it follows the Design panel's item gap), for icon sizing relative
+       to the title's type, and for the hover cue that says "click to rename". */
+    const titleField = <EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap />;
+
     if (overrideClass) {
-      return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></h3>;
+      return <h3 className={`${overrideClass} cv-section-title`}>{titleField}</h3>;
     }
 
-    return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap /></Renderer>;
+    return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}>{titleField}</Renderer>;
   };
 
   const headerUnitId = `${instance.id}_header`;
@@ -1604,8 +1590,10 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
     ...savedDesign,  // overlay with user's saved design (fixes dashboard card thumbnails)
     ...design,       // overlay with explicit prop (fixes template-modal thumbnails)
   };
-  const formatOption = defaultDesign.formatOption || 'hybrid';
-  const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
+  // Entry descriptions are ONE combined view: paragraphs and bullets always
+  // render together. There is deliberately no description-layout switch — the
+  // old `bullets_only`/`paragraph_only` classes display:none'd half of the
+  // stored content, which made typed text vanish from the document.
   const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px`, '--cv-item-gap': `${defaultDesign.itemGap ?? 12}px`, '--cv-column-gap': `${Math.max(8, (defaultDesign.sectionGap ?? 1) + 8)}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {
@@ -1653,13 +1641,13 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   switch (template.type) {
     case '1-col':
       return (
-        <div className={`w-full h-full cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full cv-document`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
           {renderZone('main', 'w-full min-w-0')}
         </div>
       );
     case '2-col':
       return (
-        <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex flex-col cv-document`} style={{ ...wrapperStyle, backgroundColor: '#ffffff' }}>
           {(template.zones['header'] || []).length > 0 && (
             <div className="w-full min-w-0" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0, marginBottom: 'var(--cv-section-gap, 16px)' }}>
               {renderZone('header', 'w-full min-w-0')}
@@ -1674,7 +1662,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
     case 'sidebar-left':
     case 'sidebar-left-dark':
       return (
-        <div className={`w-full h-full flex relative cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex relative cv-document`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
           <div className="absolute left-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
           <div className={`w-[32%] min-w-0 relative z-10 ${isDarkSidebar ? 'cv-dark-sidebar text-white' : ''}`} style={{ paddingRight: '5mm' }}>
             {renderZone('sidebar', 'h-max', isDarkSidebar)}
@@ -1687,7 +1675,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
     case 'sidebar-right':
     case 'sidebar-right-dark':
       return (
-        <div className={`w-full h-full flex relative cv-document ${formatClass}`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex relative cv-document`} style={{ ...wrapperStyle, padding: 'var(--cv-page-margin)', backgroundColor: '#ffffff' }}>
           <div className="absolute right-0 top-0 bottom-0 z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)', width: 'calc(32% + 0.36 * var(--cv-page-margin))' }}></div>
           <div className="w-[68%] min-w-0 relative z-10" style={{ paddingRight: '5mm' }}>
             {renderZone('main', 'h-max')}
@@ -1699,7 +1687,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
       );
     case 'top-sidebar-right':
       return (
-        <div className={`w-full h-full flex flex-col relative cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex flex-col relative cv-document`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
           {(template.zones['header'] || []).length > 0 && (
             <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
               {renderZone('header', 'w-full min-w-0')}
@@ -1716,7 +1704,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
       );
     case 'top-sidebar-left':
       return (
-        <div className={`w-full h-full flex flex-col relative cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex flex-col relative cv-document`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
           {(template.zones['header'] || []).length > 0 && (
             <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
               {renderZone('header', 'w-full min-w-0')}
@@ -1733,7 +1721,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
       );
     case 'hybrid-split':
       return (
-        <div className={`w-full h-full flex flex-col cv-document ${formatClass}`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
+        <div className={`w-full h-full flex flex-col cv-document`} style={{ ...wrapperStyle, minHeight: 'var(--cv-page-height)', backgroundColor: '#ffffff' }}>
           {(template.zones['header'] || []).length > 0 && (
             <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>
               {renderZone('header', 'w-full min-w-0')}

@@ -3,6 +3,7 @@ import CVCanvasEngine, { CVCanvasBuilderRef } from './CVCanvasEngine';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import { normalizeCvDataForCanvas, normalizeSkillsText, extractHighlightsFromHtml, extractSummaryFromHtml } from '@/lib/utils/cv-canvas-normalizer';
+import { parseDescriptionHtml, writeRecordDescriptionBlocks } from '@/lib/utils/cv-description-blocks';
 import { clampLevel, fluencyToLevel, levelToFluency, serializeLanguagesForStorage } from '@/lib/utils/cv-snippet-data';
 
 interface CVBuilderProAdapterProps {
@@ -155,24 +156,39 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
     }
 
     if (Array.isArray(normalizedIncoming?.projects)) {
-      newCvData.projects = normalizedIncoming.projects.map((proj: any) => ({
-        ...proj,
-        description: extractSummaryFromHtml(proj.description || ''),
-        highlights: extractHighlightsFromHtml(proj.description || ''),
-      }));
+      newCvData.projects = normalizedIncoming.projects.map((proj: any, index: number) => {
+        const record: any = { ...proj };
+        // The canvas HTML is the combined view (ordered paragraphs + bullets) and
+        // is authoritative here: parse it into ordered blocks and derive the
+        // legacy `description`/`highlights` from those, so mixed order survives.
+        writeRecordDescriptionBlocks(
+          record,
+          'description',
+          parseDescriptionHtml(proj.description || ''),
+          cvData.projects?.[index]?.descriptions
+        );
+        return record;
+      });
     }
 
     if (Array.isArray(normalizedIncoming?.experience)) {
       // Reverse map canvas experience → Unified work format
-      const mappedWork = normalizedIncoming.experience.map((exp: any) => ({
-        id: exp.id,
-        position: exp.role,
-        name: exp.company,
-        startDate: exp.startDate || '',
-        endDate: exp.endDate || '',
-        summary: extractSummaryFromHtml(exp.description || ''),
-        highlights: extractHighlightsFromHtml(exp.description || ''),
-      }));
+      const mappedWork = normalizedIncoming.experience.map((exp: any, index: number) => {
+        const record: any = {
+          id: exp.id,
+          position: exp.role,
+          name: exp.company,
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
+        };
+        writeRecordDescriptionBlocks(
+          record,
+          'summary',
+          parseDescriptionHtml(exp.description || ''),
+          cvData.work?.[index]?.descriptions
+        );
+        return record;
+      });
 
       // Support both Unified (work[]) and legacy (experience[]) storage
       if (Array.isArray(cvData.work) || (!(cvData as any).experience && !Array.isArray(newCvData.experience))) {
@@ -193,16 +209,23 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
     }
 
     if (Array.isArray(normalizedIncoming?.volunteer)) {
-      newCvData.volunteer = normalizedIncoming.volunteer.map((vol: any) => ({
-        id: vol.id,
-        position: vol.role,
-        organization: vol.organization,
-        startDate: vol.startDate || '',
-        endDate: vol.endDate || '',
-        url: vol.url || '',
-        summary: extractSummaryFromHtml(vol.description || ''),
-        highlights: extractHighlightsFromHtml(vol.description || ''),
-      }));
+      newCvData.volunteer = normalizedIncoming.volunteer.map((vol: any, index: number) => {
+        const record: any = {
+          id: vol.id,
+          position: vol.role,
+          organization: vol.organization,
+          startDate: vol.startDate || '',
+          endDate: vol.endDate || '',
+          url: vol.url || '',
+        };
+        writeRecordDescriptionBlocks(
+          record,
+          'summary',
+          parseDescriptionHtml(vol.description || ''),
+          cvData.volunteer?.[index]?.descriptions
+        );
+        return record;
+      });
     }
     
     if (Array.isArray(normalizedIncoming?.education)) {

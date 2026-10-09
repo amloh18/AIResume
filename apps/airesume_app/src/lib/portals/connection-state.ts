@@ -97,6 +97,10 @@ export interface JobSourceDescriptor {
   connectedSubtitle: string;
   /** Tailwind classes for the card's icon tile. */
   iconClass: string;
+  /** Direct portal login page URL. */
+  loginUrl: string;
+  /** Portal domain for display. */
+  domain: string;
 }
 
 /**
@@ -114,6 +118,8 @@ export const JOB_SOURCE_DESCRIPTORS: Record<JobSourceProvider, JobSourceDescript
     description: 'Connect your Naukri account to personalize your AIResume job workflow.',
     connectedSubtitle: 'Account connected',
     iconClass: 'bg-blue-50 dark:bg-blue-950/30 text-blue-500',
+    loginUrl: 'https://www.naukri.com/nlogin/login',
+    domain: 'naukri.com',
   },
   indeed: {
     provider: 'indeed',
@@ -121,6 +127,8 @@ export const JOB_SOURCE_DESCRIPTORS: Record<JobSourceProvider, JobSourceDescript
     description: 'Connect your Indeed account to personalize your AIResume job workflow.',
     connectedSubtitle: 'Global account',
     iconClass: 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-500',
+    loginUrl: 'https://secure.indeed.com/auth',
+    domain: 'indeed.com',
   },
   linkedin: {
     provider: 'linkedin',
@@ -128,6 +136,8 @@ export const JOB_SOURCE_DESCRIPTORS: Record<JobSourceProvider, JobSourceDescript
     description: 'Connect your LinkedIn account to personalize your AIResume job workflow.',
     connectedSubtitle: 'Account connected',
     iconClass: 'bg-sky-50 dark:bg-sky-950/30 text-sky-500',
+    loginUrl: 'https://www.linkedin.com/login',
+    domain: 'linkedin.com',
   },
 };
 

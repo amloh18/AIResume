@@ -144,17 +144,18 @@ export const SNAPSHOT_STYLES = `
   .cv-snapshot-wrapper .gap-0\.5 { gap: calc(2px * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .gap-y-0\.5 { row-gap: calc(2px * var(--cv-spacing)) !important; }
   .cv-snapshot-wrapper .gap-x-3 { column-gap: calc(12px * var(--cv-spacing)) !important; }
+
+  /* Section-title rhythm — the snapshot must agree with the canvas pixel for
+     pixel (it is a template thumbnail AND an export surface). Half the item gap
+     = the mb-1.5 it replaces at the default 12px, and the icon rides the
+     title's own type size instead of a fixed 14–16px. See CVCanvasEngine for
+     the full rationale. */
+  .cv-snapshot-wrapper .cv-document .cv-section-title { margin-bottom: calc(var(--cv-item-gap, 12px) * 0.5 * var(--cv-spacing)) !important; }
+  .cv-snapshot-wrapper .cv-document .cv-section-title > svg,
+  .cv-snapshot-wrapper .cv-document .cv-section-title .lucide { width: 1em !important; height: 1em !important; }
   
-  /* Layout formats */
-  .cv-format-bullets-only .cv-prose p {
-    display: none !important;
-    margin-bottom: 0 !important;
-  }
-  .cv-format-paragraph-only .cv-prose ul {
-    display: none !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-  }
+  /* Entry descriptions are ONE combined view: paragraphs and bullets always
+     render together (no description-layout class). */
   .cv-document p:empty,
   .cv-document p:has(> br:only-child),
   .cv-document ul:empty {

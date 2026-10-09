@@ -1,5 +1,6 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { clampLevel, serializeLanguagesForStorage } from '@/lib/utils/cv-snippet-data';
+import { descriptionHtmlForRecord } from '@/lib/utils/cv-description-blocks';
 
 const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
   const parts: string[] = [];
@@ -136,25 +137,40 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       company: w.name,
       startDate: w.startDate || '',
       endDate: w.endDate || '',
-      description: buildRichTextDescription(w.summary, w.highlights),
+      // One combined description: ordered paragraphs + bullets. Reading the
+      // ordered `descriptions` blocks (when they agree with summary/highlights)
+      // keeps mixed order intact across the canvas ↔ Unified ↔ Mori round trip.
+      description: descriptionHtmlForRecord(w, 'work'),
     }));
   } else if (Array.isArray((cvData as any).experience) && (cvData as any).experience.length > 0) {
     // Already in canvas format or legacy format — normalize field names
-    translated.experience = (cvData as any).experience.map((exp: any, index: number) => ({
-      id: exp.id || `exp-${index}`,
-      role: exp.role || exp.position || '',
-      company: exp.company || exp.name || '',
-      startDate: exp.startDate || '',
-      endDate: exp.endDate || '',
-      description: exp.description || buildRichTextDescription(exp.summary, exp.highlights),
-    }));
+    translated.experience = (cvData as any).experience.map((exp: any, index: number) => {
+      const hasOrderedBlocks = Array.isArray(exp.descriptions) && exp.descriptions.length > 0;
+      const hasLegacyBlocks =
+        (typeof exp.summary === 'string' && exp.summary.trim().length > 0) ||
+        (Array.isArray(exp.highlights) && exp.highlights.length > 0);
+      // Only rebuild HTML when there is something structured to rebuild from;
+      // otherwise a stored description is already the combined view and is
+      // passed through untouched (same as before).
+      const description = hasOrderedBlocks || hasLegacyBlocks
+        ? descriptionHtmlForRecord(exp, 'work')
+        : exp.description || '';
+      return {
+        id: exp.id || `exp-${index}`,
+        role: exp.role || exp.position || '',
+        company: exp.company || exp.name || '',
+        startDate: exp.startDate || '',
+        endDate: exp.endDate || '',
+        description,
+      };
+    });
   }
 
   if (Array.isArray(cvData.volunteer)) {
     translated.volunteer = cvData.volunteer.map((v: any, index: number) => ({
       ...v,
       id: v.id || `vol-${index}`,
-      description: buildRichTextDescription(v.summary, v.highlights),
+      description: descriptionHtmlForRecord(v, 'volunteer'),
     }));
   }
 
@@ -210,14 +226,25 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
   }
 
   if (Array.isArray(cvData.projects)) {
-    translated.projects = cvData.projects.map((p: any, index: number) => ({
-      ...p,
-      id: p.id || `proj-${index}`,
-      // Support both plain text description and rich HTML with highlights
-      description: p.description && p.description.includes('<')
-        ? (p.description || '')
-        : buildRichTextDescription(p.description, p.highlights),
-    }));
+    translated.projects = cvData.projects.map((p: any, index: number) => {
+      const hasOrderedBlocks = Array.isArray(p.descriptions) && p.descriptions.length > 0;
+      const hasHighlights = Array.isArray(p.highlights) && p.highlights.length > 0;
+      let description: string;
+      if (hasOrderedBlocks || hasHighlights) {
+        // Combined model: paragraphs (description) + bullets (highlights), order
+        // preserved through the ordered blocks.
+        description = descriptionHtmlForRecord(p, 'projects');
+      } else if (p.description && p.description.includes('<')) {
+        description = p.description;
+      } else {
+        description = buildRichTextDescription(p.description, p.highlights);
+      }
+      return {
+        ...p,
+        id: p.id || `proj-${index}`,
+        description,
+      };
+    });
   }
 
   if (Array.isArray(cvData.skills)) {

@@ -67,7 +67,7 @@ ${!hasJD ? `- **Evaluation:** Switch ATS Score "K" (Keywords) to "Global Industr
 1. **The Pruning Layer:** ${hasJD ? 'Delete unrelated/old roles.' : 'Skip pruning - focus on broadening impact.'}
 2. **The Bridging Layer:** If Score < 75%, generate 3 [STRATEGIC UPGRADE] project entries.
 3. **The XYZ Metric Injection:** Rewrite bullets using: "[Action Verb] + [Quantifiable Result] + [Keyword]." Use \`[X]\` for missing metrics.
-4. **Format Enforcement:** All fixes for \`work\`, \`projects\`, \`education\`, and \`volunteer\` MUST be formatted as bullet points. Convert paragraph summaries within these sections into bulleted lists. Do NOT use bullet points for \`basics.summary\`.
+4. **Format Enforcement:** Entry descriptions for \`work\`, \`projects\`, \`education\`, and \`volunteer\` are ONE combined description: bullets first, optionally followed by at most ONE short lead/outro line (~25 words). Convert long prose paragraphs within these sections into bullets; a short line may stay as a lead/outro. Do NOT use bullet points for \`basics.summary\` (it is always a paragraph).
 ${isRestricted ? '5. **RESTRICTED MODE (FREE TIER):** YOU MUST ONLY OUTPUT FIXES WITH CATEGORY `grammar` OR `clarity`. DO NOT OUTPUT ANY `impact`, `keywords`, `structure`, OR `formatting` FIXES. KEEP OUTPUT TO MAXIMUM 5 FIXES.' : ''}
 
 ### INPUT DATA
@@ -121,7 +121,7 @@ NOTE: Return 5-10 most impactful fixes only. Do NOT include full CV copies in th
 - original_text MUST be found inside the string at fieldPath (exact substring).
 - NEVER invent content that isn't present in the CV.
 - KEEP RESPONSE COMPACT - max 5-10 fixes, no full CV copies.
-- **CRITICAL:** Ensure \`fixed_text\` is formatted as a bullet point (starting with "• ") for all sections EXCEPT \`basics.summary\`. NEVER use hyphens (-) or asterisks (*) for bullets, ALWAYS use the bullet dot symbol (•). Ensure high bullet volume for recent jobs.
+- **CRITICAL:** Ensure \`fixed_text\` is formatted as a bullet point (starting with "• ") for entry-description fixes, EXCEPT for the single short lead/outro line of an entry and for \`basics.summary\`. NEVER use hyphens (-) or asterisks (*) for bullets, ALWAYS use the bullet dot symbol (•). Ensure high bullet volume for recent jobs.
 
 ### [OUTPUT JSON START]
 `;

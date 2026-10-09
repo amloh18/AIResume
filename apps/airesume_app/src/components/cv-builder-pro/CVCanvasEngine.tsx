@@ -922,8 +922,19 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         if (!inSelectedBlock) {
           // When in focused section, clicking outside (including on another section)
           // closes the focus from the section rather than activating it on the other section.
-          e.stopPropagation();
-          e.preventDefault();
+          //
+          // …with ONE exception: a click that lands on an editable field must be
+          // allowed to put the caret in it. preventDefault() here blocked the
+          // native focus, so typing in a field belonging to a DIFFERENT section
+          // than the focused one took two clicks — the first only dismissed the
+          // other section's focus. That read as "this text is not editable",
+          // most visibly on section headings (rename "Work Experience" →
+          // "Experience"), which are ordinary editable fields. The click is left
+          // to bubble so the clicked section can also become the selected one.
+          if (!target.closest('[contenteditable="true"]')) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
           setSelectedBlockId(null);
           window.dispatchEvent(new CustomEvent('mori-close-menus'));
           return;
@@ -1333,13 +1344,14 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       ...(template.preferredSpacing != null ? { spacing: template.preferredSpacing } : {}),
       ...(template.preferredFontSize != null ? { fontSize: template.preferredFontSize } : {}),
       ...(template.preferredPageMargin != null ? { pageMargin: template.preferredPageMargin } : {}),
-      // Typography, accent and description layout are part of a template's
-      // identity too, not just its geometry — Minimalist Single is Playfair on
-      // black in bullets. A template that declares none of these leaves the
-      // previous values alone, so switching between the other 14 is unchanged.
+      // Typography and accent are part of a template's identity too, not just
+      // its geometry — Minimalist Single is Playfair on black. A template that
+      // declares none of these leaves the previous values alone, so switching
+      // between the other 14 is unchanged.
+      // (Templates deliberately no longer carry a preferred description layout:
+      // an entry's description is ONE combined view of paragraphs and bullets.)
       ...(template.preferredFont != null ? { font: template.preferredFont } : {}),
       ...(template.preferredAccentColor != null ? { accentColor: template.preferredAccentColor } : {}),
-      ...(template.preferredFormatOption != null ? { formatOption: template.preferredFormatOption } : {}),
     }));
     const portalTarget = typeof document !== 'undefined' && document.getElementById('builder-utility-panel-portal');
     if (!portalTarget) {
@@ -2497,9 +2509,6 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       );
     };
 
-    const formatOption = design.formatOption || 'hybrid';
-    const formatClass = formatOption === 'bullets_only' ? 'cv-format-bullets-only' : (formatOption === 'paragraph_only' ? 'cv-format-paragraph-only' : 'cv-format-hybrid');
-
     const maxPage = Object.values(pageAssignments).reduce((max, p) => Math.max(max, p), 0);
     const totalPages = maxPage + 1;
     const pages = Array.from({ length: totalPages }, (_, i) => i);
@@ -2507,7 +2516,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     return (
       <div
         id="cv-document-root"
-        className={`cv-document ${formatClass} ${
+        className={`cv-document ${
           isSpread
             ? 'grid grid-cols-2 items-start justify-items-center gap-[var(--cv-page-gap)]'
             : 'flex flex-col items-center gap-[var(--cv-page-gap)]'
@@ -3077,29 +3086,6 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                   </div>
                 )}
                 
-                <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
-                  <label className={`text-small font-bold uppercase tracking-widest mb-2.5 block ${textMuted}`}>Description Layout</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'hybrid', label: 'Hybrid' },
-                      { id: 'paragraph_only', label: 'Paragraph' },
-                      { id: 'bullets_only', label: 'Bullets' }
-                    ].map(opt => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setDesign({ ...design, formatOption: opt.id })}
-                        className={`py-2 px-1 text-small font-bold rounded border transition-colors ${
-                          (design.formatOption || 'hybrid') === opt.id
-                            ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen
-                            : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300 hover:bg-[#2e2e2e]' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50')
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
                   <label className={`text-small font-bold uppercase tracking-widest mb-3 block ${textMuted}`}>Date Format</label>
                   <select value={design.dateFormat || 'MMM YYYY'} onChange={(e) => setDesign({...design, dateFormat: e.target.value})} className={`w-full p-2.5 rounded-lg border text-small appearance-none cursor-pointer focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all ${isDarkUI ? 'bg-[#1e1e1e] border-gray-700 text-gray-200 hover:border-gray-600' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300 shadow-sm'}`}>
@@ -3758,17 +3744,37 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         #cv-document-root.cv-document .gap-0\.5 { gap: calc(2px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .gap-y-0\.5 { row-gap: calc(2px * var(--cv-spacing)) !important; }
         #cv-document-root.cv-document .gap-x-3 { column-gap: calc(12px * var(--cv-spacing)) !important; }
+
+        /* ─── SECTION TITLE RHYTHM ─────────────────────────────────
+         * The heading's gap to its first entry used to be frozen at its Tailwind
+         * mb-1.5 (6px) while the entries underneath were spaced by
+         * --cv-item-gap: raising Item gap in the Design panel pulled the entries
+         * apart and left the title welded to the first one. The title's gap is
+         * now HALF the item gap — 6px at the default 12px, so nothing moves on
+         * an untouched document — which keeps the heading visibly closer to its
+         * own content than the entries are to each other while still scaling
+         * with the control. (Specificity alone would not be enough: these rules
+         * sit after the mb-* block above for exactly that reason.)
+         *
+         * The icon is sized in font-relative units = the title's own font size.
+         * The fixed pixel size the styles pass in remains the fallback; at the
+         * default base size the heading is ~13.2px, so a 16px glyph read as
+         * larger than the words it labels.
+         *
+         * Hover: section names are renameable inline ("Work Experience" ↔
+         * "Experience"), so the heading underlines itself under the pointer
+         * like every other editable field on the sheet — the affordance was
+         * missing, which made the heading read as a label rather than a field. */
+        #cv-document-root.cv-document .cv-section-title { margin-bottom: calc(var(--cv-item-gap, 12px) * 0.5 * var(--cv-spacing)) !important; }
+        #cv-document-root.cv-document .cv-section-title > svg,
+        #cv-document-root.cv-document .cv-section-title .lucide { width: 1em !important; height: 1em !important; }
+        #cv-document-root.cv-document .cv-section-title [contenteditable="true"] { cursor: text; }
+        #cv-document-root.cv-document .cv-section-title:hover [contenteditable="true"] { box-shadow: inset 0 -0.08em 0 0 var(--cv-accent); }
         
-        /* Layout formats */
-        .cv-format-bullets-only .cv-prose p {
-          display: none !important;
-          margin-bottom: 0 !important;
-        }
-        .cv-format-paragraph-only .cv-prose ul {
-          display: none !important;
-          margin-top: 0 !important;
-          margin-bottom: 0 !important;
-        }
+        /* Entry descriptions are ONE combined view: paragraphs and bullets
+           always render together. There is deliberately no bullets-only /
+           paragraph-only class — those display:none'd half of the stored
+           content, so text the user typed vanished from the document. */
         .cv-document p:empty,
         .cv-document p:has(> br:only-child),
         .cv-document ul:empty {

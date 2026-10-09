@@ -20,7 +20,7 @@ const pricingCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 min
 
 /** Canonical USD prices — single source of truth. Matches Polar catalog. */
-export const PLAN_USD_PRICES: Record<string, number> = {
+const PLAN_USD_PRICES: Record<string, number> = {
   starter_monthly:  0,     // Regular $4.99 (free for now)
   starter_yearly:   19.99, // $2/month ($19.99 total billed annually)
   focused_monthly:  9.99,  // $9.99/month

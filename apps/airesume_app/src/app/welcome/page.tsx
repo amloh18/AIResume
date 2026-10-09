@@ -65,7 +65,7 @@ import { toast } from '@/lib/hot-toast';
 import { getStrengthDescription, getWeaknessDescription } from '@/lib/cv-descriptions';
 import guestCVService from '@/lib/services/guestCVService';
 
-export type OnboardingStage = 
+type OnboardingStage = 
   | 'INTENT'              // Step 1: What are you here to achieve?
   | 'PROFILE_SEED'        // Step 2: Build Profile (Upload / Paste / LinkedIn / Scratch)
   | 'AI_ANALYSIS'         // Step 3: AI Discovery & Analysis ("Improve & Design My CV")
@@ -81,14 +81,14 @@ export type OnboardingStage =
   | 'JOB_ACCOUNTS'        // Step 13: Connect the job sites you personally use
   | 'LAUNCH';             // Step 14: Final Launch & CEO Note
 
-export interface CareerPathway {
+interface CareerPathway {
   id: string;
   name: string;
   icon: string;
   roles: string[];
 }
 
-export const CAREER_PATHWAYS: CareerPathway[] = [
+const CAREER_PATHWAYS: CareerPathway[] = [
   {
     id: 'engineering',
     name: 'Software & Tech',
@@ -246,7 +246,7 @@ const STAGE_TO_STEP: Record<OnboardingStage | string, number> = {
   'CAREER_ADVANTAGE': 12,
 };
 
-export const WELCOME_SALARY_CONFIG: Record<
+const WELCOME_SALARY_CONFIG: Record<
   string,
   {
     label: string;

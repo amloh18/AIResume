@@ -5,6 +5,7 @@ import {
   diffCVData,
 } from '@/types/cv-edit-ops';
 import { normalizeCvData } from '@/types/cv-normalizer';
+import { materializeCvDescriptionViews } from '@/lib/utils/cv-description-blocks';
 
 export function cleanAndParseJSON(content: string): any {
   let cleaned = (content || '').trim();
@@ -428,7 +429,10 @@ export function mergeMoriCvIntoCanvas(
       }
 
       console.log(`[mori-chat] Applied ${session.results.length} operations, ${diffs.length} fields changed`);
-      return session.cvData;
+      // The AI edits the ordered `descriptions` blocks; the canvas/ATS/exports
+      // read the legacy `summary`/`highlights` view. `preferExisting: true`
+      // because here the blocks are the newer, intentional edit.
+      return materializeCvDescriptionViews(session.cvData, { preferExisting: true });
     } else {
       // Operations failed validation — fall through to legacy patch if available
       const failedOps = session.results.filter(r => !r.success);
@@ -466,5 +470,5 @@ export function mergeMoriCvIntoCanvas(
     console.log(`[mori-chat] Applied patch with keys: ${patchKeys.join(', ')}`);
   }
 
-  return changed ? next : null;
+  return changed ? materializeCvDescriptionViews(next, { preferExisting: true }) : null;
 }
