@@ -180,3 +180,6 @@ apps/admin/
 # ── Sensitive Documentation ─────────────────────────────────────────────
 docs/sensitive.md
 sensitive.md
+
+# ── Local video / marketing production assets ───────────────────────────
+production/

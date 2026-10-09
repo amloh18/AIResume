@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'This account uses passwordless login. Please use the 4-digit code option.' 
+          error: 'This account uses passwordless login. Please use the 6-digit code option.' 
         },
         { status: 401 }
       );
