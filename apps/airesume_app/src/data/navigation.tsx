@@ -46,7 +46,7 @@ export const navLinks: NavLink[] = [
       { 
         label: 'Resume Templates', 
         description: 'Explore 15+ interactive ATS-friendly templates, section layouts, and modular snippets.', 
-        href: '/explore', 
+        href: '/templates', 
         ariaLabel: 'Explore resume templates and modular snippets',
         icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
         snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'

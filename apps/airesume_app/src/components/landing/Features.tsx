@@ -11,9 +11,11 @@ import {
   Mic, 
   Sliders, 
   Bot,
-  Layers
+  Layers,
+  FileText,
+  Check
 } from 'lucide-react';
-import { MorphGrid, MorphSignalDeck } from '@/components/landing/MorphGrid';
+import EditorMoriDeck from '@/components/landing/EditorMoriDeck';
 
 export default function Features() {
   const [typedText, setTypedText] = useState('');
@@ -93,7 +95,7 @@ export default function Features() {
           {/* ================= COLUMN 1 (LEFT) ================= */}
           <div className="flex flex-col gap-6 h-full">
             
-            {/* Tile 1: ATS Resume Engine & Code Inspector (Tall) */}
+            {/* Tile 1: 1-Click Tailored Docs (Tall) */}
             <motion.div 
               className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
@@ -102,54 +104,95 @@ export default function Features() {
               transition={{ duration: 0.6 }}
             >
               <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-2">
+                  <Sparkles className="w-3 h-3" /> 1-Click Generation
+                </div>
                 <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
-                  ATS-Optimized Parsing
+                  1-Click Tailored Docs
                 </h3>
                 <p className="text-sm text-gray-400 leading-relaxed mb-4">
-                  Engineered to parse flawlessly through Taleo, Workday, and Greenhouse with clean structured hierarchy.
+                  Your CV and cover letter are automatically generated and tailored to any job in just 1 click with verified factual evidence.
                 </p>
                 <Link 
-                  href="/studio"
+                  href="/templates"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
                 >
-                  Explore Studio <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  Generate Tailored Docs <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
 
-              {/* Code Visual Container with Animated Scanning Laser */}
-              <div className="relative mt-2 rounded-2xl bg-[#090a0d] border border-white/[0.06] p-4 font-mono text-xs overflow-hidden shadow-inner">
+              {/* Dual Document Visual with 1-Click Generation Animation */}
+              <div className="relative mt-2 rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3.5 font-sans text-xs overflow-hidden shadow-inner">
                 {/* Active scan beam */}
                 <motion.div 
                   className="absolute inset-x-0 h-10 bg-gradient-to-b from-transparent via-emerald-500/20 to-transparent pointer-events-none z-10"
-                  animate={{ y: [0, 180, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                  animate={{ y: [0, 190, 0] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                
-                <div className="flex items-center space-x-1.5 mb-3 opacity-60">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                  <span className="ml-2 text-[10px] text-gray-500">resume.ats.json</span>
-                </div>
 
-                <div className="space-y-1.5 text-[11px] leading-relaxed select-none">
-                  <div className="text-gray-500">&#47;&#47; ATS Validation: 100% Passed</div>
-                  <div><span className="text-[#36D39B]">&quot;candidate&quot;</span>: &#123;</div>
-                  <div className="pl-4"><span className="text-teal-300">&quot;headline&quot;</span>: <span className="text-amber-300">&quot;Senior Full-Stack Engineer&quot;</span>,</div>
-                  <div className="pl-4"><span className="text-teal-300">&quot;match_score&quot;</span>: <span className="text-[#36D39B]">98.4</span>,</div>
-                  <div className="pl-4"><span className="text-teal-300">&quot;keywords&quot;</span>: [</div>
-                  <div className="pl-8 text-gray-400">&quot;React&quot;, &quot;Next.js&quot;, &quot;Distributed Systems&quot;, &quot;Go&quot;</div>
-                  <div className="pl-4">]</div>
-                  <div>&#125;</div>
-                </div>
-
-                {/* Score pill */}
-                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[11px]">
-                  <span className="text-gray-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> ATS Verified
+                <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-white/5">
+                  <span className="text-[10px] text-gray-400 font-mono flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Target: Senior Software Engineer
                   </span>
-                  <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full">
-                    A+ Rating
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-400">
+                    ⚡ 1-Click Ready
+                  </span>
+                </div>
+
+                {/* Dual Document Cards */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Card 1: Tailored CV */}
+                  <div className="rounded-xl bg-[#12161f] border border-white/10 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-emerald-400" /> Tailored CV
+                        </span>
+                        <span className="text-[9px] text-emerald-400 font-mono font-bold">98% ATS</span>
+                      </div>
+                      <div className="space-y-1 text-[9px] text-gray-400">
+                        <div className="h-1.5 bg-white/10 rounded w-3/4" />
+                        <div className="h-1 bg-emerald-500/30 rounded w-full" />
+                        <div className="h-1 bg-white/5 rounded w-5/6" />
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[9px]">
+                      <span className="text-emerald-400 font-semibold">14 Keywords</span>
+                      <span className="text-gray-400">PDF • DOCX</span>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Matching Cover Letter */}
+                  <div className="rounded-xl bg-[#12161f] border border-white/10 p-2.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-bold text-white flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-teal-400" /> Cover Letter
+                        </span>
+                        <span className="text-[9px] text-teal-300 font-mono font-bold">Matched</span>
+                      </div>
+                      <div className="space-y-1 text-[9px] text-gray-400">
+                        <div className="h-1.5 bg-white/10 rounded w-2/3" />
+                        <div className="h-1 bg-teal-500/30 rounded w-full" />
+                        <div className="h-1 bg-white/5 rounded w-4/5" />
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between text-[9px]">
+                      <span className="text-teal-300 font-semibold">Custom Hook</span>
+                      <span className="text-gray-400">Ready</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status footer */}
+                <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px]">
+                  <span className="text-gray-300 flex items-center gap-1 text-[10px]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    CV + Cover Letter Synced
+                  </span>
+                  <span className="text-emerald-400 font-mono text-[10px]">
+                    Generated in 1.8s
                   </span>
                 </div>
               </div>
@@ -300,7 +343,7 @@ export default function Features() {
               </p>
             </motion.div>
 
-            {/* Tile 5: Career Audit & Scorecards (Tokens & Swatches) */}
+            {/* Tile 5: Automated Jobs Apply (Live Application Worker Queue) */}
             <motion.div 
               className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col justify-between overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)] flex-1"
               initial={{ opacity: 0, y: 30 }}
@@ -309,36 +352,89 @@ export default function Features() {
               transition={{ duration: 0.6, delay: 0.25 }}
             >
               <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-2">
+                  <Bot className="w-3 h-3" /> Auto-Apply Worker
+                </div>
                 <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
-                  Diagnostic Audits
+                  Automated Jobs Apply
                 </h3>
                 <p className="text-sm text-gray-400 leading-relaxed mb-4">
-                  Fix resume bottlenecks with deep structural scoring across impact, conciseness, and metrics.
+                  Put applications on autopilot. Our deterministic engine fills ATS fields, attaches tailored docs, and tracks submissions with zero manual hassle.
                 </p>
                 <Link 
-                  href="/ai-career-report"
+                  href="/dashboard/jobs"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
                 >
-                  Get Audit <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                  Explore Automation <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
 
-              <div className="mt-auto grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-emerald-500/30 transition-colors">
-                  <span className="text-sm font-black text-emerald-400">98%</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">ATS Match</span>
+              {/* Animated Application Worker Queue Visual */}
+              <div className="mt-auto rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3 flex flex-col gap-2 overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between pb-2 border-b border-white/5 text-[10px]">
+                  <span className="flex items-center gap-1.5 font-medium text-white">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Auto-Apply Queue
+                  </span>
+                  <span className="text-[9px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-1.5 py-0.5 rounded font-mono">
+                    3 Active Dispatches
+                  </span>
                 </div>
-                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-teal-500/30 transition-colors">
-                  <span className="text-sm font-black text-teal-300">STAR</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">Method</span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-blue-500/30 transition-colors">
-                  <span className="text-sm font-black text-blue-400">0</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">Red Flags</span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#090a0d] border border-white/[0.06] flex flex-col items-center justify-center text-center group-hover:border-amber-500/30 transition-colors">
-                  <span className="text-sm font-black text-amber-400">Top 5%</span>
-                  <span className="text-[10px] text-gray-400 mt-0.5">Ranking</span>
+
+                <div className="space-y-1.5">
+                  {/* Job Item 1 - Submitted */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-white/5 text-gray-300 text-[11px]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-5 h-5 rounded-md bg-[#1d222e] border border-white/10 flex items-center justify-center text-[9px] font-bold text-emerald-400 shrink-0">
+                        S
+                      </div>
+                      <div className="min-w-0 truncate">
+                        <div className="font-semibold text-white truncate text-[11px]">Stripe • Staff Frontend</div>
+                        <div className="text-[9px] text-gray-400">Greenhouse ATS</div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-[9px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Check className="w-2.5 h-2.5" /> Submitted
+                    </span>
+                  </div>
+
+                  {/* Job Item 2 - In Progress with animated fill */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-emerald-500/30 text-gray-300 text-[11px] relative overflow-hidden">
+                    <motion.div 
+                      className="absolute inset-y-0 left-0 bg-emerald-500/10 pointer-events-none"
+                      animate={{ width: ['20%', '85%', '20%'] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <div className="flex items-center gap-2 min-w-0 relative z-10">
+                      <div className="w-5 h-5 rounded-md bg-[#1d222e] border border-white/10 flex items-center justify-center text-[9px] font-bold text-teal-300 shrink-0">
+                        A
+                      </div>
+                      <div className="min-w-0 truncate">
+                        <div className="font-semibold text-white truncate text-[11px]">Airbnb • Full-Stack Lead</div>
+                        <div className="text-[9px] text-gray-400">Auto-filling form fields...</div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-[9px] font-semibold text-teal-300 bg-teal-500/10 border border-teal-500/30 px-2 py-0.5 rounded-full relative z-10 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-ping" />
+                      Applying
+                    </span>
+                  </div>
+
+                  {/* Job Item 3 - Queued */}
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-[#13161c] border border-white/5 text-gray-300 text-[11px]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-5 h-5 rounded-md bg-[#1d222e] border border-white/10 flex items-center justify-center text-[9px] font-bold text-gray-400 shrink-0">
+                        L
+                      </div>
+                      <div className="min-w-0 truncate">
+                        <div className="font-semibold text-gray-300 truncate text-[11px]">Linear • Product Engineer</div>
+                        <div className="text-[9px] text-gray-400">Lever ATS</div>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-[9px] text-gray-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
+                      Queued
+                    </span>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -422,7 +518,7 @@ export default function Features() {
                   Real-time interactive canvas with smart section reordering, modular typography, and instant PDF exports.
                 </p>
                 <Link 
-                  href="/studio"
+                  href="/templates"
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors mb-6"
                 >
                   Open Studio <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
@@ -466,7 +562,7 @@ export default function Features() {
 
         </div>
 
-        {/* Interactive Morphing Signal Deck (Inspired by reference video 00:02-00:04) */}
+        {/* Native In-Editor Mori AI Assistant Deck (Step 3 Mockup Animation) */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -474,7 +570,7 @@ export default function Features() {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="mt-12 lg:mt-16"
         >
-          <MorphSignalDeck />
+          <EditorMoriDeck />
         </motion.div>
       </div>
     </section>

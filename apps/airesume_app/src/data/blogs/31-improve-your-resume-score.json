@@ -1,0 +1,107 @@
+{
+  "id": "blog-031",
+  "slug": "improve-your-resume-score",
+  "title": "How to Improve Your Resume Score: From 60 to 85+ in One Sitting",
+  "subtitle": "What each sub-score measures, which fixes are worth your time, and how to raise a middling result without keyword stuffing.",
+  "excerpt": "A resume score in the 60s will not get you shortlisted. Learn what each sub-score measures, which fixes move the needle fastest, and how to push your result past 85 without keyword stuffing.",
+  "category": "ATS Optimization",
+  "readTime": "12 min read",
+  "date": "2026-09-11",
+  "featuredImage": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1920&q=80",
+  "featuredImageAlt": "Two people reviewing notes and figures on a laptop screen at a shared desk",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "resume score",
+    "improve resume score",
+    "resume score checker",
+    "raise ATS score",
+    "resume optimization",
+    "match score"
+  ],
+  "sections": [
+    {
+      "id": "what-a-60-tells-you",
+      "heading": "What a Score in the 60s Is Actually Telling You",
+      "content": "<p class=\"text-gray-300 mb-4\">A resume score in the 60s is not a verdict on your career. It means the raw material is present and something specific, usually one component, is holding the total down. Scores below about 50 rarely surface in a recruiter's shortlist, the 70s are competitive, and the mid-80s and above put you in the group that gets read first. Treat those as bands rather than promises, since every tool draws the lines slightly differently.</p><p class=\"text-gray-300 mb-4\">The useful part is that the gap between 62 and 86 is almost never a rewrite. In practice it comes down to a handful of findable problems: one keyword zone that is empty, four bullets that describe duties instead of results, a section heading the parser did not recognize, a summary that never names the role you want. Each is a small edit, and each lands in a different part of the report.</p><p class=\"text-gray-300 mb-4\">This guide works through what each component actually measures, then orders the fixes by how much movement they produce for how little effort. The goal is one sitting. You should finish with a document you can send, not a list of projects for the weekend.</p>"
+    },
+    {
+      "id": "the-four-sub-scores",
+      "heading": "The Four Sub-Scores and What Each One Really Measures",
+      "content": "<p class=\"text-gray-300 mb-4\">Before you change anything, find out which component is dragging your total. Each measures a different kind of failure, and each has a different ceiling:</p>",
+      "subSections": [
+        {
+          "heading": "Content and impact",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether your bullets state outcomes rather than duties. It looks for quantified results, strong opening verbs, and accomplishment statements instead of responsibility lists. If this is your weakest panel, your resume is reading as a job description of your roles rather than a record of what changed because you were in them.</p>"
+        },
+        {
+          "heading": "Keyword match",
+          "content": "<p class=\"text-gray-300 mb-3\">Overlap between your document and one specific posting: exact terms, common variants, and where those terms appear. It is the only component that changes when you apply to a different job, and usually the fastest to raise, because the missing terms are already listed for you in the posting itself.</p>"
+        },
+        {
+          "heading": "Format and parseability",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether the file survives conversion: text extraction, date consistency, font choices, tables and images, contact placement. This component is binary in spirit. The content is either readable to a parser or it is not, which is why it is worth clearing completely rather than partially.</p>"
+        },
+        {
+          "heading": "Structure and completeness",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether the expected sections exist and appear in a sensible order: summary, experience, education, skills, plus the contact block. Missing sections cost you twice, because a skills list that never made it into the document takes its keywords down with it.</p>"
+        }
+      ]
+    },
+    {
+      "id": "prioritized-fix-list",
+      "heading": "The Fix List, Ranked by Points Gained per Minute",
+      "content": "<p class=\"text-gray-300 mb-4\">Work down this list in order. Everything above the halfway mark can be done in a single sitting, and the early items are the ones that move a middling result fastest. Run your current file through a <a href=\"/resume-score\" class=\"text-emerald-400 font-bold hover:underline\">resume score</a> check before you start, so you know which of the four components is the one holding your total down:</p><ol class=\"list-decimal list-inside space-y-3 text-gray-300 my-6\"><li><strong class=\"text-white\">Clear every parsing flag.</strong> Re-export with a live text layer, replace any table or image holding body text, and standardize your date format. Nothing downstream counts until the file reads cleanly, and this is the cheapest work on the list.</li><li><strong class=\"text-white\">Name the target role in your summary.</strong> Put the posting's title in your opening line and add the three most important missing terms. The top of the document carries the most weight, and this edit takes ten minutes.</li><li><strong class=\"text-white\">Rebuild the skills block around the posting.</strong> List the tools they named first, in their phrasing, including both the acronym and the spelled-out form where the two differ.</li><li><strong class=\"text-white\">Rewrite your four most recent bullets as results.</strong> One verb, one outcome, one number where you have one. Four bullets is usually enough to change how the entire section scans.</li><li><strong class=\"text-white\">Fix section headings and contact placement.</strong> Standard labels, contact details in the body rather than the header. Two minutes, and it protects everything above it.</li><li><strong class=\"text-white\">Trim roles older than ten years to one line.</strong> This stops early-career detail from pushing your recent accomplishments down the page, where fewer people read.</li><li><strong class=\"text-white\">Only now do polish work.</strong> Tighten the summary, cut filler adjectives, check page length. The gains here are real but small, which is exactly why they come last.</li></ol>"
+    },
+    {
+      "id": "worked-example",
+      "heading": "A Worked Example: One Bullet, Rewritten in Four Minutes",
+      "content": "<p class=\"text-gray-300 mb-4\">Here is a single experience bullet from a marketing manager's resume, checked against a demand generation role. Nothing else in the document changed between the two readings:</p><div class=\"grid md:grid-cols-2 gap-6 my-6\"><div class=\"bg-red-950/20 border border-red-800/40 rounded-xl p-5\"><h4 class=\"text-red-400 font-bold mb-2\">Before: content and keyword panels both weak</h4><div class=\"text-xs text-red-300 leading-relaxed font-mono bg-black/40 p-3 rounded-lg mb-3\">Responsible for managing email campaigns and working with the team to improve results.</div><div class=\"text-xs text-gray-400\"><strong>Problems:</strong> opens with a duty, no outcome, no number, and none of the tools the posting names. The keyword panel scored zero for the method it asks for.</div></div><div class=\"bg-emerald-950/20 border border-emerald-700/40 rounded-xl p-5\"><h4 class=\"text-emerald-400 font-bold mb-2\">After: same facts, stated as impact</h4><div class=\"text-xs text-emerald-300 leading-relaxed font-mono bg-black/40 p-3 rounded-lg mb-3\">Built and ran the Salesforce Marketing Cloud email program across 6 segments, lifting open rates 14% and contributing $480K in pipeline over two quarters.</div><div class=\"text-xs text-gray-400\"><strong>Why it moved:</strong> names the tool the posting asks for, opens with a verb, and attaches a number to the outcome the role is hired to produce.</div></div></div><p class=\"text-gray-300 mb-4\">One bullet cannot carry a whole document, and it should not try to. What changed here is that the same facts started counting in two components at once instead of neither: the content panel saw an outcome, and the keyword panel saw a term it was looking for. Multiply that pattern across your four most recent bullets, empty the keyword gaps in your summary and skills block, and clear the parsing flags, and a document sitting in the low 60s lands in the mid-80s without a single invented claim.</p><p class=\"text-gray-300 mb-4\">Notice what did not happen: no new achievements were invented, and no number was rounded up. Every figure in the rewritten version came from the original experience; only the framing changed. If you cannot find a number for a bullet, use scope instead, such as the number of segments, markets, accounts or people involved. Scope is specific, it is verifiable, and it reads as concrete to a recruiter even without a percentage attached.</p>"
+    },
+    {
+      "id": "why-stuffing-backfires",
+      "heading": "Why Keyword Stuffing Caps Your Score Instead of Lifting It",
+      "content": "<p class=\"text-gray-300 mb-4\">The tempting response to a weak keyword panel is to paste the posting into your skills block until every term appears. Short-term, some checkers will reward you. Then two things go wrong.</p><p class=\"text-gray-300 mb-4\">First, repetition stops reading like experience. A skills line that lists the same tool four ways, or a paragraph where every second word is lifted from the requirements, is obvious to anyone who reads resumes all day. Screening tools are built to notice obvious manipulation, and recruiters do not need a tool to notice it at all. What you gain in a panel you lose in credibility the moment a human opens the file.</p><p class=\"text-gray-300 mb-4\">Second, you have created claims you have to defend. Every term on your resume is fair game in an interview, and a keyword you added purely to satisfy a scoring tool turns into the question you cannot answer well. The fix that lasts is the same one throughout this guide: add true terms where they were missing, place them where they belong, and leave the rest alone. That raises the same panel and survives the conversation at the end of the process.</p><p class=\"text-gray-300 mb-4\">There is also a structural reason stuffing fails. Repetition does not add coverage, it adds noise: the fifth occurrence of the same tool teaches the extractor nothing new, while the ten lines it consumed could have carried two missing terms and a result. Treat every skills line and bullet as space with a cost, and spend it on terms the posting asks for that you have not used yet. Scarcity, not saturation, is what makes a keyword block work in your favor.</p>"
+    },
+    {
+      "id": "verify-and-track",
+      "heading": "Verify the Result, Then Track It Across Versions",
+      "content": "<p class=\"text-gray-300 mb-4\">After your edits, run the document through an <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">ATS Resume Checker</a> rather than trusting your own sense that it improved. The check tells you whether the parsing flags are genuinely gone, whether the headings now resolve, and whether the terms you added are landing in sections the tool actually reads. It is the difference between believing a fix worked and knowing it did.</p><p class=\"text-gray-300 mb-4\">Then check the same file with a <a href=\"/resume-score\" class=\"text-emerald-400 font-bold hover:underline\">resume score</a> before and after each round of edits. One reading is a snapshot; two readings separated by an edit tell you whether the change was worth the time, which is how you learn which of the seven fixes above moves fastest on your particular document.</p><p class=\"text-gray-300 mb-4\">Keep that history for a practical reason: tailoring drifts. On a fourth application in a row it is easy to overwrite the summary with the wrong version, drop a section, or mangle a date range without noticing. A quick re-check after each edit keeps the floor under your document while you are working quickly.</p><p class=\"text-gray-300 mb-4\">The order of those two tools matters. Check the file structure first, then look at the number: a score calculated on scrambled text is measuring the wrong document, and you will chase keyword gaps that were never the real problem. Parse clean, then read the score, then edit, then repeat the pair. Two passes per round is enough, and each one takes less time than the edit that follows it.</p>"
+    },
+    {
+      "id": "when-to-stop",
+      "heading": "When to Stop Optimizing and Send It",
+      "content": "<p class=\"text-gray-300 mb-4\">There is a point past which further edits stop being optimization. Once every parsing flag is clear, your summary names the role, your recent bullets carry outcomes, and the keyword panel shows no honest gaps left to fill, you are in the mid-80s or above. From there, extra points tend to come from repetition or padding, and padding is exactly what makes a document worse to read.</p><p class=\"text-gray-300 mb-4\">The arithmetic favors stopping. Twenty minutes spent squeezing three more points out of an existing document is twenty minutes you did not spend tailoring it to the posting, writing the note that goes with it, or starting the next application. A strong score gets your file read; the tailoring is what makes the reader keep reading.</p><p class=\"text-gray-300 mb-4\">So set a bar and hold to it: parsing clean, mid-80s or better, nothing on the page you could not defend for five minutes. When the document clears all three, send it, log it, and move to the next one. Your first result is waiting to be measured:</p><p class=\"text-gray-300 mb-4\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#013f2e] hover:bg-[#025c43] text-white px-8 py-4 rounded-full font-bold shadow-lg transition-colors duration-200 text-sm\">Start with AIResume Free</a> <a href=\"/ai-resume-builder\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Try the AI Resume Builder</a></p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "what-a-60-tells-you", "title": "What a Score in the 60s Is Actually Telling You" },
+    { "id": "the-four-sub-scores", "title": "The Four Sub-Scores and What Each One Really Measures" },
+    { "id": "prioritized-fix-list", "title": "The Fix List, Ranked by Points Gained per Minute" },
+    { "id": "worked-example", "title": "A Worked Example: One Bullet, Rewritten in Four Minutes" },
+    { "id": "why-stuffing-backfires", "title": "Why Keyword Stuffing Caps Your Score Instead of Lifting It" },
+    { "id": "verify-and-track", "title": "Verify the Result, Then Track It Across Versions" },
+    { "id": "when-to-stop", "title": "When to Stop Optimizing and Send It" }
+  ],
+  "faqs": [
+    {
+      "question": "How many points can one rewritten bullet add?",
+      "answer": "There is no fixed value, because a bullet affects two components at once: content and, when it names a required term, keyword match. On a middling document, rewriting the four most recent bullets is often worth more than any other single edit, because that section carries the most weight."
+    },
+    {
+      "question": "Is 100 a realistic resume score to aim for?",
+      "answer": "It is reachable, and reaching it usually means you have added everything the checker asked for rather than improved your document. Past the mid-80s, extra points tend to come from repetition or padding. Clear every parsing error, land in the mid-80s, and spend the saved time on your next application."
+    },
+    {
+      "question": "Does tailoring for each job change my score?",
+      "answer": "Yes. The keyword panel compares your document to one specific posting, so the same file scores differently against two roles without any edits. The other three components barely move. That is why a strong master resume plus a short tailoring pass per application gives you a stable floor and a competitive match."
+    },
+    {
+      "question": "Should I fix format issues before rewriting content?",
+      "answer": "Yes. Format and structure problems decide whether your content is readable at all, so they are cheap to fix and logically first. Once the file parses cleanly, keyword and content work starts showing up in your score instead of being computed on scrambled or missing text."
+    },
+    {
+      "question": "Will a higher resume score guarantee more interviews?",
+      "answer": "No tool can promise interviews, because hiring depends on the pool, the timing and the person reading it. What a higher score does is remove the failures that stop your application from being considered at all, so your actual experience ends up competing instead of being filtered out silently."
+    }
+  ]
+}

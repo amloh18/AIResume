@@ -31,6 +31,17 @@ export const metadata: Metadata = {
   },
 };
 
+const breadcrumb = breadcrumbSchema([
+  { name: 'Home', path: '/' },
+  { name: 'AI Resume Builder' },
+]);
+
 export default function Page() {
-  return <AIResumeBuilderPage />;
+  return (
+    <>
+      <JsonLd data={breadcrumb} />
+      <JsonLd data={faqSchema(AI_RESUME_BUILDER_FAQ)} />
+      <AIResumeBuilderPage />
+    </>
+  );
 }

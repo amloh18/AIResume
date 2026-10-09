@@ -1,5 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import { Breadcrumbs, FaqSection, JsonLd, breadcrumbSchema, faqSchema } from '@/components/seo/StructuredData'
+import { ROLE_GUIDES } from '@/data/role-guides'
 
 // Role data with unique content for each role
 const roleData: Record<string, {
@@ -320,6 +322,19 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
   }
 }
 
+// Cross-links from every role page into the commercial pages. Role pages attract long-tail search
+// traffic they can rarely convert on their own; these give that traffic a path to a page that can,
+// and pass crawl priority with it.
+const RELATED_GUIDE_LINKS = [
+  { href: '/ats-resume-checker', label: 'ATS resume checker' },
+  { href: '/resume-score', label: 'Resume score checker' },
+  { href: '/ai-resume-builder', label: 'AI resume builder' },
+  { href: '/templates', label: 'Resume templates' },
+  { href: '/blog/how-to-build-ats-friendly-resume', label: 'Build an ATS-friendly resume' },
+  { href: '/blog/ats-score-optimization', label: 'ATS score optimisation' },
+  { href: '/compare/resume-builders', label: 'Compare resume builders' },
+]
+
 export default async function RolePage({ params }: { params: Promise<{ role: string }> }) {
   const { role } = await params
   const data = roleData[role]
@@ -337,12 +352,28 @@ export default async function RolePage({ params }: { params: Promise<{ role: str
       </div>
     )
   }
-  
+
+  // Long-form, role-specific copy. Missing for a role only if one was added to `roleData` without
+  // a matching guide — the sections below simply do not render rather than shipping empty headings.
+  const guide = ROLE_GUIDES[role]
+  const breadcrumb = breadcrumbSchema([
+    { name: 'Home', path: '/' },
+    { name: `${data.name} Resume` },
+  ])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+      <JsonLd data={breadcrumb} />
+      {guide ? <JsonLd data={faqSchema(guide.faq)} /> : null}
+
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
+          <Breadcrumbs
+            center
+            className="mb-6"
+            items={[{ name: 'Home', path: '/' }, { name: `${data.name} Resume` }]}
+          />
           <h1 className="text-5xl font-bold text-white mb-6">
             {data.name} Resume
           </h1>
@@ -430,6 +461,78 @@ export default async function RolePage({ params }: { params: Promise<{ role: str
                   <p className="text-gray-300">{tip}</p>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Long-form writing guide */}
+      {guide ? (
+        <>
+          <section className="py-16 px-4 bg-gray-800/50">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold text-white mb-6 text-center">
+                How to Write a {data.name} Resume
+              </h2>
+              <p className="text-gray-300 leading-relaxed mb-8">{guide.howToIntro}</p>
+              <div className="space-y-4">
+                {guide.howTo.map((step, index) => (
+                  <div key={step.title} className="bg-gray-800 rounded-xl p-6 border border-gray-700 flex gap-4">
+                    <span className="text-green-500 font-bold shrink-0">{index + 1}</span>
+                    <div>
+                      <h3 className="text-white font-semibold mb-1">{step.title}</h3>
+                      <p className="text-gray-300 leading-relaxed text-sm">{step.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Common mistakes */}
+          <section className="py-16 px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold text-white mb-6 text-center">
+                Common {data.name} Resume Mistakes
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4">
+                {guide.mistakes.map((mistake) => (
+                  <div key={mistake.title} className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <h3 className="text-white font-semibold mb-2 flex gap-2">
+                      <span className="text-red-400">✕</span>
+                      {mistake.title}
+                    </h3>
+                    <p className="text-gray-400 leading-relaxed text-sm">{mistake.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {/* FAQ */}
+      {guide ? (
+        <section className="py-16 px-4 bg-gray-800/50">
+          <div className="max-w-4xl mx-auto">
+            <FaqSection items={guide.faq} title={`${data.name} Resume FAQs`} />
+          </div>
+        </section>
+      ) : null}
+
+      {/* Related guides — pushes crawl and link equity to the money pages */}
+      <section className="py-16 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-8 text-center">Related Guides</h2>
+          <div className="flex flex-wrap justify-center gap-3">
+            {RELATED_GUIDE_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-full text-sm text-gray-300 hover:text-white hover:border-green-500/50 transition"
+              >
+                {link.label}
+              </Link>
             ))}
           </div>
         </div>

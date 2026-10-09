@@ -41,14 +41,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ]
 
   // ── Free tools ─────────────────────────────────────────────────────────
-  // `/explore` only. `/interview-coach` and `/linkedin-enhancer` are wrapped in
-  // `<RouteGuard requireAuth>` and redirect a signed-out visitor to `/sign-in`, so they are not
-  // indexable pages — listing them in a sitemap advertises a redirect, which is a contradictory
-  // signal. They are also disallowed in `robots.txt`. If either becomes public, add it here AND
-  // remove the disallow.
-  const toolPages = ['explore']
-
-  const toolSitemapEntries = toolPages.map((tool) => page(`/${tool}`, 0.7, 'weekly'))
+  // `/explore` is absent on purpose: it renders the identical body as `/templates` and now carries a
+  // canonical pointing there, so listing it would advertise a non-canonical URL. Sitemaps should
+  // contain canonical URLs only.
+  //
+  // `/interview-coach` and `/linkedin-enhancer` are wrapped in `<RouteGuard requireAuth>` and are
+  // marked `noindex` — they are not indexable pages. Note that `robots.txt` does NOT disallow them
+  // any more: a Disallow stops Google from fetching the page, which also stops it from ever reading
+  // the noindex directive. Listing them here would advertise a redirect, so they stay out.
+  const toolSitemapEntries: MetadataRoute.Sitemap = []
 
   // ── Role-specific resume pages ─────────────────────────────────────────
   const rolePages = [

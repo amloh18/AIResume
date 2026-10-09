@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, ArrowRight } from 'lucide-react'
 import CardNav from '@/components/landing/CardNav'
 import Footer from '@/components/landing/Footer'
 import { navLinks } from '@/data/navigation'
+import { Breadcrumbs } from '@/components/seo/StructuredData'
 
 export default function CompareResumeBuildersPage() {
   return (
@@ -20,6 +21,7 @@ export default function CompareResumeBuildersPage() {
         
         <div className="relative z-10 max-w-5xl mx-auto">
           <header className="pl-0 text-left flex flex-col items-start mb-16">
+            <Breadcrumbs className="mb-6" items={[{ name: 'Home', path: '/' }, { name: 'Best Resume Builders in 2026' }]} />
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

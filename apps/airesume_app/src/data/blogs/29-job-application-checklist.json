@@ -1,0 +1,197 @@
+{
+  "id": "blog-029",
+  "slug": "job-application-checklist",
+  "title": "The Job Application Checklist: 21 Checks to Run Before You Hit Submit",
+  "subtitle": "A complete pre-submission checklist covering tailoring, ATS formatting, contact details, file hygiene, proofreading and follow-up — the part of the process most candidates skip.",
+  "excerpt": "Most applications are rejected before a human reads them. Run this 21-point checklist before you hit submit: tailoring, ATS formatting, contact details, file naming, proofreading and follow-up.",
+  "category": "Job Applications",
+  "readTime": "13 min read",
+  "date": "2026-07-31",
+  "featuredImage": "https://images.unsplash.com/photo-1586281380117-5a60ae2050cc?w=1920&q=80",
+  "featuredImageAlt": "Printed checklist on a clipboard beside a laptop and pen on a desk",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "job application checklist",
+    "resume checklist",
+    "before you submit",
+    "job application tips",
+    "ATS checklist",
+    "apply for a job"
+  ],
+  "sections": [
+    {
+      "id": "why-a-checklist-beats-hope",
+      "heading": "Why Five Minutes of Checking Beats a Week of Hoping",
+      "content": "<p class=\"text-gray-300 mb-4\">Most applications are not rejected because the candidate was unqualified. They are rejected because of a detail nobody checked: a filename the portal renamed on upload, a phone number stranded in a document header, a summary that still references the previous company. None of those errors announce themselves. You only ever see the rejection.</p><p class=\"text-gray-300 mb-4\">This checklist turns the last few minutes of any application into a repeatable routine. It runs in the order the work actually happens: research the role, tailor the document, verify the formatting, clean up the file, proofread with a method, then handle the ten minutes after you submit. Twenty-one checks in six stages, and after a week you will do most of them without reading.</p>"
+    },
+    {
+      "id": "stage-1-research",
+      "heading": "Stage 1: Research the Role Before You Open Your Resume (Checks 1–4)",
+      "content": "<p class=\"text-gray-300 mb-4\">Tailoring starts before your document opens. These first four checks make sure you are aiming at the right target and that you know exactly which terms the employer is listening for.</p>",
+      "subSections": [
+        {
+          "heading": "Check 1: Confirm the non-negotiables",
+          "content": "<p class=\"text-gray-300 mb-3\">Separate the posting's non-negotiables from its wish list. A required professional license, a required work authorization, or a stated minimum years in a regulated discipline will end your application no matter how well the document is written; almost everything else is negotiable. Make that call now, before you spend an hour customizing a resume for a role you cannot accept.</p>"
+        },
+        {
+          "heading": "Check 2: Extract the five terms that matter most",
+          "content": "<p class=\"text-gray-300 mb-3\">Copy the posting into a plain text file and highlight every term that appears more than once — the tools, the methods, the outputs. Repeated terms are what the role is genuinely about, and they form the shortlist your resume has to hit. Five is usually enough to cover the screen, and you will reuse them in every later stage.</p>"
+        },
+        {
+          "heading": "Check 3: Note the employer's own vocabulary",
+          "content": "<p class=\"text-gray-300 mb-3\">Employers write in their own dialect. One company says pipeline, another says funnel; one says stakeholders, another says partners. Note the phrasing they chose and use it back to them in your summary and bullets later. Mirroring their vocabulary reads as fluency in their world; your preferred synonym reads as guessing.</p>"
+        },
+        {
+          "heading": "Check 4: Save a copy of the posting",
+          "content": "<p class=\"text-gray-300 mb-3\">Postings get edited, filled internally, or deleted without warning. Save a PDF or a screenshot the day you apply. Three weeks later, when a screening call lands, you will want the exact requirements the employer published rather than the version you half-remember.</p>"
+        }
+      ]
+    },
+    {
+      "id": "stage-2-tailoring",
+      "heading": "Stage 2: Tailor the Document to This Posting (Checks 5–9)",
+      "content": "<p class=\"text-gray-300 mb-4\">These five checks are the actual tailoring work. Run them against the version built for this posting, not your master document.</p>",
+      "subSections": [
+        {
+          "heading": "Check 5: Put the target title in your summary",
+          "content": "<p class=\"text-gray-300 mb-3\">Put the target role's own title, or a close and honest version of it, in your opening summary. If the posting says Customer Success Manager and your resume says Client Relations Specialist, the match between your document and the role is weaker than it deserves to be even when the work is identical. Name the role you are applying for in the first line.</p>"
+        },
+        {
+          "heading": "Check 6: Mirror the core keywords across three zones",
+          "content": "<p class=\"text-gray-300 mb-3\">Every core keyword from your shortlist should appear at least once, and the top three should appear two or three times. Spread them across three zones: the summary, the skills block, and your two most recent roles. A term clumped into one section helps less than the same term appearing naturally where it already belongs.</p>"
+        },
+        {
+          "heading": "Check 7: Open recent bullets with a result",
+          "content": "<p class=\"text-gray-300 mb-3\">Open your last two positions and make sure each bullet opens with what happened rather than what you were responsible for. Led, Reduced, Launched and Shipped let a reader find the outcome immediately; Responsible for makes them hunt for it. One result per bullet, stated early, is worth more than three duties strung together.</p>"
+        },
+        {
+          "heading": "Check 8: Cut roles older than ten years to one line",
+          "content": "<p class=\"text-gray-300 mb-3\">Roles older than ten years should take one line each: title, employer, years. Detail from 2013 tells a reader almost nothing about what you will do now, but it does push your recent accomplishments below the fold where fewer people look.</p>"
+        },
+        {
+          "heading": "Check 9: Reorder your skills to match their priority",
+          "content": "<p class=\"text-gray-300 mb-3\">Reorder your skills so the posting's first requirement appears first. Lists read top to bottom by both people and parsers, and the order you inherited from your master document was written for a different job. Thirty seconds of reordering quietly aligns the most scanned block on the page.</p>"
+        }
+      ]
+    },
+    {
+      "id": "stage-3-formatting",
+      "heading": "Stage 3: Format It So a System Can Parse It (Checks 10–13)",
+      "content": "<p class=\"text-gray-300 mb-4\">An employer's system reads your file before anyone opens it, so the formatting has to survive a machine. The fastest way to catch problems here is to run the document through an <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">ATS Resume Checker</a> first — it parses your file the way an applicant tracking system will, then shows you what broke. Then confirm these four by eye:</p>",
+      "subSections": [
+        {
+          "heading": "Check 10: Use standard section headings",
+          "content": "<p class=\"text-gray-300 mb-3\">Use the boring, standard labels: Summary, Work Experience, Education, Skills. Creative headings such as My Journey or Career Story are perfectly readable to a person but easy for a parser to misfile, and content filed under the wrong heading effectively disappears from the search a recruiter runs later.</p>"
+        },
+        {
+          "heading": "Check 11: Keep body text out of images and tables",
+          "content": "<p class=\"text-gray-300 mb-3\">Nothing important should live inside an image, a text box, or a table cell. Logos, skill bars and multi-column graphic layouts are common causes of scrambled text once a system strips the formatting. Simple test: select the text in your PDF and copy it. If it copies in the wrong order, so does the parse.</p>"
+        },
+        {
+          "heading": "Check 12: Use one date format everywhere",
+          "content": "<p class=\"text-gray-300 mb-3\">Use one date format throughout, for example 04/2022 to Present, without mixing styles like Apr 22 into the same page. Consistent dates let the system calculate tenure and total experience correctly, and mixed formats are one of the more common reasons a timeline comes back wrong.</p>"
+        },
+        {
+          "heading": "Check 13: Pick one readable standard font",
+          "content": "<p class=\"text-gray-300 mb-3\">Pick one standard typeface — Arial, Calibri, Roboto or Inter — at 10.5pt or larger for body text. Decorative fonts, symbols used as icons and text under 10pt are all places where characters turn into blanks during conversion. Consistency matters more than personality here.</p>"
+        }
+      ]
+    },
+    {
+      "id": "stage-4-file-hygiene",
+      "heading": "Stage 4: File Hygiene and Contact Details (Checks 14–16)",
+      "content": "<p class=\"text-gray-300 mb-4\">The file parses. Now make sure it arrives cleanly and that the employer can actually reach you.</p>",
+      "subSections": [
+        {
+          "heading": "Check 14: Name the file predictably",
+          "content": "<p class=\"text-gray-300 mb-3\">Name the file Firstname-Lastname-Resume-Company.pdf. Avoid spaces, accents and version words like final, latest or v3 — some portals strip anything beyond a simple name, and a file called Resume (7) FINAL.pdf tells the recruiter nothing about whose it is or which role it belongs to.</p>"
+        },
+        {
+          "heading": "Check 15: Put contact details in the document body",
+          "content": "<p class=\"text-gray-300 mb-3\">Put your email, phone number, city and LinkedIn URL in the body of the document, not in the header or footer. Headers and footers are frequently dropped during parsing, which means contact details buried there never make it into the employer's record. Your name and one working way to reach you belong in the first six lines.</p>"
+        },
+        {
+          "heading": "Check 16: Open the file on another device",
+          "content": "<p class=\"text-gray-300 mb-3\">Email the PDF to yourself and open it on your phone, or on a second machine if you have one. Check that it renders, that the text still selects and that your links open. A file that looks perfect in the application you exported from does not prove that it travels well.</p>"
+        }
+      ]
+    },
+    {
+      "id": "stage-5-proofreading",
+      "heading": "Stage 5: Proofread With a Method, Not a Glance (Checks 17–19)",
+      "content": "<p class=\"text-gray-300 mb-4\">Proofreading your own writing fails for a structural reason: you read what you meant, not what is on the page. These three passes counter that directly.</p>",
+      "subSections": [
+        {
+          "heading": "Check 17: Read the document backwards",
+          "content": "<p class=\"text-gray-300 mb-3\">Read the document from the last sentence to the first. The backward order stops your brain from silently correcting the words, so transposed letters, doubled words and missing punctuation surface instead of sliding past. It feels slow. It takes about four minutes and catches the errors a spell checker never will.</p>"
+        },
+        {
+          "heading": "Check 18: Verify every name, number and link",
+          "content": "<p class=\"text-gray-300 mb-3\">Check every proper noun and every number: company names, product names, certification titles, dates, metrics. Then open each link in the document and confirm it loads. A resume that claims you grew revenue by 40% when you meant 14%, or links to a private portfolio, costs credibility you do not get back.</p>"
+        },
+        {
+          "heading": "Check 19: Read the cover letter out loud",
+          "content": "<p class=\"text-gray-300 mb-3\">If you attached a cover letter, read it out loud, once. It should name the specific company and the specific role. A letter addressed to the wrong employer is worse than no letter at all, because it tells the reader exactly how many applications came before theirs.</p>"
+        }
+      ]
+    },
+    {
+      "id": "stage-6-after-submitting",
+      "heading": "Stage 6: The Ten Minutes After You Submit (Checks 20–21)",
+      "content": "<p class=\"text-gray-300 mb-4\">Hitting submit is not the end of the workflow. Two checks in the first ten minutes protect you for everything that follows.</p>",
+      "subSections": [
+        {
+          "heading": "Check 20: Log the application immediately",
+          "content": "<p class=\"text-gray-300 mb-3\">Log the application before you close the tab: date, company, role, source, the resume version you sent and any contact name. Two weeks later this is the difference between a confident follow-up that references the exact posting and a generic message saying you applied recently. One tracker, so the whole search lives in one place.</p>"
+        },
+        {
+          "heading": "Check 21: Save the exact file you sent",
+          "content": "<p class=\"text-gray-300 mb-3\">Keep the exact file you submitted. Save a dated copy such as Firstname-Lastname-Company-2026-07-31.pdf and note the <a href=\"/resume-score\" class=\"text-emerald-400 font-bold hover:underline\">resume score</a> that version earned. When a recruiter asks you to resend, or a hiring manager wants to see what they reviewed, you want the identical document, not a draft you have edited since.</p>"
+        }
+      ]
+    },
+    {
+      "id": "running-the-full-checklist",
+      "heading": "How to Run All 21 Checks in Under Ten Minutes",
+      "content": "<p class=\"text-gray-300 mb-4\">Your first pass will take fifteen to twenty minutes, because you are reading every check and deciding what it means for your document. After that the stages batch: research and tailoring happen in one sitting while the posting is still open in front of you, and formatting, file hygiene and proofreading become a single sweep at the end.</p><p class=\"text-gray-300 mb-4\">A workable rhythm is to keep the checklist beside you for the first week, then let stages one and three become part of how you read a posting. The file checks take about three minutes combined once nothing is changing. The proofreading passes are the ones to never skip, because they catch the errors you are structurally blind to in your own writing.</p><p class=\"text-gray-300 mb-4\">If you would rather have a tool than a mental list, that is what the software is for: paste the posting next to your document and the checks that depend on the job description get run for you, leaving the judgment calls, the ones only you can make, to you.</p>"
+    },
+    {
+      "id": "run-every-check-once",
+      "heading": "Run Every Check Once and Never Submit Blind Again",
+      "content": "<p class=\"text-gray-300 mb-4\">Six stages, twenty-one checks: research the role, tailor the document, format it for a machine, clean the file, proofread with a method, and log what you sent. Each check costs seconds while you are still editing. Every unchecked mistake costs an interview you will never hear about, because the rejection arrives with no explanation attached.</p><p class=\"text-gray-300 mb-4\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#013f2e] hover:bg-[#025c43] text-white px-8 py-4 rounded-full font-bold shadow-lg transition-colors duration-200 text-sm\">Start with AIResume Free</a> <a href=\"/ai-resume-builder\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Try the AI Resume Builder</a></p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "why-a-checklist-beats-hope", "title": "Why Five Minutes of Checking Beats a Week of Hoping" },
+    { "id": "stage-1-research", "title": "Stage 1: Research the Role Before You Open Your Resume (Checks 1–4)" },
+    { "id": "stage-2-tailoring", "title": "Stage 2: Tailor the Document to This Posting (Checks 5–9)" },
+    { "id": "stage-3-formatting", "title": "Stage 3: Format It So a System Can Parse It (Checks 10–13)" },
+    { "id": "stage-4-file-hygiene", "title": "Stage 4: File Hygiene and Contact Details (Checks 14–16)" },
+    { "id": "stage-5-proofreading", "title": "Stage 5: Proofread With a Method, Not a Glance (Checks 17–19)" },
+    { "id": "stage-6-after-submitting", "title": "Stage 6: The Ten Minutes After You Submit (Checks 20–21)" },
+    { "id": "running-the-full-checklist", "title": "How to Run All 21 Checks in Under Ten Minutes" },
+    { "id": "run-every-check-once", "title": "Run Every Check Once and Never Submit Blind Again" }
+  ],
+  "faqs": [
+    {
+      "question": "How long does the checklist take once you know it?",
+      "answer": "Your first run takes fifteen to twenty minutes because you are reading every check. After a week, the research and tailoring stages become part of how you read a posting, and the formatting and file checks take about three minutes combined. Budget ten minutes per application once it is habit."
+    },
+    {
+      "question": "Should you run this checklist before every single application?",
+      "answer": "Run stages two through six every time, because the document changes with each posting. Stage one only needs repeating when the target changes, and stage four when you touch the template. The habit costs minutes per application; skipping it is what produces rejections you never get an explanation for."
+    },
+    {
+      "question": "What should you do if you are short on time?",
+      "answer": "Skip the polish, never the checks. A generic resume that parses cleanly, carries correct contact details and has no typos still competes; a perfectly tailored one with a broken filename or a missing phone number does not. Run the formatting, file and proofreading stages first, then submit that version with confidence."
+    },
+    {
+      "question": "Does running these checks mean gaming the applicant tracking system?",
+      "answer": "No. Every check on this list either makes your real experience easier to read or removes an accident that hides it. You are not adding claims you cannot defend or stuffing keywords into a hidden block. You are making sure the honest version of your record reaches a person intact."
+    },
+    {
+      "question": "Which single check prevents the most silent rejections?",
+      "answer": "Opening the final PDF on a different device before you submit. That one habit catches wrong contact details, broken links, scrambled dates and files that will not open at all, which is the category of mistake that produces an automatic rejection with no feedback attached to it whatsoever."
+    }
+  ]
+}

@@ -256,7 +256,7 @@ export default function FeaturesPage() {
                   <ArrowRight size={20} />
                 </Link>
                 <Link
-                  href="/ai-career-report"
+                  href="/ats-resume-checker"
                   className="px-8 py-4 bg-white/5 border border-white/15 text-white font-bold rounded-full hover:bg-white/10 transition-colors inline-flex items-center gap-2"
                 >
                   Try Free Analysis

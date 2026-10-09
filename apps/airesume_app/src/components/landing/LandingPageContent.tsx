@@ -13,10 +13,10 @@ import { navLinks } from '@/data/navigation';
 const Features = dynamic(() => import('@/components/landing/Features'), { ssr: true });
 const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
-const CompetitorComparison = dynamic(() => import('@/components/landing/CompetitorComparison'), { ssr: true });
 const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks'), { ssr: true });
 const Pricing = dynamic(() => import('@/components/landing/Pricing'), { ssr: true });
 const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), { ssr: true });
+const ResumeGuides = dynamic(() => import('@/components/landing/ResumeGuides'), { ssr: true });
 const FAQ = dynamic(() => import('@/components/landing/FAQ'), { ssr: true });
 const Footer = dynamic(() => import('@/components/landing/Footer'), { ssr: true });
 
@@ -90,8 +90,6 @@ export default function LandingPageContent() {
         <ChromeExtension />
         <Testimonials />
 
-        <CompetitorComparison />
-
         <div className="dark">
           <Pricing onPlanSelect={(plan) => {
             window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
@@ -99,6 +97,8 @@ export default function LandingPageContent() {
         </div>
 
         <BlogSection />
+
+        <ResumeGuides />
 
         <FAQ />
         <Footer />

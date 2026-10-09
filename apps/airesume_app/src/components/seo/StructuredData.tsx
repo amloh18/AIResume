@@ -29,8 +29,8 @@ export type BreadcrumbItem = { name: string; path?: string }
 
 /**
  * Breadcrumb schema. Google reads this for the breadcrumb trail under a result, and Search Console
- * has a dedicated "Breadcrumbs" enhancement report for it — which is empty on any page that omits it.
- * The last item is normally the current page and carries no `item`, per Google's own examples.
+ * has a dedicated "Breadcrumbs" enhancement report for it — which stays empty on any page that omits
+ * it. The last item is normally the current page and carries no `item`, per Google's own examples.
  */
 export function breadcrumbSchema(items: BreadcrumbItem[]) {
   return {
@@ -43,6 +43,46 @@ export function breadcrumbSchema(items: BreadcrumbItem[]) {
       ...(entry.path ? { item: absoluteUrl(entry.path) } : {}),
     })),
   }
+}
+
+/**
+ * Visible breadcrumb trail. Rendered alongside `breadcrumbSchema` — markup that describes a trail
+ * nobody can see is the kind of mismatch Google discounts.
+ */
+export function Breadcrumbs({
+  items,
+  className = '',
+  center = false,
+}: {
+  items: BreadcrumbItem[]
+  className?: string
+  center?: boolean
+}) {
+  return (
+    <nav aria-label="Breadcrumb" className={className}>
+      <ol
+        className={`flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-500 ${
+          center ? 'justify-center' : ''
+        }`}
+      >
+        {items.map((entry, index) => {
+          const isLast = index === items.length - 1
+          return (
+            <li key={entry.name} className="flex items-center gap-2">
+              {index > 0 ? <span aria-hidden="true" className="text-gray-600">/</span> : null}
+              {entry.path && !isLast ? (
+                <Link href={entry.path} className="hover:text-gray-300 transition-colors">
+                  {entry.name}
+                </Link>
+              ) : (
+                <span className={isLast ? 'text-gray-300' : undefined}>{entry.name}</span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
 }
 
 export type FaqItem = { question: string; answer: string }
@@ -59,38 +99,11 @@ export function faqSchema(items: FaqItem[]) {
   }
 }
 
-/** Describes the product itself so results can carry software/app rich results. */
-export function softwareApplicationSchema({
-  name,
-  description,
-  path,
-  offers = true,
-}: {
-  name: string
-  description: string
-  path: string
-  offers?: boolean
-}) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name,
-    description,
-    url: absoluteUrl(path),
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web',
-    ...(offers
-      ? {
-          offers: {
-            '@type': 'Offer',
-            price: '0',
-            priceCurrency: 'USD',
-          },
-        }
-      : {}),
-    publisher: { '@id': `${SITE_URL}/#organization` },
-  }
-}
+// No per-page `SoftwareApplication` helper on purpose. The homepage already declares that entity
+// once, with a stable `@id` (`https://buildairesume.com/#software`) and a `provider`/`isPartOf`
+// graph. Declaring it again on `/ai-resume-builder` without the same `@id` would present search
+// engines with two competing identities for one product — the exact problem the homepage markup
+// was rewritten to fix. Reference the existing `@id` if a subpage ever needs it.
 
 /**
  * Visible FAQ list.
@@ -117,7 +130,6 @@ export function FaqSection({
   const Heading = headingLevel
   return (
     <section className={className}>
-      <JsonLd data={faqSchema(items)} />
       <Heading className="text-2xl sm:text-3xl font-bold text-white mb-8">{title}</Heading>
       <div className="space-y-3">
         {items.map(({ question, answer }) => (

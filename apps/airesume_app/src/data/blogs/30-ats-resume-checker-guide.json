@@ -1,0 +1,137 @@
+{
+  "id": "blog-030",
+  "slug": "ats-resume-checker-guide",
+  "title": "ATS Resume Checker: How to Test Your Resume Before Anyone Else Sees It",
+  "subtitle": "What an ATS resume checker actually measures, how to read the report it gives you, and the fixes that move your result the most.",
+  "excerpt": "An ATS resume checker parses your resume the way Greenhouse, Workday and Lever do, then scores keyword match, formatting and structure. Here is how to read the report and fix what it flags.",
+  "category": "ATS Optimization",
+  "readTime": "13 min read",
+  "date": "2026-09-04",
+  "featuredImage": "https://images.unsplash.com/photo-1573164713988-8665fc963095?w=1920&q=80",
+  "featuredImageAlt": "Rows of server racks in a data centre with an engineer walking between them",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "ATS resume checker",
+    "resume checker",
+    "check resume for ATS",
+    "ATS scan",
+    "resume test",
+    "applicant tracking system"
+  ],
+  "sections": [
+    {
+      "id": "what-a-checker-actually-does",
+      "heading": "What an ATS Resume Checker Actually Does",
+      "content": "<p class=\"text-gray-300 mb-4\">An ATS resume checker is a rehearsal. It takes the exact file you were about to upload and runs it through the same sequence of operations an employer's software performs: extract the text, detect your sections, pull out the terms that matter, and judge the formatting. You get to see the result while there is still time to fix it.</p><p class=\"text-gray-300 mb-4\">That distinction matters because most candidates test nothing. They polish a document in a word processor, export it, and upload it, assuming the file that looks good on their screen looks the same everywhere else. It does not. A resume can render perfectly in Word and still lose its dates, its job titles, or its contact block the moment a different engine converts it to plain text.</p><p class=\"text-gray-300 mb-4\">A checker closes that gap. You upload the file, you optionally paste the job description you are targeting, and the tool reports what survived the conversion and what did not. The rest of this guide is about reading that report properly: which flags are blockers, which are cosmetic, and which order to fix them in.</p>"
+    },
+    {
+      "id": "the-four-passes",
+      "heading": "Inside the Check: The Four Passes Your File Goes Through",
+      "content": "<p class=\"text-gray-300 mb-4\">Every checker is built from roughly the same four stages. Knowing what each stage does tells you why a specific flag appears and what fixing it will actually change:</p>",
+      "subSections": [
+        {
+          "heading": "Pass 1: Text extraction",
+          "content": "<p class=\"text-gray-300 mb-3\">The tool attempts to pull selectable text out of your file in reading order. If your resume is a scan, an export that flattened the text into an image, or a layout with columns of floating text boxes, extraction fails or scrambles the order. Everything downstream inherits this result, which is why a failed extraction is the one flag that should stop you before you read anything else in the report.</p>"
+        },
+        {
+          "heading": "Pass 2: Section detection",
+          "content": "<p class=\"text-gray-300 mb-3\">Extracted text is then grouped into sections by matching headings. The tool looks for labels it recognizes, such as Experience, Education, Skills and Summary, and assigns everything beneath them. Non-standard titles leave content unassigned, and content sitting in no section is effectively invisible to a recruiter who later filters the applicant pool by skill or by date.</p>"
+        },
+        {
+          "heading": "Pass 3: Keyword extraction and match",
+          "content": "<p class=\"text-gray-300 mb-3\">Your terms are tokenized and compared against the job description you supplied: exact matches first, then close variants and common abbreviations. This pass produces the match percentage, and it explains why the same resume scores differently against two postings without a single word being edited.</p>"
+        },
+        {
+          "heading": "Pass 4: Format scoring",
+          "content": "<p class=\"text-gray-300 mb-3\">Finally the structure itself is judged: font sizes and families, date consistency, page count, tables and images, contact placement. These flags rarely decide an application on their own, but a document full of them is one that will degrade further inside a stricter system than the one you tested with.</p>"
+        }
+      ]
+    },
+    {
+      "id": "running-your-first-check",
+      "heading": "How to Run Your First Check in Under Two Minutes",
+      "content": "<p class=\"text-gray-300 mb-4\">Run the check on the file you are actually going to submit, not the source document. The point is to test the artifact, because the artifact is what the employer receives. An <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">ATS Resume Checker</a> takes the uploaded file directly, so there is no step where you accidentally test the wrong thing.</p><ol class=\"list-decimal list-inside space-y-3 text-gray-300 my-6\"><li><strong class=\"text-white\">Upload the final export.</strong> Wait for the parse result before anything else. If the extraction pass failed, stop here and fix the file, because every number below it was calculated on broken text.</li><li><strong class=\"text-white\">Paste the job description.</strong> Without it you get structure and formatting results only. With it, the keyword panel has a target to compare against, which is where most of the actionable value sits.</li><li><strong class=\"text-white\">Read top to bottom, fix blockers first.</strong> Parsing and section errors come before keyword gaps. Fixing keywords in a file that does not parse is rearranging furniture in a house with no door.</li><li><strong class=\"text-white\">Re-upload after your edits.</strong> A flag is only cleared when the re-run says so. Assume nothing; the second run takes seconds.</li></ol>"
+    },
+    {
+      "id": "reading-the-report",
+      "heading": "How to Read the Report, Panel by Panel",
+      "content": "<p class=\"text-gray-300 mb-4\">Checker reports vary in layout but converge on four panels. Read them in this order, because each one depends on the panel above it:</p>",
+      "subSections": [
+        {
+          "heading": "The overall number",
+          "content": "<p class=\"text-gray-300 mb-3\">One figure summarizing everything below it. Treat it as triage rather than a verdict: it tells you whether this document is ready to send or needs another pass, and it gives you a baseline to compare against after your edits. The number itself matters far less than the panel that is holding it down.</p>"
+        },
+        {
+          "heading": "The parsing panel",
+          "content": "<p class=\"text-gray-300 mb-3\">Whether your text came out, in what order, and whether your headings were recognized. If this panel has errors, stop reading the rest of the report. Fix the source: the layout, the export settings, the section titles. Re-run, then continue. Panels computed on flawed text are measuring the wrong document.</p>"
+        },
+        {
+          "heading": "The keyword panel",
+          "content": "<p class=\"text-gray-300 mb-3\">Matched terms, missing terms, and where each one appears. Split the missing list into two piles immediately: terms you genuinely have experience with, which belong in your summary, skills block or a recent bullet, and terms you do not have, which you leave alone. The panel is a gap analysis, not an instruction to copy the posting into your resume.</p>"
+        },
+        {
+          "heading": "The format panel",
+          "content": "<p class=\"text-gray-300 mb-3\">Individual flags on dates, fonts, tables, page length and contact placement. These are the cheapest items on the report to fix and the easiest to over-chase. Repair anything that affects reading order or contact retrieval; treat preferences about length and styling as optional.</p>"
+        }
+      ]
+    },
+    {
+      "id": "which-flags-to-fix-first",
+      "heading": "Which Flags to Fix First (And Which You Can Leave)",
+      "content": "<p class=\"text-gray-300 mb-4\">Not every flag deserves equal attention. Work through the report in three tiers and you will clear it in a fraction of the time:</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 ml-4 mb-6\"><li><strong class=\"text-white\">Tier 1: blockers.</strong> Failed text extraction, contact details missing from the body, unrecognized section headings, dates that did not parse. These decide whether your content exists on the other side at all. Nothing else matters until they are clean.</li><li><strong class=\"text-white\">Tier 2: high value per minute.</strong> Missing must-have keywords from the posting, a summary that never names the role, recent bullets that describe duties instead of outcomes. Once the file parses, these move your match result more than anything else on the report.</li><li><strong class=\"text-white\">Tier 3: polish.</strong> Page count preferences, adjective density, minor font inconsistencies. Worth doing only when tiers 1 and 2 are finished.</li></ul><p class=\"text-gray-300 mb-4\">If a flag is both hard to fix and low impact, leave it. A legacy font that still parses correctly is not a problem worth an hour. The report is a work queue, not a contract, and every minute spent in tier three is a minute not spent tailoring for the actual role.</p><p class=\"text-gray-300 mb-4\">When you are unsure where a flag sits, use this test: would fixing it change what the reader sees, or only how the file was built? Changing what the reader sees, such as restored dates, visible contact details or a keyword that now appears in the right section, is tier one or two. Changing only how it was built, with no visible difference in the parsed output, is tier three. A second run of the <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">ATS Resume Checker</a> after each tier shows you exactly which category a fix belonged to.</p>"
+    },
+    {
+      "id": "common-false-fixes",
+      "heading": "The Fixes That Raise Your Number but Hurt Your Application",
+      "content": "<p class=\"text-gray-300 mb-4\">Checker reports are easy to misread as a game with a 100 at the end, and the fastest route to that number is usually the worst thing you can do to your resume. Adding every missing term from the posting, including the ones for work you have never done, will lift your keyword panel while making the document worse for the only audience that matters.</p><p class=\"text-gray-300 mb-4\">There is a second cost. Once keywords are repeated to satisfy a tool, they stop sounding like experience. Dense, mechanical phrasing is easy for a recruiter to spot and hard to defend in an interview, where every claim on the page can be questioned out loud. An exaggerated metric that collapses under one follow-up question undoes more than a weak score ever could.</p><p class=\"text-gray-300 mb-4\">The durable rule is simple: add things that are true and were missing, never things that were requested and are false. If you ran the tool but never named it, name it. If you only have adjacent experience, describe the adjacent work honestly. That raises the same panel and survives the conversation at the end of the process.</p>"
+    },
+    {
+      "id": "checker-vs-resume-score",
+      "heading": "From a One-Off Report to a Score You Can Track",
+      "content": "<p class=\"text-gray-300 mb-4\">A single check is a snapshot. Run the same document through a <a href=\"/resume-score\" class=\"text-emerald-400 font-bold hover:underline\">resume score</a> across successive versions and it becomes a measurement: you can see whether the rewrite you just completed actually moved the result, and by how much, instead of assuming it helped.</p><p class=\"text-gray-300 mb-4\">Tracking also catches regressions. When you are tailoring a fourth application in a row, it is easy to drop a section, mangle a date range, or overwrite the summary with the version built for a different role, and not notice until the next report. A quick check after each edit keeps the floor under your document while you work at speed.</p><p class=\"text-gray-300 mb-4\">Keep the readings where you can compare them, one line per version with the date and what you changed. Within a few rounds you will know which edits on your own document actually move the number and which ones you were doing out of habit, and that knowledge is what stops you from re-optimizing the same paragraph three applications later.</p>"
+    },
+    {
+      "id": "start-with-a-clean-template",
+      "heading": "Start From a Template That Already Passes",
+      "content": "<p class=\"text-gray-300 mb-4\">The cheapest way to clear the parsing panel is to never break it. Templates designed for screening start from a single text column, standard headings, text-layer fonts and contact details in the body, which means the file that comes out of the editor is already the file that survives conversion.</p><p class=\"text-gray-300 mb-4\">Pick one of the <a href=\"/templates\" class=\"text-emerald-400 font-bold hover:underline\">resume templates</a>, build the document, then run the check once against your target posting. You are verifying the layout, not redesigning it. If the report is clean on a template that already follows these rules, your remaining work is almost entirely content and keywords, which is where the interesting decisions are.</p>"
+    },
+    {
+      "id": "how-often-to-rerun",
+      "heading": "How Often to Re-Run the Check",
+      "content": "<p class=\"text-gray-300 mb-4\">Re-running takes under a minute, so the honest answer is: whenever the document or the target changes. In practice four moments cover almost everything. After every structural edit, because a new section or a different export setting can undo work you thought was finished. Once per posting, against that posting's job description, since the keyword panel is relative to the role. When you switch templates, before the first application built on it. And immediately before any high-value submission, so you are sending a file you verified today rather than last month.</p><p class=\"text-gray-300 mb-4\">Between those moments, stop checking. Re-running a document you have not edited returns the same report, and refreshing it for reassurance is time that belongs to the next application. Check, fix, move on.</p><p class=\"text-gray-300 mb-4\">The expensive version of this process is finding out you had a parsing problem three weeks later, when the rejections have already arrived and you cannot tell which applications were affected. The cheap version takes two minutes today.</p><p class=\"text-gray-300 mb-4\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#013f2e] hover:bg-[#025c43] text-white px-8 py-4 rounded-full font-bold shadow-lg transition-colors duration-200 text-sm\">Start with AIResume Free</a> <a href=\"/ai-resume-builder\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Try the AI Resume Builder</a></p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "what-a-checker-actually-does", "title": "What an ATS Resume Checker Actually Does" },
+    { "id": "the-four-passes", "title": "Inside the Check: The Four Passes Your File Goes Through" },
+    { "id": "running-your-first-check", "title": "How to Run Your First Check in Under Two Minutes" },
+    { "id": "reading-the-report", "title": "How to Read the Report, Panel by Panel" },
+    { "id": "which-flags-to-fix-first", "title": "Which Flags to Fix First (And Which You Can Leave)" },
+    { "id": "common-false-fixes", "title": "The Fixes That Raise Your Number but Hurt Your Application" },
+    { "id": "checker-vs-resume-score", "title": "From a One-Off Report to a Score You Can Track" },
+    { "id": "start-with-a-clean-template", "title": "Start From a Template That Already Passes" },
+    { "id": "how-often-to-rerun", "title": "How Often to Re-Run the Check" }
+  ],
+  "faqs": [
+    {
+      "question": "Is an ATS resume checker the same as a resume scoring tool?",
+      "answer": "They overlap but are not identical. A checker tells you what the file looks like after parsing, section detection and formatting review, while a scoring tool compresses that into a single number and compares it against a target job description. Most people want both: the report to fix, the number to track."
+    },
+    {
+      "question": "How accurate is a checker compared to a real employer system?",
+      "answer": "No checker can reproduce every configuration in the market, because each employer tunes their setup differently. What a good checker does reproduce is the shared core: text extraction, heading recognition, keyword comparison and format rules. Treat it as a strong approximation that catches the same categories of failure, not a guarantee."
+    },
+    {
+      "question": "Can the checker tell me exactly which keywords I am missing?",
+      "answer": "Yes, once you paste the job description alongside your file. The keyword panel lists terms the posting emphasizes that your resume does not contain, plus the terms you already share. It cannot tell you which of the missing ones you genuinely qualify for, so that judgment call stays with you and your cover letter."
+    },
+    {
+      "question": "What should my score be before I hit submit?",
+      "answer": "Aim for zero parsing errors first, a strong keyword match for that specific posting second, and an overall figure in the high 80s or above. Past that point you are polishing rather than improving, and the next hour is worth more spent tailoring the application itself or starting the next one."
+    },
+    {
+      "question": "Will fixing every flag guarantee my resume gets seen?",
+      "answer": "Nothing about screening is guaranteed, and no report can promise that a human opens your application. What the checks do is remove the failures that keep your document out of consideration entirely, such as unreadable text, hidden contact details and missing terms, so your actual experience is what gets evaluated."
+    }
+  ]
+}

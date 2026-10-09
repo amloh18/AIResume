@@ -27,10 +27,19 @@ export const ARTICLE_SLUGS = [
   'how-to-search-jobs-by-skills',
   'prepare-for-interview-using-job-description',
   'why-you-keep-applying-getting-no-interviews',
+  // Fills 2026-07-31 — the single 14-day hole in an otherwise unbroken weekly Friday cadence.
+  'job-application-checklist',
   'how-ai-helps-apply-for-jobs-without-spam',
   'resume-vs-job-description-skills-gap-analysis',
   'prepare-for-technical-behavioral-interviews-with-ai',
   'modern-job-search-all-in-one-workflow',
+  // Weekly Fridays continuing from 2026-09-04 through to the current date.
+  'ats-resume-checker-guide',
+  'improve-your-resume-score',
+  'best-resume-builders-2026',
+  'choose-a-resume-template',
+  'product-manager-resume-2026',
+  'what-is-an-ai-resume-builder',
 ] as const;
 
 export type ArticleSlug = (typeof ARTICLE_SLUGS)[number];
@@ -65,6 +74,13 @@ import article25 from './25-how-ai-helps-apply-for-jobs-without-spam.json';
 import article26 from './26-resume-vs-job-description-skills-gap-analysis.json';
 import article27 from './27-prepare-for-technical-behavioral-interviews-with-ai.json';
 import article28 from './28-modern-job-search-all-in-one-workflow.json';
+import article29 from './29-job-application-checklist.json';
+import article30 from './30-ats-resume-checker-guide.json';
+import article31 from './31-improve-your-resume-score.json';
+import article32 from './32-best-resume-builders-2026.json';
+import article33 from './33-choose-a-resume-template.json';
+import article34 from './34-product-manager-resume-2026.json';
+import article35 from './35-what-is-an-ai-resume-builder.json';
 
 const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'why-ai-resume-beats-cakecv': article01,
@@ -91,10 +107,17 @@ const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'how-to-search-jobs-by-skills': article22,
   'prepare-for-interview-using-job-description': article23,
   'why-you-keep-applying-getting-no-interviews': article24,
+  'job-application-checklist': article29,
   'how-ai-helps-apply-for-jobs-without-spam': article25,
   'resume-vs-job-description-skills-gap-analysis': article26,
   'prepare-for-technical-behavioral-interviews-with-ai': article27,
   'modern-job-search-all-in-one-workflow': article28,
+  'ats-resume-checker-guide': article30,
+  'improve-your-resume-score': article31,
+  'best-resume-builders-2026': article32,
+  'choose-a-resume-template': article33,
+  'product-manager-resume-2026': article34,
+  'what-is-an-ai-resume-builder': article35,
 };
 
 /**
@@ -105,21 +128,37 @@ export function buildTableOfContents(sections: { id: string; heading: string }[]
 }
 
 /**
- * Get metadata for all articles (used for listing/index page)
+ * Metadata for every article, newest first.
+ *
+ * This used to be a plain `Object.values()` pass, so the order was file-insertion order — which is
+ * not chronological: files 01–10 are numbered newest-first and 11–35 oldest-first. The blog index
+ * calls `filteredArticles[0]` "Featured" and heads the grid "Latest Articles", and the article
+ * pager walks the same array for prev/next, so both were presenting an arbitrary order as if it
+ * were recency. Sorting on `date` descending makes those labels true and keeps the weekly
+ * publishing timeline legible as the catalogue grows.
+ *
+ * `date` is an ISO string (`YYYY-MM-DD`), so a lexicographic comparison is also chronological;
+ * the `Date` conversion only guards against a malformed value dragging a post out of position.
  */
 export function getAllArticles(): BlogArticleMeta[] {
-  return Object.values(ARTICLE_REGISTRY).map(a => ({
-    id: a.id,
-    slug: a.slug,
-    title: a.title,
-    excerpt: a.excerpt,
-    category: a.category,
-    readTime: a.readTime,
-    date: a.date,
-    featuredImage: a.featuredImage,
-    featuredImageAlt: a.featuredImageAlt,
-    author: a.author,
-  }));
+  return Object.values(ARTICLE_REGISTRY)
+    .map(a => ({
+      id: a.id,
+      slug: a.slug,
+      title: a.title,
+      excerpt: a.excerpt,
+      category: a.category,
+      readTime: a.readTime,
+      date: a.date,
+      featuredImage: a.featuredImage,
+      featuredImageAlt: a.featuredImageAlt,
+      author: a.author,
+    }))
+    .sort((a, b) => {
+      const ta = Date.parse(a.date);
+      const tb = Date.parse(b.date);
+      return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+    });
 }
 
 /**
@@ -166,18 +205,21 @@ export function getAllSlugs(): ArticleSlug[] {
 }
 
 /**
- * Get prev/next articles by slug
+ * Get prev/next articles by slug.
+ *
+ * Indexes into the date-ordered array from `getAllArticles()` rather than into `ARTICLE_SLUGS`:
+ * walking one ordering while reading values from another pairs the wrong neighbours. (Mirrors the
+ * inlined logic of `ArticleNavigation` in `blog/[slug]/page.tsx`.)
  */
 export function getAdjacentArticles(slug: string): {
   prev?: Pick<BlogArticleMeta, 'id' | 'slug' | 'title' | 'featuredImage' | 'featuredImageAlt'>;
   next?: Pick<BlogArticleMeta, 'id' | 'slug' | 'title' | 'featuredImage' | 'featuredImageAlt'>;
 } {
-  const slugs = getAllSlugs();
   const all = getAllArticles();
-  const index = slugs.indexOf(slug as ArticleSlug);
+  const index = all.findIndex(a => a.slug === slug);
   if (index === -1) return {};
   const prev = index > 0 ? all[index - 1] : undefined;
-  const next = index < slugs.length - 1 ? all[index + 1] : undefined;
+  const next = index < all.length - 1 ? all[index + 1] : undefined;
   return {
     prev: prev ? { id: prev.id, slug: prev.slug, title: prev.title, featuredImage: prev.featuredImage, featuredImageAlt: prev.featuredImageAlt } : undefined,
     next: next ? { id: next.id, slug: next.slug, title: next.title, featuredImage: next.featuredImage, featuredImageAlt: next.featuredImageAlt } : undefined,

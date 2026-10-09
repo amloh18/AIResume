@@ -8,6 +8,106 @@
 
 import type { FaqItem } from '@/components/seo/StructuredData'
 
+/**
+ * Homepage FAQ — informational questions first, then product/billing.
+ *
+ * Two sources used to describe this page: an FAQPage schema in `src/app/page.tsx` listing ten
+ * questions, and `components/landing/FAQ.tsx` rendering seven *entirely different* ones. Not one
+ * question overlapped, so the markup described content nobody could see on the page — which Google
+ * treats as invalid structured data and disqualifies for rich results. Both now import from here.
+ */
+export const HOME_FAQ: FaqItem[] = [
+  {
+    question: 'What is an AI resume builder?',
+    answer:
+      'An AI resume builder uses artificial intelligence to create a professional resume. It generates content from your experience, writes achievement-focused bullet points, optimizes wording for the job you are applying to, and helps you build an ATS-friendly resume faster than writing it by hand.',
+  },
+  {
+    question: 'Is AIResume ATS-friendly?',
+    answer:
+      'Yes. AIResume builds resumes with ATS-compatible formatting, clear sections, and simple layouts that applicant tracking systems can parse reliably. Templates are designed to avoid tables and complex styling that commonly break ATS parsers.',
+  },
+  {
+    question: 'Can AIResume tailor my resume to a job?',
+    answer:
+      'Yes. Paste a job description or a job URL and AIResume analyzes the role, identifies important keywords, compares the job with your resume, and recommends changes. You can rewrite relevant sections to improve alignment with the specific role.',
+  },
+  {
+    question: 'Can I create a resume from scratch?',
+    answer:
+      'Yes. You can create a resume from scratch using the AI resume builder. It guides you through each section, generates professional content, and helps you write strong summaries and achievement-focused bullet points.',
+  },
+  {
+    question: 'Can I improve an existing resume?',
+    answer:
+      'Yes. Upload or paste your existing resume and AIResume will analyze it, improve the content, strengthen weak bullet points, fix formatting, and suggest keywords so your resume performs better with ATS systems and recruiters.',
+  },
+  {
+    question: 'Can I create an AI cover letter?',
+    answer:
+      'Yes. The AI cover letter generator creates job-specific cover letters based on your resume and the job description. Each letter is tailored to the role, references your actual achievements, and can be edited before you send it.',
+  },
+  {
+    question: 'What is an ATS?',
+    answer:
+      'An ATS (Applicant Tracking System) is software employers use to screen, filter, and manage job applications. It parses resumes and ranks candidates by how well their resume matches the job description. An ATS-friendly resume uses clear formatting and relevant keywords so the system can read and score it correctly.',
+  },
+  {
+    question: 'Can I use AIResume for CVs?',
+    answer:
+      'Yes. AIResume works for both resumes and CVs. Use it to create a CV with your full career history or a tailored resume for a specific job. The builder supports both formats with professional templates.',
+  },
+  {
+    question: 'Are the resume templates ATS-friendly?',
+    answer:
+      'Yes. Every template in AIResume uses ATS-compatible formatting, readable headings, and clean layouts. Choose from professional, modern, and simple resume templates with confidence that applicant tracking systems can parse them.',
+  },
+  {
+    question: 'How does resume scoring work?',
+    answer:
+      'Resume scoring analyzes your resume against a job description and gives it a score based on keyword matches, skills alignment, readability, and format compatibility. It shows you exactly which keywords and sections to improve so you can strengthen your resume before applying.',
+  },
+]
+
+/** The homepage product and billing questions, previously held inline in `components/landing/FAQ.tsx`. */
+export const PRODUCT_FAQ: FaqItem[] = [
+  {
+    question: 'What is AIResume and how does it help me get hired?',
+    answer:
+      'AIResume is an all-in-one AI career workspace designed to help you land interviews faster. It builds ATS-optimized resumes from scratch or improves existing ones, generates tailored cover letters matching job descriptions, simulates interview prep, and tracks all your job applications in a single Kanban dashboard.',
+  },
+  {
+    question: 'How does the real-time ATS scoring & keyword optimization work?',
+    answer:
+      'When you paste a target job description, our engine analyzes essential hard and soft skills, industry keywords, and ATS parsing criteria. It gives you a real-time match score and precise, actionable bullet point recommendations so your resume consistently beats automated filters and ranks at the top of recruiter pipelines.',
+  },
+  {
+    question: 'Can I start from scratch or upload my existing resume?',
+    answer:
+      'Both! You can upload an existing PDF or DOCX file for instant AI restructuring and keyword enhancement, or build a brand-new resume step-by-step using our Mori AI Career Assistant with industry-tested, ATS-compliant templates.',
+  },
+  {
+    question: 'How do the Application Tracker and Auto Applications work?',
+    answer:
+      "The Application Tracker organizes every job in an intuitive Kanban pipeline from 'Saved' to 'Interviewing' and 'Offer'. With Auto Applications, our system automatically tailors your CV and cover letter for each specific role and streamlines submissions, saving you dozens of repetitive hours.",
+  },
+  {
+    question: 'What is the difference between the Starter and Focused plans?',
+    answer:
+      'The Starter plan ($0 for monthly with limited usage, or $2/mo yearly) gives you core studio editing, standard templates, live ATS scoring, and 10 tracked applications. The Focused plan ($9.99/mo or $7/mo billed yearly) unlocks unlimited AI usage, automated applications, the LinkedIn Profile Enhancer, Interview Prep, and 24/7 priority support.',
+  },
+  {
+    question: 'What happens to my documents if I cancel or change my plan?',
+    answer:
+      'Your documents are always 100% yours. If you downgrade or cancel your subscription, you retain full access to view, edit, and download all previously created resumes and cover letters as PDF and DOCX files without any watermarks or restrictions.',
+  },
+  {
+    question: 'What payment methods and currencies do you support?',
+    answer:
+      'We support all major international Credit and Debit Cards (Visa, Mastercard, AMEX), UPI, and regional payment methods via secure SSL-encrypted processing. Prices in non-USD currencies are calculated with live exchange rates with no hidden fees.',
+  },
+]
+
 export const ATS_CHECKER_FAQ: FaqItem[] = [
   {
     question: 'What is an ATS resume checker?',
@@ -81,33 +181,33 @@ export const RESUME_SCORE_FAQ: FaqItem[] = [
 
 export const AI_RESUME_BUILDER_FAQ: FaqItem[] = [
   {
+    question: 'How does the balance between manual control and AI assistance work?',
+    answer:
+      'With AIResume, you are always in the driver’s seat. You input your real career achievements, role milestones, and voice. Our AI assists by suggesting high-impact action verbs, converting generic bullets into metric-driven outcomes, checking ATS readability, and formatting everything into pixel-perfect templates. You can edit, override, or rearrange every single word.',
+  },
+  {
+    question: 'What is the difference between Manual Review Mode and Auto-Apply?',
+    answer:
+      'Manual Review Mode is designed for candidates who prefer to personally inspect every single submission. AI finds matching jobs and drafts a tailored resume and cover letter, staging it for your 1-click review. Auto-Apply Mode lets our career agent submit matching applications directly on your behalf according to your strict filters (such as target titles, locations, minimum salary, and notice period) within your plan’s safe quota.',
+  },
+  {
+    question: 'Will employers and Applicant Tracking Systems (ATS) accept these resumes?',
+    answer:
+      'Yes, 100%. All AIResume templates are built from the ground up according to strict ATS industry standards (single-column hierarchies, standard section headers, clean typography, and parseable date formats). Our live ATS scanner tests your resume against recruiter parsing engines before you submit.',
+  },
+  {
+    question: 'How do application quotas protect my candidate reputation?',
+    answer:
+      'Blind mass spamming hurts candidate credibility and leads to portal account restrictions. AIResume enforces thoughtful rate limits (e.g. 10 applications/month on Starter, up to 50 daily automated applications on Focused) to ensure every application is tailored, high-quality, and completely relevant to your goals.',
+  },
+  {
+    question: 'Is my personal data and resume information private?',
+    answer:
+      'Absolutely. We do not sell your personal information or resume content to third-party data brokers. Your documents and connected job accounts are encrypted with AES-256 security, and your data is never used to train public generative AI foundation models.',
+  },
+  {
     question: 'Is the AI resume builder free?',
     answer:
       'Yes, building and downloading a resume is free. You can pick a template, write your experience and run the ATS checks without a card. Paid plans add the higher-volume AI rewriting, job-description tailoring and the automated application pipeline.',
-  },
-  {
-    question: 'How is this different from asking ChatGPT to write my resume?',
-    answer:
-      'A general chat model will give you plausible-sounding prose with invented metrics if you are not careful. This is a structured editor: the AI operates on real sections of your resume, keeps your facts intact, scores the result against applicant tracking systems, and shows you every suggested change before it lands in the document.',
-  },
-  {
-    question: 'Will the resume pass applicant tracking systems?',
-    answer:
-      'The templates and export are built to parse cleanly — single column where it matters, standard section headings, selectable text and no text boxes. Whether you pass depends on your content matching the job. Run the ATS checker on the finished resume to see the keyword gaps before you apply.',
-  },
-  {
-    question: 'Can I tailor one resume for different jobs?',
-    answer:
-      'That is the intended workflow. Keep one master resume, then tailor it per application: the builder pulls the keywords out of the job description, suggests the bullets that matter for that role and reorders sections, without you rebuilding the document each time.',
-  },
-  {
-    question: 'Does it write the content for me from scratch?',
-    answer:
-      'It can draft a summary and achievements, but the good results come from feeding it real detail — what you shipped, for whom, and with what outcome. The AI is strongest at turning a plain line like "managed the migration" into a specific, quantified one, not at inventing a career you did not have.',
-  },
-  {
-    question: 'What file formats can I export?',
-    answer:
-      'PDF and DOCX. PDF for most applications because the layout holds, DOCX when an employer specifically asks for an editable file or their system rejects PDF uploads.',
   },
 ]

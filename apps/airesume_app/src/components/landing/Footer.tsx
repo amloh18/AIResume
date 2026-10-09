@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
 import { X, Linkedin, Instagram, Mail, ArrowRight, Heart, CheckCircle, AlertCircle, Phone, MapPin } from 'lucide-react';
@@ -11,11 +12,24 @@ const Footer = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Real routes, not homepage-only anchors. These used to be `#features`/`#pricing`/`#blog` links
+  // that called `preventDefault` and then looked the id up with `document.querySelector` — which
+  // meant they navigated nowhere at all from any page other than the homepage, and `#support`
+  // pointed at an id that does not exist anywhere. Leading-slash hashes (`/#features`) work from
+  // every route: Next navigates home and then scrolls to the anchor.
+  //
+  // The tool links are the internal-linking hub: they put a link to each commercial page on every
+  // page of the site, which is the cheapest crawl-priority signal available.
   const quickLinks = [
-    { name: 'Features', href: '#features' },
-    { name: 'Pricing', href: '#pricing' },
-    { name: 'Support', href: '#support' },
-    { name: 'Blog', href: '#blog' },
+    { name: 'AI Resume Builder', href: '/ai-resume-builder' },
+    { name: 'ATS Resume Checker', href: '/ats-resume-checker' },
+    { name: 'Resume Score', href: '/resume-score' },
+    { name: 'Resume Templates', href: '/templates' },
+    { name: 'Compare Builders', href: '/compare/resume-builders' },
+    { name: 'Features', href: '/#features' },
+    { name: 'Pricing', href: '/#pricing' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'Support', href: '/legal#support' },
   ];
 
   const socialLinks = [
@@ -23,16 +37,6 @@ const Footer = () => {
     { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/buildairesume.com/' },
     { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/build-ai-resume/' },
   ];
-
-  const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
 
   const handleNewsletterSubscription = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,23 +205,18 @@ const Footer = () => {
                   whileHover={{ x: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <motion.a
+                  <Link
                     href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }}
                     className="text-white/60 hover:text-[#36D39B] transition-colors duration-300 text-small font-medium group flex items-center gap-2"
-                    whileHover={{ x: -5 }}
                   >
                     <span>{link.name}</span>
-                    <motion.div
+                    <motion.span
                       className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       whileHover={{ rotate: 45 }}
                     >
                       <ArrowRight size={14} />
-                    </motion.div>
-                  </motion.a>
+                    </motion.span>
+                  </Link>
                 </motion.li>
               ))}
             </ul>

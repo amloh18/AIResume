@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, CheckCircle, Target, Zap, Palette, FileText, Lightbulb, Star } from 'lucide-react'
-import { FaqSection } from '@/components/seo/StructuredData'
+import { ArrowRight, Target, Zap, Palette, FileText, Lightbulb, Star } from 'lucide-react'
+import { Breadcrumbs, FaqSection } from '@/components/seo/StructuredData'
 import { RESUME_SCORE_FAQ } from '@/data/seo'
 
 const SCORE_INTRO =
@@ -125,6 +125,7 @@ export default function ResumeScorePage() {
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <Breadcrumbs center className="mb-6" items={[{ name: 'Home', path: '/' }, { name: 'Resume Score Checker' }]} />
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-block px-4 py-2 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium mb-6">
             📊 Resume Score
           </motion.div>
