@@ -301,6 +301,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       .then(async (response) => {
         const result = await response.json();
         if (!result.success) {
+          if (result.message === 'Email is already verified') {
+            setMode('signin');
+            setSuccess('Your email is already verified. Please sign in with your password.');
+            return;
+          }
           setError(result.message || 'Failed to send verification code. Please try again.');
         }
       })
@@ -518,6 +523,12 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
               if (!atomicSignupResponse.ok) {
                 const errorData = await atomicSignupResponse.json();
+                if (errorData.alreadyVerified) {
+                  setMode('signin');
+                  setSuccess('Your email is already verified. Please sign in with your password.');
+                  setIsLoading(false);
+                  return;
+                }
                 setError(errorData.message || 'Invalid or expired code. Please try again.');
                 setRemainingAttempts(errorData.remainingAttempts || 0);
                 setIsLoading(false);
@@ -660,9 +671,15 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       .then(async (response) => {
         const result = await response.json();
         if (!result.success) {
+          if (result.message === 'Email is already verified') {
+            setMode('signin');
+            setSuccess('Your email is already verified. Please sign in with your password.');
+            return;
+          }
           setError(result.message || 'Failed to resend code. Please try again.');
         } else {
           setCooldownSeconds(60);
+          setSuccess('A new verification code has been sent to your email.');
         }
       })
       .catch(() => {

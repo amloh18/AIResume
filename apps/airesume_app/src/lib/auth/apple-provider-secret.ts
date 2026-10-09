@@ -34,6 +34,7 @@ const REGENERATION_WINDOW_SECONDS = 7 * 24 * 60 * 60; // regenerate 7 days befor
 interface CachedSecret {
   secret: string;
   expiresAt: number; // unix seconds
+  clientId?: string;
 }
 
 let cachedSecret: CachedSecret | null = null;
@@ -119,7 +120,7 @@ export function getAppleClientSecret(): string {
   }
 
   const now = Math.floor(Date.now() / 1000);
-  if (cachedSecret && cachedSecret.expiresAt - now > REGENERATION_WINDOW_SECONDS) {
+  if (cachedSecret && cachedSecret.clientId === clientId && cachedSecret.expiresAt - now > REGENERATION_WINDOW_SECONDS) {
     return cachedSecret.secret;
   }
 
@@ -134,7 +135,7 @@ export function getAppleClientSecret(): string {
       audience: APPLE_TOKEN_AUDIENCE,
       expiresIn: SECRET_TTL_SECONDS,
     });
-    cachedSecret = { secret, expiresAt };
+    cachedSecret = { secret, expiresAt, clientId };
     console.log(`🍎 Apple client secret generated (kid=${keyId}, valid ${Math.round(SECRET_TTL_SECONDS / 86400)} days)`);
     return secret;
   } catch (error) {

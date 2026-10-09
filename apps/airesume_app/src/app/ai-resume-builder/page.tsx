@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
 import AIResumeBuilderPage from './page.client';
+import { JsonLd, breadcrumbSchema, faqSchema } from '@/components/seo/StructuredData';
+import { AI_RESUME_BUILDER_FAQ } from '@/data/seo';
 
 export const metadata: Metadata = {
   title: 'AI Resume Builder | ATS-Optimized Resumes & Application Automation',

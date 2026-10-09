@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Validate code format
     if (!validateCodeFormat(code)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid code format. Please enter a 4-digit code.' },
+        { success: false, message: 'Invalid code format. Please enter a 6-digit code.' },
         { status: 400 }
       );
     }
