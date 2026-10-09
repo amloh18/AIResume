@@ -23,7 +23,7 @@ const JOB_SITES = [
 
 const ChromeExtension = () => {
   return (
-    <section id="chrome-extension" className="relative pt-32 pb-20 bg-[#141810] overflow-hidden">
+    <section id="chrome-extension" className="relative pt-32 pb-20 bg-[#1a1c1b] overflow-hidden">
       {/* Background Effects - Subtle dark glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#81ff00]/5 rounded-full blur-[150px]"></div>

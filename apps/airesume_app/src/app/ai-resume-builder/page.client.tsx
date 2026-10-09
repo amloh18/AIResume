@@ -28,6 +28,8 @@ import {
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
 import { navLinks } from '@/data/navigation';
+import { AI_RESUME_BUILDER_FAQ } from '@/data/seo';
+import { Breadcrumbs } from '@/components/seo/StructuredData';
 
 export default function AIResumeBuilderPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -129,29 +131,6 @@ export default function AIResumeBuilderPage() {
     }
   ];
 
-  const faqs = [
-    {
-      question: 'How does the balance between manual control and AI assistance work?',
-      answer: 'With AIResume, you are always in the driver’s seat. You input your real career achievements, role milestones, and voice. Our AI assists by suggesting high-impact action verbs, converting generic bullets into metric-driven outcomes, checking ATS readability, and formatting everything into pixel-perfect templates. You can edit, override, or rearrange every single word.'
-    },
-    {
-      question: 'What is the difference between Manual Review Mode and Auto-Apply?',
-      answer: 'Manual Review Mode is designed for candidates who prefer to personally inspect every single submission. AI finds matching jobs and drafts a tailored resume and cover letter, staging it for your 1-click review. Auto-Apply Mode lets our career agent submit matching applications directly on your behalf according to your strict filters (such as target titles, locations, minimum salary, and notice period) within your plan’s safe quota.'
-    },
-    {
-      question: 'Will employers and Applicant Tracking Systems (ATS) accept these resumes?',
-      answer: 'Yes, 100%. All AIResume templates are built from the ground up according to strict ATS industry standards (single-column hierarchies, standard section headers, clean typography, and parseable date formats). Our live ATS scanner tests your resume against recruiter parsing engines before you submit.'
-    },
-    {
-      question: 'How do application quotas protect my candidate reputation?',
-      answer: 'Blind mass spamming hurts candidate credibility and leads to portal account restrictions. AIResume enforces thoughtful rate limits (e.g. 10 applications/month on Starter, up to 50 daily automated applications on Focused) to ensure every application is tailored, high-quality, and completely relevant to your goals.'
-    },
-    {
-      question: 'Is my personal data and resume information private?',
-      answer: 'Absolutely. We do not sell your personal information or resume content to third-party data brokers. Your documents and connected job accounts are encrypted with AES-256 security, and your data is never used to train public generative AI foundation models.'
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-[#141810] text-white relative overflow-hidden flex flex-col justify-between selection:bg-lime-400 selection:text-black">
       {/* Background Ambient Glows */}
@@ -170,6 +149,7 @@ export default function AIResumeBuilderPage() {
 
         {/* 1. HERO SECTION */}
         <section className="pt-32 sm:pt-40 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center">
+          <Breadcrumbs center className="mb-6" items={[{ name: 'Home', path: '/' }, { name: 'AI Resume Builder' }]} />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -201,7 +181,7 @@ export default function AIResumeBuilderPage() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/explore"
+                href="/templates"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-base transition-colors"
               >
                 <span>Explore Templates</span>
@@ -472,7 +452,7 @@ export default function AIResumeBuilderPage() {
           </div>
 
           <div className="space-y-4">
-            {faqs.map((faq, index) => {
+            {AI_RESUME_BUILDER_FAQ.map((faq, index) => {
               const isOpen = openFaq === index;
               return (
                 <div 
@@ -481,6 +461,7 @@ export default function AIResumeBuilderPage() {
                 >
                   <button
                     onClick={() => toggleFaq(index)}
+                    aria-expanded={isOpen}
                     className="w-full p-6 text-left flex items-center justify-between gap-4"
                   >
                     <span className="font-semibold text-base sm:text-lg text-white">{faq.question}</span>
@@ -490,11 +471,18 @@ export default function AIResumeBuilderPage() {
                       <ChevronDown className="w-5 h-5 text-white/50 shrink-0" />
                     )}
                   </button>
-                  {isOpen && (
-                    <div className="px-6 pb-6 text-sm sm:text-base text-white/75 leading-relaxed border-t border-white/5 pt-4">
-                      {faq.answer}
-                    </div>
-                  )}
+                  {/*
+                    The answer stays mounted whether or not the panel is open. Accordion code that
+                    unmounts collapsed answers drops them from the server-rendered HTML, so crawlers
+                    would never see the text that the FAQPage schema on this route claims exists —
+                    a mismatch Google treats as invalid markup.
+                  */}
+                  <div
+                    hidden={!isOpen}
+                    className="px-6 pb-6 text-sm sm:text-base text-white/75 leading-relaxed border-t border-white/5 pt-4"
+                  >
+                    {faq.answer}
+                  </div>
                 </div>
               );
             })}
@@ -521,7 +509,7 @@ export default function AIResumeBuilderPage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  href="/explore"
+                  href="/templates"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-base transition-colors"
                 >
                   <span>View ATS Templates</span>

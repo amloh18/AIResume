@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, CheckCircle, Search, FileCheck, BarChart3, Shield } from 'lucide-react'
-import { FaqSection } from '@/components/seo/StructuredData'
+import { Breadcrumbs, FaqSection } from '@/components/seo/StructuredData'
 import { ATS_CHECKER_FAQ } from '@/data/seo'
 
 const INTRO_COPY =
@@ -162,6 +162,7 @@ export default function ATSResumeCheckerPage() {
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto pl-0 text-left flex flex-col items-start">
+          <Breadcrumbs className="mb-6" items={[{ name: 'Home', path: '/' }, { name: 'ATS Resume Checker' }]} />
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full text-xs font-semibold uppercase tracking-wider mb-6">
             🔍 Free ATS Resume Checker
           </motion.div>

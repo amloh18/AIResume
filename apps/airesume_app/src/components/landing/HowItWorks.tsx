@@ -12,28 +12,28 @@ const HowItWorks = () => {
 
   const features = React.useMemo(() => [
     {
-      title: 'Create Primary CV',
-      description: 'Build your comprehensive professional profile once. Include all your skills, experience, and achievements to act as the foundation for every future application.',
+      title: 'Bring Your CV (Master Profile)',
+      description: 'Upload your current CV to build your base profile once. It acts as your permanent career foundation, powering all future job-tailored resumes and applications.',
       image: '/images/Howitworks/step1.webp',
     },
     {
-      title: 'Search & Save Jobs',
-      description: 'Discover roles across different portals and save them to your tracker. Pull job details instantly using our Chrome extension or add them manually.',
+      title: 'Discover & Save Tailored Jobs',
+      description: 'Find matched roles across LinkedIn, Indeed, and top ATS boards. Save opportunities in 1 click using our Chrome extension or explore verified visa-sponsored openings.',
       image: '/images/Howitworks/step2.webp',
     },
     {
-      title: 'Add Job Description',
-      description: 'Import job details instantly using our Chrome extension or paste them manually. We analyze the requirements to understand exactly what the employer needs.',
+      title: 'Apply in Bulk or Paste Any JD',
+      description: 'Queue automated applications to thousands of qualified jobs in bulk, or simply paste any target job description to prepare a targeted manual submission.',
       image: '/images/Howitworks/step3.webp',
     },
     {
-      title: 'Get Tailored Docs',
-      description: 'Your CV and cover letter are automatically generated and optimized for the highest possible ATS score, perfectly matching the job description.',
+      title: 'Get 1-Click Tailored Documents',
+      description: 'Your CV and cover letter are instantly generated and optimized for maximum ATS scoring, using verified factual evidence and job-matched keywords.',
       image: '/images/Howitworks/step4.webp',
     },
     {
-      title: 'Refine & Track',
-      description: 'Make final tweaks in our studio if desired, then download your documents and track your application status from "Applied" to "Hired".',
+      title: 'Auto-Apply, Takeover & Follow-Up',
+      description: 'Let our bot submit applications deterministically or take manual control anytime. Track your application journey from saved to offer, with automated recruiter follow-ups.',
       image: '/images/Howitworks/step5.webp',
     },
   ], []);

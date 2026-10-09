@@ -1,8 +1,7 @@
 # robots.txt — https://buildairesume.com
 #
 # SERVED BY NEXT.JS FROM THIS PATH: apps/airesume_app/public/robots.txt
-# The copy at the repository root is a mirror kept for visibility only and is NOT served. If you
-# change the rules here, change them there too — or delete that copy.
+# There is no repository-root mirror; this is the only copy.
 #
 # Policy: the marketing site and every public tool are crawlable, AI crawlers included. /llms.txt is
 # published on purpose so assistants describe the product accurately; blocking them would not remove
@@ -17,12 +16,16 @@ Allow: /
 Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /editor/
-# Both redirect a signed-out visitor to /sign-in, so they are not indexable pages.
-Disallow: /interview-coach/
-Disallow: /linkedin-enhancer/
+# /profile/ and /shared/candidate/ send a signed-out visitor to /sign-in, so Disallow is right:
+# there is nothing to fetch and nothing to de-index.
 Disallow: /profile/
-Disallow: /welcome/
 Disallow: /shared/candidate/
+#
+# NOT disallowed: /interview-coach/, /linkedin-enhancer/ and /welcome/. Each returns HTTP 200 for a
+# signed-out crawler and each is marked `noindex` in its own route-segment layout. Do not add a
+# Disallow for them — robots.txt blocks the fetch, and a page Google cannot fetch can never be told
+# not to index it. `/linkedin-enhancer` was indexed for exactly that reason, showing the homepage's
+# title and description, because the original Disallow kept the directive unread.
 
 # Auth flows — nothing here is useful in an index, and some carry tokens.
 Disallow: /auth/
@@ -72,8 +75,6 @@ Allow: /llm.txt
 Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /editor/
-Disallow: /interview-coach/
-Disallow: /linkedin-enhancer/
 Disallow: /profile/
 Disallow: /shared/candidate/
 Disallow: /auth/

@@ -176,8 +176,15 @@ const categoryColors: Record<string, string> = {
 
 function ArticleNavigation({ currentSlug, articles }: { currentSlug: string, articles: BlogArticleMeta[] }) {
   const currentIndex = articles.findIndex(a => a.slug === currentSlug);
-  const prev = currentIndex > 0 ? articles[currentIndex - 1] : null;
-  const next = currentIndex < articles.length - 1 ? articles[currentIndex + 1] : null;
+
+  // `articles` is newest-first (see `getAllArticles`), so array order runs opposite to time: the
+  // element *after* this one was published *earlier*. "Previous" in a blog means the post published
+  // before this one, so the two directions are swapped relative to raw index order — otherwise
+  // "Previous" advertises a newer article than the one you are reading.
+  const older = currentIndex >= 0 && currentIndex < articles.length - 1 ? articles[currentIndex + 1] : null;
+  const newer = currentIndex > 0 ? articles[currentIndex - 1] : null;
+  const prev = older;
+  const next = newer;
 
   return (
     <div className="grid md:grid-cols-2 gap-4 mt-16">

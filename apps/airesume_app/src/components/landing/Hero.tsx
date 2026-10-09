@@ -122,7 +122,7 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
             {/* Inline CTAs on Mobile and Tablet */}
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 w-full desktop:w-auto desktop:flex desktop:items-center desktop:gap-4">
               <button
-                onClick={() => router.push('/explore')}
+                onClick={() => router.push('/templates')}
                 className="w-full desktop:w-auto inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-3 sm:px-5 desktop:px-7 py-3 desktop:py-3.5 rounded-full font-bold text-[11px] sm:text-xs desktop:text-xs backdrop-blur-md border border-white/10 transition-all hover:scale-105 uppercase tracking-wide cursor-pointer whitespace-nowrap text-center"
               >
                 Explore Templates

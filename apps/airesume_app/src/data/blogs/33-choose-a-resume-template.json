@@ -1,0 +1,117 @@
+{
+  "id": "blog-033",
+  "slug": "choose-a-resume-template",
+  "title": "How to Choose a Resume Template That Passes ATS and Still Looks Good",
+  "subtitle": "Why most \"modern\" templates fail automated screening, and the five layout features to check before you commit to one.",
+  "excerpt": "Two-column layouts, icon rows and text boxes look good and parse badly. Here is how to choose a resume template that survives ATS parsing without looking dated.",
+  "category": "Resume Writing",
+  "readTime": "12 min read",
+  "date": "2026-09-25",
+  "featuredImage": "https://images.unsplash.com/photo-1517842645767-c639042777db?w=1920&q=80",
+  "featuredImageAlt": "Open notebook with handwritten notes, a pen and reading glasses on a desk",
+  "author": "Amarjot Lohia",
+  "tags": [
+    "resume template",
+    "ATS resume template",
+    "best resume template",
+    "CV template 2026",
+    "resume layout",
+    "two column resume"
+  ],
+  "sections": [
+    {
+      "id": "why-modern-templates-fail",
+      "heading": "Why Most Modern Resume Templates Fail Automated Screening",
+      "content": "<p class=\"text-gray-300 mb-4\">Resume templates are sold on first impressions. The preview shows balanced columns, an icon rail, a colored skills block — and it looks great, because a browser renders the page exactly the way the designer intended. An applicant tracking system never renders it at all.</p><p class=\"text-gray-300 mb-4\">A parser converts your file into a flat stream of text. It does not see your grid, your alignment, or your color hierarchy. Anything that depends on visual position instead of document order — a sidebar, a floating text box, an icon — becomes noise, disappears entirely, or lands somewhere it does not belong.</p><p class=\"text-gray-300 mb-4\">That is why a template can pass a visual check and fail a parse check at the same time. The layout did not break on screen; the extraction broke underneath it. Nothing in the preview warns you, because the preview is a browser and the preview is not the thing that decides whether a human ever sees your application.</p><p class=\"text-gray-300 mb-4\">The five failure modes below account for most of the damage. Learn to spot them while you are still choosing a template, because every one of them is expensive to undo after you have typed your work history into a locked layout.</p>"
+    },
+    {
+      "id": "how-parsers-read-a-page",
+      "heading": "How a Parser Reads a Page — and Where Reading Order Breaks",
+      "content": "<p class=\"text-gray-300 mb-4\">Every parser starts from the same assumption: a resume is a sequence of text in reading order. The more your layout relies on visual position, the further that sequence drifts from what you see on screen.</p>",
+      "subSections": [
+        {
+          "heading": "1. Multi-Column Reading Order",
+          "content": "<p class=\"text-gray-300 mb-3\">Many extractors sweep left to right across the full page width instead of honoring your column boundaries. In a two-column layout, items in a narrow left rail interleave with the right column, so your degree appears between two bullets from a job you held in 2019. Nothing looks broken in the preview; the text stream underneath is simply out of order, and chronology is what recruiters use to judge seniority.</p>"
+        },
+        {
+          "heading": "2. Icons, Glyphs, and Skill Bars",
+          "content": "<p class=\"text-gray-300 mb-3\">An icon font, a rating dot, or a progress bar carries no text for a parser to read. A skills row that shows a flag glyph next to a filled bar can contribute zero keywords to your application, and an emoji may extract as a placeholder or nothing at all. Your expertise silently leaves the document while staying perfectly visible to you.</p>"
+        },
+        {
+          "heading": "3. Tables Used for Layout",
+          "content": "<p class=\"text-gray-300 mb-3\">Tables are the most common invisible dependency in a template. Designers use them to align dates against titles and to pin columns in place, because that is how positioning works on a page. Parsers flatten tables cell by cell, and nested or merged cells regularly come out in an order that matches neither the design nor a sensible chronology.</p>"
+        },
+        {
+          "heading": "4. Text Boxes, Headers, and Footers",
+          "content": "<p class=\"text-gray-300 mb-3\">Content placed in floating text boxes or in the page header and footer is frequently excluded from extraction altogether. Contact details in a header, a summary in a sidebar text box, or a skills block pinned to the margin can vanish from the parsed version while looking perfect in preview. If your phone number lives in a header, assume it may not travel.</p>"
+        },
+        {
+          "heading": "5. Images Without Readable Text",
+          "content": "<p class=\"text-gray-300 mb-3\">Headshots, logos, word clouds, and skill infographics are raster images. Parsers do not read pixels, and alt text is rarely carried into a resume record. If your job titles, degree, or software list exist only inside an image, they do not exist for the system that ranks your application — and a recruiter scanning the extracted record will not see them either.</p>"
+        }
+      ]
+    },
+    {
+      "id": "five-layout-features-to-check",
+      "heading": "Five Layout Features to Check Before You Commit",
+      "content": "<p class=\"text-gray-300 mb-4\">Do this check while you are still choosing a template, not after you have typed for an hour. It takes two minutes and eliminates almost all of the risk. Open the template preview and answer each row below before you enter a single word of content.</p><table><thead><tr><th>Feature</th><th>Safe choice</th><th>Risky choice</th></tr></thead><tbody><tr><td>Column count</td><td>One column for all body text</td><td>Two or more columns carrying experience bullets</td></tr><tr><td>Section headings</td><td>Real text styled with type hierarchy</td><td>Headings inside badges, boxes, or sidebars</td></tr><tr><td>Skills</td><td>Plain list separated by commas or bullets</td><td>Icon sets, rating dots, progress bars</td></tr><tr><td>Dates and titles</td><td>Dates as text under each role title</td><td>Dates isolated in a narrow side rail</td></tr><tr><td>Contact block</td><td>Name, phone, and email as body text</td><td>Details in the page header or a text box</td></tr></tbody></table><p class=\"text-gray-300 mb-4\">One row deserves emphasis: if your experience bullets flow through more than one column, treat the template as unsafe until you have tested it yourself. That single decision determines most parse outcomes, because the interleaving damage starts the moment two columns of body text exist.</p><p class=\"text-gray-300 mb-4\">The other four rows matter in the same proportion they can hurt you. A heading in a badge usually still extracts, because the words are text. A skill inside an icon extracts nothing, because there are no words to extract. Rank your checks by how completely the feature hides real language.</p>"
+    },
+    {
+      "id": "when-two-columns-are-safe",
+      "heading": "When a Two-Column Layout Is Actually Safe",
+      "content": "<p class=\"text-gray-300 mb-4\">Not every multi-column design is a trap. A narrow left rail that holds only your city, phone number, email, and a short skills list — with all experience and education in one wide right column — is read acceptably by many parsers. Acceptably is not a guarantee, though, and the behavior varies between systems you will never be able to inspect.</p><p class=\"text-gray-300 mb-4\">The safe rule is about body text, not decoration. A sidebar holding contact details is a modest risk if it goes wrong, because you can repeat that information elsewhere in the document. Two columns of employment bullets is a large one: when the streams interleave, a recruiter reading the extracted version loses the chronology that tells them how senior you are.</p><p class=\"text-gray-300 mb-4\">There is also a subtler failure. Some templates put a heading in the left rail and its content in the right, so the parser records an empty section or a heading with no items under it. Sections that appear empty are sections a ranking algorithm has nothing to match against.</p><p class=\"text-gray-300 mb-4\">Single column does not mean plain. Type hierarchy, horizontal rules, generous spacing, and a disciplined font scale give you visual structure using nothing but real text — the same ingredients a parser already understands and a recruiter can skim without hunting for where a column ends.</p>"
+    },
+    {
+      "id": "fonts-icons-and-visual-weight",
+      "heading": "Fonts, Icons, and Visual Weight That Survive the Text Layer",
+      "content": "<p class=\"text-gray-300 mb-4\">Type is the one design tool that works twice: it looks good to a reader and stays intact as text. Standard families such as Arial, Calibri, Roboto, Inter, and Georgia extract cleanly in most systems, while decorative display fonts fall back to odd glyphs when a parser lacks the embedded font file.</p><p class=\"text-gray-300 mb-4\">Size matters as much as family. Anything under roughly nine points invites being skipped, and light gray text on a white background can look refined on a screen while becoming unreadable on a printed copy or a low-contrast applicant portal. Keep body text dark, sized for skimming, and use weight rather than color for emphasis so bold terms survive extraction as bold terms.</p><p class=\"text-gray-300 mb-4\">Icons belong in the human-facing version of your document, not the uploaded one. If you want a visual skills section, produce two files: the designed one for a portfolio or a direct email to a hiring manager, and a text-only version for application portals. Our <a href=\"/templates\" class=\"text-emerald-400 font-bold hover:underline\">resume templates</a> keep the icon-free version as the default, so the file you upload is always the readable one — and every template in the library is checked against a text-layer export before it ships.</p>"
+    },
+    {
+      "id": "test-a-template-yourself",
+      "heading": "How to Test Any Template Yourself in Five Minutes",
+      "content": "<p class=\"text-gray-300 mb-4\">You do not need special software to evaluate a template. You need one export, a text editor, and the discipline to run the test before you apply rather than after you are rejected.</p><ol class=\"list-decimal list-inside space-y-3 text-gray-300 ml-4 my-6\"><li><strong class=\"text-white\">Fill it with real content.</strong> A full role with dates, three bullets, an education line, and a skills list. Placeholder text hides layout problems because short strings never wrap or collide.</li><li><strong class=\"text-white\">Export to PDF and copy everything.</strong> Open the file, select all, and paste the entire page into a plain-text editor. What appears there is close to what a parser receives.</li><li><strong class=\"text-white\">Read the pasted result top to bottom.</strong> Contact details first, then summary, then each job title with its dates and bullets attached underneath it, in the order you designed.</li><li><strong class=\"text-white\">Check the risky zones.</strong> Skills section, sidebar, header, footer. Confirm every label crossed over as words rather than disappearing or arriving at the end.</li><li><strong class=\"text-white\">Get a second opinion.</strong> Run the same file through an <a href=\"/ats-resume-checker\" class=\"text-emerald-400 font-bold hover:underline\">ATS Resume Checker</a> and compare what it extracted against what you wrote.</li></ol><p class=\"text-gray-300 mb-4\">If step three reads in the order you designed, the template is probably safe and you can start writing. If it does not, careful writing will not rescue the file — the structure is the problem, so pick a different layout while your content is still sitting in your clipboard.</p>"
+    },
+    {
+      "id": "before-after-rebuild",
+      "heading": "Before and After: Rebuilding a Template That Failed Parsing",
+      "content": "<p class=\"text-gray-300 mb-4\">Here is a typical rebuild. The starting point was a design-forward template chosen for its icon sidebar and color blocks; the goal was the same content in a file a parser could follow in order.</p><table><thead><tr><th>Element</th><th>Before: what broke</th><th>After: the fix</th></tr></thead><tbody><tr><td>Layout</td><td>Two columns with an icon sidebar</td><td>Single column with ruled sections</td></tr><tr><td>Skills</td><td>Icon row with rating bars</td><td>Plain list of real skill names</td></tr><tr><td>Contact</td><td>Placed in the page header</td><td>First lines of the body text</td></tr><tr><td>Dates</td><td>Right-hand rail, split from titles</td><td>Directly under each job title</td></tr><tr><td>Parse result</td><td>Sections interleaved, skills missing</td><td>Reading order matches the design</td></tr></tbody></table><p class=\"text-gray-300 mb-4\">Nothing about the candidate changed between those two files. Same jobs, same bullets, same skills, same degree. The entire difference was in how the document was structured, which is why template choice belongs in the screening conversation rather than the taste conversation.</p><p class=\"text-gray-300 mb-4\">The rebuilt version also took less time to maintain. Sections stacked in one column can be duplicated, reordered, and tailored per application without a layout fighting back — you edit text, export, and the structure holds.</p>"
+    },
+    {
+      "id": "template-final-checklist",
+      "heading": "The Checklist to Run Before You Start Typing",
+      "content": "<p class=\"text-gray-300 mb-4\">Print this, keep it in a note, or memorize it. Every item takes seconds to verify at template-selection time and becomes expensive once your content is committed.</p><ul class=\"list-disc list-inside space-y-2 text-gray-300 ml-4 mb-6\"><li><strong class=\"text-white\">Single column</strong> for all experience and education content</li><li><strong class=\"text-white\">Real text headings</strong> — never images, badges, or boxed labels</li><li><strong class=\"text-white\">Skills as words</strong> with no icons, dots, or progress bars</li><li><strong class=\"text-white\">Contact details in the body</strong>, not the page header or footer</li><li><strong class=\"text-white\">Dates under each title</strong> as selectable text</li><li><strong class=\"text-white\">Text-layer PDF export</strong> you can copy from</li><li><strong class=\"text-white\">Nothing image-only</strong> — if it matters, it exists as text</li></ul><p class=\"text-gray-300 mb-4\">A good template guarantees structure, not substance. It cannot fix a summary that says nothing, thin bullets, or keywords that never appear in the posting — for those problems, the <a href=\"/ai-resume-builder\" class=\"text-emerald-400 font-bold hover:underline\">AI resume builder</a> drafts role-specific content you can drop straight into a layout that already parses.</p><p class=\"text-gray-300 mb-4\">If you are still deciding, start from <a href=\"/templates\" class=\"text-emerald-400 font-bold hover:underline\">resume templates</a> that already passed the paste test, then run your own finished export through the checker before you send it anywhere. Structure first, words second, applications third.</p><p class=\"text-gray-300 mb-4\"><a href=\"/sign-up\" class=\"inline-flex items-center gap-2 bg-[#013f2e] hover:bg-[#025c43] text-white px-8 py-4 rounded-full font-bold shadow-lg transition-colors duration-200 text-sm\">Start with AIResume Free</a> <a href=\"/ai-resume-builder\" class=\"inline-flex items-center gap-2 bg-white/10 text-white border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/20 transition text-sm\">Try the AI Resume Builder</a></p>"
+    }
+  ],
+  "tableOfContents": [
+    { "id": "why-modern-templates-fail", "title": "Why Most Modern Resume Templates Fail Automated Screening" },
+    { "id": "how-parsers-read-a-page", "title": "How a Parser Reads a Page — and Where Reading Order Breaks" },
+    { "id": "five-layout-features-to-check", "title": "Five Layout Features to Check Before You Commit" },
+    { "id": "when-two-columns-are-safe", "title": "When a Two-Column Layout Is Actually Safe" },
+    { "id": "fonts-icons-and-visual-weight", "title": "Fonts, Icons, and Visual Weight That Survive the Text Layer" },
+    { "id": "test-a-template-yourself", "title": "How to Test Any Template Yourself in Five Minutes" },
+    { "id": "before-after-rebuild", "title": "Before and After: Rebuilding a Template That Failed Parsing" },
+    { "id": "template-final-checklist", "title": "The Checklist to Run Before You Start Typing" }
+  ],
+  "faqs": [
+    {
+      "question": "Do two-column resumes get rejected by applicant tracking systems?",
+      "answer": "No public system guarantees rejection of a format, and parser behavior varies between vendors. The real risk is reading order: many extract left to right across the full page width, interleaving your sidebar with your main column. Single-column layouts avoid that risk entirely, which is why they remain the safest default."
+    },
+    {
+      "question": "Can an ATS read icons, skill bars, and progress charts?",
+      "answer": "Usually not as skills. Icon fonts and rating graphics carry no extractable text, so a Python skill shown as a filled bar may contribute nothing to keyword matching. List your skills as plain text with real words, and keep any visual version for the human-facing copy of your resume instead."
+    },
+    {
+      "question": "Which fonts are safest for an ATS resume?",
+      "answer": "Standard system fonts such as Arial, Calibri, Roboto, Inter, Georgia, and Times New Roman extract cleanly almost everywhere. Decorative or custom web fonts can fall back to odd characters in some parsers, and anything below roughly nine points risks being skipped. Prioritize legibility over personality in the typeface."
+    },
+    {
+      "question": "Should I include a photo or logo on my resume?",
+      "answer": "For most US and UK applications, no. Images rarely contribute text to a parser, they take up space that content could use, and some employers discard them by policy to reduce bias. If your market expects a photo, keep it away from the skills and experience areas so it cannot disrupt reading order."
+    },
+    {
+      "question": "How do I know if my template is ATS-friendly?",
+      "answer": "Export the finished document, copy everything into a plain-text editor, and read the order from top to bottom. If sections interleave, dates detach from titles, or the contact block is missing, the template is unsafe. An ATS Resume Checker will then show you exactly what a parser extracts from the file."
+    }
+  ]
+}

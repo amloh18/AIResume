@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ArrowRight } from 'lucide-react';
+import { HOME_FAQ, PRODUCT_FAQ } from '@/data/seo';
 
 interface FAQItem {
   id: number;
@@ -13,43 +14,14 @@ interface FAQItem {
 const FAQ = () => {
   const [openItems, setOpenItems] = useState<number[]>([1]);
 
-  const faqData: FAQItem[] = [
-    {
-      id: 1,
-      question: "What is AIResume and how does it help me get hired?",
-      answer: "AIResume is an all-in-one AI career workspace designed to help you land interviews faster. It builds ATS-optimized resumes from scratch or improves existing ones, generates tailored cover letters matching job descriptions, simulates interview prep, and tracks all your job applications in a single Kanban dashboard."
-    },
-    {
-      id: 2,
-      question: "How does the real-time ATS scoring & keyword optimization work?",
-      answer: "When you paste a target job description, our engine analyzes essential hard and soft skills, industry keywords, and ATS parsing criteria. It gives you a real-time match score and precise, actionable bullet point recommendations so your resume consistently beats automated filters and ranks at the top of recruiter pipelines."
-    },
-    {
-      id: 3,
-      question: "Can I start from scratch or upload my existing resume?",
-      answer: "Both! You can upload an existing PDF or DOCX file for instant AI restructuring and keyword enhancement, or build a brand-new resume step-by-step using our Mori AI Career Assistant with industry-tested, ATS-compliant templates."
-    },
-    {
-      id: 4,
-      question: "How do the Application Tracker and Auto Applications work?",
-      answer: "The Application Tracker organizes every job in an intuitive Kanban pipeline from 'Saved' to 'Interviewing' and 'Offer'. With Auto Applications, our system automatically tailors your CV and cover letter for each specific role and streamlines submissions, saving you dozens of repetitive hours."
-    },
-    {
-      id: 5,
-      question: "What is the difference between the Starter and Focused plans?",
-      answer: "The Starter plan ($0 for monthly with limited usage, or $2/mo yearly) gives you core studio editing, standard templates, live ATS scoring, and 10 tracked applications. The Focused plan ($9.99/mo or $7/mo billed yearly) unlocks unlimited AI usage, automated applications, the LinkedIn Profile Enhancer, Interview Prep, and 24/7 priority support."
-    },
-    {
-      id: 6,
-      question: "What happens to my documents if I cancel or change my plan?",
-      answer: "Your documents are always 100% yours. If you downgrade or cancel your subscription, you retain full access to view, edit, and download all previously created resumes and cover letters as PDF and DOCX files without any watermarks or restrictions."
-    },
-    {
-      id: 7,
-      question: "What payment methods and currencies do you support?",
-      answer: "We support all major international Credit and Debit Cards (Visa, Mastercard, AMEX), UPI, and regional payment methods via secure SSL-encrypted processing. Prices in non-USD currencies are calculated with live exchange rates with no hidden fees."
-    }
-  ];
+  // Single source of truth: `src/app/page.tsx` builds the FAQPage JSON-LD from this exact array, so
+  // the schema and what a reader can open can never disagree. Keep the order — informational
+  // questions first, because those are the ones aimed at search queries rather than at pricing.
+  const faqData: FAQItem[] = [...HOME_FAQ, ...PRODUCT_FAQ].map((item, index) => ({
+    id: index + 1,
+    question: item.question,
+    answer: item.answer,
+  }));
 
   const toggleItem = (id: number) => {
     setOpenItems(prev => {

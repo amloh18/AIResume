@@ -22,7 +22,15 @@ export const metadata: Metadata = {
     type: 'website',
   },
   alternates: {
-    canonical: 'https://buildairesume.com/explore',
+    // `/explore` renders the exact same `ExploreStudioClient` body as `/templates` — same 742 words,
+    // same H1, only the <title> differs. Two indexable URLs with identical content split the signals
+    // for "resume templates" between them, and `/templates` is the page that should hold them.
+    // Canonicalising here tells Google to fold this route into `/templates` instead of ranking both.
+    canonical: 'https://buildairesume.com/templates',
+  },
+  robots: {
+    index: false,
+    follow: true,
   },
 };
 
