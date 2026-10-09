@@ -320,34 +320,47 @@ const SECTION_ICONS: any = {
   contact: Phone,
 };
 
+/* ─── SECTION TITLES ─────────────────────────────────────────────────────────
+ * Every style carries `cv-section-title` on the element that owns the title's
+ * bottom gap. The two stylesheets (canvas + snapshot) then drive BOTH of the
+ * title's visual relationships from tokens:
+ *   • its gap to the first entry follows --cv-item-gap, so the Design panel's
+ *     Item gap control opens the title → entry space too, instead of the title
+ *     hugging the first entry while only the entries drifted apart;
+ *   • its icon is sized in font-relative units, i.e. to the title's own type
+ *     size, rather than the fixed 14-16px that read as slightly larger than the
+ *     title itself.
+ * The Tailwind mb-* and size-* utilities below stay as the no-token fallback. */
+const TITLE_TOKEN_CLASS = 'cv-section-title';
+
 export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; isDark: boolean; showIcons?: boolean; titleKey?: string }>> = {
   'standard': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} ${TITLE_TOKEN_CLASS} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'minimal': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 cv-keep-with-next ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} ${TITLE_TOKEN_CLASS} mb-1.5 cv-keep-with-next ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
   },
   'accent': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} ${TITLE_TOKEN_CLASS} mb-1.5 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'boxed': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-1.5 ${TYPOGRAPHY.date} cv-keep-with-next ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
+    return <div className={`inline-flex items-center gap-2 border px-2 py-1 ${TITLE_TOKEN_CLASS} mb-1.5 ${TYPOGRAPHY.date} cv-keep-with-next ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
   },
   'sidebar-default': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-1 border-b pb-1 cv-keep-with-next ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} ${TITLE_TOKEN_CLASS} mb-1 border-b pb-1 cv-keep-with-next ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
   },
   'designer': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 cv-keep-with-next ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} ${TITLE_TOKEN_CLASS} mb-2 cv-keep-with-next ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'lines': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className="flex items-center gap-4 mb-2 cv-keep-with-next"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
+    return <div className={`flex items-center gap-4 ${TITLE_TOKEN_CLASS} mb-2 cv-keep-with-next`}><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
   },
 };
 
@@ -1318,7 +1331,7 @@ export const CANVAS_TEMPLATES = [
   // rhythm), 1px between entries, a black accent, and bullets rather than the
   // hybrid paragraph/bullet mix. Every one of these is a `preferred*` field so
   // the Design panel still overrides them per document.
-  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 0, preferredItemGap: 1, preferredSpacing: 0.7, preferredFontSize: 10, preferredPageMargin: 25, preferredFont: 'Playfair Display', preferredAccentColor: '#000000', preferredFormatOption: 'bullets_only', zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
+  { id: 'tpl-1', name: 'Minimalist Single', type: '1-col', titleStyle: 'minimal', preferredSectionGap: 0, preferredItemGap: 1, preferredSpacing: 0.7, preferredFontSize: 10, preferredPageMargin: 25, preferredFont: 'Playfair Display', preferredAccentColor: '#000000', zones: { main: ['header-minimal', 'summary-clean', 'experience-standard', 'education-standard', 'projects-standard', 'skills-category-inline'] } },
   { id: 'tpl-2', name: 'Modern Split', type: '2-col', titleStyle: 'standard', preferredSectionGap: 18, preferredItemGap: 10, zones: { header: ['header-minimal'], left: ['experience-standard', 'projects-standard', 'education-standard'], right: ['summary-highlight', 'skills-pills', 'languages-comma'] } },
   { id: 'tpl-3', name: 'Professional Sidebar Left', type: 'sidebar-left', titleStyle: 'standard', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { sidebar: ['header-avatar', 'sidebar-contact', 'skills-pills', 'languages-dots'], main: ['summary-clean', 'experience-standard', 'projects-compact', 'education-standard'] } },
   { id: 'tpl-4', name: 'Executive Sidebar Right', type: 'sidebar-right', titleStyle: 'minimal', sidebarTitleStyle: 'sidebar-default', preferredSectionGap: 14, preferredItemGap: 8, zones: { main: ['header-split', 'summary-clean', 'experience-timeline', 'education-standard'], sidebar: ['sidebar-contact', 'skills-category-inline', 'interests-pills'] } },

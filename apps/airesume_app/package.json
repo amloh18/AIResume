@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build --webpack",
     "start": "next start",
     "lint": "eslint src/app && eslint src/lib && eslint src/components && eslint src/contexts src/hooks src/types src/services src/models src/verification src/workers src/data src/email src/matching src/platforms src/*.ts",
     "build:analyze": "ANALYZE=true next build",
@@ -25,6 +25,8 @@
     "backfill:role-families": "npx tsx scripts/backfill-role-families.ts",
     "db:indexes": "npx tsx scripts/create-job-indexes.ts",
     "backfill:cv-tailoring-mode": "npx tsx scripts/backfill-cv-tailoring-mode.ts",
+    "verify:description-blocks": "npx tsx tests/verify-description-blocks.ts",
+    "verify:field-labels": "npx tsx tests/verify-field-labels.ts",
     "build:worker": "node scripts/build-worker.mjs",
     "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",
     "admin:list": "npx tsx scripts/list-admins.ts",

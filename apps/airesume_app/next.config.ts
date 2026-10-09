@@ -403,15 +403,6 @@ const nextConfig: NextConfig = {
     'pdf2pic',
     'pdf-parse',
     'stripe',
-    // Exclude Sentry from Edge Runtime
-    '@sentry/nextjs',
-    '@sentry/node',
-    '@sentry/browser',
-    '@sentry/core',
-    '@sentry/utils',
-    '@sentry/types',
-    '@sentry/integrations',
-    '@sentry/tracing',
   ],
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,

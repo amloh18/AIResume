@@ -13,7 +13,8 @@
  * Original database records are NOT modified until explicit save.
  */
 
-import { generateCVId, ensureId, type DescriptionBlock } from './cv-edit-ops';
+import { generateCVId, ensureId } from './cv-edit-ops';
+import { DESCRIPTION_SECTION_FIELDS, materializeRecordDescriptionViews } from '@/lib/utils/cv-description-blocks';
 
 // ============================================================================
 // NORMALIZE: Add IDs to legacy CV data
@@ -37,7 +38,7 @@ export function normalizeCvData(cvData: any): any {
 
   // Normalize array sections
   const arraySections = [
-    'work', 'education', 'skills', 'projects', 'certificates',
+    'work', 'experience', 'education', 'skills', 'projects', 'certificates',
     'languages', 'awards', 'publications', 'volunteer',
     'interests', 'references'
   ];
@@ -88,23 +89,21 @@ function normalizeRecord(item: any, sectionKey: string, index: number): any {
     next.id = `${sectionKey}-${generateCVId().substring(0, 8)}`;
   }
 
-  // Convert highlights (string[]) to descriptions (DescriptionBlock[]) if not present
-  // This is the key backward-compatibility bridge
-  if (!next.descriptions) {
-    next.descriptions = convertToDescriptions(next, sectionKey);
-  }
-
-  // Ensure all description blocks have IDs and valid types
-  if (Array.isArray(next.descriptions)) {
-    next.descriptions = next.descriptions.map((d: any, i: number) => {
-      if (!d || typeof d !== 'object') {
-        return { id: generateCVId(), type: 'paragraph', content: String(d || '') };
-      }
-      return {
-        id: d.id || generateCVId(),
-        type: d.type === 'bullet' ? 'bullet' : 'paragraph',
-        content: d.content || '',
-      };
+  /* Combined description model — paragraphs and bullets live in ONE ordered
+   * `descriptions` array.
+   *
+   * Reconcile it against the legacy fields on every normalization so Mori
+   * always sees the CURRENT text: when the two views disagree, the legacy
+   * summary/highlights/description are the ones external writers (CV Surgeon,
+   * tailoring, patches) just edited, so they win; when they agree, the ordered
+   * blocks are kept so mixed ordering survives. Records with blocks but no
+   * legacy content at all keep their blocks (an AI-only write).
+   *
+   * The call also materializes the legacy fields back from the blocks, which is
+   * what keeps the two views in agreement. */
+  if (DESCRIPTION_SECTION_FIELDS[sectionKey]) {
+    materializeRecordDescriptionViews(next, DESCRIPTION_SECTION_FIELDS[sectionKey], {
+      previousDescriptions: Array.isArray(item.descriptions) ? item.descriptions : undefined,
     });
   }
 
@@ -122,60 +121,6 @@ function normalizeRecord(item: any, sectionKey: string, index: number): any {
   }
 
   return next;
-}
-
-/**
- * Convert legacy highlights/summary to canonical DescriptionBlock[].
- *
- * Mapping rules:
- * - summary (string) → paragraph block(s) (split on double newlines)
- * - highlights (string[]) → bullet blocks
- * - If both exist: summary blocks come first, then bullet blocks
- * - Empty/whitespace-only content is filtered out
- */
-function convertToDescriptions(item: any, sectionKey: string): DescriptionBlock[] {
-  const descriptions: DescriptionBlock[] = [];
-
-  // Get summary text (paragraph content)
-  const summary = typeof item.summary === 'string' ? item.summary.trim() : '';
-
-  // Get highlights (bullet content)
-  const highlights = Array.isArray(item.highlights)
-    ? item.highlights.filter((h: any) => typeof h === 'string' && h.trim().length > 0)
-    : [];
-
-  // Also check for 'description' field (used in some sections)
-  const description = typeof item.description === 'string' ? item.description.trim() : '';
-
-  // For sections that use 'description' instead of 'summary'
-  const paragraphText = sectionKey === 'projects' || sectionKey === 'certificates'
-    ? description
-    : summary;
-
-  // Add paragraph blocks from summary/description
-  if (paragraphText) {
-    // Split on double newlines for multiple paragraphs
-    const paragraphs = paragraphText.split(/\n\n+/).filter((p: string) => p.trim().length > 0);
-    for (const para of paragraphs) {
-      descriptions.push({
-        id: generateCVId(),
-        type: 'paragraph',
-        content: para.trim(),
-      });
-    }
-  }
-
-  // Add bullet blocks from highlights
-  for (const highlight of highlights) {
-    descriptions.push({
-      id: generateCVId(),
-      type: 'bullet',
-      content: highlight.trim(),
-    });
-  }
-
-  // If neither summary nor highlights produced anything, return empty
-  return descriptions;
 }
 
 // ============================================================================

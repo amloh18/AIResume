@@ -11,6 +11,7 @@ import crypto from 'crypto';
 import { ANALYSIS_AGENT_PROMPT, CV_TAILOR_AGENT_PROMPT } from '@/lib/prompts/promptTemplates';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { cleanAndParseJSON, inferCvSectionFromPrompt, mergeMoriCvIntoCanvas, parseMoriChatContent } from '@/lib/utils/mori-chat-response';
+import { materializeCvDescriptionViews } from '@/lib/utils/cv-description-blocks';
 import { mixedIdFilter } from '@/lib/utils/mixed-id';
 import { normalizeCvData } from '@/types/cv-normalizer';
 import { diffCVData } from '@/types/cv-edit-ops';
@@ -257,6 +258,11 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // The tailor agent returns bullets only; derive the ordered `descriptions`
+      // blocks from them so the canvas, Mori and ATS all read ONE combined
+      // description model instead of drifting summary/highlights views.
+      materializeCvDescriptionViews(mappedCV);
+
       // Save analysis report to database cache to prevent redundant re-generation when editor loads
       if (cvId) {
         try {
@@ -470,7 +476,20 @@ RULES FOR CV EDITS — READ CAREFULLY:
 
 7. DESCRIPTION BLOCKS: Records have a "descriptions" array with objects like:
    { "id": "some-uuid", "type": "paragraph"|"bullet", "content": "text" }
-   When modifying descriptions, always reference the exact "id" of the target description.
+   These blocks are ONE combined description per entry: paragraphs and bullets
+   coexist in the same array and their ORDER is meaningful. When modifying
+   descriptions, always reference the exact "id" of the target description.
+
+   ENTRY DESCRIPTION CONVENTION (work, projects, volunteer, education):
+   - Entry paragraphs are SHORT lead-in/outro lines for the bullets — one line,
+     roughly 25 words or fewer. They are NOT free-form summaries.
+   - The preferred shape is: bullet points first, optionally followed by ONE
+     short closing/lead line. Sometimes bullets only — that is fine too.
+   - Long prose does NOT belong in an entry description. Convert it to bullets,
+     or to a single short line when it genuinely works as a lead-in.
+   - Only basics.summary is a full paragraph; never convert it to bullets.
+   - When adding new content with add_description, use type "bullet" by
+     default. Use type "paragraph" only for that one short lead/outro line.
 
 8. PRESERVE IDs. Never regenerate IDs for existing records or descriptions. Never modify records you were not asked to change.
 

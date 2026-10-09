@@ -9,6 +9,7 @@
  */
 
 import { SnippetOverrides } from './snippets';
+import type { DescriptionBlock } from './cv-edit-ops';
 
 /**
  * Section structure entry defining order and visibility
@@ -76,6 +77,12 @@ export interface UnifiedCVDataStructure {
     endDate: string;
     summary: string;
     highlights: string[];
+    /**
+     * The combined, ORDERED description (paragraphs and bullets in one array).
+     * Canonical for mixed content: `summary` + `highlights` are the lossy legacy
+     * view derived from it. See `lib/utils/cv-description-blocks.ts`.
+     */
+    descriptions?: DescriptionBlock[];
   }>;
 
   // Volunteer Experience
@@ -87,6 +94,7 @@ export interface UnifiedCVDataStructure {
     endDate: string;
     summary: string;
     highlights: string[];
+    descriptions?: DescriptionBlock[];
   }>;
 
   // Education
@@ -171,6 +179,8 @@ export interface UnifiedCVDataStructure {
     highlights?: string[];  // Optional field
     keywords: string[];  // Technologies/skills used in the project
     url: string;
+    /** Combined ordered description (see `work[].descriptions`). */
+    descriptions?: DescriptionBlock[];
   }>;
 }
 
