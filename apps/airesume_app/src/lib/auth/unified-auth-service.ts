@@ -79,6 +79,52 @@ export class UnifiedAuthService {
           name: getSessionCookieName(),
           options: getSessionCookieOptions(7 * 24 * 60 * 60), // 7 days
         },
+        callbackUrl: {
+          name: isSecureSessionCookie() ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
+          options: {
+            sameSite: isSecureSessionCookie() ? 'none' : 'lax',
+            path: '/',
+            secure: isSecureSessionCookie(),
+          },
+        },
+        csrfToken: {
+          name: isSecureSessionCookie() ? '__Host-next-auth.csrf-token' : 'next-auth.csrf-token',
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: isSecureSessionCookie(),
+          },
+        },
+        pkceCodeVerifier: {
+          name: isSecureSessionCookie() ? '__Secure-next-auth.pkce.code_verifier' : 'next-auth.pkce.code_verifier',
+          options: {
+            httpOnly: true,
+            sameSite: isSecureSessionCookie() ? 'none' : 'lax',
+            path: '/',
+            secure: isSecureSessionCookie(),
+            maxAge: 60 * 15,
+          },
+        },
+        state: {
+          name: isSecureSessionCookie() ? '__Secure-next-auth.state' : 'next-auth.state',
+          options: {
+            httpOnly: true,
+            sameSite: isSecureSessionCookie() ? 'none' : 'lax',
+            path: '/',
+            secure: isSecureSessionCookie(),
+            maxAge: 60 * 15,
+          },
+        },
+        nonce: {
+          name: isSecureSessionCookie() ? '__Secure-next-auth.nonce' : 'next-auth.nonce',
+          options: {
+            httpOnly: true,
+            sameSite: isSecureSessionCookie() ? 'none' : 'lax',
+            path: '/',
+            secure: isSecureSessionCookie(),
+          },
+        },
       },
 
       secret: NEXTAUTH_SECRET,
