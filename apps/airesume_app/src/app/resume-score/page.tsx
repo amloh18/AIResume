@@ -1,5 +1,7 @@
 import { Metadata } from 'next'
 import ResumeScorePage from './page.client'
+import { JsonLd, breadcrumbSchema, faqSchema } from '@/components/seo/StructuredData'
+import { RESUME_SCORE_FAQ } from '@/data/seo'
 
 export const metadata: Metadata = {
   title: 'Resume Score Checker | Is Your Resume ATS-Ready?',
@@ -8,6 +10,17 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://buildairesume.com/resume-score' },
 }
 
+const breadcrumb = breadcrumbSchema([
+  { name: 'Home', path: '/' },
+  { name: 'Resume Score Checker' },
+])
+
 export default function Page() {
-  return <ResumeScorePage />
+  return (
+    <>
+      <JsonLd data={breadcrumb} />
+      <JsonLd data={faqSchema(RESUME_SCORE_FAQ)} />
+      <ResumeScorePage />
+    </>
+  )
 }

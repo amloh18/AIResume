@@ -3,6 +3,7 @@ import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
 import { 
+  generateVerificationCode,
   validateCodeFormat, 
   incrementFailedAttempts,
   isCodeExpired,
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Validate code format
     if (!validateCodeFormat(code)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid code format. Please enter a 4-digit code.' },
+        { success: false, message: 'Invalid code format. Please enter a 6-digit code.' },
         { status: 400 }
       );
     }
@@ -53,6 +54,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!verificationToken) {
+      // Check if user is already verified (e.g. from a previous attempt)
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser?.isEmailVerified) {
+        return NextResponse.json(
+          {
+            success: false,
+            alreadyVerified: true,
+            message: 'Your email is already verified. Please sign in with your password.'
+          },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
         { success: false, message: 'Invalid or expired code' },
         { status: 401 }
@@ -121,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Create a one-time session token for NextAuth sign-in
     // This token will be used with the passwordless provider
-    const sessionCode = Math.random().toString().slice(2, 6).padStart(4, '0');
+    const sessionCode = generateVerificationCode();
     const sessionToken = await VerificationToken.createCode(
       user._id,
       email.toLowerCase(),
