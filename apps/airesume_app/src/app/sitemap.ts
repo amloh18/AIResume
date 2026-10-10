@@ -1,5 +1,26 @@
 import { MetadataRoute } from 'next'
 import { getAllArticles } from '@/data/blogs'
+import { getDb } from '@/lib/db'
+import { PUBLIC_OPEN_STATUSES, buildJobSlug } from '@/lib/jobs/publicJobView'
+
+/**
+ * Cap on job URLs emitted from the sitemap. A sitemap file is limited to 50,000
+ * URLs / 50 MB, and a "every job ever" sitemap is mostly dead weight — Google
+ * wants the canonical, still-open listings. The newest N open roles are plenty;
+ * older ones remain reachable and crawlable through `/explore/jobs`.
+ */
+const MAX_JOB_SITEMAP_URLS = 2000
+
+/*
+  Rendered per request rather than prerendered at build.
+
+  A `sitemap.js` route handler is cached by default, which meant the build (where
+  MongoDB is not reachable) baked in a sitemap with no job URLs at all and then
+  served that for up to an hour after every deploy. Declaring the route dynamic
+  removes the build-time dependency entirely — the DB read happens on request and
+  the CDN absorbs the traffic.
+*/
+export const dynamic = 'force-dynamic'
 
 /**
  * Sitemap.
@@ -14,7 +35,7 @@ import { getAllArticles } from '@/data/blogs'
  * defaulting it to build time would stamp every URL with "changed just now" on every deploy. Google
  * ignores a `lastmod` it finds consistently inaccurate, so a wrong value is worse than omitting it.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://buildairesume.com'
 
   const page = (
@@ -38,6 +59,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page('/resume-score', 0.9, 'weekly'),
     page('/features', 0.9, 'weekly'),
     page('/blog', 0.8, 'weekly'),
+    // Public job discovery. `/explore/jobs` is indexable (unlike `/explore`,
+    // which canonicalises to `/templates`) and is the hub for the job detail
+    // pages emitted below.
+    page('/explore/jobs', 0.9, 'daily'),
   ]
 
   // ── Free tools ─────────────────────────────────────────────────────────
@@ -115,8 +140,44 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const legalSitemapEntries = legalPages.map((path) => page(path, 0.3, 'yearly'))
 
+  // ── Public job listings ────────────────────────────────────────────────
+  // Only OPEN listings are advertised (a closed role must not be indexed as an
+  // open one). The whole section is best-effort: if the database is unreachable
+  // the sitemap still renders every static entry rather than 500ing.
+  let jobSitemapEntries: MetadataRoute.Sitemap = []
+  try {
+    const db = await getDb()
+    const rows = await db
+      .collection('jobs')
+      .find({ status: { $in: [...PUBLIC_OPEN_STATUSES] } })
+      // `title` + `company.name` are projected because the slug is DERIVED from
+      // them — there is no slug column to select.
+      .project({ canonicalId: 1, title: 1, 'company.name': 1, lastVerifiedAt: 1, postedAt: 1 })
+      .sort({ postedAt: -1 })
+      .limit(MAX_JOB_SITEMAP_URLS)
+      .toArray()
+
+    // The sitemap must advertise the SAME url the page actually serves, or every
+    // submitted url is a redirect. `buildJobSlug` reads exactly the fields
+    // projected above, so the two can never disagree.
+    const seen = new Set<string>()
+    jobSitemapEntries = rows
+      .filter((row: any) => typeof row?.canonicalId === 'string' && row.canonicalId.length > 0)
+      .flatMap((row: any) => {
+        const path = `/explore/jobs/${buildJobSlug(row)}`
+        // A duplicate url makes the sitemap invalid, so collapse any collision
+        // rather than emitting the same path twice.
+        if (seen.has(path)) return []
+        seen.add(path)
+        return [page(path, 0.6, 'daily', row.lastVerifiedAt || row.postedAt || undefined)]
+      })
+  } catch (error) {
+    console.warn('[sitemap] public job listings unavailable, emitting static entries only:', error)
+  }
+
   return [
     ...staticPages,
+    ...jobSitemapEntries,
     ...toolSitemapEntries,
     ...roleSitemapEntries,
     ...exampleSitemapEntries,

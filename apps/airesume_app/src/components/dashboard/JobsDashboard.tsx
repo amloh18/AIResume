@@ -107,6 +107,7 @@ const MANAGED_URL_KEYS = [
   'companies',
   'sources',
   'atsTypes',
+  'portal',
 ];
 
 function arrayParam(values: string[] | undefined): string | undefined {
@@ -138,6 +139,7 @@ function filtersToParams(filters: JobsFilter): URLSearchParams {
   set('companies', arrayParam(filters.companies));
   set('sources', arrayParam(filters.sources as string[] | undefined));
   set('atsTypes', arrayParam(filters.atsTypes as string[] | undefined));
+  set('portal', filters.portalSource);
   return params;
 }
 
@@ -181,6 +183,8 @@ function paramsToFilters(params: URLSearchParams): Partial<JobsFilter> {
   if (sources) f.sources = sources as JobsFilter['sources'];
   const atsTypes = split('atsTypes');
   if (atsTypes) f.atsTypes = atsTypes as JobsFilter['atsTypes'];
+  const portal = get('portal');
+  if (portal === 'naukri' || portal === 'indeed' || portal === 'linkedin') f.portalSource = portal;
   return f;
 }
 
@@ -225,46 +229,69 @@ type SavedIndexRecord = {
   company?: string;
   jobTitle?: string;
   title?: string;
+  status?: string;
+  internalStatus?: string;
 };
 
+interface BuiltJobIndices {
+  savedIds: Set<string>;
+  savedJobIdMap: Map<string, string>;
+  applicationJobIdMap: Map<string, string>;
+  appliedJobIds: Set<string>;
+}
+
 /**
- * Build the id set / id map from a `/api/jobs?limit=200&lite=true` payload.
- * Pure, so the mount loader and the `jobUpdated` listener share it verbatim
- * instead of each carrying their own copy of the key list.
+ * Build indices from `/api/jobs?limit=200&lite=true` payload.
+ * Strictly separates bookmarks (saved status) from application/in-flight tracker records.
  */
-function buildSavedIndex(items: SavedIndexRecord[]): { idSet: Set<string>; idMap: Map<string, string> } {
-  const idSet = new Set<string>();
-  const idMap = new Map<string, string>();
+function buildJobIndices(items: SavedIndexRecord[]): BuiltJobIndices {
+  const savedIds = new Set<string>();
+  const savedJobIdMap = new Map<string, string>();
+  const applicationJobIdMap = new Map<string, string>();
+  const appliedJobIds = new Set<string>();
 
   items.forEach((j) => {
     const dbId = j._id || j.id;
-    /*
-      A saved document always has an `_id`. Bail rather than index the derived
-      keys under `undefined` — that leaves `has(key)` true while `get(key)` is
-      falsy, so the bookmark and the tracker disagree about the same job.
-    */
     if (!dbId) return;
 
-    idSet.add(dbId);
-    idMap.set(dbId, dbId);
-
-    if (j.jobId) {
-      idSet.add(j.jobId);
-      idMap.set(j.jobId, dbId);
-    }
-    if (j.externalId) {
-      idSet.add(j.externalId);
-      idMap.set(j.externalId, dbId);
-    }
+    // Index all tracker applications into applicationJobIdMap
+    applicationJobIdMap.set(dbId, dbId);
+    if (j.jobId) applicationJobIdMap.set(j.jobId, dbId);
+    if (j.externalId) applicationJobIdMap.set(j.externalId, dbId);
     if (j.jobUrl || j.sourceUrl) {
-      idMap.set(normalizeApplyUrl(j.jobUrl || j.sourceUrl), dbId);
+      applicationJobIdMap.set(normalizeApplyUrl(j.jobUrl || j.sourceUrl), dbId);
     }
     if (j.company && (j.jobTitle || j.title)) {
-      idMap.set(jobIdentityKey(j.company, j.jobTitle || j.title), dbId);
+      applicationJobIdMap.set(jobIdentityKey(j.company, j.jobTitle || j.title), dbId);
+    }
+
+    const isSavedOnly = j.status === 'saved' || j.status === 'draft';
+    if (isSavedOnly) {
+      savedIds.add(dbId);
+      savedJobIdMap.set(dbId, dbId);
+      if (j.jobId) {
+        savedIds.add(j.jobId);
+        savedJobIdMap.set(j.jobId, dbId);
+      }
+      if (j.externalId) {
+        savedIds.add(j.externalId);
+        savedJobIdMap.set(j.externalId, dbId);
+      }
+      if (j.jobUrl || j.sourceUrl) {
+        savedJobIdMap.set(normalizeApplyUrl(j.jobUrl || j.sourceUrl), dbId);
+      }
+      if (j.company && (j.jobTitle || j.title)) {
+        savedJobIdMap.set(jobIdentityKey(j.company, j.jobTitle || j.title), dbId);
+      }
+    } else if (j.status) {
+      // Any non-saved status (e.g. created, applied, screening, etc.) counts as applied
+      appliedJobIds.add(dbId);
+      if (j.jobId) appliedJobIds.add(j.jobId);
+      if (j.externalId) appliedJobIds.add(j.externalId);
     }
   });
 
-  return { idSet, idMap };
+  return { savedIds, savedJobIdMap, applicationJobIdMap, appliedJobIds };
 }
 
 /*
@@ -344,6 +371,89 @@ export default function JobsDashboard() {
       tabSetByUrl.current = true;
     }
   }, [searchParams]);
+
+  /*
+    ── Public → authenticated handoff ────────────────────────────────────────
+    A visitor who clicked "Apply with AIResume" on `/explore/jobs/:id` arrives
+    here as `/dashboard/jobs?tab=applications&jobId=<canonicalId>&fromPublic=1`.
+    The `jobId` is a *canonical listing* id, not an application id, so there is
+    usually no tracker row for it yet.
+
+    This effect is the one place that turns a public listing into a tracked
+    application:
+      - It only runs when the `fromPublic` flag is present, so an ordinary
+        `?jobId=` deep link (e.g. from a card's "View" action) is untouched.
+      - It creates the application through the EXISTING `POST /api/jobs` route,
+        which dedupes via `checkForDuplicate`. A duplicate returns 409 with the
+        existing row, so a reload or a second sign-in resumes the same
+        application instead of creating another.
+      - It creates it with the default `saved` status, which is not a quota
+        event — quota is consumed by the auto-apply pipeline, not by saving.
+      - It then rewrites the URL to the real application id, which is what the
+        ApplicationsPanel deep-link understands, so Journey → Analysis opens on
+        the right job.
+    Nothing is submitted and no automation is started.
+  */
+  const publicHandoffRef = useRef(false);
+  useEffect(() => {
+    const jobIdParam = searchParams.get('jobId');
+    const fromPublic = searchParams.get('fromPublic') === '1';
+    if (!jobIdParam || !fromPublic || publicHandoffRef.current) return;
+    publicHandoffRef.current = true;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/public/jobs/${encodeURIComponent(jobIdParam)}`);
+        if (!res.ok) {
+          toast({
+            title: 'Job unavailable',
+            description:
+              'That listing is no longer accepting applications. Your existing applications are unaffected.',
+          });
+          router.replace('/dashboard/jobs?tab=applications');
+          return;
+        }
+
+        const data = await res.json();
+        const job = data?.job;
+        if (!job) {
+          router.replace('/dashboard/jobs?tab=applications');
+          return;
+        }
+
+        const createRes = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId: job.canonicalId,
+            jobTitle: job.title,
+            company: job.company?.name,
+            location: job.location?.label,
+            jobUrl: job.applyUrl,
+            jobDescription: job.description,
+            // `discovery` is an existing, allowlisted source — the job was found
+            // in the public discovery feed, not imported or added by hand.
+            source: 'discovery',
+            atsType: job.atsType || 'unknown',
+          }),
+        });
+
+        const created = await createRes.json().catch(() => null);
+        // 409 (duplicate) returns `existingJob`; a fresh create returns `job`.
+        const appId =
+          created?.job?._id || created?.existingJob?._id || created?.existingJob?.id;
+
+        if (appId) {
+          router.replace(`/dashboard/jobs?tab=applications&jobId=${appId}`);
+        } else {
+          router.replace('/dashboard/jobs?tab=applications');
+        }
+      } catch (err) {
+        console.error('Public job handoff failed:', err);
+        router.replace('/dashboard/jobs?tab=applications');
+      }
+    })();
+  }, [searchParams, router, toast]);
 
   const [countries, setCountries] = useState<string[]>([]);
 
@@ -435,6 +545,8 @@ export default function JobsDashboard() {
   const [portalConnections, setPortalConnections] = useState<any[]>([]);
   const [naukriConnected, setNaukriConnected] = useState<boolean>(false);
   const [isSyncingPortals, setIsSyncingPortals] = useState<boolean>(false);
+  /** Which portal's Sync button is currently running (per-tab spinner). */
+  const [syncingPortal, setSyncingPortal] = useState<'naukri' | 'indeed' | 'linkedin' | null>(null);
   const [connectModalOpen, setConnectModalOpen] = useState<boolean>(false);
   const [selectedConnectPortal, setSelectedConnectPortal] = useState<PortalType>('naukri');
   const [autoApplyEnabled, setAutoApplyEnabled] = useState<boolean>(false);
@@ -560,8 +672,10 @@ export default function JobsDashboard() {
     return parts;
   }, [userPreferences, filters.workplaceType, filters.experienceLevel]);
 
-  // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id
+  // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id (saved only)
   const [savedJobIdMap, setSavedJobIdMap] = useState<Map<string, string>>(new Map());
+  // Map of discovered job ID / URL / titleKey -> MongoDB JobApplication _id (all tracker applications)
+  const [applicationJobIdMap, setApplicationJobIdMap] = useState<Map<string, string>>(new Map());
   const [savedCount, setSavedCount] = useState(0);
 
   // Fetch saved job IDs on mount and userId change
@@ -573,9 +687,13 @@ export default function JobsDashboard() {
           const data = await res.json();
           const items = data.jobs || data.data || [];
           if (Array.isArray(items)) {
-            const { idSet, idMap } = buildSavedIndex(items);
-            setSavedIds(idSet);
-            setSavedJobIdMap(idMap);
+            const { savedIds: nextSavedIds, savedJobIdMap: nextSavedJobIdMap, applicationJobIdMap: nextAppMap, appliedJobIds: nextApplied } = buildJobIndices(items);
+            setSavedIds(nextSavedIds);
+            setSavedJobIdMap(nextSavedJobIdMap);
+            setApplicationJobIdMap(nextAppMap);
+            if (nextApplied.size > 0) {
+              setAppliedIds((prev) => new Set([...prev, ...nextApplied]));
+            }
           }
         }
         // Fetch saved-count separately (only saved status)
@@ -611,15 +729,7 @@ export default function JobsDashboard() {
   const liveStatuses = useJobLiveStatusStore((state) => state.statuses);
 
   /**
-   * Resolve a discover-listing job to the JobApplication id it was saved as.
-   *
-   * The candidate chain itself lives in `jobIdentityKey` / `normalizeApplyUrl`
-   * at module scope so this, `isJobSaved`, `handleSaveJob` and the card CTAs
-   * cannot drift apart — they had four near-identical copies of it.
-   *
-   * Declared before its consumers on purpose: `trackerForJob` and the card
-   * render list it in a dependency array, and referencing a `const` above its
-   * declaration throws at hook-creation time.
+   * Resolve a discover-listing job to the JobApplication id in the tracker.
    */
   const resolveApplicationId = useCallback(
     (job: JobListing): string | null => {
@@ -627,14 +737,18 @@ export default function JobsDashboard() {
       const url = normalizeApplyUrl(job.applyUrl);
 
       return (
+        applicationJobIdMap.get(job._id) ||
+        (job.id ? applicationJobIdMap.get(job.id) : null) ||
+        (url ? applicationJobIdMap.get(url) : null) ||
+        applicationJobIdMap.get(jobKey) ||
         savedJobIdMap.get(job._id) ||
         (job.id ? savedJobIdMap.get(job.id) : null) ||
         (url ? savedJobIdMap.get(url) : null) ||
         savedJobIdMap.get(jobKey) ||
-        (savedIds.has(job._id) ? job._id : null)
+        null
       );
     },
-    [savedJobIdMap, savedIds]
+    [applicationJobIdMap, savedJobIdMap]
   );
 
   const trackerByApplicationId = useMemo(() => {
@@ -716,9 +830,13 @@ export default function JobsDashboard() {
             const data = await res.json();
             const items = data.jobs || data.data || [];
             if (Array.isArray(items)) {
-              const { idSet, idMap } = buildSavedIndex(items);
-              setSavedIds(idSet);
-              setSavedJobIdMap(idMap);
+              const { savedIds: nextSavedIds, savedJobIdMap: nextSavedJobIdMap, applicationJobIdMap: nextAppMap, appliedJobIds: nextApplied } = buildJobIndices(items);
+              setSavedIds(nextSavedIds);
+              setSavedJobIdMap(nextSavedJobIdMap);
+              setApplicationJobIdMap(nextAppMap);
+              if (nextApplied.size > 0) {
+                setAppliedIds((prev) => new Set([...prev, ...nextApplied]));
+              }
             }
           }
           // Also refresh saved count
@@ -746,27 +864,35 @@ export default function JobsDashboard() {
   }, []);
 
   /**
-   * Whether the listing is already in the tracker.
-   *
-   * Delegates to the shared candidate chain rather than repeating it, plus a
-   * `savedIds` membership check on the source id: the id set and the id map are
-   * built from the same payload but a listing's `id` can be in the set without a
-   * usable map value, so the union is kept instead of trusting the map alone.
+   * Whether the listing is explicitly saved (bookmarked) in the tracker.
+   * Strictly decoupled from application status.
    */
   const isJobSaved = useCallback(
-    (job: JobListing) =>
-      Boolean(resolveApplicationId(job)) || (job.id ? savedIds.has(job.id) : false),
-    [resolveApplicationId, savedIds]
+    (job: JobListing) => {
+      const jobKey = jobIdentityKey(job.company, job.title);
+      const url = normalizeApplyUrl(job.applyUrl);
+      return (
+        savedIds.has(job._id) ||
+        (job.id ? savedIds.has(job.id) : false) ||
+        savedJobIdMap.has(job._id) ||
+        (job.id ? savedJobIdMap.has(job.id) : false) ||
+        (url ? savedJobIdMap.has(url) : false) ||
+        savedJobIdMap.has(jobKey)
+      );
+    },
+    [savedIds, savedJobIdMap]
   );
 
   const handleSaveJob = async (job: JobListing) => {
-    // Needed by the optimistic map updates below; the resolve/toggle decision
-    // goes through `resolveApplicationId` so all callers agree.
     const jobKey = jobIdentityKey(job.company, job.title);
     const url = normalizeApplyUrl(job.applyUrl);
 
-    const dbJobId = resolveApplicationId(job);
-    const currentlySaved = Boolean(dbJobId) || savedIds.has(job._id);
+    const dbJobId =
+      savedJobIdMap.get(job._id) ||
+      (job.id ? savedJobIdMap.get(job.id) : null) ||
+      (url ? savedJobIdMap.get(url) : null) ||
+      savedJobIdMap.get(jobKey);
+    const currentlySaved = isJobSaved(job);
 
     if (savingRef.current === job._id) return;
     savingRef.current = job._id;
@@ -801,7 +927,8 @@ export default function JobsDashboard() {
       } else {
         const res = await fetch('/api/jobs', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },            body: JSON.stringify({
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             jobId: job._id || job.id || undefined,
             jobTitle: job.title,
             company: job.company,
@@ -838,6 +965,7 @@ export default function JobsDashboard() {
           setSavedIds((prev) => {
             const next = new Set(prev);
             next.add(job._id);
+            if (job.id) next.add(job.id);
             if (createdDbId) next.add(createdDbId);
             return next;
           });
@@ -846,8 +974,20 @@ export default function JobsDashboard() {
           setSavedJobIdMap((prev) => {
             const next = new Map(prev);
             next.set(job._id, createdDbId);
-            if (job.applyUrl) next.set(job.applyUrl, createdDbId);
+            if (job.id) next.set(job.id, createdDbId);
+            if (url) next.set(url, createdDbId);
             next.set(jobKey, createdDbId);
+            next.set(createdDbId, createdDbId);
+            return next;
+          });
+
+          setApplicationJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.set(job._id, createdDbId);
+            if (job.id) next.set(job.id, createdDbId);
+            if (url) next.set(url, createdDbId);
+            next.set(jobKey, createdDbId);
+            next.set(createdDbId, createdDbId);
             return next;
           });
 
@@ -1006,12 +1146,28 @@ export default function JobsDashboard() {
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || job._id;
-        setAppliedIds((prev) => new Set(prev).add(job._id));
-        // Auto-apply saves the job on the backend — mark it as saved-via-apply
-        // so the card hides the explicit Save button.
-        setSavedIds((prev) => new Set(prev).add(job._id));
-        setSavedCount((prev) => prev + 1);
-        setSavedViaApplyIds((prev) => new Set(prev).add(job._id));
+        setAppliedIds((prev) => {
+          const next = new Set(prev);
+          next.add(job._id);
+          if (job.id) next.add(job.id);
+          if (createdId) next.add(createdId);
+          return next;
+        });
+
+        if (createdId) {
+          const jobKey = jobIdentityKey(job.company, job.title);
+          const url = normalizeApplyUrl(job.applyUrl);
+          setApplicationJobIdMap((prev) => {
+            const next = new Map(prev);
+            next.set(job._id, createdId);
+            if (job.id) next.set(job.id, createdId);
+            if (url) next.set(url, createdId);
+            next.set(jobKey, createdId);
+            next.set(createdId, createdId);
+            return next;
+          });
+        }
+
         // Immediately invalidate entitlements so usage counters update in the UI
         queryClient.invalidateQueries({ queryKey: ['entitlements'] });
 
@@ -1405,10 +1561,57 @@ export default function JobsDashboard() {
     }
   };
 
+  /**
+   * "Sync Latest Jobs" for one connected portal tab.
+   *
+   * Delegates to the existing `POST /api/portal-connections/:provider/sync`
+   * (which runs an instant fetch pass and returns created/updated counts), then
+   * refetches the feed. The response is surfaced honestly: today the consumer
+   * portals have no implemented job source, so the endpoint returns
+   * `sourceUnavailable: true` and the toast says "nothing to sync yet" rather
+   * than claiming jobs arrived.
+   */
+  const handleSyncPortal = async (provider: 'naukri' | 'indeed' | 'linkedin') => {
+    if (syncingPortal) return;
+    try {
+      setSyncingPortal(provider);
+      const res = await fetch(`/api/portal-connections/${encodeURIComponent(provider)}/sync`, {
+        method: 'POST',
+      });
+      const result = res.ok ? await res.json().catch(() => null) : null;
+
+      await fetchJobs();
+      await fetchPortalConnections();
+
+      const created = result?.jobsCreated || 0;
+      const updated = result?.jobsUpdated || 0;
+      toast({
+        title:
+          created + updated > 0
+            ? `Sync complete — ${created} new, ${updated} updated`
+            : 'Nothing new to sync',
+        description:
+          created + updated > 0
+            ? `Your ${provider} feed has been refreshed.`
+            : result?.sourceUnavailable
+              ? 'Your account is connected. Job discovery from this portal is not available yet.'
+              : 'No new roles were found for this portal.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Sync failed',
+        description: err?.message || `Could not sync ${provider} right now.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncingPortal(null);
+    }
+  };
+
   const deduplicatedJobs = deduplicateJobs(jobs);
   const displayedJobs = filters.savedOnly
     ? deduplicatedJobs.filter((job) => isJobSaved(job))
-    : deduplicatedJobs.filter((job) => !isJobSaved(job));
+    : deduplicatedJobs;
 
   // Comms is a fixed-height workspace: CommsPanel scrolls internally, so its
   // tab content must FILL the space between the header block and the bottom of
@@ -1541,6 +1744,8 @@ export default function JobsDashboard() {
               entitlements={entitlements}
               isPaidUser={isPaidUser}
               portalConnections={portalConnections}
+              syncingPortal={syncingPortal}
+              onSyncPortal={handleSyncPortal}
             />
 
             {/* Results Count & Dynamic Mode Statement */}
@@ -1641,7 +1846,9 @@ export default function JobsDashboard() {
                   {displayedJobs
                     .map((job, index) => {
                       const saved = isJobSaved(job);
-                      const tracker = saved ? trackerForJob(job) : null;
+                      const appId = resolveApplicationId(job);
+                      const tracker = trackerForJob(job);
+                      const isApplied = appliedIds.has(job._id) || (job.id ? appliedIds.has(job.id) : false) || Boolean(appId && tracker?.status && tracker.status !== 'saved' && tracker.status !== 'draft');
                       const applyKey = `apply-${job._id}`;
                       const applying = isApplying === applyKey;
                       const progressPercent = liveStatuses[applyKey]?.progress;
@@ -1652,61 +1859,62 @@ export default function JobsDashboard() {
                         job={job}
                         colorIndex={index}
                         isSaved={saved}
-                        isApplied={appliedIds.has(job._id)}
+                        isApplied={isApplied}
                         applicationMode={applicationMode}
                         saving={savingId === job._id}
                         tracker={tracker}
                         applying={applying}
                         progressPercent={progressPercent}
-                        savedViaApply={savedViaApplyIds.has(job._id)}
+                        savedViaApply={false}
                         progressLabel={
                           applying
                             ? `Please wait — ${progressPercent ? `${progressPercent}% done` : 'a task is already running for this job'}.`
                             : undefined
                         }
                         onOpenTracker={() => {
-                          // Same chain the tracker lookup used — a bare
-                          // `savedJobIdMap.get(job._id)` misses listings whose
-                          // application was indexed under the source id, the
-                          // apply URL or `company___title`, so the button used
-                          // to land on the generic tab despite the card having
-                          // rendered tracker detail.
-                          const appId = resolveApplicationId(job);
-                          router.push(
-                            appId
-                              ? `/dashboard/jobs?tab=applications&jobId=${appId}`
-                              : '/dashboard/jobs?tab=applications'
-                          );
-                        }}
-                        onOpenDocuments={() => router.push('/dashboard/jobs?tab=docs')}
-                        onOpen={() => {
-                          if (saved && tracker) {
-                            // Saved jobs: open the full journey sidebar
-                            const appId = resolveApplicationId(job);
+                          const resolvedId = appId || (job.id ? resolveApplicationId({ ...job, _id: job.id }) : null);
+                          if (resolvedId) {
+                            const fullJob = (dashboardData?.jobs || []).find(
+                              (j: any) => (j._id || j.id) === resolvedId
+                            ) || job;
                             setSelectedTrackerJob({
-                              ...job,
-                              _id: appId || job._id,
-                              id: appId || job._id,
-                              status: tracker.status || 'saved',
+                              ...fullJob,
+                              _id: resolvedId,
+                              id: resolvedId,
+                              status: tracker?.status || (isApplied ? 'applied' : 'saved'),
                               matchScore: job.matchScore,
-                              atsScore: tracker.atsScore,
+                              atsScore: tracker?.atsScore,
                             });
                             setTrackerSidebarOpen(true);
                           } else {
-                            // Unsaved jobs: open the detail modal
+                            router.push('/dashboard/jobs?tab=applications');
+                          }
+                        }}
+                        onOpenDocuments={() => router.push('/dashboard/jobs?tab=docs')}
+                        onOpen={() => {
+                          const resolvedId = appId || (job.id ? resolveApplicationId({ ...job, _id: job.id }) : null);
+                          if (resolvedId) {
+                            // Any tracked, saved or applied job: open the full journey sidebar focused on Analysis tab
+                            const fullJob = (dashboardData?.jobs || []).find(
+                              (j: any) => (j._id || j.id) === resolvedId
+                            ) || job;
+                            setSelectedTrackerJob({
+                              ...fullJob,
+                              _id: resolvedId,
+                              id: resolvedId,
+                              status: tracker?.status || (isApplied ? 'applied' : 'saved'),
+                              matchScore: job.matchScore,
+                              atsScore: tracker?.atsScore,
+                            });
+                            setTrackerSidebarOpen(true);
+                          } else {
+                            // Unsaved/untracked jobs: open the detail modal
                             setSelectedJob(job);
                             setModalOpen(true);
                           }
                         }}
                         onSave={() => handleSaveJob(job)}
-                        /*
-                          No pass action once a job is saved. A shortlisted job
-                          must not be dismissible — the ✕ would silently drop a
-                          job the user deliberately kept, and passing does not
-                          un-save it, so the card vanished while the record
-                          stayed behind. Un-saving is the explicit action.
-                        */
-                        onPass={saved ? undefined : () => {
+                        onPass={saved || isApplied ? undefined : () => {
                           const previousJobs = jobs;
                           setJobs((prev) => prev.filter((j) => j._id !== job._id));
                           fetch('/api/jobs/pass', {
@@ -1859,6 +2067,7 @@ export default function JobsDashboard() {
                 <JobSidebar
                   job={fullJob}
                   journeys={jobJourneys}
+                  openContext={{ initialTab: 'analytics' }}
                   onClose={() => {
                     setTrackerSidebarOpen(false);
                     setSelectedTrackerJob(null);

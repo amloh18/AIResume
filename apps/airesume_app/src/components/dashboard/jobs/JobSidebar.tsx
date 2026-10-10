@@ -2312,6 +2312,10 @@ ${userName}`
     if (openContext.autoOpenEdit) {
       handleOpenEditModal();
     }
+
+    if (openContext.initialTab) {
+      setActiveTab(openContext.initialTab);
+    }
   }, [handleOpenInterviewCoach, handleOpenEditModal, job.status, openContext, sidebarConfig.actionPayloads]);
 
   const atsType = ((job as any).atsType && (job as any).atsType !== 'unknown') ? (job as any).atsType : null;

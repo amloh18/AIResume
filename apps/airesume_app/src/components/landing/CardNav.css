@@ -483,6 +483,35 @@
   }
 }
 
+/*
+  Compact the link row a little earlier than the 768px breakpoint.
+
+  "Explore Jobs" was added to the shared `navLinks` in src/data/navigation.tsx, taking
+  the desktop nav to five items. The card is capped at 1023px but shrinks to 95% of the
+  viewport below that, so between 769px and ~871px there was not enough room: measured in
+  headless Chrome, the row overflowed its container by up to 19px and "Explore Jobs"
+  wrapped onto two lines (58px tall vs 42px for its siblings).
+
+  The 768px block above already applies this exact compact treatment, so this simply
+  extends it up to the width where the full-size row fits again, and `white-space: nowrap`
+  stops any future label from silently wrapping instead of overflowing.
+
+  Verified in headless Chrome: no overflow and no wrapping at every width from 640px to
+  1100px, with ~72px of slack at the tightest point (769px). Pages that pass their own
+  four-item navLinks are unaffected.
+*/
+@media (min-width: 769px) and (max-width: 900px) {
+  .nav-links {
+    gap: 1rem;
+  }
+
+  .nav-link {
+    font-size: 12px;
+    padding: 0.75rem 0.75rem;
+    white-space: nowrap;
+  }
+}
+
 /* Mobile Menu Styles */
 .nav-actions {
   display: flex;

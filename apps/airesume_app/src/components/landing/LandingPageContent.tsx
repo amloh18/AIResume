@@ -14,6 +14,7 @@ const Features = dynamic(() => import('@/components/landing/Features'), { ssr: t
 const ChromeExtension = dynamic(() => import('@/components/landing/ChromeExtension'), { ssr: true });
 const Testimonials = dynamic(() => import('@/components/landing/Testimonials'), { ssr: true });
 const HowItWorks = dynamic(() => import('@/components/landing/HowItWorks'), { ssr: true });
+const ExploreJobs = dynamic(() => import('@/components/landing/ExploreJobs'), { ssr: true });
 const Pricing = dynamic(() => import('@/components/landing/Pricing'), { ssr: true });
 const BlogSection = dynamic(() => import('@/components/landing/BlogSection'), { ssr: true });
 const ResumeGuides = dynamic(() => import('@/components/landing/ResumeGuides'), { ssr: true });
@@ -87,6 +88,12 @@ export default function LandingPageContent() {
         <Features />
         <TestimonialSnippet index={1} />
         <HowItWorks />
+        {/*
+          Job discovery + auto-apply. Sits after HowItWorks so the narrative runs
+          build → tailor → *then* discover & apply, and it carries the only
+          above-the-fold link into the public `/explore/jobs` surface.
+        */}
+        <ExploreJobs />
         <ChromeExtension />
         <Testimonials />
 

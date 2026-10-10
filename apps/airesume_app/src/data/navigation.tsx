@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen, Linkedin } from 'lucide-react';
+import { FileText, Sparkles, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen, Linkedin, Search } from 'lucide-react';
 
 export interface SubmenuItem {
   label: string;
@@ -74,6 +74,14 @@ export const navLinks: NavLink[] = [
         icon: <FileText className="w-6 h-6 text-purple-400" />
       },
       { 
+        label: 'Explore Jobs', 
+        description: 'Search thousands of live roles by title, company, skills and location — free, no account needed.', 
+        href: '/explore/jobs', 
+        ariaLabel: 'Explore open jobs',
+        icon: <Search className="w-6 h-6 text-emerald-400" />,
+        snapshot: 'bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border-emerald-500/30'
+      },
+      { 
         label: 'Job Tracker', 
         description: 'Save jobs, track applications, and manage your job search in one place.', 
         href: '/dashboard/jobs', 
@@ -96,6 +104,18 @@ export const navLinks: NavLink[] = [
       badge: 'New Feature',
       actionText: 'Try AI Coach'
     }
+  },
+  /*
+    Direct top-level link — not a dropdown.
+
+    `/explore/jobs` is the one surface that needs no account, so it gets a
+    one-click entry rather than being buried a level down in Products. It is also
+    listed inside the Products submenu, which is where people look for "jobs".
+  */
+  {
+    label: 'Explore Jobs',
+    href: '/explore/jobs',
+    ariaLabel: 'Explore open jobs — free, no account needed',
   },
   { 
     label: 'Extension', 
