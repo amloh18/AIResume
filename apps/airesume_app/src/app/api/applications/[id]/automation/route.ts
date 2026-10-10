@@ -32,6 +32,7 @@ export async function POST(
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const action = body?.action as AutomationAction;
+    const code = body?.code ? String(body.code) : undefined;
 
     await getConnection();
 
@@ -39,6 +40,7 @@ export async function POST(
       userId: auth.userId,
       applicationId: id,
       action,
+      code,
     });
 
     return NextResponse.json({ success: true, ...result });

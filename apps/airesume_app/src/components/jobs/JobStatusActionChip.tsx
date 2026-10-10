@@ -8,6 +8,7 @@ import {
   XCircle,
   Sparkles,
   CheckCircle,
+  Key,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -37,12 +38,15 @@ const STATUS_ICONS: Record<StatusIconKey, LucideIcon | null> = {
   x: XCircle,
   sparkles: Sparkles,
   check: CheckCircle,
+  key: Key,
   none: null,
 };
 
 const ACTION_STYLES: Record<BadgeActionId, string> = {
   approve: 'bg-violet-600 hover:bg-violet-700 text-white border border-transparent',
   retry: 'bg-amber-500 hover:bg-amber-600 text-white border border-transparent',
+  enter_code: 'bg-emerald-600 hover:bg-emerald-700 text-white border border-transparent animate-pulse',
+  submit_code: 'bg-emerald-600 hover:bg-emerald-700 text-white border border-transparent',
   dismiss:
     'border border-gray-300 dark:border-white/15 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10',
 };

@@ -35,7 +35,7 @@ import { mixedIdFilter } from '@/lib/utils/mixed-id';
  *     rows with no queue document at all) reserves like the enqueue path does.
  */
 
-export type AutomationAction = 'approve' | 'dismiss' | 'retry';
+export type AutomationAction = 'approve' | 'dismiss' | 'retry' | 'submit_code';
 
 export type AutomationActionErrorCode =
   | 'NOT_FOUND'
@@ -55,7 +55,7 @@ export class AutomationActionError extends Error {
 }
 
 export interface AutomationActionResult {
-  status: 'queued' | 'already_queued' | 'dismissed';
+  status: 'queued' | 'already_queued' | 'dismissed' | 'code_submitted';
   applicationId: string;
   queueItemId?: string;
   queuePosition?: number;
@@ -70,7 +70,7 @@ export interface AutomationActionResult {
  */
 const MAYBE_ALREADY_SUBMITTED_REASONS = /no confirmation evidence|needs manual verification/i;
 
-const VALID_ACTIONS: AutomationAction[] = ['approve', 'dismiss', 'retry'];
+const VALID_ACTIONS: AutomationAction[] = ['approve', 'dismiss', 'retry', 'submit_code'];
 
 async function latestReviewReason(applicationId: mongoose.Types.ObjectId): Promise<string> {
   try {
@@ -95,6 +95,22 @@ async function activeEta(applicationId: string): Promise<QueueEtaEstimate | null
     return estimateQueueEta(active as any, applicationId);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Stores verification code in Redis key ats_sec_code:<applicationId>
+ */
+async function setAtsSecurityCode(applicationId: string, code: string): Promise<void> {
+  try {
+    const { getRedisClient } = await import('@/lib/cache/redis-client');
+    const redis = await getRedisClient();
+    if (redis) {
+      // 5 minutes TTL for the verification code
+      await redis.setEx(`ats_sec_code:${applicationId}`, 300, code.trim());
+    }
+  } catch (err) {
+    console.warn('[applicationAutomation] Failed to write code to Redis:', err);
   }
 }
 
@@ -209,8 +225,9 @@ export async function performAutomationAction(params: {
   userId: string;
   applicationId: string;
   action: AutomationAction;
+  code?: string;
 }): Promise<AutomationActionResult> {
-  const { userId, applicationId, action } = params;
+  const { userId, applicationId, action, code } = params;
 
   if (!VALID_ACTIONS.includes(action)) {
     throw new AutomationActionError('INVALID_ACTION', `Unknown action "${action}"`);
@@ -229,6 +246,42 @@ export async function performAutomationAction(params: {
   }
   const appDoc = app as any;
   const internal = String(appDoc.internalStatus || '');
+
+  // ── submit_code ─────────────────────────────────────────────────────
+  if (action === 'submit_code') {
+    if (!code || code.trim().length < 4) {
+      throw new AutomationActionError('INVALID_ACTION', 'Verification code must be at least 4 characters');
+    }
+    const cleanCode = code.trim();
+
+    // 1. Write to Redis ats_sec_code:<applicationId>
+    await setAtsSecurityCode(applicationId, cleanCode);
+
+    // 2. Record application event
+    try {
+      await ApplicationEvent.create({
+        applicationId: app._id,
+        userId: mongoose.isValidObjectId(userId) ? new mongoose.Types.ObjectId(userId) : userId,
+        jobId: app.jobId,
+        type: 'status_update',
+        previousStatus: internal,
+        newStatus: internal,
+        source: 'user',
+        metadata: {
+          action: 'submit_verification_code',
+          codeLength: cleanCode.length,
+        },
+      });
+    } catch {
+      // event recording is best-effort
+    }
+
+    return {
+      status: 'code_submitted',
+      applicationId,
+      message: 'Verification code submitted! Submitting application now...',
+    };
+  }
 
   const activeItem = await ApplicationQueue.findOne({
     applicationId: mixedIdFilter(app._id),
