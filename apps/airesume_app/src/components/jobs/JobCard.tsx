@@ -464,23 +464,34 @@ export function JobCard({
 
                 {/* Document readiness — only meaningful for tracked jobs */}
                 {tracker && (
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-600 dark:text-gray-400"
-                    title={
-                      tracker.hasCV && tracker.hasCoverLetter
-                        ? 'Tailored CV and cover letter ready'
-                        : tracker.hasCV || tracker.hasCoverLetter
-                          ? 'One document ready'
-                          : 'No tailored documents yet'
-                    }
-                  >
-                    <FileText
-                      className={`w-3 h-3 ${tracker.hasCV ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
-                    />
-                    <FileText
-                      className={`w-3 h-3 ${tracker.hasCoverLetter ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
-                    />
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {(!tracker.hasCV || !tracker.hasCoverLetter) && (
+                      <span
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                        title="CV and cover letter need completion"
+                      >
+                        <AlertCircle className="w-2.5 h-2.5 text-amber-500" />
+                        <span>CV/CL requires attention</span>
+                      </span>
+                    )}
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-600 dark:text-gray-400"
+                      title={
+                        tracker.hasCV && tracker.hasCoverLetter
+                          ? 'Tailored CV and cover letter ready'
+                          : tracker.hasCV || tracker.hasCoverLetter
+                            ? 'One document ready'
+                            : 'No tailored documents yet'
+                      }
+                    >
+                      <FileText
+                        className={`w-3 h-3 ${tracker.hasCV ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
+                      />
+                      <FileText
+                        className={`w-3 h-3 ${tracker.hasCoverLetter ? 'text-emerald-500' : 'text-gray-300 dark:text-gray-600'}`}
+                      />
+                    </span>
+                  </div>
                 )}
 
                 {/* Freshness indicator for recently posted jobs */}

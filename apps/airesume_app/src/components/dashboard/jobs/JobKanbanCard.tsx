@@ -624,13 +624,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         {/* Compact View */}
         <div className="flex justify-between items-center mt-2">
           <div className="flex items-center gap-1.5 text-small text-gray-500 dark:text-gray-400">
-            <span>
-              {documentState === 'ready'
-                ? "Documents ready"
-                : documentState === 'partial'
-                  ? "Partially generated"
-                  : "Documents not generated"}
-            </span>
+            {documentState === 'partial' || documentState === 'none' ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                <AlertCircle size={10} className="text-amber-500" />
+                <span>CV/CL requires attention</span>
+              </span>
+            ) : (
+              <span>Documents ready</span>
+            )}
           </div>
           <div className="flex gap-1.5">
             <div
