@@ -1560,9 +1560,40 @@ ${userName}`
   */
   const handleAutomationAction = useCallback(async (actionId: BadgeActionId) => {
     if (isAutomationAction) return;
+
+    const applicationId = (job as any)._id || (job as any).id;
+    if (!applicationId) return;
+
+    if (actionId === 'enter_code') {
+      const code = window.prompt(
+        'Enter the 8-character verification code sent to your email by Greenhouse:'
+      );
+      if (!code || code.trim().length < 4) return;
+
+      setIsAutomationAction(true);
+      try {
+        const res = await authenticatedFetch(`/api/applications/${applicationId}/automation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'submit_code', code: code.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to submit verification code');
+
+        toast.success('Verification code submitted! Submitting application now...');
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: applicationId } }));
+        onRefresh?.();
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to submit verification code');
+        onRefresh?.();
+      } finally {
+        setIsAutomationAction(false);
+      }
+      return;
+    }
+
     setIsAutomationAction(true);
     try {
-      const applicationId = (job as any)._id || (job as any).id;
       const res = await authenticatedFetch(`/api/applications/${applicationId}/automation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2354,6 +2385,32 @@ ${userName}`
           : '';
 
       const openPosting = (job as any).jobUrl || (job as any).applyUrl || (job as any).sourceUrl;
+
+      if (stageIsOpen && (internal === 'verification' || (internal === 'review_required' && /verification|security.?code|otp|enter.?code/i.test(reviewReason)))) {
+        return {
+          badgeText: 'Verification Code Needed',
+          badgeClasses: 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40',
+          toneClasses: 'border-amber-200/80 bg-gradient-to-b from-amber-50/30 to-white dark:border-amber-500/20 dark:from-amber-950/20 dark:to-[#131810]',
+          title: 'Enter Verification Code',
+          description: reviewReason || 'Greenhouse sent an 8-character verification code to your email. Enter it below to complete submission.',
+          primaryAction: {
+            label: 'Enter Verification Code',
+            icon: Send,
+            onClick: () => void handleAutomationAction('enter_code'),
+            disabled: isAutomationAction,
+            loading: isAutomationAction,
+            loadingLabel: 'Submitting…',
+          },
+          secondaryActions: [
+            {
+              label: 'Apply Manually',
+              icon: ExternalLink,
+              onClick: () => void handleAutomationAction('dismiss'),
+              disabled: isAutomationAction,
+            },
+          ],
+        } satisfies GuidanceHubData;
+      }
 
       if (stageIsOpen && internal === 'review_required') {
         const isApprovalHold = /awaiting (your )?approval|approval before submission|held for your approval/i.test(reviewReason);

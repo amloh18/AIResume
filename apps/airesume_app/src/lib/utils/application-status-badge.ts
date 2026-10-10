@@ -21,9 +21,9 @@ import { formatQueueEta } from '@/lib/utils/queue-eta';
  *   retry   → …{action:'retry'}
  */
 
-export type StatusIconKey = 'clock' | 'external' | 'eye' | 'x' | 'sparkles' | 'check' | 'none';
+export type StatusIconKey = 'clock' | 'external' | 'eye' | 'x' | 'sparkles' | 'check' | 'key' | 'none';
 
-export type BadgeActionId = 'approve' | 'dismiss' | 'retry';
+export type BadgeActionId = 'approve' | 'dismiss' | 'retry' | 'enter_code' | 'submit_code';
 
 export interface BadgeAction {
   id: BadgeActionId;
@@ -94,6 +94,15 @@ function reviewBadge(reason: string): ApplicationStatusBadge {
     // badge offers no one-click verb that could double-submit.
     return { label: 'Needs your action', tone: 'rose', icon: 'eye', title };
   }
+  if (/verification|security.?code|otp|enter.?code/i.test(reason)) {
+    return {
+      label: 'Verification code needed',
+      tone: 'amber',
+      icon: 'key',
+      title: title || 'Greenhouse sent an 8-character verification code to your email.',
+      action: { id: 'enter_code', label: 'Enter code' },
+    };
+  }
   if (/awaiting (your )?approval|approval before submission|held for your approval/i.test(reason)) {
     return {
       label: 'Awaiting approval',
@@ -141,7 +150,16 @@ export function deriveApplicationStatusBadge(input: StatusBadgeInput): Applicati
   const internal = (input.internalStatus || '').toLowerCase();
   const reason = input.reviewReason || '';
 
-  if (status === 'created' || status === 'staging') {
+  if (status === 'created' || status === 'staging' || internal === 'verification') {
+    if (internal === 'verification') {
+      return {
+        label: 'Verification code needed',
+        tone: 'amber',
+        icon: 'key',
+        title: reason || 'Greenhouse sent an 8-character verification code to your email.',
+        action: { id: 'enter_code', label: 'Enter code' },
+      };
+    }
     if (internal === 'review_required') return reviewBadge(reason);
     if (internal === 'automation_dismissed') {
       return {

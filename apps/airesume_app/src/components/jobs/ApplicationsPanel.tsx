@@ -613,6 +613,34 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const handleAutomationAction = async (job: any, actionId: BadgeActionId) => {
     const jobId = job.id || job._id;
     if (!jobId) return;
+
+    if (actionId === 'enter_code') {
+      const code = window.prompt(
+        'Enter the 8-character verification code sent to your email by Greenhouse:'
+      );
+      if (!code || code.trim().length < 4) return;
+
+      const toastId = `automation-code-${jobId}`;
+      toast.loading('Submitting verification code…', { id: toastId });
+      try {
+        const res = await authenticatedFetch(`/api/applications/${jobId}/automation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'submit_code', code: code.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to submit verification code');
+
+        toast.success('Verification code submitted! Submitting application now...', { id: toastId });
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId } }));
+        loadData();
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to submit verification code', { id: toastId });
+        loadData();
+      }
+      return;
+    }
+
     const busy =
       actionId === 'approve' ? 'Approving submission…'
       : actionId === 'retry' ? 'Retrying submission…'
