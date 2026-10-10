@@ -12,6 +12,8 @@ import ExploreJobsClient from './ExploreJobsClient';
  * `robots: index` is deliberate: unlike `/explore` (which canonicalises to
  * `/templates`), this is a real, unique, publicly useful page.
  */
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Explore Jobs — Search Open Roles | AIResume',
   description:

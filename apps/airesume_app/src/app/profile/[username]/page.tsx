@@ -57,13 +57,6 @@ export async function generateMetadata({
   };
 }
 
-// Generate static params for popular profiles (optional)
-export async function generateStaticParams() {
-  // This can be populated with popular usernames for pre-generation
-  // For now, we'll use fallback: 'blocking' for dynamic generation
-  return [];
-}
-
 interface ProfilePageProps {
   params: Promise<{ username: string }>;
 }

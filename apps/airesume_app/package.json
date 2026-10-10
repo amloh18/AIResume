@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build --webpack",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build --turbo",
+    "build:webpack": "NODE_OPTIONS=--max-old-space-size=4096 next build --webpack",
     "start": "next start",
     "lint": "eslint src/app && eslint src/lib && eslint src/components && eslint src/contexts src/hooks src/types src/services src/models src/verification src/workers src/data src/email src/matching src/platforms src/*.ts",
     "build:analyze": "ANALYZE=true next build",

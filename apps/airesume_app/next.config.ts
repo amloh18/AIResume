@@ -1,3 +1,4 @@
+import path from 'path';
 import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from "next";
 // Force rebuild'
@@ -11,6 +12,12 @@ const nextConfig: NextConfig = {
   // `@/lib/...` — and an alias is resolved per-BUILD from the project's own import map — admin's alias
   // makes those specifiers resolve *in admin* without this app needing a matching alias or a single
   // rewritten file. An `@shared` alias here would be dead config.
+
+  // Silence workspace root inference warnings and avoid scanning outside directories
+  outputFileTracingRoot: path.join(__dirname, '../../'),
+  turbopack: {
+    root: path.join(__dirname, '../../'),
+  },
 
   // Disable Fast Refresh notifications
   devIndicators: {
@@ -340,7 +347,13 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   
   transpilePackages: ['next-auth'],
-
+  
+  // Dokploy / Docker container builds have tight memory constraints.
+  // Running the entire TypeScript compiler twice in the same container process spikes memory.
+  // Type checking is already validated separately via `npm run type-check` before deployment.
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   async redirects() {
     return [
       {
@@ -429,39 +442,26 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(nextConfig, {
-  // For all available options, see:
-  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+// Conditionally wrap with Sentry config only when SENTRY_AUTH_TOKEN is provided.
+// When deploying without SENTRY_AUTH_TOKEN (e.g. self-hosted VPS / Dokploy), running the full
+// Sentry Webpack AST transformation, bundle wrapping, and sourcemap generation over hundreds of
+// routes exhausts the Node.js 4GB heap and causes fatal OOM aborts (exit code 134).
+// Sentry runtime exception capturing in instrumentation.ts continues to work normally.
+const enableSentryBuildPlugin = Boolean(process.env.SENTRY_AUTH_TOKEN);
 
-  org: "morigrid-labs",
-
-  project: "javascript-nextjs",
-
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-
-  // For all available options, see:
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
-
-  // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: false,
-
-  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
-  // This can increase your server load as well as your hosting bill.
-  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
-  // side errors will fail.
-  tunnelRoute: "/monitoring",
-
-  // Hides source maps from generated client bundles by deleting them after upload
-  sourcemaps: {
-    deleteSourcemapsAfterUpload: true,
-  },
-
-  webpack: {
-    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-    // See the following for more information:
-    // https://docs.sentry.io/product/crons/
-    // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: true,
-  },
-});
+export default enableSentryBuildPlugin
+  ? withSentryConfig(nextConfig, {
+      org: "morigrid-labs",
+      project: "javascript-nextjs",
+      silent: !process.env.CI,
+      widenClientFileUpload: false,
+      tunnelRoute: "/monitoring",
+      sourcemaps: {
+        disable: !enableSentryBuildPlugin,
+        deleteSourcemapsAfterUpload: true,
+      },
+      webpack: {
+        automaticVercelMonitors: true,
+      },
+    })
+  : nextConfig;
