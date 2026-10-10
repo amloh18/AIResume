@@ -263,6 +263,16 @@ export interface JobsFilter {
   savedOnly?: boolean;
   easyApplyOnly?: boolean;
   unpersonalized?: boolean;
+  /**
+   * Active connected-portal segment (Naukri / Indeed / LinkedIn).
+   *
+   * Present only while a portal tab is selected. It is the UI's memory of *which*
+   * portal tab is active — the actual feed filtering is carried by `atsTypes`
+   * (set to `[portalSource]`), which the discover endpoint already understands.
+   * Kept separate from `atsTypes` so a future multi-select ATS filter does not
+   * silently re-label the tab.
+   */
+  portalSource?: 'naukri' | 'indeed' | 'linkedin';
 }
 
 export interface PaginatedJobsResponse {

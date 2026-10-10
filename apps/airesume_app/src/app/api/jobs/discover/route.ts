@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       const [passedDocs, savedDocs, appDocs] = await Promise.allSettled([
         db.collection('passed_jobs').find({ userId: new ObjectId(userId) }).toArray(),
         db.collection('saved_jobs').find({ userId: new ObjectId(userId) }).toArray(),
-        db.collection('jobapplications').find(trackerQuery)
+        db.collection('jobapplications').find({ ...trackerQuery, status: 'saved' })
           .project({ _id: 1, jobId: 1, externalId: 1, jobUrl: 1, company: 1, jobTitle: 1 })
           .toArray(),
       ]);

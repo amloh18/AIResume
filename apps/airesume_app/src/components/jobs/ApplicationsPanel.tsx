@@ -329,7 +329,13 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     if (!target) return;
     deepLinkHandledRef.current = true;
     setSelectedJob(target);
-    setSidebarOpenContext(deepLinkEdit ? { autoOpenEdit: true } : null);
+    /*
+      A deep link that is not an "edit" is the Journey → Analysis entry point —
+      both the card "View" action and the public-job handoff land here. Selecting
+      the analytics tab explicitly (rather than relying on the sidebar's default)
+      keeps that contract true if the default ever changes.
+    */
+    setSidebarOpenContext(deepLinkEdit ? { autoOpenEdit: true } : { initialTab: 'analytics' });
     setShowModal(true);
   }, [deepLinkJobId, deepLinkEdit, jobs, loading]);
 

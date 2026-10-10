@@ -32,6 +32,21 @@ const publicRoutes = [
   '/legal',
   '/force-logout',
   '/editor',
+  /*
+    Public job discovery.
+
+    `/explore/jobs` is already reachable without a session — route gating here is
+    a *denylist* (`protectedRoutes` / `adminRoutes`), and this path is under
+    neither. It is listed explicitly so the public intent is declared in one
+    place instead of being an accident of the denylist, and so a future change
+    that adds `/explore` to `protectedRoutes` cannot silently take job discovery
+    private.
+
+    ⚠️ This does NOT make the underlying job APIs public. `/api/public/jobs*` is
+    opened separately by the `/api/public` entry in `publicApiRoutes` below, and
+    every authenticated job/application route still enforces the session itself.
+  */
+  '/explore/jobs',
 ];
 
 const isProtectedRoute = (req: NextRequest) => {

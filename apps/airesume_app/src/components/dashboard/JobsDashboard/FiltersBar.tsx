@@ -15,8 +15,16 @@ import {
   Briefcase,
   Target,
   Settings,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { CountrySelector } from '@/components/jobs/CountrySelector';
+import {
+  JOB_SOURCE_DESCRIPTORS,
+  isConnectedState,
+  type JobSourceConnectionView,
+  type JobSourceProvider,
+} from '@/lib/portals/connection-state';
 import type { CvTailoringMode } from '@/lib/cv-tailoring/tailoringMode';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 import { formatResetLabel } from '@/lib/utils/reset-countdown';
@@ -40,7 +48,12 @@ interface FiltersBarProps {
   onOpenSettings?: () => void;
   entitlements?: any;
   isPaidUser?: boolean;
-  portalConnections?: any[];
+  /** Canonical connection views from `GET /api/portal-connections`. */
+  portalConnections?: JobSourceConnectionView[];
+  /** Provider currently being synced (drives the spinner on the Sync button). */
+  syncingPortal?: JobSourceProvider | null;
+  /** Trigger an instant fetch pass for one connected portal. */
+  onSyncPortal?: (provider: JobSourceProvider) => void;
 }
 
 const WORKPLACE_OPTIONS = [
@@ -81,6 +94,8 @@ export default function FiltersBar({
   entitlements,
   isPaidUser = false,
   portalConnections = [],
+  syncingPortal = null,
+  onSyncPortal,
 }: FiltersBarProps) {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -144,11 +159,38 @@ export default function FiltersBar({
     Boolean(filters.easyApplyOnly),
   ].filter(Boolean).length;
 
-  const currentView = filters.savedOnly
+  /*
+    Only genuinely-connected portals get a tab. `state` is the server's own
+    projection of the stored record (`deriveJobSourceState`), so a connection
+    that rotted into `attention_required` or was disconnected does not advertise
+    a job feed it cannot deliver.
+  */
+  const connectedPortals = useMemo(
+    () =>
+      (portalConnections || []).filter(
+        (c): c is JobSourceConnectionView => Boolean(c) && isConnectedState(c.state)
+      ),
+    [portalConnections]
+  );
+
+  const currentView = filters.portalSource
+    ? 'portal'
+    : filters.savedOnly
     ? 'saved'
     : filters.unpersonalized || filters.matchScoreMin === 0
     ? 'all'
     : 'recommended';
+
+  /** Selecting a portal tab is the "All" view scoped to that portal's ATS/source. */
+  const handleSelectPortal = (provider: JobSourceProvider) => {
+    onChange({
+      savedOnly: false,
+      unpersonalized: true,
+      matchScoreMin: 0,
+      portalSource: provider,
+      atsTypes: [provider] as any,
+    });
+  };
 
   /**
    * Entering the Saved view clears the discover filters first.
@@ -171,6 +213,7 @@ export default function FiltersBar({
       sortBy: 'matchScore',
       sortOrder: 'desc',
       matchScoreMin: undefined,
+      portalSource: undefined,
     });
   };
 
@@ -373,6 +416,7 @@ export default function FiltersBar({
                   sortOrder: 'desc',
                   matchScoreMin: undefined,
                   unpersonalized: false,
+                  portalSource: undefined,
                 })
               }
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
@@ -394,6 +438,7 @@ export default function FiltersBar({
                   sortOrder: 'desc',
                   matchScoreMin: 0,
                   unpersonalized: true,
+                  portalSource: undefined,
                 })
               }
               className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
@@ -423,7 +468,70 @@ export default function FiltersBar({
                 </span>
               )}
             </button>
+
+            {/*
+              Connected-portal tabs (Naukri / Indeed / LinkedIn).
+
+              Rendered ONLY for sources whose connection state is `connected`.
+              They sit in the same segment switcher as Recommended / All / Saved
+              because that is where the user looks for "which feed am I seeing",
+              and selecting one is simply the All feed scoped to that portal's
+              ATS/source (`atsTypes=[provider]`).
+            */}
+            {connectedPortals.map((conn) => {
+              const active = filters.portalSource === conn.source;
+              return (
+                <button
+                  key={conn.source}
+                  type="button"
+                  onClick={() => handleSelectPortal(conn.source)}
+                  title={`Jobs from your connected ${conn.name} account`}
+                  className={`h-full px-3 rounded-[8px] text-xs transition-all duration-150 ease-out flex items-center gap-1.5 flex-1 sm:flex-none justify-center ${
+                    active
+                      ? 'bg-[#013f2e] dark:bg-lime-500 text-white dark:text-black shadow-md font-bold'
+                      : 'text-white/70 hover:text-white font-medium'
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-[4px] flex items-center justify-center text-[9px] font-black shrink-0 ${
+                      active ? 'bg-white/20 dark:bg-black/15' : 'bg-white/10'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {conn.name.charAt(0)}
+                  </span>
+                  <span className="hidden sm:inline">{conn.name}</span>
+                </button>
+              );
+            })}
           </div>
+
+          {/*
+            Instant sync for the active portal. Calls the existing
+            POST /api/portal-connections/:provider/sync, which runs a fetch pass
+            and reports how many jobs were created/updated.
+          */}
+          {filters.portalSource && (
+            <button
+              type="button"
+              onClick={() => onSyncPortal?.(filters.portalSource as JobSourceProvider)}
+              disabled={syncingPortal === filters.portalSource}
+              title={`Fetch the latest jobs from ${JOB_SOURCE_DESCRIPTORS[filters.portalSource as JobSourceProvider]?.name || 'this portal'}`}
+              className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors ${
+                syncingPortal === filters.portalSource
+                  ? 'border-[var(--border-primary)] bg-[var(--bg-tertiary)] dark:bg-white/5 text-gray-500 cursor-wait'
+                  : 'border-[var(--border-primary)] bg-white/5 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/10 cursor-pointer'
+              }`}
+            >
+              {syncingPortal === filters.portalSource ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">Sync Latest Jobs</span>
+              <span className="sm:hidden">Sync</span>
+            </button>
+          )}
 
           {/* Row 2b: Quick filter chips — wrap on mobile, inline on desktop */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">

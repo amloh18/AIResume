@@ -196,6 +196,8 @@ export async function GET(req: NextRequest) {
           jobTitle: 1,
           title: 1,
           companyLogo: 1,
+          status: 1,
+          internalStatus: 1,
         })
         .sort({ updatedAt: -1 })
         .limit(isNaN(limitVal) ? 200 : limitVal)

@@ -74,6 +74,23 @@ export interface JobCardProps {
   /** If true, job was auto-saved during apply — hide the explicit save button. */
   savedViaApply?: boolean;
   /**
+   * Render mode.
+   *
+   * `default` is the authenticated Jobs Hub card: save, tracker status, live
+   * apply progress and per-user match scores.
+   *
+   * `public` is the anonymous Explore card. It renders the *same* visual language
+   * from the same canonical job data, but every user-scoped affordance is
+   * removed — no Save (a mutation), no tracker chip, no match pill, no quota.
+   * The action row collapses to "View details" + "Apply with AIResume", and the
+   * Apply CTA is expected to route the visitor through authentication.
+   *
+   * This is a variant rather than a second component on purpose: two job cards
+   * drifting apart is exactly how the public and authenticated feeds start
+   * disagreeing about the same listing.
+   */
+  variant?: 'default' | 'public';
+  /**
    * Server-derived live progress for this job, when it has an application
    * moving. Supplied by the caller from `useApplicationProgress` — the card
    * stays a pure renderer (the Explore grid mounts hundreds of these).
@@ -226,7 +243,9 @@ export function JobCard({
   onOpenDocuments,
   savedViaApply = false,
   progress = null,
+  variant = 'default',
 }: JobCardProps) {
+  const isPublic = variant === 'public';
   const jobId = String(job._id || job.id || '');
   const liveStatus = useJobLiveStatusStore((state) => (jobId ? state.statuses[jobId] : undefined));
   const { clearStatus } = useJobLiveStatusStore();
@@ -322,7 +341,13 @@ export function JobCard({
               company={companyName}
               size={24}
               logoUrl={job.companyLogo}
-              jobId={job._id || job.id || ''}
+              /*
+                Never pass a jobId in public mode. CompanyLogo persists a
+                freshly-resolved logo with an authenticated PUT to
+                `/api/jobs/:id`; on the anonymous Explore page that call would
+                401 and leak an authenticated request from a public surface.
+              */
+              jobId={isPublic ? null : job._id || job.id || ''}
             />
             <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
               {companyName}
@@ -445,7 +470,12 @@ export function JobCard({
             <div className="mt-auto pt-3 border-t border-black/8 dark:border-white/5 space-y-2.5">
               {/* Dynamic stage info */}
               <div className="flex items-center justify-between text-xs">
-                {isSaved ? (
+                {isPublic && (job as any).openForApplication === false ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                    <AlertCircle className="w-3 h-3" />
+                    No longer accepting applications
+                  </span>
+                ) : isSaved ? (
                   <span className="inline-flex items-center gap-1.5 font-bold text-lime-600 dark:text-[#013f2e]">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {tracker ? 'In your tracker' : 'Saved in Staging'}
@@ -511,7 +541,44 @@ export function JobCard({
               </div>
 
               {/* Primary Action Buttons */}
-              {isApplied ? (
+              {isPublic ? (
+                /*
+                  Anonymous visitor. Two actions only:
+                    - "View details"  → the public job page (no auth needed)
+                    - "Apply with AIResume" → begins the authentication handoff
+                  No Save, no tracker, no match, no quota — those are user-scoped.
+                */
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen();
+                    }}
+                    className="px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>View details</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApply();
+                    }}
+                    disabled={(job as any).openForApplication === false}
+                    className={`px-3 py-2.5 rounded-xl text-white text-xs font-bold transition-all shadow-sm flex justify-center items-center gap-1.5 ${
+                      (job as any).openForApplication === false
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gray-900 hover:bg-black dark:bg-[#013f2e] dark:hover:brightness-95'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Apply with AIResume</span>
+                  </button>
+                </div>
+              ) : isApplied ? (
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -572,7 +639,7 @@ export function JobCard({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      (onOpenDocuments || onOpenTracker || onOpen)();
+                      (onOpenTracker || onOpen)();
                     }}
                     className="px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 text-gray-800 dark:text-gray-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                   >

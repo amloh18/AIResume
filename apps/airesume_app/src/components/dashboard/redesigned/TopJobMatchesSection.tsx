@@ -26,6 +26,8 @@ import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { useApplicationProgress, invalidateApplicationProgress } from '@/hooks/useApplicationProgress';
 import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
+import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
+import type { JobCardTrackerInfo } from '@/components/jobs/JobCard';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
 
 export interface TopMatchJob {
@@ -149,6 +151,9 @@ export default function TopJobMatchesSection() {
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [trackerSidebarOpen, setTrackerSidebarOpen] = useState(false);
+  const [selectedTrackerJob, setSelectedTrackerJob] = useState<any | null>(null);
+  const [trackerAppMap, setTrackerAppMap] = useState<Map<string, any>>(new Map());
   const [isParserOpen, setIsParserOpen] = useState(false);
   const [isApplyingAll, setIsApplyingAll] = useState(false);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
@@ -189,7 +194,7 @@ export default function TopJobMatchesSection() {
     el.scrollBy({ left: direction === 'left' ? -(cardWidth + 16) : cardWidth + 16, behavior: 'smooth' });
   };
 
-  // Load saved job IDs for this user
+  // Load saved & tracker applications for this user
   useEffect(() => {
     if (!userId) return;
     const controller = new AbortController();
@@ -201,12 +206,39 @@ export default function TopJobMatchesSection() {
           const items = data.jobs || data.data || [];
           if (Array.isArray(items)) {
             const set = new Set<string>();
+            const appMap = new Map<string, any>();
+            const appliedSet = new Set<string>();
             items.forEach((j: any) => {
-              if (j._id) set.add(j._id);
-              if (j.id) set.add(j.id);
-              if (j.jobId) set.add(j.jobId);
+              const dbId = j._id || j.id;
+              if (dbId) {
+                appMap.set(dbId, j);
+                if (j.jobId) appMap.set(j.jobId, j);
+                if (j.externalId) appMap.set(j.externalId, j);
+                if (j.jobUrl || j.sourceUrl) {
+                  appMap.set(String(j.jobUrl || j.sourceUrl).trim().toLowerCase(), j);
+                }
+                const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                const tit = (j.jobTitle || j.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                if (comp && tit) {
+                  appMap.set(`${comp}___${tit}`, j);
+                }
+              }
+              const isSavedOnly = j.status === 'saved' || j.status === 'draft';
+              if (isSavedOnly) {
+                if (j._id) set.add(j._id);
+                if (j.id) set.add(j.id);
+                if (j.jobId) set.add(j.jobId);
+              } else if (j.status) {
+                if (j._id) appliedSet.add(j._id);
+                if (j.id) appliedSet.add(j.id);
+                if (j.jobId) appliedSet.add(j.jobId);
+              }
             });
             setSavedIds(set);
+            setTrackerAppMap(appMap);
+            if (appliedSet.size > 0) {
+              setAppliedIds((prev) => new Set([...prev, ...appliedSet]));
+            }
           }
         }
       } catch (err: any) {
@@ -252,7 +284,7 @@ export default function TopJobMatchesSection() {
     return () => controller.abort();
   }, [userId]);
 
-  // Listen for jobUpdated events to refresh savedIds when jobs are saved/updated elsewhere
+  // Listen for jobUpdated events to refresh savedIds and trackerAppMap when jobs are saved/updated elsewhere
   useEffect(() => {
     const handleJobUpdated = () => {
       async function refreshSaved() {
@@ -263,12 +295,39 @@ export default function TopJobMatchesSection() {
             const items = data.jobs || data.data || [];
             if (Array.isArray(items)) {
               const set = new Set<string>();
+              const appMap = new Map<string, any>();
+              const appliedSet = new Set<string>();
               items.forEach((j: any) => {
-                if (j._id) set.add(j._id);
-                if (j.id) set.add(j.id);
-                if (j.jobId) set.add(j.jobId);
+                const dbId = j._id || j.id;
+                if (dbId) {
+                  appMap.set(dbId, j);
+                  if (j.jobId) appMap.set(j.jobId, j);
+                  if (j.externalId) appMap.set(j.externalId, j);
+                  if (j.jobUrl || j.sourceUrl) {
+                    appMap.set(String(j.jobUrl || j.sourceUrl).trim().toLowerCase(), j);
+                  }
+                  const comp = (j.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                  const tit = (j.jobTitle || j.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+                  if (comp && tit) {
+                    appMap.set(`${comp}___${tit}`, j);
+                  }
+                }
+                const isSavedOnly = j.status === 'saved' || j.status === 'draft';
+                if (isSavedOnly) {
+                  if (j._id) set.add(j._id);
+                  if (j.id) set.add(j.id);
+                  if (j.jobId) set.add(j.jobId);
+                } else if (j.status) {
+                  if (j._id) appliedSet.add(j._id);
+                  if (j.id) appliedSet.add(j.id);
+                  if (j.jobId) appliedSet.add(j.jobId);
+                }
               });
               setSavedIds(set);
+              setTrackerAppMap(appMap);
+              if (appliedSet.size > 0) {
+                setAppliedIds((prev) => new Set([...prev, ...appliedSet]));
+              }
             }
           }
         } catch (err: any) {
@@ -287,6 +346,39 @@ export default function TopJobMatchesSection() {
       window.removeEventListener('jobDeleted', handleJobUpdated as EventListener);
     };
   }, []);
+
+  const resolveTrackerApp = useCallback(
+    (jobId: string, rawJob?: JobListing) => {
+      const comp = (rawJob?.company || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const tit = (rawJob?.title || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      const normUrl = rawJob?.applyUrl ? String(rawJob.applyUrl).trim().toLowerCase() : '';
+
+      return (
+        trackerAppMap.get(jobId) ||
+        (rawJob?.id ? trackerAppMap.get(rawJob.id) : null) ||
+        (rawJob?._id ? trackerAppMap.get(rawJob._id) : null) ||
+        (normUrl ? trackerAppMap.get(normUrl) : null) ||
+        (comp && tit ? trackerAppMap.get(`${comp}___${tit}`) : null) ||
+        null
+      );
+    },
+    [trackerAppMap]
+  );
+
+  const trackerForJob = useCallback(
+    (jobId: string, rawJob?: JobListing): JobCardTrackerInfo | null => {
+      const app = resolveTrackerApp(jobId, rawJob);
+      if (!app) return null;
+      return {
+        status: String(app.status || 'saved'),
+        applicationDate: app.applicationDate || app.appliedAt || app.updatedAt,
+        atsScore: typeof app.atsScore === 'number' ? app.atsScore : undefined,
+        hasCV: false,
+        hasCoverLetter: false,
+      };
+    },
+    [resolveTrackerApp]
+  );
 
   const fetchTopMatches = useCallback(async (signal?: AbortSignal, retryCount = 0) => {
     const MAX_RETRIES = 2;
@@ -406,19 +498,26 @@ export default function TopJobMatchesSection() {
   const handleSaveToggle = async (job: TopMatchJob, e: React.MouseEvent) => {
     e.stopPropagation();
     const jobId = job._id;
-    const isCurrentlySaved = savedIds.has(jobId);
+    const isCurrentlySaved = savedIds.has(jobId) || (job.rawJob?.id ? savedIds.has(job.rawJob.id) : false);
+    const app = resolveTrackerApp(jobId, job.rawJob);
 
     setSavingId(jobId);
     try {
       if (isCurrentlySaved) {
-        const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+        const dbId = app?._id || jobId;
+        const res = await fetch(`/api/jobs/${dbId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Failed to unsave');
         setSavedIds((prev) => {
           const next = new Set(prev);
           next.delete(jobId);
+          if (job.rawJob?.id) next.delete(job.rawJob.id);
+          if (dbId) next.delete(dbId);
           return next;
         });
         toast({ title: 'Removed from saved jobs', company: job.company, logoUrl: job.companyLogo });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jobDeleted', { detail: { jobId: dbId } }));
+        }
       } else {
         const res = await fetch('/api/jobs', {
           method: 'POST',
@@ -435,8 +534,19 @@ export default function TopJobMatchesSection() {
           }),
         });
         if (!res.ok) throw new Error('Failed to save');
-        setSavedIds((prev) => new Set(prev).add(jobId));
+        const resData = await res.json().catch(() => ({}));
+        const createdId = resData?.data?._id || resData?.data?.id || resData?.job?._id || resData?.job?.id || jobId;
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          next.add(jobId);
+          if (job.rawJob?.id) next.add(job.rawJob.id);
+          if (createdId) next.add(createdId);
+          return next;
+        });
         toast({ title: 'Job saved to your tracker!', company: job.company, logoUrl: job.companyLogo });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId: createdId } }));
+        }
       }
     } catch (err: any) {
       toast({
@@ -542,7 +652,13 @@ export default function TopJobMatchesSection() {
 
       if (res.ok && resData.success) {
         const createdId = resData.applicationId || jobId;
-        setAppliedIds((prev) => new Set(prev).add(jobId));
+        setAppliedIds((prev) => {
+          const next = new Set(prev);
+          next.add(jobId);
+          if (targetJob.id) next.add(targetJob.id);
+          if (createdId) next.add(createdId);
+          return next;
+        });
 
         // Immediately invalidate entitlements so usage counters update
         queryClient.invalidateQueries({ queryKey: ['entitlements'] });
@@ -577,11 +693,6 @@ export default function TopJobMatchesSection() {
         } else if (resData.status === 'applied') {
           applyProgress.completeApply(targetJob.title, targetJob.company, true, resData.message, jobId, 'applied');
         } else {
-          /*
-            Unrecognised status — do not assume it succeeded. This branch used to report success for any
-            status it did not recognise, so a value added to the endpoint later would silently read as a
-            win here.
-          */
           applyProgress.completeApply(
             targetJob.title,
             targetJob.company,
@@ -626,8 +737,30 @@ export default function TopJobMatchesSection() {
   };
 
   const handleOpenDetail = (job: TopMatchJob) => {
-    setSelectedJob(job.rawJob);
-    setModalOpen(true);
+    const rawId = job.rawJob?.id;
+    const app = resolveTrackerApp(job._id, job.rawJob);
+    const isAppSaved = savedIds.has(job._id) || (rawId ? savedIds.has(rawId) : false);
+    const isAppApplied =
+      appliedIds.has(job._id) ||
+      (rawId ? appliedIds.has(rawId) : false) ||
+      Boolean(app?.status && app.status !== 'saved' && app.status !== 'draft');
+
+    if (app || isAppSaved || isAppApplied) {
+      setSelectedTrackerJob({
+        ...job.rawJob,
+        _id: app?._id || job._id,
+        id: app?._id || job._id,
+        jobTitle: job.title,
+        company: job.company,
+        status: app?.status || (isAppApplied ? 'applied' : 'saved'),
+        matchScore: job.matchScore,
+        atsScore: app?.atsScore,
+      });
+      setTrackerSidebarOpen(true);
+    } else {
+      setSelectedJob(job.rawJob);
+      setModalOpen(true);
+    }
   };
 
   const handleParseComplete = async (parsedData?: any) => {
@@ -982,22 +1115,29 @@ export default function TopJobMatchesSection() {
             ref={scrollContainerRef}
             className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {displayJobs.map((job, index) => (
-              // Same card the jobs-page Explore feed renders — this carousel
-              // is a horizontal strip of it, not a second card design.
-              // `[&>*]:h-full` stretches JobCard's root to the tallest card so
-              // the row keeps an even baseline (it is not a direct flex child).
+            {displayJobs.map((job, index) => {
+              const tracker = trackerForJob(job._id, job.rawJob);
+              const rawId = job.rawJob?.id;
+              const isSaved = savedIds.has(job._id) || (rawId ? savedIds.has(rawId) : false);
+              const isApplied =
+                appliedIds.has(job._id) ||
+                (rawId ? appliedIds.has(rawId) : false) ||
+                Boolean(tracker?.status && tracker.status !== 'saved' && tracker.status !== 'draft');
+
+              return (
               <div
                 key={job._id}
                 className="min-w-[280px] max-w-[280px] shrink-0 [&>*]:h-full"
               >
                 <JobCard
                   job={{ ...job.rawJob, matchScore: job.matchScore }}
-                  isSaved={savedIds.has(job._id)}
-                  isApplied={appliedIds.has(job._id)}
+                  isSaved={isSaved}
+                  isApplied={isApplied}
                   applicationMode={applicationMode}
                   saving={savingId === job._id}
+                  tracker={tracker}
                   onOpen={() => handleOpenDetail(job)}
+                  onOpenTracker={() => handleOpenDetail(job)}
                   onSave={() => handleSaveToggle(job, { stopPropagation: () => {} } as any)}
                   onApply={() => handleApply(job)}
                   onPass={() => {
@@ -1021,7 +1161,8 @@ export default function TopJobMatchesSection() {
                   progress={getForJob(job._id) ?? null}
                 />
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1041,6 +1182,22 @@ export default function TopJobMatchesSection() {
             if (matchJob) handleSaveToggle(matchJob, { stopPropagation: () => {} } as any);
           }}
           onApply={() => selectedJob && handleApply(selectedJob)}
+        />
+      )}
+
+      {/* Journey Sidebar — opens for tracked/applied/saved jobs on Analysis tab */}
+      {trackerSidebarOpen && selectedTrackerJob && (
+        <JobSidebar
+          job={selectedTrackerJob}
+          journeys={[]}
+          openContext={{ initialTab: 'analytics' }}
+          onClose={() => {
+            setTrackerSidebarOpen(false);
+            setSelectedTrackerJob(null);
+          }}
+          onRefresh={() => {
+            fetchTopMatches();
+          }}
         />
       )}
 

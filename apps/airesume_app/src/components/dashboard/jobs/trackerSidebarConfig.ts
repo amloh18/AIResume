@@ -46,6 +46,8 @@ export interface TrackerSidebarOpenContext {
   highlightAction?: TrackerSidebarActionId;
   /** Deep link: automatically open the Edit Job sidebar once the job loads. */
   autoOpenEdit?: boolean;
+  /** Force-select a specific tab on open (defaults to 'analytics'). */
+  initialTab?: 'analytics' | 'details' | 'communication' | 'documents' | 'notes';
 }
 
 export interface TrackerSidebarMetric {
