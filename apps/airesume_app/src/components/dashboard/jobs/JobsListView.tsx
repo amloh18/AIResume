@@ -12,7 +12,8 @@ import {
   Eye,
   Pencil,
   Trash2,
-  Loader2
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 import CompanyLogo from '@/components/ui/CompanyLogo';
 import { CVJourney } from '@/types/cv';
@@ -420,8 +421,18 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                           {jobJourneys && jobJourneys.length > 0 && (() => {
                             const { hasCV, hasCoverLetter } =
                               getJourneyDocumentsForJob(jobJourneys);
+                            const needsAttention = (!hasCV || !hasCoverLetter) && (job.status === 'created' || job.status === 'staging' || job.status === 'saved');
                             return (
                               <div className="flex items-center gap-1.5 mr-1 text-[11px] font-semibold">
+                                {needsAttention && (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                    title="CV/Cover letter requires attention before submitting"
+                                  >
+                                    <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                    <span>CV/CL requires attention</span>
+                                  </span>
+                                )}
                                 <span className={`inline-flex items-center gap-0.5 ${hasCV ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`} title={hasCV ? 'CV Generated' : 'No CV'}>
                                   <CheckCircle className="w-3.5 h-3.5" />
                                   <span>CV</span>

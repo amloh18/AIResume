@@ -8,6 +8,9 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +25,8 @@ import type { JobListing } from '@/types/automation-schema';
 import { toUserFacingMessage } from '@/lib/utils/user-facing-error';
 import { useJobLiveStatusStore } from '@/lib/stores/jobLiveStatusStore';
 import { useApplicationProgress, invalidateApplicationProgress } from '@/hooks/useApplicationProgress';
+import JobParserSidebar from '@/components/dashboard/jobs/JobParserSidebar';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 
 export interface TopMatchJob {
   _id: string;
@@ -144,12 +149,15 @@ export default function TopJobMatchesSection() {
   const [error, setError] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isParserOpen, setIsParserOpen] = useState(false);
+  const [isApplyingAll, setIsApplyingAll] = useState(false);
   const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [savingId, setSavingId] = useState<string | null>(null);
   const [applicationMode, setApplicationMode] = useState<string>('manual_review');
   const [entitlementNoticeData, setEntitlementNoticeData] = useState<EntitlementNoticeData | null>(null);
   const [entitlementNoticeOpen, setEntitlementNoticeOpen] = useState(false);
+  const { getAutoApplyUsage } = useEntitlements();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -622,6 +630,178 @@ export default function TopJobMatchesSection() {
     setModalOpen(true);
   };
 
+  const handleParseComplete = async (parsedData?: any) => {
+    setIsParserOpen(false);
+    if (!parsedData) return;
+
+    try {
+      const payload = {
+        jobTitle: parsedData.jobTitle || 'Untitled Role',
+        company: parsedData.company || 'Unknown Company',
+        location: parsedData.location || 'Remote',
+        jobUrl: parsedData.jobUrl || '',
+        jobDescription: parsedData.jobDescription || parsedData.jobDescriptionRaw || '',
+        salary: parsedData.salary,
+        experienceLevel: parsedData.experienceLevel,
+        tags: parsedData.tags || [],
+        sponsorship: parsedData.sponsorship,
+        benefits: parsedData.benefits,
+        status: 'created',
+        source: 'manual',
+      };
+
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        toast({
+          title: 'Job Analyzed & Added',
+          description: `Added "${payload.jobTitle}" at ${payload.company} to your applications.`,
+        });
+        window.dispatchEvent(new CustomEvent('creditsUpdated'));
+        window.dispatchEvent(new CustomEvent('jobUpdated'));
+        fetchTopMatches();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        toast({
+          title: 'Failed to Save Job',
+          description: errorData.error || errorData.message || 'Could not save parsed job.',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      console.error('Failed to save parsed job:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to save parsed job application.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleApplyAll = async () => {
+    // Only target unapplied jobs in the display list
+    const unappliedList = jobs.filter((j) => !appliedIds.has(j._id) && !(j.rawJob?.id && appliedIds.has(j.rawJob.id)));
+
+    if (unappliedList.length === 0) {
+      toast({
+        title: 'Already Applied',
+        description: 'You have already applied to all recommended jobs in this list.',
+      });
+      return;
+    }
+
+    // Check quota / entitlements
+    const quota = getAutoApplyUsage();
+    if (!quota.isUnlimited && quota.remaining !== null && quota.remaining <= 0) {
+      setEntitlementNoticeData({
+        code: 'AUTO_APPLY_LIMIT_REACHED',
+        jobTitle: unappliedList[0]?.title || 'Recommended Jobs',
+        company: unappliedList[0]?.company || 'Target Companies',
+        applyUrl: unappliedList[0]?.applyUrl || '',
+        message: 'Your daily auto-apply allowance has been reached for today. Upgrade your plan to increase limits.',
+      });
+      setEntitlementNoticeOpen(true);
+      return;
+    }
+
+    setIsApplyingAll(true);
+    let successfulCount = 0;
+    let stoppedEarly = false;
+
+    toast({
+      title: 'Applying to Matches',
+      description: `Starting auto-applications for ${unappliedList.length} top job matches…`,
+    });
+
+    for (let i = 0; i < unappliedList.length; i++) {
+      const matchJob = unappliedList[i];
+      const targetJob = matchJob.rawJob || matchJob;
+      const jobId = matchJob._id || targetJob.id || targetJob._id;
+
+      // Check remaining quota before each submission
+      const currentQuota = getAutoApplyUsage();
+      if (!currentQuota.isUnlimited && currentQuota.remaining !== null && currentQuota.remaining <= 0) {
+        stoppedEarly = true;
+        setEntitlementNoticeData({
+          code: 'AUTO_APPLY_LIMIT_REACHED',
+          jobTitle: matchJob.title,
+          company: matchJob.company,
+          applyUrl: matchJob.applyUrl,
+          message: `Daily auto-apply limit reached after submitting ${successfulCount} application(s).`,
+        });
+        setEntitlementNoticeOpen(true);
+        break;
+      }
+
+      setApplyingJobId(jobId);
+      try {
+        const payload = {
+          jobId,
+          title: matchJob.title,
+          company: matchJob.company,
+          jobUrl: matchJob.applyUrl,
+          description: targetJob.description || '',
+          location: matchJob.location || '',
+          salary: matchJob.salary || '',
+          atsType: matchJob.source || targetJob.atsType || 'unknown',
+          source: matchJob.source || 'discover',
+          mode: 'automatic',
+        };
+
+        const res = await fetch('/api/jobs/auto-apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const resData = await res.json().catch(() => ({}));
+
+        if (res.status === 403 || resData.code === 'AUTO_APPLY_LIMIT_REACHED' || resData.code === 'AUTO_APPLY_LIFETIME_REACHED') {
+          stoppedEarly = true;
+          setEntitlementNoticeData({
+            code: resData.code || 'AUTO_APPLY_LIMIT_REACHED',
+            jobTitle: matchJob.title,
+            company: matchJob.company,
+            applyUrl: matchJob.applyUrl,
+            message: resData.message || 'Auto-apply quota exhausted.',
+          });
+          setEntitlementNoticeOpen(true);
+          break;
+        }
+
+        if (res.ok && resData.success) {
+          successfulCount++;
+          setAppliedIds((prev) => new Set(prev).add(jobId));
+          queryClient.invalidateQueries({ queryKey: ['entitlements'] });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { jobId } }));
+          }
+        }
+      } catch (err) {
+        console.warn(`Apply All failed for ${matchJob.title}:`, err);
+      }
+
+      // Small delay between successive requests to prevent burst flooding
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+
+    setIsApplyingAll(false);
+    setApplyingJobId(null);
+
+    if (successfulCount > 0) {
+      toast({
+        title: 'Batch Applications Queued',
+        description: `Successfully queued ${successfulCount} application(s) for automated submission.${
+          stoppedEarly ? ' Stopped when account limit was reached.' : ''
+        }`,
+      });
+    }
+  };
+
   if ((loading || !hasFetched) && jobs.length === 0) {
     return (
       <div className="space-y-4">
@@ -740,6 +920,32 @@ export default function TopJobMatchesSection() {
           )}
           <button
             type="button"
+            onClick={() => setIsParserOpen(true)}
+            className="px-3.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 text-xs font-semibold hover:border-gray-400 dark:hover:border-white/20 hover:text-gray-900 dark:hover:text-white transition-all flex items-center gap-1.5 shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add job</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleApplyAll}
+            disabled={isApplyingAll || displayJobs.length === 0}
+            className="px-3.5 py-1.5 rounded-full bg-[#013f2e] hover:bg-[#02523c] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isApplyingAll ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Applying all…</span>
+              </>
+            ) : (
+              <>
+                <Zap className="w-3.5 h-3.5" />
+                <span>Apply all</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
             onClick={() => router.push('/dashboard/jobs?tab=discover')}
             className="px-3.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] text-gray-700 dark:text-gray-300 text-xs font-semibold hover:border-gray-400 dark:hover:border-white/20 transition-all flex items-center gap-1.5 shadow-xs"
           >
@@ -843,6 +1049,13 @@ export default function TopJobMatchesSection() {
         isOpen={entitlementNoticeOpen}
         onClose={() => setEntitlementNoticeOpen(false)}
         data={entitlementNoticeData}
+      />
+
+      {/* Smart Job Analysis Sidebar */}
+      <JobParserSidebar
+        isOpen={isParserOpen}
+        onClose={() => setIsParserOpen(false)}
+        onParseComplete={handleParseComplete}
       />
     </div>
   );

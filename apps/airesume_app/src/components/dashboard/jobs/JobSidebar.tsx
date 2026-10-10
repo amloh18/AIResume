@@ -63,6 +63,7 @@ import { useApplicationProgress } from '@/hooks/useApplicationProgress';
 import { LiveProgressBar } from '@/components/applications/LiveProgressBar';
 import { formatQueueEta } from '@/lib/utils/queue-eta';
 import type { BadgeActionId } from '@/lib/utils/application-status-badge';
+import { TailoringIssuesPanel } from '@/components/jobs/TailoringIssuesPanel';
 
 interface JobApplication {
   id: string;
@@ -3495,6 +3496,9 @@ ${userName}`
                         </div>
                       );
                     })()}
+
+                    {/* Tailoring Intelligence & Issues Panel */}
+                    <TailoringIssuesPanel job={job} masterCv={cvData || undefined} />
 
                     {/* Current Stage + Readiness */}
                     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
