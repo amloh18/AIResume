@@ -45,7 +45,7 @@ import { MapPin, Building2, Briefcase, Calendar, DollarSign, CheckCircle2, Arrow
  * goes through the raw Mongo driver (not `fetch`), so the effective freshness is
  * the page render itself.
  */
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 interface ResolvedJob {
   job: PublicJobDetail;

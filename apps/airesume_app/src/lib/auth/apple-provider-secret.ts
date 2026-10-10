@@ -82,7 +82,8 @@ function normalizeKeyContent(raw: string): string {
 function readKeyFile(keyPath: string): string | null {
   if (!keyPath) return null;
   try {
-    const resolved = path.isAbsolute(keyPath) ? keyPath : path.join(process.cwd(), keyPath);
+    // turbopackIgnore: true prevents tracing the entire project repository when reading key files
+    const resolved = path.isAbsolute(keyPath) ? keyPath : path.join(/*turbopackIgnore: true*/ process.cwd(), keyPath);
     return fs.readFileSync(resolved, 'utf8');
   } catch (error) {
     console.error(`🍎 Failed to read Apple .p8 key file at "${keyPath}":`, error);
