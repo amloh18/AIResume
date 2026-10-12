@@ -72,7 +72,11 @@ export class BaselineScheduler {
    * Check which sources need refreshing and run them.
    * This is the main entry point called by the cron job.
    */
-  static async runBaselineCycle(): Promise<{
+  static async runBaselineCycle(options: {
+    targetSource?: string;
+    ignoreInterval?: boolean;
+    ignoreStagger?: boolean;
+  } = {}): Promise<{
     ran: string[];
     skipped: string[];
     failed: string[];
@@ -89,6 +93,10 @@ export class BaselineScheduler {
     const settings = getCachedSettings();
 
     for (const schedule of BASELINE_SCHEDULES) {
+      if (options.targetSource && schedule.source !== options.targetSource) {
+        continue;
+      }
+
       // Use dynamic enabled check (env var may override DB/registry defaults)
       const effectiveEnabled = getSourceEnabled(schedule.source);
       const sourceSettings = settings?.sources?.[schedule.source];
@@ -110,7 +118,7 @@ export class BaselineScheduler {
       const sourceDoc = await sourcesColl.findOne({ name: schedule.source });
       const lastRunAt = sourceDoc?.status?.lastRunAt;
 
-      if (lastRunAt) {
+      if (!options.ignoreInterval && lastRunAt) {
         const elapsed = Date.now() - new Date(lastRunAt).getTime();
         if (elapsed < effectiveInterval) {
           result.skipped.push(schedule.source);
@@ -119,18 +127,21 @@ export class BaselineScheduler {
       }
 
       // Check stagger offset
-      const offsetMinutes = STAGGER_OFFSETS[schedule.source] || 0;
-      const now = new Date();
-      const currentMinute = now.getHours() * 60 + now.getMinutes();
-      if (currentMinute % 60 < offsetMinutes) {
-        result.skipped.push(schedule.source);
-        continue;
+      if (!options.ignoreStagger) {
+        const offsetMinutes = STAGGER_OFFSETS[schedule.source] || 0;
+        const now = new Date();
+        const currentMinute = now.getHours() * 60 + now.getMinutes();
+        if (currentMinute % 60 < offsetMinutes) {
+          result.skipped.push(schedule.source);
+          continue;
+        }
       }
 
       // Run the source
+      let createdRunId = `baseline-${schedule.source}-${Date.now()}`;
       try {
-        const runId = `baseline-${schedule.source}-${Date.now()}`;
-        const { runId: createdRunId } = await createRun(db, schedule.source, runId);
+        const runRes = await createRun(db, schedule.source, createdRunId);
+        createdRunId = runRes.runId;
 
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), effectiveDuration);
@@ -161,7 +172,10 @@ export class BaselineScheduler {
 
           const progress = await executeSourceRun(db, schedule.source, createdRunId, controller.signal, fetchOptions);
 
-          if (progress.status === 'completed' || progress.status === 'not_configured') {
+          const status = (progress.status === 'completed' || progress.status === 'not_configured') ? 'completed' : 'failed';
+          await completeRun(db, createdRunId, status, progress, { [schedule.source]: progress });
+
+          if (status === 'completed') {
             result.ran.push(schedule.source);
           } else {
             result.failed.push(schedule.source);
@@ -169,8 +183,16 @@ export class BaselineScheduler {
         } finally {
           clearTimeout(timeout);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`[BaselineScheduler] Failed to run ${schedule.source}:`, err);
+        try {
+          const failedResult = {
+            status: 'failed' as const,
+            fetched: 0, normalized: 0, inserted: 0, updated: 0, duplicates: 0, errors: 1,
+            error: err?.message || 'Unknown error',
+          };
+          await completeRun(db, createdRunId, 'failed', failedResult, { [schedule.source]: failedResult });
+        } catch {}
         result.failed.push(schedule.source);
       }
     }
