@@ -250,19 +250,8 @@ export class IngestionScheduler {
    * Get the next scheduled run time for a source based on baseline schedule.
    */
   static getNextScheduledRun(sourceName: string, lastRunAt: Date | null): Date {
-    const intervals: Record<string, number> = {
-      greenhouse: 3 * 60 * 60 * 1000,  // 3 hours
-      lever: 3 * 60 * 60 * 1000,       // 3 hours
-      ashby: 3 * 60 * 60 * 1000,       // 3 hours
-      workday: 6 * 60 * 60 * 1000,     // 6 hours
-      adzuna: 6 * 60 * 60 * 1000,      // 6 hours
-      jobspy: 8 * 60 * 60 * 1000,      // 8 hours
-      remotive: 8 * 60 * 60 * 1000,    // 8 hours
-      remoteok: 8 * 60 * 60 * 1000,    // 8 hours
-      linkedin: 12 * 60 * 60 * 1000,   // 12 hours
-    };
-
-    const interval = intervals[sourceName] || 6 * 60 * 60 * 1000;
+    const def = SOURCE_REGISTRY[sourceName];
+    const interval = def?.refreshIntervalMs || 6 * 60 * 60 * 1000;
     const lastRun = lastRunAt ? new Date(lastRunAt).getTime() : 0;
     return new Date(lastRun + interval);
   }
@@ -279,7 +268,30 @@ export class IngestionScheduler {
     await getConnection();
     const db = mongoose.connection.db!;
     const sourcesColl = db.collection('jobSources');
-    const sources = await sourcesColl.find({}).toArray();
+    const runsColl = db.collection('ingestionRuns');
+    const [sources, runAverages] = await Promise.all([
+      sourcesColl.find({}).toArray(),
+      runsColl.aggregate([
+        { $match: { status: 'completed' } },
+        {
+          $group: {
+            _id: '$source',
+            avgYield: { $avg: '$metrics.fetched' },
+            avgDuration: { $avg: '$durationMs' },
+          },
+        },
+      ]).toArray().catch(() => []),
+    ]);
+
+    const runAvgMap = new Map<string, { avgYield: number; avgDuration: number }>();
+    for (const r of runAverages) {
+      if (r._id) {
+        runAvgMap.set(r._id, {
+          avgYield: Math.round(r.avgYield || 0),
+          avgDuration: Math.round(r.avgDuration || 0),
+        });
+      }
+    }
 
     const healthStatuses: SourceHealthStatus[] = [];
 
@@ -291,6 +303,12 @@ export class IngestionScheduler {
       const healthStatus = IngestionScheduler.determineHealthStatus(source, def);
 
       const enabled = getSourceEnabled(name);
+      const metrics = runAvgMap.get(name);
+      const avgYield = metrics?.avgYield ??
+        (source.statistics?.totalRuns
+          ? Math.round((source.statistics.totalJobsFound || 0) / source.statistics.totalRuns)
+          : (source.statistics?.avgYield || 0));
+      const avgDuration = metrics?.avgDuration ?? source.statistics?.avgDuration ?? 0;
 
       healthStatuses.push({
         source: name,
@@ -301,8 +319,8 @@ export class IngestionScheduler {
         lastSuccessAt: source.status?.lastSuccessAt || null,
         lastFailureAt: source.status?.lastFailureAt || null,
         consecutiveFailures: source.status?.consecutiveFailures || 0,
-        avgYield: source.statistics?.avgYield || 0,
-        avgDuration: source.statistics?.avgDuration || 0,
+        avgYield,
+        avgDuration,
         nextEligibleRun: IngestionScheduler.getNextScheduledRun(name, source.status?.lastRunAt),
       });
     }
@@ -361,9 +379,9 @@ export class IngestionScheduler {
       const lastSuccess = new Date(source.status.lastSuccessAt).getTime();
       const hoursSinceSuccess = (Date.now() - lastSuccess) / (1000 * 60 * 60);
 
-      // Stale if hasn't run in 2x the refresh interval
+      // Stale if hasn't run in 2x the refresh interval (minimum 26 hours so daily scheduled workers don't falsely go stale)
       if (def?.refreshIntervalMs) {
-        const staleThreshold = (def.refreshIntervalMs * 2) / (1000 * 60 * 60);
+        const staleThreshold = Math.max(26, (def.refreshIntervalMs * 2) / (1000 * 60 * 60));
         if (hoursSinceSuccess > staleThreshold) return 'stale';
       }
 

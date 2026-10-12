@@ -431,7 +431,7 @@ export default function TopJobMatchesSection() {
           applyUrl: j.applyUrl || '',
           source: j.source || 'Aggregator',
           salary: salaryText,
-          matchReasons: (j as any).matchReasons || (isFresh ? ['Recently posted opportunity'] : ['Strong skills match with your profile']),
+          matchReasons: (j as any).matchReasons || [],
           rawJob: j,
           isFresh,
           freshness: isFresh

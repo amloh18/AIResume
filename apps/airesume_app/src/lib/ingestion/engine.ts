@@ -1888,20 +1888,38 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
   log('UPSERT', `batchUpsert: ${jobs.length} jobs for source=${sourceName}`);
 
   // Phase 12: Pre-check content hashes to track true duplicates vs content updates
-  // Use only canonicalId lookup (efficient $in) — skip the $and on sourcePairs
-  // which explodes for large batches (e.g. 3,397 Greenhouse jobs).
+  // Look up by canonicalId AND (when present) source.primary + source.sourceJobId.
+  // This guarantees that if a job's location/title changed slightly (producing a new canonicalId),
+  // but it already exists with { source.primary, sourceJobId }, it is treated as a content update
+  // rather than an insert colliding with the unique index `jobs_source_dedup_unique`.
   const canonicalIds = jobs.map((j) => j.canonicalId);
+  const sourceJobIds = jobs
+    .map((j) => j.source?.sourceJobId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-  // Batch the $in query to avoid MongoDB BSON size limits (>16MB)
+  // Batch the lookup queries to avoid MongoDB BSON size limits (>16MB)
   const BATCH_SIZE = 500;
   const existingDocs: any[] = [];
   for (let i = 0; i < canonicalIds.length; i += BATCH_SIZE) {
     const batch = canonicalIds.slice(i, i + BATCH_SIZE);
     const docs = await coll
       .find({ canonicalId: { $in: batch } })
-      .project({ canonicalId: 1, contentHash: 1 })
+      .project({ canonicalId: 1, contentHash: 1, 'source.primary': 1, 'source.sourceJobId': 1 })
       .toArray();
     existingDocs.push(...docs);
+  }
+
+  // Also query by sourceJobIds for this source
+  const existingSourceDocs: any[] = [];
+  if (sourceJobIds.length > 0) {
+    for (let i = 0; i < sourceJobIds.length; i += BATCH_SIZE) {
+      const batch = sourceJobIds.slice(i, i + BATCH_SIZE);
+      const docs = await coll
+        .find({ 'source.primary': sourceName, 'source.sourceJobId': { $in: batch } })
+        .project({ canonicalId: 1, contentHash: 1, 'source.primary': 1, 'source.sourceJobId': 1 })
+        .toArray();
+      existingSourceDocs.push(...docs);
+    }
   }
 
   // Pre-compute freshness for each job
@@ -1921,10 +1939,16 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
     return { expiresAt, freshnessScore: Math.round(freshnessScore * 1000) / 1000 };
   }
 
-  // Build lookup: canonicalId → existing contentHash
-  const existingHashByCanonical = new Map<string, string>();
+  // Build lookups:
+  // 1. canonicalId → existing doc
+  // 2. sourceJobId → existing doc
+  const existingByCanonical = new Map<string, any>();
   for (const doc of existingDocs) {
-    if (doc.canonicalId) existingHashByCanonical.set(doc.canonicalId, doc.contentHash || '');
+    if (doc.canonicalId) existingByCanonical.set(doc.canonicalId, doc);
+  }
+  const existingBySourceJobId = new Map<string, any>();
+  for (const doc of existingSourceDocs) {
+    if (doc.source?.sourceJobId) existingBySourceJobId.set(doc.source.sourceJobId, doc);
   }
 
   // Classify each job: new, content-changed, or metadata-only (duplicate)
@@ -1932,29 +1956,33 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
   let contentUpdated = 0;
   let duplicates = 0;
 
-  const contentChangedJobs: NormalizedJob[] = [];
+  const contentChangedJobs: Array<{ job: NormalizedJob; targetCanonicalId: string }> = [];
   const newJobs: NormalizedJob[] = [];
+  const duplicateJobs: Array<{ job: NormalizedJob; targetCanonicalId: string }> = [];
 
   for (const job of jobs) {
-    const existingHash = existingHashByCanonical.get(job.canonicalId);
+    const existing = existingByCanonical.get(job.canonicalId) ||
+      (job.source?.sourceJobId ? existingBySourceJobId.get(job.source.sourceJobId) : undefined);
 
-    if (existingHash === undefined) {
-      // New job
+    if (!existing) {
+      // Truly new job
       newJobs.push(job);
       inserted++;
-    } else if (existingHash !== job.contentHash) {
-      // Content changed
-      contentChangedJobs.push(job);
-      contentUpdated++;
     } else {
-      // Metadata only — true duplicate
-      duplicates++;
+      const targetCanonicalId = existing.canonicalId || job.canonicalId;
+      if (existing.contentHash !== job.contentHash) {
+        // Content changed
+        contentChangedJobs.push({ job, targetCanonicalId });
+        contentUpdated++;
+      } else {
+        // Metadata only — duplicate
+        duplicateJobs.push({ job, targetCanonicalId });
+        duplicates++;
+      }
     }
   }
 
   // Upsert new jobs (full fields via $setOnInsert + $set)
-  // Filter by canonicalId only — the $or with source fields caused duplicate
-  // key issues in bulkWrite when multiple jobs shared sourceJobId across companies.
   const newOps = newJobs.map((job) => {
     const { expiresAt, freshnessScore } = computeFreshness(job);
     return {
@@ -2010,12 +2038,12 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
     };
   });
 
-  // Upsert content-changed jobs (update content fields)
-  const contentOps = contentChangedJobs.map((job) => {
+  // Upsert content-changed jobs (update content fields on existing target canonicalId)
+  const contentOps = contentChangedJobs.map(({ job, targetCanonicalId }) => {
     const { expiresAt, freshnessScore } = computeFreshness(job);
     return {
       updateOne: {
-        filter: { canonicalId: job.canonicalId },
+        filter: { canonicalId: targetCanonicalId },
         update: {
           $set: {
             title: job.title,
@@ -2056,28 +2084,23 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
           },
           $inc: { 'ingestion.updateCount': 1 },
         },
-        upsert: true,
+        upsert: false,
       },
     };
   });
 
-  // Metadata-only updates for duplicates (just touch lastSeenAt/lastVerifiedAt)
-  const duplicateJobs = jobs.filter((job) => {
-    const existingHash = existingHashByCanonical.get(job.canonicalId);
-    return existingHash !== undefined && existingHash === job.contentHash;
-  });
-
-  const metaOps = duplicateJobs.map((job) => {
+  // Metadata-only updates for duplicates (touch lastSeenAt/lastVerifiedAt on existing target canonicalId)
+  const metaOps = duplicateJobs.map(({ job, targetCanonicalId }) => {
     const { expiresAt } = computeFreshness(job);
     return {
       updateOne: {
-        filter: { canonicalId: job.canonicalId },
+        filter: { canonicalId: targetCanonicalId },
         update: {
           $set: {
             'source.lastSeenAt': now,
             lastSeenAt: now,
             lastVerifiedAt: now,
-            expiresAt, // refresh expiry so actively-seen jobs don't expire early
+            expiresAt,
             status: 'active',
             atsType: job.source.primary,
             remote: Boolean(job.location?.remote),
@@ -2102,12 +2125,24 @@ export async function batchUpsert(db: mongoose.Connection['db'], jobs: Normalize
       : { upsertedCount: 0, modifiedCount: 0, upsertedIds: {} } as any;
     log('UPSERT', `${sourceName}: bulkWrite done — upserted=${res.upsertedCount} modified=${res.modifiedCount}`);
   } catch (bulkErr: any) {
-    // Log full error details for debugging
-    const errDetails = bulkErr.writeErrors
-      ? bulkErr.writeErrors.slice(0, 5).map((e: any) => `idx=${e.index} code=${e.code} ${e.errmsg}`).join('; ')
-      : bulkErr.message;
-    log('ERROR', `${sourceName}: bulkWrite FAILED — ${errDetails}`);
-    throw bulkErr;
+    // If unordered bulkWrite encountered writeErrors (e.g. duplicate keys on legacy indexes),
+    // salvage the successful writes rather than failing the whole source run.
+    if (bulkErr.name === 'MongoBulkWriteError' || bulkErr.writeErrors) {
+      const writeErrors = bulkErr.writeErrors || [];
+      const dupErrors = writeErrors.filter((e: any) => e.code === 11000);
+      const otherErrors = writeErrors.filter((e: any) => e.code !== 11000);
+
+      const errDetails = writeErrors.slice(0, 5).map((e: any) => `idx=${e.index} code=${e.code} ${e.errmsg}`).join('; ');
+      log('WARN', `${sourceName}: bulkWrite finished with ${writeErrors.length} errors (${dupErrors.length} duplicates) — ${errDetails}`);
+
+      if (otherErrors.length > 0 && dupErrors.length === 0) {
+        throw bulkErr;
+      }
+      res = bulkErr.result || { upsertedCount: 0, modifiedCount: 0, upsertedIds: {} };
+    } else {
+      log('ERROR', `${sourceName}: bulkWrite FAILED — ${bulkErr.message}`);
+      throw bulkErr;
+    }
   }
 
   // Record events for newly inserted jobs (non-fatal)

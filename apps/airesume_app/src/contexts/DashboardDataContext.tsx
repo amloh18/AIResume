@@ -30,7 +30,6 @@ interface DashboardDataContextType {
   aiInsights: any[];
   skillsMarket: any;
   salaryInsights: any;
-  jobRecommendations: any[];
   // Loading states
   criticalLoading: boolean; // User/subscription data
   secondaryLoading: {
@@ -45,7 +44,6 @@ interface DashboardDataContextType {
     aiInsights: boolean;
     skillsMarket: boolean;
     salaryInsights: boolean;
-    jobRecommendations: boolean;
   };
   // Legacy loading for backward compatibility
   loading: boolean;
@@ -62,7 +60,6 @@ interface DashboardDataContextType {
     aiInsights?: string | null;
     skillsMarket?: string | null;
     salaryInsights?: string | null;
-    jobRecommendations?: string | null;
   };
   // Legacy error for backward compatibility
   error: string | null;
@@ -80,7 +77,6 @@ interface DashboardDataContextType {
   refreshAiInsights: () => Promise<void>;
   refreshSkillsMarket: () => Promise<void>;
   refreshSalaryInsights: () => Promise<void>;
-  refreshJobRecommendations: () => Promise<void>;
   refreshAll: () => Promise<void>;
 }
 
@@ -132,7 +128,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
   const [aiInsights, setAiInsights] = useState<any[]>([]);
   const [skillsMarket, setSkillsMarket] = useState<any>(null);
   const [salaryInsights, setSalaryInsights] = useState<any>(null);
-  const [jobRecommendations, setJobRecommendations] = useState<any[]>([]);
 
   // Separate loading states for critical vs secondary data
   const [criticalLoading, setCriticalLoading] = useState(true);
@@ -148,8 +143,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
     activities: false,
     aiInsights: false,
     skillsMarket: false,
-    salaryInsights: false,
-    jobRecommendations: false
+    salaryInsights: false
   });
 
   const [errors, setErrors] = useState<{
@@ -165,7 +159,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
     aiInsights?: string | null;
     skillsMarket?: string | null;
     salaryInsights?: string | null;
-    jobRecommendations?: string | null;
   }>({});
 
   // Track if data has been loaded to prevent duplicate fetches
@@ -568,24 +561,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
     });
   }, []);
 
-  const fetchJobRecommendations = useCallback(async (userId: string) => {
-    return requestDeduplication.deduplicate('/api/dashboard/job-recommendations', async () => {
-      if (loadingStates.current.get('jobRecommendations')) return;
-      try {
-        loadingStates.current.set('jobRecommendations', true);
-        setSecondaryLoading(prev => ({ ...prev, jobRecommendations: true }));
-        const response = await authenticatedFetch(`/api/dashboard/job-recommendations?userId=${userId}`);
-        const result = await response.json();
-        if (result.success) setJobRecommendations(result.data.recommendations);
-      } catch (err: any) {
-        setErrors(prev => ({ ...prev, jobRecommendations: err.message }));
-      } finally {
-        loadingStates.current.set('jobRecommendations', false);
-        setSecondaryLoading(prev => ({ ...prev, jobRecommendations: false }));
-      }
-    });
-  }, []);
-
   const refreshCVs = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (userId) {
@@ -662,11 +637,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
     if (userId) await fetchSalaryInsights(userId);
   }, [user, fetchSalaryInsights]);
 
-  const refreshJobRecommendations = useCallback(async () => {
-    const userId = getUserIdForAPI(user);
-    if (userId) await fetchJobRecommendations(userId);
-  }, [user, fetchJobRecommendations]);
-
   const refreshAll = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (!userId) return;
@@ -684,8 +654,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
       activities: true,
       aiInsights: true,
       skillsMarket: true,
-      salaryInsights: true,
-      jobRecommendations: true
+      salaryInsights: true
     });
     setErrors({});
 
@@ -704,13 +673,12 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
       fetchActivities(userId),
       fetchAiInsights(userId),
       fetchSkillsMarket(userId),
-      fetchSalaryInsights(userId),
-      fetchJobRecommendations(userId)
+      fetchSalaryInsights(userId)
     ]);
 
     const duration = Math.round(performance.now() - startTime);
     console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
-  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchJourneys, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
+  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchJourneys, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights]);
 
   // CRITICAL PATH LOADING: Wait for auth, then load secondary data
   useEffect(() => {
@@ -763,7 +731,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
       setAiInsights([]);
       setSkillsMarket(null);
       setSalaryInsights(null);
-      setJobRecommendations([]);
       setErrors({});
     }
 
@@ -831,7 +798,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
         aiInsights,
         skillsMarket,
         salaryInsights,
-        jobRecommendations,
         criticalLoading,
         secondaryLoading,
         loading, // Legacy
@@ -850,7 +816,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode; bootst
         refreshAiInsights,
         refreshSkillsMarket,
         refreshSalaryInsights,
-        refreshJobRecommendations,
         refreshAll
       }}
     >

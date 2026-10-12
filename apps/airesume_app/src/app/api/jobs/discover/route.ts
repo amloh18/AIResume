@@ -22,6 +22,7 @@ import { retrieveCandidates, flattenTieredCandidates, getTierSummary } from '@/l
 import { buildDiscoverFeed } from '@/lib/search/feedBuilder';
 import { scoreJobForCandidate } from '@/matching/deterministicScoring';
 import { extractCandidateProfile } from '@/matching/candidateProfileExtractor';
+import { normalizeScoringProfile } from '@/matching/scoringProfile';
 import { getOrComputeProfile } from '@/lib/search/userProfileCache';
 import type { NormalizedUserProfile } from '@/lib/search/userProfileCache';
 import { resolveFeedRemoteOnly } from '@/lib/jobs/workplace';
@@ -153,6 +154,7 @@ export async function GET(request: NextRequest) {
         if (!candidateProfile) {
           candidateProfile = userProfile; // Use cached profile as candidateProfile
         }
+        candidateProfile = normalizeScoringProfile(candidateProfile);
       } catch (err) {
         console.warn('[Discover] Failed to load user profile:', err);
       }
@@ -641,53 +643,66 @@ export async function GET(request: NextRequest) {
 
       const flatCandidates = rawJobs.map((j: any) => mapToCandidate(j, 'EXACT'));
 
-      const scoredListings: (JobListing & { matchTier: string })[] = flatCandidates.map((candidate) => {
-        let matchScore = 50;
-        if (candidateProfile) {
-          try {
-            const scoreResult = scoreJobForCandidate(
-              {
-                title: candidate.title,
-                normalizedTitle: candidate.normalizedTitle,
-                skills: candidate.keywords,
-                location: { city: candidate.location, country: candidate.country, remote: candidate.remote },
-                salary: { min: candidate.salaryMin, max: candidate.salaryMax, currency: candidate.salaryCurrency },
-                experience: { level: candidate.seniority },
-                roleFamily: candidate.roleFamily,
-                seniority: candidate.seniority,
-                description: candidate.description,
-              },
-              candidateProfile
-            );
-            matchScore = Math.min(98, Math.max(5, scoreResult.score));
-          } catch {
-            matchScore = 50;
+      const scoredListings: (JobListing & { matchTier: string })[] = flatCandidates
+        .map((candidate) => {
+          let matchScore = 50;
+          let matchReasons: string[] = [];
+          let hardConstraintViolations: string[] = [];
+          if (candidateProfile) {
+            try {
+              const scoreResult = scoreJobForCandidate(
+                {
+                  title: candidate.title,
+                  normalizedTitle: candidate.normalizedTitle,
+                  skills: candidate.keywords,
+                  location: { city: candidate.location, country: candidate.country, remote: candidate.remote },
+                  salary: { min: candidate.salaryMin, max: candidate.salaryMax, currency: candidate.salaryCurrency },
+                  experience: { level: candidate.seniority },
+                  roleFamily: candidate.roleFamily,
+                  seniority: candidate.seniority,
+                  description: candidate.description,
+                  postedAt: candidate.postedDate,
+                  applyUrl: resolveApplyUrl(candidate),
+                },
+                candidateProfile
+              );
+              matchScore = Math.min(98, Math.max(5, scoreResult.score));
+              matchReasons = scoreResult.reasons;
+              hardConstraintViolations = scoreResult.hardConstraintViolations;
+            } catch {
+              matchScore = 50;
+            }
           }
-        }
-        return {
-          _id: candidate._id,
-          title: candidate.title,
-          company: candidate.company,
-          companyLogo: candidate.companyLogo,
-          location: candidate.location,
-          remote: candidate.remote,
-          salaryMin: candidate.salaryMin,
-          salaryMax: candidate.salaryMax,
-          salaryCurrency: candidate.salaryCurrency,
-          matchScore,
-          source: candidate.source as any,
-          atsType: candidate.atsType as any,
-          // One resolver decides this. `applyUrl` alone is empty for 86.7% of the corpus — the
-        // `feashliaa` sync writes the form URL to `source.applicationUrl` (SB-20).
-        applyUrl: resolveApplyUrl(candidate),
-          postedDate: candidate.postedDate,
-          userId: userId || '',
-          country: candidate.country,
-          description: candidate.description,
-          keywords: candidate.keywords,
-          matchTier: candidate.matchTier,
-        } as JobListing & { matchTier: string };
-      });
+
+          // Hard filter stage (SB-31, AGENTS §14): skip jobs violating hard constraints
+          if (hardConstraintViolations.length > 0) {
+            return null;
+          }
+
+          return {
+            _id: candidate._id,
+            title: candidate.title,
+            company: candidate.company,
+            companyLogo: candidate.companyLogo,
+            location: candidate.location,
+            remote: candidate.remote,
+            salaryMin: candidate.salaryMin,
+            salaryMax: candidate.salaryMax,
+            salaryCurrency: candidate.salaryCurrency,
+            matchScore,
+            matchReasons: matchReasons.length > 0 ? matchReasons : undefined,
+            source: candidate.source as any,
+            atsType: candidate.atsType as any,
+            applyUrl: resolveApplyUrl(candidate),
+            postedDate: candidate.postedDate,
+            userId: userId || '',
+            country: candidate.country,
+            description: candidate.description,
+            keywords: candidate.keywords,
+            matchTier: candidate.matchTier,
+          } as JobListing & { matchTier: string };
+        })
+        .filter((j): j is JobListing & { matchTier: string } => j !== null);
 
       // Boost match scores for companies on the user's watchlist
       if (userId) {
@@ -763,55 +778,69 @@ export async function GET(request: NextRequest) {
     // ── Personalized Scoring ───────────────────────────────────────────────
     const flatCandidates = flattenTieredCandidates(candidates);
 
-    const scoredListings: (JobListing & { matchTier: string })[] = flatCandidates.map((candidate) => {
-      let matchScore = 45; // default for unauthenticated
+    const scoredListings: (JobListing & { matchTier: string })[] = flatCandidates
+      .map((candidate) => {
+        let matchScore = 45; // default for unauthenticated
+        let matchReasons: string[] = [];
+        let hardConstraintViolations: string[] = [];
 
-      if (candidateProfile) {
-        try {
-          const scoreResult = scoreJobForCandidate(
-            {
-              title: candidate.title,
-              normalizedTitle: candidate.normalizedTitle,
-              skills: candidate.keywords,
-              location: { city: candidate.location, country: candidate.country, remote: candidate.remote },
-              salary: { min: candidate.salaryMin, max: candidate.salaryMax, currency: candidate.salaryCurrency },
-              experience: { level: candidate.seniority },
-              roleFamily: candidate.roleFamily,
-              seniority: candidate.seniority,
-              description: candidate.description,
-            },
-            candidateProfile
-          );
-          matchScore = Math.min(98, Math.max(5, scoreResult.score));
-        } catch {
-          matchScore = 45;
+        if (candidateProfile) {
+          try {
+            const scoreResult = scoreJobForCandidate(
+              {
+                title: candidate.title,
+                normalizedTitle: candidate.normalizedTitle,
+                skills: candidate.keywords,
+                location: { city: candidate.location, country: candidate.country, remote: candidate.remote },
+                salary: { min: candidate.salaryMin, max: candidate.salaryMax, currency: candidate.salaryCurrency },
+                experience: { level: candidate.seniority },
+                roleFamily: candidate.roleFamily,
+                seniority: candidate.seniority,
+                description: candidate.description,
+                postedAt: candidate.postedDate,
+                applyUrl: resolveApplyUrl(candidate),
+              },
+              candidateProfile
+            );
+            matchScore = Math.min(98, Math.max(5, scoreResult.score));
+            matchReasons = scoreResult.reasons;
+            hardConstraintViolations = scoreResult.hardConstraintViolations;
+          } catch {
+            matchScore = 45;
+          }
         }
-      }
 
-      return {
-        _id: candidate._id,
-        title: candidate.title,
-        company: candidate.company,
-        companyLogo: candidate.companyLogo,
-        location: candidate.location,
-        remote: candidate.remote,
-        salaryMin: candidate.salaryMin,
-        salaryMax: candidate.salaryMax,
-        salaryCurrency: candidate.salaryCurrency,
-        matchScore,
-        source: candidate.source as any,
-        atsType: candidate.atsType as any,
-        // One resolver decides this. `applyUrl` alone is empty for 86.7% of the corpus — the
-        // `feashliaa` sync writes the form URL to `source.applicationUrl` (SB-20).
-        applyUrl: resolveApplyUrl(candidate),
-        postedDate: candidate.postedDate,
-        userId: userId || '',
-        country: candidate.country,
-        description: candidate.description,
-        keywords: candidate.keywords,
-        matchTier: candidate.matchTier,
-      } as JobListing & { matchTier: string };
-    });
+        // Hard constraint reduction (SB-31, AGENTS §14): skip jobs violating hard constraints
+        if (hardConstraintViolations.length > 0) {
+          return null;
+        }
+
+        return {
+          _id: candidate._id,
+          title: candidate.title,
+          company: candidate.company,
+          companyLogo: candidate.companyLogo,
+          location: candidate.location,
+          remote: candidate.remote,
+          salaryMin: candidate.salaryMin,
+          salaryMax: candidate.salaryMax,
+          salaryCurrency: candidate.salaryCurrency,
+          matchScore,
+          matchReasons: matchReasons.length > 0 ? matchReasons : undefined,
+          source: candidate.source as any,
+          atsType: candidate.atsType as any,
+          // One resolver decides this. `applyUrl` alone is empty for 86.7% of the corpus — the
+          // `feashliaa` sync writes the form URL to `source.applicationUrl` (SB-20).
+          applyUrl: resolveApplyUrl(candidate),
+          postedDate: candidate.postedDate,
+          userId: userId || '',
+          country: candidate.country,
+          description: candidate.description,
+          keywords: candidate.keywords,
+          matchTier: candidate.matchTier,
+        } as JobListing & { matchTier: string };
+      })
+      .filter((j): j is JobListing & { matchTier: string } => j !== null);
 
     // ── Build Tiered Feed ──────────────────────────────────────────────────
     const feed = buildDiscoverFeed(candidates, { limit, page });

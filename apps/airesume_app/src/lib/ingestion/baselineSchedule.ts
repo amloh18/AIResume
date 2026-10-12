@@ -38,6 +38,12 @@ export const BASELINE_SCHEDULES: SourceSchedule[] = [
   { source: 'remotive', intervalMs: 8 * 60 * 60 * 1000, maxDurationMs: 3 * 60 * 1000, enabled: true },
   { source: 'remoteok', intervalMs: 8 * 60 * 60 * 1000, maxDurationMs: 3 * 60 * 1000, enabled: true },
   { source: 'linkedin', intervalMs: 12 * 60 * 60 * 1000, maxDurationMs: 15 * 60 * 1000, enabled: false },
+  { source: 'smartrecruiters', intervalMs: 6 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
+  { source: 'workable', intervalMs: 6 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
+  { source: 'recruitee', intervalMs: 6 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
+  { source: 'personio', intervalMs: 6 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
+  { source: 'bamboohr', intervalMs: 2 * 60 * 60 * 1000, maxDurationMs: 10 * 60 * 1000, enabled: true },
+  { source: 'feashliaa', intervalMs: 6 * 60 * 60 * 1000, maxDurationMs: 15 * 60 * 1000, enabled: true },
 ];
 
 // ── Stagger Offset (minutes) ───────────────────────────────────────────────
@@ -51,6 +57,12 @@ const STAGGER_OFFSETS: Record<string, number> = {
   jobspy: 25,
   remotive: 30,
   remoteok: 35,
+  smartrecruiters: 40,
+  workable: 45,
+  recruitee: 50,
+  personio: 55,
+  bamboohr: 0,
+  feashliaa: 10,
 };
 
 // ── Baseline Scheduler ──────────────────────────────────────────────────────
