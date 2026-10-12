@@ -113,6 +113,16 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // Editor product tour — "show once". Set by the tour when it finishes, and
+    // read back on the next editor load. It lives here (not in client storage)
+    // because the 431 cleanup wipes localStorage on every page load.
+    if (onboardingData.editor_tour_completed !== undefined) {
+      updateFields['onboarding.editor_tour_completed'] = onboardingData.editor_tour_completed;
+      if (onboardingData.editor_tour_completed === true) {
+        updateFields['onboarding.editor_tour_completed_at'] = new Date().toISOString();
+      }
+    }
+
     if (onboardingData.activation_status) updateFields['onboarding.activation_status'] = onboardingData.activation_status;
     if (onboardingData.activation_route) {
       if (!onboardingData.activation_route.startsWith('/editor')) {

@@ -226,6 +226,19 @@ export interface IUser extends Document {
     cv_checklist_dismiss_reason?: 'score' | 'manual';
     cv_checklist_dismissed_at?: string;
 
+    /**
+     * Editor product tour (the first-run walkthrough of step 3).
+     *
+     * Stored on the user record rather than in `localStorage` because the client
+     * storage is wiped on every page load by the 431-error cleanup
+     * (`immediate431Fix` in lib/utils/immediate-431-fix.ts calls
+     * `localStorage.clear()`), which turned a "show once" tour into one that
+     * replayed on every navigation. Same shape and reason as
+     * `cv_checklist_dismissed` above.
+     */
+    editor_tour_completed?: boolean;
+    editor_tour_completed_at?: string;
+
     // Career Preferences & Profiling
     career_pathway?: string;
     target_roles?: string[];
@@ -846,6 +859,8 @@ const userSchema = new Schema<IUser>({
     cv_checklist_dismissed: { type: Boolean, default: false },
     cv_checklist_dismiss_reason: { type: String, enum: ['score', 'manual'] },
     cv_checklist_dismissed_at: { type: String },
+    editor_tour_completed: { type: Boolean, default: false },
+    editor_tour_completed_at: { type: String },
 
     // Career Preferences & Profiling
     career_pathway: { type: String },

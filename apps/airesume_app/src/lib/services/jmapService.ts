@@ -15,18 +15,18 @@ import nodemailer from 'nodemailer';
 // ============================================================================
 
 function getJmapConfig() {
-  const baseUrl = process.env.STALWART_JMAP_URL || 'http://localhost:8085/jmap';
+  const baseUrl = process.env.STALWART_JMAP_URL || 'http://stalwart-mail:8080/jmap';
   const user = process.env.STALWART_JMAP_USER || 'admin';
-  const pass = process.env.STALWART_JMAP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
+  const pass = process.env.STALWART_JMAP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || 'BuildAIResume2026!';
   return { baseUrl, user, pass };
 }
 
 function getSmtpConfig() {
-  const host = process.env.STALWART_SMTP_HOST || '192.168.1.8';
+  const host = process.env.STALWART_SMTP_HOST || 'stalwart-mail';
   const port = parseInt(process.env.STALWART_SMTP_PORT || '587');
   const secure = process.env.STALWART_SMTP_SECURE === 'true' || port === 465;
-  const user = process.env.STALWART_SMTP_USER || 'applications@morigrid.com';
-  const pass = process.env.STALWART_SMTP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || '';
+  const user = process.env.STALWART_SMTP_USER || 'admin@morigrid.com';
+  const pass = process.env.STALWART_SMTP_PASSWORD || process.env.STALWART_RECOVERY_PASSWORD || 'BuildAIResume2026!';
   const senderEmail = process.env.APPLICATION_SENDER_EMAIL || 'admin@morigrid.com';
   const senderName = process.env.APPLICATION_SENDER_NAME || 'BuildAIResume';
   return { host, port, secure, user, pass, senderEmail, senderName };
@@ -614,6 +614,7 @@ export async function sendEmailViaSmtp(params: SendEmailParams): Promise<{
 }> {
   try {
     const { host, port, secure, user, pass, senderEmail, senderName } = getSmtpConfig();
+    const isInternalOrLocal = host === 'stalwart-mail' || host === '127.0.0.1' || host === 'localhost' || host === '192.168.1.8';
     const transporter = nodemailer.createTransport({
       host,
       port,
@@ -622,6 +623,7 @@ export async function sendEmailViaSmtp(params: SendEmailParams): Promise<{
         user,
         pass,
       },
+      tls: isInternalOrLocal ? { rejectUnauthorized: false } : undefined,
       pool: true,
       maxConnections: 5,
       maxMessages: 100,

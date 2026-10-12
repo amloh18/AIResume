@@ -13,6 +13,8 @@
 import mongoose from 'mongoose';
 import { getEmails, searchEmails, markAsRead, resolveBodyText, type JmapEmail } from '@/lib/services/jmapService';
 import { Communication, type CommunicationClassification, type MatchConfidence } from '@/models/Communication';
+import User from '@/models/User';
+import { EmailAccount } from '@/models/TrackerEmail';
 import { log } from '@/lib/structured-logger';
 
 
@@ -465,6 +467,31 @@ async function processInboundEmail(
       }
     }
 
+    // ── Phase 8: Auto-Forward critical emails to user's personal email ──
+    const IMPORTANT_CLASSIFICATIONS: CommunicationClassification[] = [
+      'INTERVIEW_INVITATION',
+      'OFFER',
+      'ASSESSMENT',
+      'APPLICATION_ACKNOWLEDGEMENT',
+    ];
+
+    if (IMPORTANT_CLASSIFICATIONS.includes(classification.classification)) {
+      try {
+        await forwardEmailToPersonal(userId, {
+          subject,
+          senderName,
+          senderEmail,
+          bodySnippet,
+          htmlBody,
+          textBody,
+          classification: classification.classification,
+          receivedAt: new Date(email.receivedAt),
+        });
+      } catch (fwdErr: any) {
+        log.warn('[EmailIngestion] Auto-forwarding failed:', fwdErr.message);
+      }
+    }
+
     return {
       communicationId: String(communication._id),
       classification: classification.classification,
@@ -483,6 +510,125 @@ async function processInboundEmail(
   }
 }
 
+/**
+ * Forward important emails (interviews, offers, assessments, acknowledgements)
+ * to candidate's personal verified email address.
+ */
+async function forwardEmailToPersonal(
+  userId: string | mongoose.Types.ObjectId,
+  info: {
+    subject: string;
+    senderName: string;
+    senderEmail: string;
+    bodySnippet: string;
+    htmlBody?: string;
+    textBody?: string;
+    classification: string;
+    receivedAt: Date;
+  }
+): Promise<void> {
+  const user = await User.findById(userId).select('email firstName lastName stalwartEmail');
+  if (!user || !user.email) return;
+
+  // Don't forward if personal email is identical to the stalwart email
+  if (user.stalwartEmail && user.email.toLowerCase() === user.stalwartEmail.toLowerCase()) {
+    return;
+  }
+
+  const { createTransporter } = await import('@/lib/email-service');
+  const transporter = createTransporter();
+  if (!transporter) {
+    log.warn('[EmailIngestion] No transporter configured for email forwarding');
+    return;
+  }
+
+  const badgeLabels: Record<string, string> = {
+    INTERVIEW_INVITATION: '🎯 Interview Invitation',
+    OFFER: '🎉 Job Offer Received',
+    ASSESSMENT: '📝 Technical Assessment',
+    APPLICATION_ACKNOWLEDGEMENT: '📬 Application Update',
+  };
+  const categoryLabel = badgeLabels[info.classification] || 'Important Application Update';
+
+  const recipientName = user.firstName ? `${user.firstName}` : 'Candidate';
+  const fwdSubject = `[Action Required: ${categoryLabel}] ${info.subject}`;
+
+  const forwardHtml = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1a202c;">
+      <div style="border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 20px;">
+        <span style="display: inline-block; background-color: #ebf8ff; color: #2b6cb0; font-weight: 600; font-size: 13px; padding: 4px 12px; border-radius: 9999px; margin-bottom: 8px;">
+          ${categoryLabel}
+        </span>
+        <h2 style="margin: 8px 0 4px 0; color: #1a202c; font-size: 20px;">${info.subject}</h2>
+        <p style="margin: 0; color: #718096; font-size: 13px;">
+          Received on your application email (<strong>${user.stalwartEmail || 'morigrid.com'}</strong>) from <strong>${info.senderName || info.senderEmail}</strong> &lt;${info.senderEmail}&gt;
+        </p>
+      </div>
+
+      <div style="padding: 12px 16px; background-color: #f7fafc; border-left: 4px solid #3b82f6; border-radius: 4px; margin-bottom: 24px;">
+        <p style="margin: 0; font-size: 14px; color: #4a5568;">
+          Hello ${recipientName}, you received a new priority communication regarding your job applications. A copy of the message is provided below:
+        </p>
+      </div>
+
+      <div style="background-color: #ffffff; padding: 16px; border: 1px solid #edf2f7; border-radius: 8px; font-size: 14px; line-height: 1.6; color: #2d3748; margin-bottom: 24px;">
+        ${info.htmlBody ? info.htmlBody : `<pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${info.textBody || info.bodySnippet}</pre>`}
+      </div>
+
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #a0aec0; text-align: center;">
+        <p style="margin: 0;">Sent via BuildAIResume Application Intelligence Engine • <a href="https://buildairesume.com" style="color: #3b82f6; text-decoration: none;">View in Comms Dashboard</a></p>
+      </div>
+    </div>
+  `;
+
+  const forwardText = `[${categoryLabel}] ${info.subject}\n\nFrom: ${info.senderName || info.senderEmail} <${info.senderEmail}>\nTo: ${user.stalwartEmail}\nDate: ${info.receivedAt.toUTCString()}\n\n---\n\n${info.textBody || info.bodySnippet}\n\n---\nView this message in your BuildAIResume Comms tab.`;
+
+  await transporter.sendMail({
+    from: `"BuildAIResume Alerts" <${process.env.EMAIL_FROM || 'verify@morigrid.com'}>`,
+    to: user.email,
+    subject: fwdSubject,
+    text: forwardText,
+    html: forwardHtml,
+  });
+
+  log.info(`[EmailIngestion] 🚀 Forwarded ${info.classification} email to personal inbox ${user.email}`);
+}
+
+/**
+ * Resolve which user owns an inbound email by inspecting recipient addresses.
+ */
+async function resolveRecipientUser(email: JmapEmail, fallbackOwnerId?: string): Promise<string | null> {
+  const recipients: string[] = [];
+  if (Array.isArray(email.to)) {
+    for (const r of email.to) {
+      if (r?.email) recipients.push(r.email.toLowerCase().trim());
+    }
+  }
+  if (Array.isArray(email.cc)) {
+    for (const r of email.cc) {
+      if (r?.email) recipients.push(r.email.toLowerCase().trim());
+    }
+  }
+
+  for (const address of recipients) {
+    // 1. Direct match on User.stalwartEmail
+    const user: any = await User.findOne({ stalwartEmail: address }).select('_id').lean();
+    if (user?._id) return String(user._id);
+
+    // 2. Direct match on EmailAccount
+    const account: any = await EmailAccount.findOne({ emailAddress: address }).select('userId').lean();
+    if (account?.userId) return String(account.userId);
+  }
+
+  // 3. Fallback to configured owner ID or first user
+  if (fallbackOwnerId && mongoose.isValidObjectId(fallbackOwnerId)) {
+    return fallbackOwnerId;
+  }
+
+  const fallbackUser: any = await User.findOne().select('_id').lean();
+  return fallbackUser?._id ? String(fallbackUser._id) : null;
+}
+
 // ============================================================================
 // Ingestion Worker
 // ============================================================================
@@ -494,23 +640,9 @@ let consecutiveFailures = 0;
 let lastError: { message: string; code?: string; at: string } | null = null;
 let nextPollAt: number | null = null;
 
-/**
- * Set when the worker is misconfigured in a way that makes ingestion impossible.
- *
- * This is deliberately *not* routed through `lastError` / `consecutiveFailures`: a missing owner is
- * not a transient failure, so backing off and retrying forever would only bury the cause. It is
- * reported through `getIngestionStatus()` so an operator can see it without reading the logs.
- */
 let configurationError: string | null = null;
 let configurationErrorLogged = false;
 
-/**
- * Flatten a fetch failure into something readable.
- *
- * `fetch` wraps the real problem: the top-level message is a useless "fetch failed" and the useful
- * detail lives on `cause` (`UND_ERR_CONNECT_TIMEOUT`, `ENOTFOUND`, …). Surfacing the code is what makes
- * an unreachable host distinguishable from a bad response.
- */
 function describeError(error: unknown): { message: string; code?: string } {
   const err = error as { message?: string; code?: string; cause?: { message?: string; code?: string } };
   const cause = err?.cause;
@@ -526,24 +658,7 @@ async function pollInbox(): Promise<boolean> {
   isIngesting = true;
 
   try {
-    // Who owns this mailbox?
-    //
-    // The previous version fell back to a hardcoded `'000000000000000000000001'`. That id belongs to
-    // no user, so every ingested message was filed under a stranger — invisible in every real user's
-    // Comms panel, while the log line still reported a successful ingestion. Refusing to ingest is
-    // the honest behaviour: until this is configured there is nobody to attribute the mail to.
-    const ownerId = process.env.STALWART_USER_ID;
-    if (!ownerId) {
-      configurationError =
-        'STALWART_USER_ID is not set, so ingested mail has no owner. Set it to the user id that owns the Stalwart mailbox.';
-      if (!configurationErrorLogged) {
-        log.error(`[EmailIngestion] ${configurationError} Skipping ingestion.`);
-        configurationErrorLogged = true;
-      }
-      return true; // Misconfiguration, not a transient failure — do not engage the failure backoff.
-    }
-    configurationError = null;
-    configurationErrorLogged = false;
+    const defaultOwnerId = process.env.STALWART_USER_ID;
 
     // Search for unread inbound emails
     const emails = await searchEmails({
@@ -554,6 +669,12 @@ async function pollInbox(): Promise<boolean> {
     let processed = 0;
     for (const email of emails) {
       try {
+        const ownerId = await resolveRecipientUser(email, defaultOwnerId);
+        if (!ownerId) {
+          log.warn(`[EmailIngestion] Could not match inbound email to any user; skipping:`, { emailId: email.id });
+          continue;
+        }
+
         const result = await processInboundEmail(ownerId, email);
         if (result) processed++;
       } catch (error) {

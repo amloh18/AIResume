@@ -38,6 +38,7 @@ import MoriChatDock from '@/components/resume-enhancer/panels/MoriChatDock';
 import MoriCoverLetterChat from '@/components/resume-enhancer/panels/MoriCoverLetterChat';
 import MoriSelectionBar from '@/components/resume-enhancer/panels/MoriSelectionBar';
 import UtilityPanelRail, { type UtilityPanelId } from '@/components/resume-enhancer/components/UtilityPanelRail';
+import EditorOnboardingTour from '@/components/resume-enhancer/EditorOnboardingTour';
 import type { EditorDocument } from '@/components/resume-enhancer/components/DocumentTabs';
 import CoverLetterCanvas, {
   type CoverLetterTemplateType,
@@ -86,6 +87,12 @@ const DEFAULT_SECTION_TITLES: Record<string, string> = {
 
 interface Step3CVProps {
   onComplete: () => void;
+  /**
+   * True while this step is the onboarding hand-off (`fromOnboarding=true`).
+   * It relabels the rail's Next tile to "Save & Continue" and arms the
+   * first-run editor tour; nothing else in this step changes.
+   */
+  isOnboarding?: boolean;
   onActiveSectionChange?: (sectionId: string) => void;
   /**
    * Which document the step-3 canvas is showing. Owned by the shell so the
@@ -112,7 +119,7 @@ export interface Step3CVRef {
 }
 
 const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
-  ({ onComplete, onActiveSectionChange, onSaveStatus, activeDocument, onActiveDocumentChange }, ref) => {
+  ({ onComplete, onActiveSectionChange, onSaveStatus, activeDocument, onActiveDocumentChange, isOnboarding = false }, ref) => {
     const { data: session } = useSession();
     const isGuestMode = !session;
     const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap, goToStep } = useResumeEnhancer();
@@ -1741,6 +1748,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             documentSwitchEnabled={coverLettersAvailable}
             hasCoverLetter={hasCoverLetter}
             disabledPanels={isCoverLetterDoc ? COVER_LETTER_DISABLED_PANELS : undefined}
+            isOnboarding={isOnboarding}
           />
 
         </div>
@@ -1773,6 +1781,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}
 
+
+        {/* First-run product tour. Only during the onboarding hand-off, and only
+            over the CV (the cover letter has its own, much smaller, surface).
+            It self-gates on a localStorage key, so it is shown exactly once. */}
+        {isOnboarding && !isCoverLetterDoc && <EditorOnboardingTour active />}
 
         {/* Floating Form Editor */}
         {
