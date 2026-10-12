@@ -8,6 +8,7 @@
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
 import { computeSmartMatch, type SmartMatchResult } from '@/lib/services/smartSkillMatcher';
+import { scoreJobForCandidate } from '@/matching/deterministicScoring';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -218,33 +219,62 @@ export class RecommendedJobsService {
     const userLocations = profile.locations || [];
     const userRemoteOnly = profile.remoteOnly || false;
 
-    return rawJobs.map((job) => {
-      const jobSkills = job.skills || [];
-      const jobTitle = job.title || '';
-      const jobLocation = job.location
-        ? `${job.location.city || ''}, ${job.location.country || ''}`
-        : '';
-      const jobRemote = job.location?.remote || false;
+    return rawJobs
+      .map((job) => {
+        const jobSkills = job.skills || [];
+        const jobTitle = job.title || '';
+        const jobLocation = job.location
+          ? `${job.location.city || ''}, ${job.location.country || ''}`
+          : '';
+        const jobRemote = job.location?.remote || false;
 
-      const result: SmartMatchResult = computeSmartMatch(
-        userSkills,
-        jobSkills,
-        userTitles,
-        jobTitle,
-        jobLocation,
-        userLocations,
-        jobRemote,
-        userRemoteOnly,
-        job.postedAt
-      );
+        // Unified deterministic score with hard constraint checking (SB-31, INV9)
+        const scoreResult = scoreJobForCandidate(
+          {
+            title: jobTitle,
+            skills: jobSkills,
+            location: job.location,
+            salary: job.salary,
+            experience: { level: job.seniority },
+            seniority: job.seniority,
+            postedAt: job.postedAt,
+            applyUrl: job.source?.applicationUrl || job.source?.sourceUrl,
+          },
+          {
+            targetRoles: userTitles,
+            skills: userSkills,
+            targetLocations: userLocations,
+            hardConstraints: { remoteOnly: userRemoteOnly, minSalary: profile.minSalary || 0 },
+            workplacePreference: userRemoteOnly ? 'remote' : 'any',
+          }
+        );
 
-      return this.mapToRecommended(job, result.overallScore, {
-        skills: result.breakdown.skills,
-        title: result.breakdown.title,
-        location: result.breakdown.location,
-        recency: result.breakdown.recency,
-      });
-    });
+        const hardConstraintViolations = scoreResult.hardConstraintViolations;
+        if (hardConstraintViolations.length > 0) {
+          // Hard constraint violation (e.g. remote-only or min salary) - filter from recommendations
+          return null;
+        }
+
+        const result: SmartMatchResult = computeSmartMatch(
+          userSkills,
+          jobSkills,
+          userTitles,
+          jobTitle,
+          jobLocation,
+          userLocations,
+          jobRemote,
+          userRemoteOnly,
+          job.postedAt
+        );
+
+        return this.mapToRecommended(job, scoreResult.score, {
+          skills: scoreResult.breakdown.skills,
+          title: scoreResult.breakdown.roleAlignment,
+          location: scoreResult.breakdown.location,
+          recency: result.breakdown.recency,
+        });
+      })
+      .filter((j): j is RecommendedJob => j !== null);
   }
 
   /**
