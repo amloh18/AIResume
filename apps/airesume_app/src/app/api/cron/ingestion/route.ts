@@ -97,7 +97,11 @@ export async function POST(request: NextRequest) {
     try {
       switch (action) {
         case 'baseline': {
-          const result = await BaselineScheduler.runBaselineCycle();
+          const result = await BaselineScheduler.runBaselineCycle({
+            targetSource: body.source,
+            ignoreInterval: Boolean(body.ignoreInterval || body.force || body.source),
+            ignoreStagger: Boolean(body.ignoreStagger || body.force || body.source),
+          });
           return NextResponse.json({ success: true, action, result });
         }
 
