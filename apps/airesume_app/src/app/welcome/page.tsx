@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Upload, 
-  Linkedin, 
   ChevronRight, 
   ChevronLeft, 
   ChevronDown, 
@@ -80,6 +79,43 @@ type OnboardingStage =
   | 'JOB_APPLICATION_MODE'   // Step 12: How much should BuildAIResume handle?
   | 'JOB_ACCOUNTS'        // Step 13: Connect the job sites you personally use
   | 'LAUNCH';             // Step 14: Final Launch & CEO Note
+
+/**
+ * The single source of truth for "how many steps are there".
+ *
+ * The header used to hard-code `13` in the Phase 2 label while the bar itself
+ * divided by 14 and the stage map above ends at LAUNCH = 14, so the label and
+ * the bar disagreed — the last step read "(14/13)". Both now read this.
+ */
+const TOTAL_ONBOARDING_STEPS = 14;
+
+/**
+ * Onboarding accent. Lime is already the product's accent — `Button`'s primary
+ * variant resolves to `dark:bg-lime-500 dark:text-black` — so the onboarding
+ * surfaces use the same pair instead of the black they used to (black selected
+ * states also disappeared against the dark-mode background).
+ */
+const ONBOARDING_ACCENT_BG = 'bg-lime-500';
+const ONBOARDING_ACCENT_BORDER = 'border-lime-500';
+const ONBOARDING_ACCENT_TEXT = 'text-black';
+
+/**
+ * How long the Pipeline Autopilot board spends on each stage (step 11).
+ *
+ * The stage timer, the progress track that fills under the board header, and the
+ * travelling card all read this, so the three cannot drift out of sync — a track
+ * that finished before (or after) the card moved is the classic tell of a
+ * hand-built demo animation.
+ */
+const TRACKER_STAGE_MS = 3600;
+
+/** The four pipeline stages, in the order the board walks them. */
+const TRACKER_STAGES = [
+  { label: 'Scout', accent: 'indigo' },
+  { label: 'Applied', accent: 'amber' },
+  { label: 'Interview', accent: 'blue' },
+  { label: 'Offers', accent: 'emerald' },
+] as const;
 
 interface CareerPathway {
   id: string;
@@ -387,8 +423,6 @@ function WelcomePageContent() {
   const [jsonInput, setJsonInput] = useState('');
   const [jsonError, setJsonError] = useState('');
 
-  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
-  const [linkedinUrl, setLinkedinUrl] = useState('');
 
   const [selectedPathway, setSelectedPathway] = useState<string>('engineering');
   const [customRoleInput, setCustomRoleInput] = useState<string>('');
@@ -825,7 +859,9 @@ function WelcomePageContent() {
           setEditorCompleted(true);
           setTransformedScore(prev => Math.min(96, Math.max(88, prev || 88)));
           triggerNotification('Profile saved! Check out your score boost.');
-        } else if (stepParam && parseInt(stepParam) >= 1 && parseInt(stepParam) <= 13) {
+        } else if (stepParam && parseInt(stepParam) >= 1 && parseInt(stepParam) <= TOTAL_ONBOARDING_STEPS) {
+          // Bounded by the same constant the header counts with, so `?step=14`
+          // (the real last step) is no longer silently ignored.
           setCurrentStep(parseInt(stepParam));
         } else if (sessionData.success && sessionData.data) {
           const { onboarding, userLifecycleState, profileName, profileRole, masterCVData, masterCVId } = sessionData.data;
@@ -1272,7 +1308,7 @@ function WelcomePageContent() {
     if (currentStep !== 11) return;
     const interval = setInterval(() => {
       setTrackerAnimStage(prev => (prev + 1) % 4);
-    }, 3500);
+    }, TRACKER_STAGE_MS);
     return () => clearInterval(interval);
   }, [currentStep]);
 
@@ -1286,21 +1322,37 @@ function WelcomePageContent() {
         {/* Dynamic Progress Indicator */}
         {!isLoadingSession && (
           <div className="flex items-center gap-6 text-xs font-semibold text-gray-400">
-            {currentStep !== 13 && (
-              <div className="flex items-center gap-3 w-48 sm:w-60">
-                <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-black transition-all duration-500"
-                    style={{ 
-                      width: `${Math.max(8, Math.round((currentStep / 14) * 100))}%` 
-                    }}
+            {/* Shown on EVERY step, including 13: the count is the user's only
+                progress reference, and hiding it for one step read as a bug. */}
+            <div className="flex items-center gap-3 w-52 sm:w-80">
+              {/* One segment per step. The bar and the label both derive from
+                  TOTAL_ONBOARDING_STEPS, so they cannot disagree the way they
+                  did when one was 13 and the other 14. */}
+              <div
+                className="flex-1 flex items-center gap-0.5"
+                role="progressbar"
+                aria-valuemin={1}
+                aria-valuemax={TOTAL_ONBOARDING_STEPS}
+                aria-valuenow={currentStep}
+                aria-label={`Onboarding step ${currentStep} of ${TOTAL_ONBOARDING_STEPS}`}
+              >
+                {Array.from({ length: TOTAL_ONBOARDING_STEPS }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                      // NOT `dark:bg-white/15`: the dark-mode welcome rules match on
+                      // `[class*="bg-white/"]`, so that class was rewritten to the
+                      // page's own near-black surface and the empty part of the bar
+                      // vanished. neutral-700 is not on their override list.
+                      i < currentStep ? ONBOARDING_ACCENT_BG : 'bg-gray-200 dark:bg-neutral-700'
+                    }`}
                   />
-                </div>
-                <span className="whitespace-nowrap font-bold text-gray-600">
-                  {currentStep <= 4 ? `Phase 1: Profile` : `Phase 2: Job Agent (${currentStep}/13)`}
-                </span>
+                ))}
               </div>
-            )}
+              <span className="whitespace-nowrap font-bold text-gray-600">
+                {currentStep <= 4 ? 'Phase 1: Profile' : 'Phase 2: Job Agent'} ({currentStep}/{TOTAL_ONBOARDING_STEPS})
+              </span>
+            </div>
           </div>
         )}
       </header>
@@ -1461,12 +1513,15 @@ function WelcomePageContent() {
                   </div>
                 ) : !isParsing ? (
                   <div className="space-y-6">
+                    {/* Three routes, not four: the LinkedIn Sync tile was a dead
+                        end (its modal is unreachable and the tile was badged
+                        "Coming Soon"), and a permanently-disabled tile in the
+                        first choice a user ever makes is worse than no tile. */}
                     {!seedingMethod && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
                         {[
                           { id: 'upload', title: 'Upload CV', desc: 'PDF, Word, TXT', icon: Upload },
                           { id: 'json', title: 'Paste Content', desc: 'JSON or Plain Text', icon: FileJson },
-                          { id: 'linkedin', title: 'LinkedIn Sync', desc: 'Profile Import', icon: Linkedin, soon: true },
                           { id: 'scratch', title: 'Start Fresh', desc: 'Interactive Canvas', icon: PenTool }
                         ].map(method => {
                           const Icon = method.icon;
@@ -1482,12 +1537,10 @@ function WelcomePageContent() {
                                   handleOpenEditorFromStep3();
                                 } else if (method.id === 'json') {
                                   setShowJsonModal(true);
-                                } else if (method.id === 'linkedin') {
-                                  setShowLinkedInModal(true);
                                 }
                               }}
                               className={`w-full h-full p-6 border-2 rounded-2xl text-center flex flex-col items-center justify-center gap-3 transition-all relative ${
-                                isSelected ? 'border-black bg-slate-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+                                isSelected ? `${ONBOARDING_ACCENT_BORDER} bg-slate-50` : 'border-gray-200 hover:border-gray-300 bg-white'
                               }`}
                             >
                               {method.soon && (
@@ -1495,7 +1548,7 @@ function WelcomePageContent() {
                                   Coming Soon
                                 </div>
                               )}
-                              <div className={`p-3 rounded-xl ${isSelected ? 'bg-black text-white' : 'bg-gray-150'}`}>
+                              <div                              className={`p-3 rounded-xl ${isSelected ? `${ONBOARDING_ACCENT_BG} ${ONBOARDING_ACCENT_TEXT}` : 'bg-gray-150'}`}>
                                 <Icon className="h-5 w-5" />
                               </div>
                               <div>
@@ -1762,14 +1815,19 @@ function WelcomePageContent() {
                 </div>
 
                 {/* Real Stats Card - Transformation Report */}
-                <div className="bg-gradient-to-br from-emerald-50 via-lime-50/40 to-white border border-emerald-200/80 rounded-3xl p-5 sm:p-6 shadow-sm text-left space-y-4">
+                <div className="bg-white border border-emerald-200/80 rounded-3xl p-5 sm:p-6 shadow-sm text-left space-y-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-emerald-100 pb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
                         <CheckCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-sm text-emerald-950">Profile Transformation Completed</h4>
+                        {/* `text-gray-900`, not `text-emerald-950`: this card used to sit
+                            on a light gradient, so a very dark green was readable. Now
+                            that it is a themed surface the dark emerald would render
+                            on a dark background — and `text-gray-900` is the class the
+                            dark-mode welcome rules already know how to remap. */}
+                        <h4 className="font-extrabold text-sm text-gray-900">Profile Transformation Completed</h4>
                         <p className="text-[11px] text-emerald-700 font-medium">Your edits have significantly boosted your ATS compatibility</p>
                       </div>
                     </div>
@@ -1808,7 +1866,10 @@ function WelcomePageContent() {
                   {/* Card A: Just My CV */}
                   <div className="border-2 border-gray-200 hover:border-gray-400 bg-white rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
                     <div className="space-y-3">
-                      <div className="p-3 bg-gray-100 rounded-2xl w-fit text-gray-800 group-hover:bg-black group-hover:text-white transition-colors">
+                      {/* Black tile, white glyph — on BOTH fork cards. It used to be
+                          a grey tile that only went black on hover, so the two
+                          options did not read as the same kind of thing. */}
+                      <div className="p-3 bg-black rounded-2xl w-fit text-white transition-colors">
                         <FileText className="h-6 w-6" />
                       </div>
                       <h3 className="font-extrabold text-xl text-gray-900">Just My CV</h3>
@@ -1826,8 +1887,9 @@ function WelcomePageContent() {
                     </Button>
                   </div>
 
-                  {/* Card B: Find My Next Job */}
-                  <div className="border-2 border-black bg-slate-50/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all relative shadow-md ring-2 ring-black/5">
+                  {/* Card B: Find My Next Job — the recommended (selected) tile, so
+                      its border carries the onboarding accent rather than black. */}
+                  <div className={`border-2 ${ONBOARDING_ACCENT_BORDER} bg-slate-50/70 rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all relative shadow-md ring-2 ring-lime-500/25`}>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="p-3 bg-black text-white rounded-2xl w-fit">
@@ -1845,7 +1907,7 @@ function WelcomePageContent() {
 
                     <Button 
                       onClick={() => setCurrentStep(5)}
-                      className="w-full mt-6 py-5 bg-black text-white hover:bg-slate-900 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md"
+                      className={`w-full mt-6 py-5 ${ONBOARDING_ACCENT_BG} ${ONBOARDING_ACCENT_TEXT} hover:bg-lime-400 rounded-xl font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md`}
                     >
                       Accelerate Job Search <ArrowRight className="w-4 h-4" />
                     </Button>
@@ -1888,7 +1950,7 @@ function WelcomePageContent() {
                             }}
                             className={`p-2.5 rounded-xl border text-left flex items-center gap-2 transition-all ${
                               isSelected 
-                                ? 'bg-black text-white border-black shadow-sm ring-2 ring-black/5' 
+                                ? `${ONBOARDING_ACCENT_BG} ${ONBOARDING_ACCENT_TEXT} ${ONBOARDING_ACCENT_BORDER} shadow-sm ring-2 ring-lime-500/25` 
                                 : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
                             }`}
                           >
@@ -1924,7 +1986,7 @@ function WelcomePageContent() {
                               }}
                               className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
                                 isSel 
-                                  ? 'bg-black text-white border-black shadow-sm' 
+                                  ? `${ONBOARDING_ACCENT_BG} ${ONBOARDING_ACCENT_TEXT} ${ONBOARDING_ACCENT_BORDER} shadow-sm` 
                                   : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-700'
                               }`}
                             >
@@ -1952,7 +2014,7 @@ function WelcomePageContent() {
                             }
                           }}
                           placeholder="+ Add custom role title..."
-                          className="text-xs bg-white border border-gray-200 rounded-xl px-3 py-1.5 flex-1 outline-none focus:border-black font-medium"
+                          className="text-xs bg-white border border-gray-200 rounded-xl px-3 py-1.5 flex-1 outline-none focus:border-lime-500 font-medium"
                         />
                         {customRoleInput.trim() && (
                           <button
@@ -1964,7 +2026,7 @@ function WelcomePageContent() {
                               }
                               setCustomRoleInput('');
                             }}
-                            className="px-3 py-1.5 bg-black text-white rounded-xl text-xs font-bold"
+                            className={`px-3 py-1.5 ${ONBOARDING_ACCENT_BG} ${ONBOARDING_ACCENT_TEXT} rounded-xl text-xs font-bold`}
                           >
                             Add
                           </button>
@@ -2112,15 +2174,18 @@ function WelcomePageContent() {
                       })}
                     </div>
 
-                    {/* Flexible option */}
+                    {/* Flexible option — deliberately drawn with the SAME classes as
+                        the preset tiles above. It used to be a dashed, greyed
+                        tile, which read as "disabled" rather than as one more
+                        (equally valid) choice. */}
                     <div className="pt-1">
                       <button
                         type="button"
                         onClick={() => setSalaryMin(0)}
-                        className={`w-full py-2.5 px-4 border-2 rounded-2xl text-xs font-bold transition-all text-center ${
+                        className={`w-full py-3.5 px-3 border-2 rounded-2xl text-center transition-all ${
                           salaryMin === 0
-                            ? 'border-black bg-slate-50 text-gray-900 shadow-xs'
-                            : 'border-dashed border-gray-300 hover:border-gray-400 bg-gray-50/50 text-gray-500'
+                            ? 'border-black bg-slate-50 font-extrabold text-gray-900 shadow-xs'
+                            : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-medium'
                         }`}
                       >
                         Flexible / Open to offers
@@ -2329,13 +2394,19 @@ function WelcomePageContent() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Or enter custom amount</label>
+                    {/* The input had no background or text colour of its own, so in
+                        dark mode the browser painted its default white field while
+                        the text inherited the page's light grey — light text on a
+                        white box. `bg-white` is remapped to the dark surface by
+                        the `.dark .welcome-page` rules, and `dark:[color-scheme:dark]`
+                        keeps the native spinner legible on it. */}
                     <input
                       type="number"
                       value={expectedApplicationsPerMonth}
                       onChange={e => setExpectedApplicationsPerMonth(Number(e.target.value))}
                       min="1"
                       max="500"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-black text-center text-lg font-bold"
+                      className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:border-lime-500 text-center text-lg font-bold text-gray-900 dark:[color-scheme:dark]"
                     />
                   </div>
                 </div>
@@ -2357,8 +2428,12 @@ function WelcomePageContent() {
                   </p>
                 </div>
 
-                {/* High-Fidelity Kanban Board Mockup */}
-                <div className="bg-gradient-to-b from-slate-50 via-white to-slate-50 border border-gray-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
+                {/* High-Fidelity Kanban Board Mockup.
+                    Solid surface, not a gradient: the old `from-slate-50 via-white
+                    to-slate-50` was never remapped by the dark-mode welcome rules
+                    (they only touch flat `bg-white`/`bg-slate-*` classes), so in
+                    dark mode the board stayed a washed-out light slab. */}
+                <div className="relative overflow-hidden bg-white border border-gray-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
                   {/* Board Header Bar */}
                   <div className="flex items-center justify-between text-xs pb-2.5 border-b border-gray-150">
                     <div className="flex items-center gap-2">
@@ -2378,6 +2453,38 @@ function WelcomePageContent() {
                     </div>
                   </div>
 
+                  {/* Stage track. One segment per stage: the segment behind the
+                      current stage fills over exactly TRACKER_STAGE_MS, so the bar
+                      and the card arrive together. `key` restarts the fill on every
+                      stage change. */}
+                  <div className="flex items-center gap-1.5" aria-hidden="true">
+                    {TRACKER_STAGES.map((stage, i) => {
+                      const isPast = i < trackerAnimStage;
+                      const isCurrent = i === trackerAnimStage;
+                      return (
+                        <div key={stage.label} className="flex-1 space-y-1.5">
+                          <div className="h-1 w-full rounded-full bg-gray-150 overflow-hidden">
+                            {isCurrent && (
+                              <motion.div
+                                key={trackerAnimStage}
+                                className="h-full rounded-full bg-emerald-500 origin-left"
+                                initial={{ scaleX: 0 }}
+                                animate={{ scaleX: 1 }}
+                                transition={{ duration: TRACKER_STAGE_MS / 1000, ease: 'linear' }}
+                              />
+                            )}
+                            {isPast && <div className="h-full rounded-full bg-emerald-500/100" />}
+                          </div>
+                          <span className={`block text-[9px] font-black uppercase tracking-wider transition-colors duration-300 ${
+                            isCurrent ? 'text-emerald-700' : 'text-gray-400'
+                          }`}>
+                            {stage.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {/* 4 Kanban Columns */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-2.5">
                     {/* Column 1: Scout */}
@@ -2394,7 +2501,8 @@ function WelcomePageContent() {
                         {trackerAnimStage === 0 ? (
                           <motion.div 
                             layoutId="tracker-live-card"
-                            className="bg-white border-2 border-indigo-500 rounded-lg p-2 shadow-sm space-y-1"
+                            transition={{ type: 'spring', stiffness: 250, damping: 26, mass: 0.9 }}
+                            className="bg-white border-2 border-indigo-500 rounded-lg p-2 shadow-[0_10px_24px_-12px_rgba(99,102,241,0.55)] space-y-1"
                           >
                             <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
                             <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
@@ -2426,7 +2534,8 @@ function WelcomePageContent() {
                         {trackerAnimStage === 1 ? (
                           <motion.div 
                             layoutId="tracker-live-card"
-                            className="bg-white border-2 border-amber-500 rounded-lg p-2 shadow-sm space-y-1"
+                            transition={{ type: 'spring', stiffness: 250, damping: 26, mass: 0.9 }}
+                            className="bg-white border-2 border-amber-500 rounded-lg p-2 shadow-[0_10px_24px_-12px_rgba(245,158,11,0.55)] space-y-1"
                           >
                             <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
                             <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
@@ -2458,7 +2567,8 @@ function WelcomePageContent() {
                         {trackerAnimStage === 2 ? (
                           <motion.div 
                             layoutId="tracker-live-card"
-                            className="bg-white border-2 border-blue-500 rounded-lg p-2 shadow-sm space-y-1"
+                            transition={{ type: 'spring', stiffness: 250, damping: 26, mass: 0.9 }}
+                            className="bg-white border-2 border-blue-500 rounded-lg p-2 shadow-[0_10px_24px_-12px_rgba(59,130,246,0.55)] space-y-1"
                           >
                             <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
                             <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
@@ -2490,7 +2600,8 @@ function WelcomePageContent() {
                         {trackerAnimStage === 3 ? (
                           <motion.div 
                             layoutId="tracker-live-card"
-                            className="bg-white border-2 border-emerald-500 rounded-lg p-2 shadow-sm space-y-1"
+                            transition={{ type: 'spring', stiffness: 250, damping: 26, mass: 0.9 }}
+                            className="bg-white border-2 border-emerald-500 rounded-lg p-2 shadow-[0_10px_24px_-12px_rgba(16,185,129,0.55)] space-y-1"
                           >
                             <p className="text-[11px] font-black text-gray-900 leading-tight">Lead AI Engineer</p>
                             <p className="text-[9px] font-semibold text-gray-500">OpenAI · Remote</p>
@@ -2510,33 +2621,11 @@ function WelcomePageContent() {
                   </div>
                 </div>
 
-                {/* 4 Feature Highlights Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {[
-                    { title: '1. Auto-Scouting Match', desc: 'Finds verified openings matching your Target Roles & Salary.', stage: 0 },
-                    { title: '2. Smart Submission Log', desc: 'Tracks tailored CV versions and cover letter submissions.', stage: 1 },
-                    { title: '3. Calendar Auto-Sync', desc: 'Syncs interview prep cards, schedules, and recruiter links.', stage: 2 },
-                    { title: '4. Offer & Negotiation', desc: 'Compares total compensation, equity, and market benchmarks.', stage: 3 }
-                  ].map((feat) => {
-                    const isActive = trackerAnimStage === feat.stage;
-                    return (
-                      <div
-                        key={feat.title}
-                        className={`p-3 rounded-xl border text-left transition-all ${
-                          isActive 
-                            ? 'bg-white border-black ring-2 ring-black/5 shadow-sm' 
-                            : 'bg-slate-50/70 border-gray-200 text-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <h4 className={`text-xs font-bold ${isActive ? 'text-black' : 'text-gray-700'}`}>{feat.title}</h4>
-                          {isActive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-                        </div>
-                        <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">{feat.desc}</p>
-                      </div>
-                    );
-                  })}
-                </div>
+                {/* The four feature tiles that used to sit here duplicated what
+                    the board already shows: they were a static list of the same
+                    four stages the animation walks through, and their active
+                    state flickered under the moving card. The board tells the
+                    story on its own, so the tiles are gone. */}
 
                 {/* Question & Interactive Choice Buttons (Non-overlapping) */}
                 <div className="pt-3 border-t border-gray-200/80 space-y-3 text-center">
@@ -2665,20 +2754,41 @@ function WelcomePageContent() {
                     CEO&apos;s Office
                   </div>
 
-                  <div className="space-y-4 text-amber-950/90 text-xl leading-relaxed" style={{ fontFamily: "'Caveat', cursive" }}>
-                    {fullLetterText.slice(0, typedLetterLength).split('\n\n').map((para, idx) => (
-                      <p key={idx} className={idx === 0 ? "text-2xl font-bold" : ""}>
-                        {para}
-                        {isTypingLetter && idx === fullLetterText.slice(0, typedLetterLength).split('\n\n').length - 1 && (
-                          <span className="inline-block w-0.5 h-5 bg-amber-800 ml-1 animate-pulse" />
-                        )}
-                      </p>
-                    ))}
+                  {/* The letter is laid over a full-height, invisible copy of
+                      itself. The card is therefore already at its final height
+                      before the first character is typed — previously the
+                      typewriter grew the card line by line, so the congratulations
+                      screen resized underneath the user while it was being read.
+                      `invisible` (not `hidden`) keeps the reserve out of sight and
+                      out of the a11y tree while its box still takes layout space. */}
+                  <div className="relative space-y-4 text-amber-950/90 text-xl leading-relaxed" style={{ fontFamily: "'Caveat', cursive" }}>
+                    <div aria-hidden="true" className="invisible space-y-4">
+                      {fullLetterText.split('\n\n').map((para, idx) => (
+                        <p key={idx} className={idx === 0 ? "text-2xl font-bold" : ""}>{para}</p>
+                      ))}
+                      <div className="pt-3 flex justify-between items-end">
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-2xl text-black">Amar Lohia</p>
+                          <p className="text-lg font-bold text-amber-900/80">CEO and Founder, AIResume</p>
+                        </div>
+                      </div>
+                    </div>
 
-                    <div className={`pt-3 flex justify-between items-end transition-opacity duration-500 ${typedLetterLength >= fullLetterText.length * 0.8 ? 'opacity-100' : 'opacity-0'}`}>
-                      <div className="space-y-0.5" style={{ fontFamily: "'Caveat', cursive" }}>
-                        <p className="font-bold text-2xl text-black">Amar Lohia</p>
-                        <p className="text-lg font-bold text-amber-900/80">CEO and Founder, AIResume</p>
+                    <div className="absolute inset-0 space-y-4">
+                      {fullLetterText.slice(0, typedLetterLength).split('\n\n').map((para, idx) => (
+                        <p key={idx} className={idx === 0 ? "text-2xl font-bold" : ""}>
+                          {para}
+                          {isTypingLetter && idx === fullLetterText.slice(0, typedLetterLength).split('\n\n').length - 1 && (
+                            <span className="inline-block w-0.5 h-5 bg-amber-800 ml-1 animate-pulse" />
+                          )}
+                        </p>
+                      ))}
+
+                      <div className={`pt-3 flex justify-between items-end transition-opacity duration-500 ${typedLetterLength >= fullLetterText.length * 0.8 ? 'opacity-100' : 'opacity-0'}`}>
+                        <div className="space-y-0.5" style={{ fontFamily: "'Caveat', cursive" }}>
+                          <p className="font-bold text-2xl text-black">Amar Lohia</p>
+                          <p className="text-lg font-bold text-amber-900/80">CEO and Founder, AIResume</p>
+                        </div>
                       </div>
                     </div>
                   </div>

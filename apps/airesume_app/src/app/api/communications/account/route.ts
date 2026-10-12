@@ -13,7 +13,7 @@ function getStalwartDomain(): string {
   if (process.env.APPLICATION_SENDER_EMAIL && process.env.APPLICATION_SENDER_EMAIL.includes('@')) {
     return process.env.APPLICATION_SENDER_EMAIL.split('@')[1];
   }
-  return 'buildairesume.com';
+  return 'morigrid.com';
 }
 
 function sanitizeEmailLocalPart(name: string): string {
@@ -24,6 +24,51 @@ function sanitizeEmailLocalPart(name: string): string {
     .replace(/^\.+|\.+$/g, '')
     .replace(/\.{2,}/g, '.');
   return sanitized || 'candidate';
+}
+
+/**
+ * Generate a guaranteed-unique email address on morigrid.com for a given user.
+ */
+async function generateUniqueEmail(user: any, preferredLocalPart?: string): Promise<string> {
+  const domain = getStalwartDomain();
+  const userIdStr = user._id ? user._id.toString() : user.id?.toString();
+
+  let baseLocal = '';
+  if (preferredLocalPart && typeof preferredLocalPart === 'string') {
+    baseLocal = sanitizeEmailLocalPart(preferredLocalPart);
+  } else if (user.firstName && user.lastName) {
+    baseLocal = sanitizeEmailLocalPart(`${user.firstName}.${user.lastName}`);
+  } else if (user.username) {
+    baseLocal = sanitizeEmailLocalPart(user.username);
+  } else if (user.email && user.email.includes('@')) {
+    baseLocal = sanitizeEmailLocalPart(user.email.split('@')[0]);
+  } else {
+    baseLocal = `candidate.${userIdStr ? userIdStr.slice(-6) : 'app'}`;
+  }
+
+  let candidate = `${baseLocal}@${domain}`;
+  let counter = 1;
+
+  while (true) {
+    // Check both User.stalwartEmail and EmailAccount.emailAddress
+    const [existingUser, existingAccount] = await Promise.all([
+      User.findOne({
+        stalwartEmail: candidate,
+        _id: { $ne: user._id || user.id },
+      }).select('_id').lean(),
+      EmailAccount.findOne({
+        emailAddress: candidate,
+        userId: { $ne: user._id || user.id },
+      }).select('_id').lean(),
+    ]);
+
+    if (!existingUser && !existingAccount) {
+      return candidate;
+    }
+
+    counter++;
+    candidate = `${baseLocal}${counter}@${domain}`;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -41,34 +86,43 @@ export async function GET(request: NextRequest) {
     const stalwartAccount: any = await EmailAccount.findOne({ userId, provider: 'stalwart' }).lean();
 
     // 2. Check User model
-    const user: any = await User.findById(userId).select('firstName lastName username email stalwartEmail').lean();
+    const userDoc: any = await User.findById(userId);
+    if (!userDoc) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
 
     let assignedEmail: string | null = null;
     if (stalwartAccount?.emailAddress) {
       assignedEmail = stalwartAccount.emailAddress;
-    } else if (user?.stalwartEmail) {
-      assignedEmail = user.stalwartEmail;
+    } else if (userDoc?.stalwartEmail) {
+      assignedEmail = userDoc.stalwartEmail;
     }
 
-    // Determine suggestion if not yet assigned
-    let suggestedName = '';
-    if (user?.firstName && user?.lastName) {
-      suggestedName = `${user.firstName}.${user.lastName}`;
-    } else if (user?.username) {
-      suggestedName = user.username;
-    } else if (session.user.name) {
-      suggestedName = session.user.name;
-    } else if (user?.email) {
-      suggestedName = user.email.split('@')[0];
+    // Auto-provision unique email if not yet assigned so user entering Emails tab gets their email immediately
+    if (!assignedEmail) {
+      assignedEmail = await generateUniqueEmail(userDoc);
+      userDoc.stalwartEmail = assignedEmail;
+      await userDoc.save();
+
+      await EmailAccount.findOneAndUpdate(
+        { userId, provider: 'stalwart' },
+        {
+          userId,
+          provider: 'stalwart',
+          emailAddress: assignedEmail,
+          syncStatus: 'connected',
+          lastSyncedAt: new Date(),
+        },
+        { upsert: true, new: true }
+      );
     }
-    const suggestedEmail = `${sanitizeEmailLocalPart(suggestedName)}@${domain}`;
 
     return NextResponse.json({
       success: true,
       assignedEmail,
       domain,
-      status: assignedEmail ? 'active' : 'unassigned',
-      suggestedEmail,
+      status: 'active',
+      suggestedEmail: assignedEmail,
     });
   } catch (error: any) {
     console.error('Communications account GET error:', error);
@@ -105,41 +159,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate local part
-    let localPart = '';
-    if (body.customLocalPart && typeof body.customLocalPart === 'string') {
-      localPart = sanitizeEmailLocalPart(body.customLocalPart);
-    } else if (user.firstName && user.lastName) {
-      localPart = sanitizeEmailLocalPart(`${user.firstName}.${user.lastName}`);
-    } else if (user.username) {
-      localPart = sanitizeEmailLocalPart(user.username);
-    } else if (session.user.name) {
-      localPart = sanitizeEmailLocalPart(session.user.name);
-    } else if (user.email) {
-      localPart = sanitizeEmailLocalPart(user.email.split('@')[0]);
-    } else {
-      localPart = `candidate.${userId.toString().slice(-6)}`;
-    }
+    // Generate unique email address with collision protection
+    const candidateEmail = await generateUniqueEmail(user, body.customLocalPart);
 
-    let candidateEmail = `${localPart}@${domain}`;
-
-    // Check for collisions with other users
-    const existing = await EmailAccount.findOne({
-      emailAddress: candidateEmail,
-      userId: { $ne: userId },
-    });
-
-    if (existing) {
-      const suffix = Math.floor(100 + Math.random() * 900);
-      candidateEmail = `${localPart}.${suffix}@${domain}`;
-    }
-
-    // Verify Stalwart connection (non-blocking if server offline in dev)
+    // Verify Stalwart connection (non-blocking)
     let stalwartStatus = 'connected';
     try {
       const jmapTest = await testJmapConnection();
       if (!jmapTest.success) {
-        stalwartStatus = 'ready'; // configured locally, Stalwart server awaiting sync
+        stalwartStatus = 'ready';
       }
     } catch {
       stalwartStatus = 'ready';

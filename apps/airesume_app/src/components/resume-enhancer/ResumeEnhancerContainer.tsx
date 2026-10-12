@@ -3031,8 +3031,14 @@ export default function ResumeEnhancerContainer({
     }
   };
 
-  // Intercept manual save for authenticated users on free plan trying to save their master CV
-  if (isManualClick && !isGuestMode && isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
+  // Intercept manual save for authenticated users on free plan trying to save their master CV.
+  //
+  // NOT during onboarding. A manual click inside the onboarding editor is
+  // "Save & Continue", and the user has not yet seen the product — showing the
+  // upgrade modal there turned the last step of signup into a paywall. The same
+  // interception still applies everywhere else the button exists (the dashboard
+  // and the standalone editor), which is where an upgrade ask belongs.
+  if (isManualClick && !isFromOnboarding && !isGuestMode && isMasterCV && (!userData || userData.currentPlanKey === 'free')) {
     openPaymentModal({
       preselectedPlanKey: 'focused_monthly',
       triggerContext: 'onboarding-exit',
@@ -3797,18 +3803,11 @@ export default function ResumeEnhancerContainer({
           (state.currentStep > 1 || state.isTemplateOverlayOpen) ? 'lg:w-[280px] justify-end' : ''
         }`}>
 
-          {/* Onboarding Save & Continue Action */}
-          {isFromOnboarding && (
-            <button
-              onClick={handleOnboardingExit}
-              disabled={saveStatus === 'saving'}
-              className="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 bg-[#013f2e] hover:bg-[#02523c] text-white dark:bg-[#80FF00] dark:text-white font-extrabold text-xs rounded-full shadow-sm hover:shadow transition-all active:scale-95 shrink-0"
-              title="Save & Continue to Onboarding"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[3]" />
-              <span className="hidden sm:inline">Save &amp; Continue</span>
-            </button>
-          )}
+          {/* The onboarding "Save & Continue" button used to live here. It is now
+              the Next tile in the panel rail (see UtilityPanelRail), which is
+              where the user's eye already is when they finish a document, and
+              where the button that advances the editor lives. Two controls for
+              one action, in opposite corners, was the confusion. */}
 
           {/* Guest Mode Tag */}
           {isGuestMode && (
@@ -3889,6 +3888,7 @@ export default function ResumeEnhancerContainer({
                         onSaveStatus={handleStep3SaveStatus}
                         activeDocument={activeDocument}
                         onActiveDocumentChange={setActiveDocument}
+                        isOnboarding={isFromOnboarding}
                       />
                     </ErrorBoundary>
                   </motion.div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import DocumentTabs, { type EditorDocument } from './DocumentTabs';
 
 /**
@@ -37,6 +37,14 @@ interface UtilityPanelRailProps {
    * behind it, so the tile would open an empty panel.
    */
   disabledPanels?: UtilityPanelId[];
+  /**
+   * True while the editor is the onboarding step-3 hand-off. The step tile that
+   * already advances the session is then relabelled "Save & Continue": during
+   * onboarding that tile is not "next panel", it is "finish my CV and go back to
+   * onboarding", and the header used to carry a second button for it — two
+   * controls for one action, in two different corners of the screen.
+   */
+  isOnboarding?: boolean;
 }
 
 /**
@@ -293,6 +301,15 @@ const RAIL_STYLES = `
   pointer-events: none;
 }
 .up-tile[aria-selected="true"] .up-label { opacity: 1; }
+
+/* Two-line label. Used by the onboarding "Save & Continue" tile, whose label is
+   a sentence rather than a single word; the rail's one-line rule would clip it.
+   The line-height is tightened so two lines still clear the centred icon. */
+.up-label--wrap {
+  white-space: normal;
+  line-height: 1.05;
+  padding: 0 5px;
+}
 
 /* close badge on the open tile itself */
 .up-close {
@@ -699,6 +716,7 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
   documentSwitchEnabled = false,
   hasCoverLetter = false,
   disabledPanels = EMPTY_DISABLED,
+  isOnboarding = false,
 }) => {
   const handleClick = (panel: UtilityPanelId) => {
     if (activePanel === panel) {
@@ -718,6 +736,8 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
       className={`shrink-0 flex flex-row md:flex-col items-center justify-start gap-2 p-1.5 md:h-fit md:max-h-full md:overflow-y-auto md:self-start scrollbar-hide ${className}`}
       role="tablist"
       aria-label="Editor panels"
+      /* Anchor for the onboarding tour's "your panels" step. Inert otherwise. */
+      data-editor-panel-rail=""
     >
       <style>{RAIL_STYLES}</style>
 
@@ -801,13 +821,24 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
       {STEP_TILES.map((step, index) => {
         const { Icon } = step;
         const isNext = step.id === 'next';
+        // The same tile, same event, same handler — only what it SAYS changes
+        // while onboarding, so there is still exactly one code path that ends the
+        // onboarding hand-off (the shell listens for `editor-next-step`).
+        const isOnboardingNext = isNext && isOnboarding;
+        const TileIcon = isOnboardingNext ? Check : Icon;
+        const tileLabel = isOnboardingNext ? 'Save & Continue' : step.label;
+        const tileTitle = isOnboardingNext
+          ? 'Save and continue to onboarding'
+          : isNext
+            ? 'Next step'
+            : 'Previous step';
         return (
           <button
             key={step.id}
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent(step.event))}
-            title={isNext ? 'Next step' : 'Previous step'}
-            aria-label={isNext ? 'Next step' : 'Previous step'}
+            title={tileTitle}
+            aria-label={tileTitle}
             style={{ animationDelay: `${(TILES.length + index) * 80 + 120}ms` }}
             className={`up-tile ${isNext ? '' : 'md:hidden'} group relative shrink-0 w-[4.5rem] h-[4.5rem] rounded-2xl overflow-visible border flex items-center justify-center ${
               isNext
@@ -815,8 +846,13 @@ export const UtilityPanelRail: React.FC<UtilityPanelRailProps> = ({
                 : 'bg-[#f3f2ee] dark:bg-[#1a1a1a] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-emerald-400/60'
             }`}
           >
-            <Icon className="w-6 h-6 stroke-[2.5] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
-            <span className="up-label">{step.label}</span>
+            <TileIcon
+              className={`w-6 h-6 stroke-[2.5] transition-transform duration-200 ${
+                isOnboardingNext ? 'mb-1' : 'group-hover:translate-x-0.5'
+              }`}
+              aria-hidden="true"
+            />
+            <span className={`up-label ${isOnboardingNext ? 'up-label--wrap' : ''}`}>{tileLabel}</span>
           </button>
         );
       })}
