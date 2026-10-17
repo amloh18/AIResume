@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Resume Mistakes to Avoid in 2026 | AIResume',
   description: 'Discover the most common resume mistakes that hurt your job search. Learn what to avoid and how to create a winning resume.',
   keywords: ['resume mistakes', 'resume errors', 'bad resume', 'resume tips'],
-  alternates: { canonical: '/blog/resume-writing/resume-mistakes' },
+  alternates: { canonical: 'https://buildairesume.com/blog/resume-writing/resume-mistakes' },
 };
 
 const navLinks = [

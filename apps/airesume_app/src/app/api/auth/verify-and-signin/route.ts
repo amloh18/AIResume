@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import jwt from 'jsonwebtoken';
 import { authConfig } from '@/lib/auth';
+import { getSessionSecret } from '@/lib/auth/session-cookie';
 import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
@@ -15,7 +17,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, code, type } = await request.json();
+    const { email, code, type, extension } = await request.json();
 
     // Validate input
     if (!email || !code || !type) {
@@ -186,6 +188,37 @@ export async function POST(request: NextRequest) {
         responseData.image = user.avatar;
         responseData.requiresSignIn = false;
         responseData.message = 'Code verified successfully! Signing you in...';
+
+        //
+        // Chrome extension grant: this route verifies the code but does NOT
+        // create a NextAuth session cookie, so the extension cannot exchange
+        // this login for an extension token anywhere else. When the caller
+        // declares itself the extension, hand back the token pair directly.
+        // Web clients omit the flag and keep the previous response shape.
+        //
+        if (extension === true) {
+          try {
+            const secret = getSessionSecret();
+            responseData.token = jwt.sign(
+              { userId: user._id.toString(), email: user.email, type: 'extension' },
+              secret,
+              { expiresIn: '30d' }
+            );
+            responseData.refreshToken = jwt.sign(
+              { userId: user._id.toString(), email: user.email, type: 'extension_refresh' },
+              secret,
+              { expiresIn: '60d' }
+            );
+            responseData.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            responseData.expiresInDays = 30;
+          } catch (secretError) {
+            console.error('❌ Extension token grant -', (secretError as Error).message);
+            return NextResponse.json(
+              { success: false, message: 'Authentication is temporarily unavailable. Please try again shortly.' },
+              { status: 500 }
+            );
+          }
+        }
         break;
 
       case 'password-reset':

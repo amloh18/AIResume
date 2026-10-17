@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { jwtVerify } from 'jose';
 import { log } from '@/lib/edge-logger';
 import { isAuthorizedCronRequest } from '@/lib/auth/cronAuth';
 import { CORRELATION_HEADER, resolveCorrelationId } from '@/lib/observability/correlation-id';
@@ -265,6 +266,38 @@ export default async function proxy(req: NextRequest) {
         );
       }
       return pass();
+    }
+
+    /*
+      Chrome extension requests authenticate with an extension JWT in
+      `Authorization: Bearer …` instead of a session cookie. The token is minted
+      by /api/auth/extension-signin, /api/auth/verify-and-signin (extension
+      grant) or /api/auth/extension-token.
+
+      `getToken()` only reads the session cookie, so without this branch every
+      extension API call was rejected here with 401 *before* the route's own
+      `authenticateRequest()` could ever see it — extension login could verify a
+      token perfectly and still get "Please sign in" on every data call.
+
+      The signature is verified here with jose (edge-runtime safe, same secret
+      as `getSessionSecret()` on the Node side); every route still re-verifies
+      the token as defence in depth. Only `type: 'extension'` access tokens are
+      honoured — refresh tokens remain exchange-only at /api/auth/extension-token.
+    */
+    const bearerHeader = req.headers.get('authorization');
+    if (bearerHeader?.startsWith('Bearer ')) {
+      try {
+        const { payload } = await jwtVerify(
+          bearerHeader.substring('Bearer '.length),
+          new TextEncoder().encode(secret)
+        );
+        if (payload.type === 'extension' && typeof payload.userId === 'string' && payload.userId) {
+          log.debug('Extension token API access', ctx({ pathname, method, userId: payload.userId }));
+          return pass();
+        }
+      } catch {
+        // Invalid/expired Bearer token — fall through to the session check (401 below).
+      }
     }
 
     if (!isAuth) {

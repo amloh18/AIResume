@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     canonical: 'https://buildairesume.com',
   },
   openGraph: {
-    title: 'Build. Match. Apply. Get hired. | BuildAIResume',
+    title: 'Build. Match. Apply. Get hired. | AIResume',
     description: 'Create once. Tailor for every job. Apply manually or let AI automate your applications.',
     url: 'https://buildairesume.com',
     siteName: 'AIResume',
@@ -75,7 +75,13 @@ export default function LandingPage() {
         "@type": "ContactPoint",
         "email": "support@buildairesume.com",
         "contactType": "customer support"
-      }
+      },
+      // Profiles that already exist in the site footer (`components/landing/Footer.tsx`) — keeps
+      // the schema honest by describing the same links the page renders.
+      "sameAs": [
+        "https://x.com/buildairesume",
+        "https://www.linkedin.com/company/build-ai-resume/"
+      ]
     },
     {
       "@context": "https://schema.org",

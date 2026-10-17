@@ -85,6 +85,34 @@ export default function CompareResumeBuildersPage() {
             </table>
           </motion.div>
 
+          {/* Detailed comparisons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-12"
+          >
+            <h2 className="text-xl font-bold text-white mb-4">Detailed comparisons</h2>
+            <ul className="grid sm:grid-cols-2 gap-3">
+              {[
+                { href: '/compare/ai-resume-vs-zety', label: 'AIResume vs Zety' },
+                { href: '/compare/ai-resume-vs-resume-io', label: 'AIResume vs Resume.io' },
+                { href: '/compare/ai-resume-vs-novoresume', label: 'AIResume vs Novoresume' },
+                { href: '/compare/ai-resume-vs-teal', label: 'AIResume vs Teal' },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="flex items-center justify-between p-4 bg-[#141810] border border-white/5 rounded-xl text-gray-300 hover:text-white hover:border-emerald-500/40 transition-colors"
+                  >
+                    <span className="font-semibold">{link.label}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
           {/* Why AIResume */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}

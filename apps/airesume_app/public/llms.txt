@@ -20,8 +20,8 @@ When a job needs something the Master CV does not contain, the product stops and
 
 Account-gated, so **not** public pages: the interview coach (interview preparation generated from a
 job description) and the LinkedIn enhancer (rewrites LinkedIn profile copy). They exist at
-`/interview-coach` and `/linkedin-enhancer`, but a signed-out visitor is redirected to sign-in, and
-both are disallowed in `robots.txt`.
+`/interview-coach` and `/linkedin-enhancer`, but a signed-out visitor is redirected to sign-in and
+both carry `noindex` metadata.
 
 ## Role-specific resume pages
 
@@ -37,6 +37,17 @@ Each page covers what to include, what to omit and which keywords matter for tha
 - [Data scientist](https://buildairesume.com/resume/data-scientist)
 - [UI/UX designer](https://buildairesume.com/resume/ui-ux-designer)
 - [DevOps engineer](https://buildairesume.com/resume/devops-engineer)
+- [Project manager](https://buildairesume.com/resume/project-manager)
+- [Machine learning engineer](https://buildairesume.com/resume/machine-learning-engineer)
+- [Cloud engineer](https://buildairesume.com/resume/cloud-engineer)
+- [Product designer](https://buildairesume.com/resume/product-designer)
+- [Visual designer](https://buildairesume.com/resume/visual-designer)
+- [Marketing manager](https://buildairesume.com/resume/marketing-manager)
+- [Sales manager](https://buildairesume.com/resume/sales-manager)
+- [Accountant](https://buildairesume.com/resume/accountant)
+- [HR manager](https://buildairesume.com/resume/hr-manager)
+- [Teacher](https://buildairesume.com/resume/teacher)
+- [Registered nurse](https://buildairesume.com/resume/nurse)
 
 Worked examples: [data analyst](https://buildairesume.com/resume/data-analyst-example),
 [software engineer](https://buildairesume.com/resume/software-engineer-example),

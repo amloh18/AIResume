@@ -1737,6 +1737,19 @@ function generateContentHash(job: {
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
+/**
+ * Normalize one raw posting into the canonical `jobs` document shape.
+ *
+ * Exported so the browser-extension capture path
+ * (`/api/jobs/capture`) produces byte-identical documents to the scheduled
+ * ingestion sources: canonicalId, contentHash, description and skills are all
+ * derived by this one function, so a user-scraped posting that a worker later
+ * also fetches dedups instead of duplicating.
+ */
+export function normalizeRawJob(raw: RawJob): NormalizedJob {
+  return normalize(raw);
+}
+
 function normalize(raw: RawJob): NormalizedJob {
   const titleRes = normalizeTitle(raw.title);
   const company = normalizeCompany(raw.companyName, raw.url);

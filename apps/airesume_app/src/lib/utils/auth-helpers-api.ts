@@ -10,6 +10,7 @@
 import { NextRequest } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import jwt from 'jsonwebtoken';
+import { getSessionSecret } from '@/lib/auth/session-cookie';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export interface AuthResult {
@@ -30,12 +31,15 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     const token = authHeader.substring(7);
     
     try {
-      const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-      
-      if (decoded.type !== 'extension') {
-        console.log('❌ Invalid token type');
-        return null;
-      }
+    // getSessionSecret() resolves NEXTAUTH_SECRET with AUTH_SECRET as alias —
+    // the same value extension tokens are signed with — so issued tokens
+    // always verify here regardless of which variable the deployment set.
+    const decoded = jwt.verify(token, getSessionSecret()) as MyJwtPayload;
+    
+    if (decoded.type !== 'extension') {
+      console.log('❌ Invalid token type');
+      return null;
+    }
       
       const userId = decoded.userId || decoded.id || '';
       if (!userId) {
@@ -75,7 +79,7 @@ export function verifyExtensionToken(authHeader: string | null): { userId: strin
   const token = authHeader.substring(7);
   
   try {
-    const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+    const decoded = jwt.verify(token, getSessionSecret()) as MyJwtPayload;
     
     // Verify it's an extension token
     if (decoded.type !== 'extension') {

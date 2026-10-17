@@ -8,14 +8,34 @@ import Footer from '@/components/landing/Footer';
 import { navLinks } from '@/data/navigation';
 import { CHIP_INLINE, chipStateDark } from '@/components/ui/chip-styles';
 
-export const metadata: Metadata = {
-  // No "| AIResume" suffix here — the root layout's `title.template` already appends it, and a
-  // manual suffix rendered the brand twice ("… | AIResume | AIResume") in SERPs.
-  title: 'Blog — Career Advice, CV Tips & ATS Optimization',
-  description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AIResume. Learn how to build a resume that gets callbacks in 2026.',
-  keywords: ['CV blog', 'resume tips', 'ATS optimization', 'career advice', 'job search 2026', 'AI resume'],
-  alternates: { canonical: '/blog' },
-};
+export async function generateMetadata(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}): Promise<Metadata> {
+  const searchParams = await props.searchParams;
+  const category = typeof searchParams.category === 'string' ? searchParams.category : undefined;
+
+  // `/blog?category=X` renders the same articles reachable at `/blog/<slug>`. Indexing the filtered
+  // view would create duplicate-content URLs competing with the canonical listing (and Google
+  // ignores category query params in practice anyway), so the filtered view is noindexed and
+  // canonicalised back to `/blog`.
+  if (category) {
+    return {
+      title: 'Blog — Career Advice, CV Tips & ATS Optimization',
+      description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AIResume. Learn how to build a resume that gets callbacks in 2026.',
+      alternates: { canonical: 'https://buildairesume.com/blog' },
+      robots: { index: false, follow: true },
+    };
+  }
+
+  return {
+    // No "| AIResume" suffix here — the root layout's `title.template` already appends it, and a
+    // manual suffix rendered the brand twice ("… | AIResume | AIResume") in SERPs.
+    title: 'Blog — Career Advice, CV Tips & ATS Optimization',
+    description: 'Expert career advice, CV writing tips, ATS optimization strategies, and resume guides from AIResume. Learn how to build a resume that gets callbacks in 2026.',
+    keywords: ['CV blog', 'resume tips', 'ATS optimization', 'career advice', 'job search 2026', 'AI resume'],
+    alternates: { canonical: 'https://buildairesume.com/blog' },
+  };
+}
 
 const categoryColors: Record<string, { badge: string; dot: string }> = {
   'AIResume vs Competitors': { badge: 'bg-purple-900/40 text-purple-300 border-purple-700/30', dot: 'bg-purple-400' },

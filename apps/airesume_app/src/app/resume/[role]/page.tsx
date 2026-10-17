@@ -99,7 +99,7 @@ const roleData: Record<string, {
       'Node.js', 'Python', 'Java', 'Go', 'Ruby', 'PHP', 'C#',
       'Express.js', 'Django', 'Spring Boot', 'FastAPI', 'PostgreSQL',
       'MongoDB', 'Redis', 'Docker', 'Kubernetes', 'AWS', 'GraphQL',
-      'REST APIs', 'Microservices', 'CI/CD', 'Linux', 'MongoDB'
+      'REST APIs', 'Microservices', 'CI/CD', 'Linux'
     ],
     summaryExample: `Backend Developer with 4 years of experience designing and deploying scalable server-side solutions. Proficient in Python, Node.js, and cloud infrastructure with track record of building high-availability systems serving millions of requests daily.`,
     experienceExamples: [
@@ -273,6 +273,311 @@ const roleData: Record<string, {
       'Emphasize security best practices'
     ],
     relatedRoles: ['cloud-engineer', 'backend-developer', 'software-engineer']
+  },
+  'project-manager': {
+    name: 'Project Manager',
+    description: 'Prove you can hold scope, schedule, and budget together with a Project Manager resume that turns delivery history into evidence. Highlight the programs you shipped, the stakeholders you aligned, and the certifications that clear the first screen.',
+    skills: [
+      'Project Management', 'Agile', 'Scrum', 'Waterfall', 'PMP', 'Stakeholder Management',
+      'Risk Management', 'Budget Management', 'Resource Planning', 'Gantt Charts',
+      'Critical Path Method', 'JIRA', 'Asana', 'Microsoft Project', 'Smartsheet',
+      'Sprint Planning', 'RACI Matrix', 'Earned Value Management', 'Scope Management',
+      'Change Management', 'Vendor Management', 'Cross-Functional Leadership',
+      'Roadmap Planning', 'Status Reporting',
+    ],
+    summaryExample: `Detail-oriented Project Manager with 6 years of experience delivering cross-functional programs on time and under budget. Ran a portfolio of 12 concurrent projects worth $4.2M, landing 95% of milestones inside the committed window. PMP-certified with deep experience blending Agile and traditional delivery.`,
+    experienceExamples: [
+      'Managed a $3.5M launch program spanning 4 teams and 3 vendors, shipping 3 weeks ahead of schedule',
+      'Introduced sprint planning and status rituals that cut missed deadlines by 45% across a 20-person department',
+      'Led a resource-leveling initiative that reduced contractor spend by $280K annually',
+      'Raised stakeholder satisfaction scores from 3.1 to 4.6 out of 5 through standardized reporting',
+      'Built a risk register and escalation process that shortened issue resolution time by 60%',
+    ],
+    tips: [
+      'Anchor every bullet to scope, schedule, budget, or risk — the four things hiring managers screen for first',
+      'Explain your methodology mix: how you run Agile and Waterfall when stakeholders demand both',
+      'Quantify program scale with budget, team size, and number of concurrent workstreams',
+      'Show tooling fluency in JIRA, MS Project, or Smartsheet, and how you keep plans current',
+      'List PMP, CSM, or PRINCE2 certification near the top with the year earned',
+    ],
+    relatedRoles: ['product-manager', 'business-analyst', 'marketing-manager']
+  },
+  'machine-learning-engineer': {
+    name: 'Machine Learning Engineer',
+    description: 'A Machine Learning Engineer resume should show you can ship models, not just train them. Surface your MLOps pipeline, production latency wins, and the business metrics your models actually moved.',
+    skills: [
+      'Python', 'TensorFlow', 'PyTorch', 'Scikit-learn', 'XGBoost', 'Machine Learning',
+      'Deep Learning', 'Natural Language Processing', 'Computer Vision', 'MLOps', 'MLflow',
+      'Kubeflow', 'Apache Airflow', 'Feature Engineering', 'Model Deployment',
+      'Model Monitoring', 'Data Pipelines', 'Apache Spark', 'SQL', 'Docker', 'Kubernetes',
+      'Git', 'A/B Testing', 'Ray',
+    ],
+    summaryExample: `Machine Learning Engineer with 4 years of experience taking models from notebook to production. Shipped ranking and recommendation systems serving 8M daily users and cut inference latency by 60% through model optimization. Strong in PyTorch, MLOps tooling, and owning the full model lifecycle.`,
+    experienceExamples: [
+      'Deployed a gradient-boosted churn model that reduced customer attrition by 12% in two quarters',
+      'Built a feature store and Airflow training pipeline that cut retraining time from 6 hours to 40 minutes',
+      'Optimized a transformer-based NLP service with quantization, lowering inference cost by 45%',
+      'Implemented drift detection and model monitoring that caught 3 silent regressions before they hit revenue',
+      'Productionized 15 models behind REST endpoints handling 200K daily predictions',
+    ],
+    tips: [
+      'Separate research from engineering: emphasize latency, throughput, and deployment ownership',
+      'Tie every model to a business metric — churn, conversion, or cost per prediction',
+      'List the full MLOps stack (MLflow, Kubeflow, feature stores), not just modeling libraries',
+      'Link a GitHub or paper trail of reproducible training code if you have one',
+      'Describe evaluation rigor: offline metrics, online A/B tests, and how you catch drift',
+    ],
+    relatedRoles: ['data-scientist', 'software-engineer', 'backend-developer']
+  },
+  'cloud-engineer': {
+    name: 'Cloud Engineer',
+    description: 'A Cloud Engineer resume needs to prove you can design, secure, and cost-control real cloud environments. Show your infrastructure-as-code depth, migration track record, and the availability you maintained.',
+    skills: [
+      'AWS', 'Microsoft Azure', 'Google Cloud Platform', 'Terraform', 'AWS CloudFormation',
+      'Pulumi', 'Serverless Architecture', 'AWS Lambda', 'Virtual Machines', 'Object Storage',
+      'VPC Design', 'IAM', 'Well-Architected Framework', 'Cloud Cost Optimization',
+      'Auto Scaling', 'Load Balancing', 'CDN', 'DNS Management', 'Amazon CloudWatch',
+      'Datadog', 'Ansible', 'Networking', 'Linux', 'Disaster Recovery',
+    ],
+    summaryExample: `Cloud Engineer with 5 years of experience designing and operating multi-account AWS and Azure environments. Migrated 40+ workloads with zero unplanned downtime and trimmed monthly cloud spend by 32% through right-sizing and reserved capacity. Deep in Terraform, IAM, and Well-Architected reviews.`,
+    experienceExamples: [
+      'Architected a multi-account AWS landing zone serving 60 microservices at 99.99% availability',
+      'Wrote reusable Terraform modules that cut environment provisioning from 2 days to 20 minutes',
+      'Led a cost optimization program reducing monthly AWS spend from $140K to $95K',
+      'Designed auto-scaling and cross-AZ failover that absorbed 5x holiday traffic spikes without degradation',
+      'Standardized IAM policies and guardrails that passed a SOC 2 audit with zero findings',
+    ],
+    tips: [
+      'Name the clouds, accounts, and regions you actually operated, not just the exams you passed',
+      'Show cost work — FinOps, rightsizing, and reserved capacity are screened for heavily now',
+      'Tell migration stories with the strategy used (lift-and-shift vs replatform) and downtime avoided',
+      'Map your experience to the Well-Architected pillars so keyword screeners match you',
+      'Detail IaC depth: module reuse, state management, and how you handle drift',
+    ],
+    relatedRoles: ['devops-engineer', 'backend-developer', 'software-engineer']
+  },
+  'product-designer': {
+    name: 'Product Designer',
+    description: 'A Product Designer resume should connect your craft to outcomes. Frame your research, systems work, and shipped features around the activation, conversion, and task-success numbers that moved.',
+    skills: [
+      'Product Design', 'UX Design', 'UI Design', 'Figma', 'Prototyping', 'Wireframing',
+      'User Research', 'Usability Testing', 'Design Systems', 'Interaction Design',
+      'Information Architecture', 'Customer Journey Mapping', 'Persona Development',
+      'Usability Heuristics', 'Responsive Design', 'Visual Design', 'Design Sprints',
+      'A/B Testing', 'HTML/CSS', 'Product Strategy', 'Mobile Design', 'Accessibility',
+      'Stakeholder Presentation', 'Competitive Analysis',
+    ],
+    summaryExample: `Product Designer with 6 years of experience owning end-to-end design for B2B SaaS products. Redesigned onboarding that lifted activation from 41% to 63% in two quarters. Fluent in systems thinking, research synthesis, and partnering with product and engineering from discovery through launch.`,
+    experienceExamples: [
+      'Led the redesign of a core checkout flow, increasing conversion by 24% across web and mobile',
+      'Built and governed a 120-component design system adopted by 4 product squads',
+      'Ran 60+ user interviews and usability tests that redirected roadmap priorities twice',
+      'Shipped an accessible redesign meeting WCAG 2.1 AA that cut navigation support tickets by 35%',
+      'Partnered with product managers on design sprints that cut concept-to-prototype time from 5 weeks to 10 days',
+    ],
+    tips: [
+      'Present 2-3 case studies with problem, process, and measurable outcome — not just final screens',
+      'Show research influence: what the findings changed about what got built',
+      'Demonstrate systems thinking and how you keep consistency across multiple squads',
+      'Use metrics hiring managers care about: activation, conversion, and task success rate',
+      'Make your portfolio link unmissable and keep it limited to your strongest work',
+    ],
+    relatedRoles: ['ui-ux-designer', 'product-manager', 'frontend-developer']
+  },
+  'visual-designer': {
+    name: 'Visual Designer',
+    description: 'A Visual Designer resume should make taste and rigor visible at once. Pair your strongest creative work with the brand consistency and campaign performance behind it.',
+    skills: [
+      'Visual Design', 'Typography', 'Color Theory', 'Layout Design', 'Adobe Photoshop',
+      'Adobe Illustrator', 'Adobe InDesign', 'Figma', 'Brand Identity', 'Logo Design',
+      'Icon Design', 'Style Guides', 'Print Design', 'Digital Design', 'Social Media Design',
+      'Email Design', 'Infographics', 'Illustration', 'Composition', 'Responsive Design',
+      'Motion Graphics', 'Photo Editing', 'Packaging Design', 'Creative Direction',
+    ],
+    summaryExample: `Visual Designer with 7 years of experience shaping brand systems across print, web, and campaign creative. Rebuilt a brand identity system that lifted email click-through rates by 28% and unified assets across 6 channels. Obsessive about typography, color, and composition at any scale.`,
+    experienceExamples: [
+      'Directed a full brand refresh covering logo, palette, and type system, rolled out across 200+ assets',
+      'Designed a social and display campaign suite that earned 4.2M impressions at a 3.1% CTR',
+      'Created an icon and illustration library in Illustrator that cut creative turnaround time by 50%',
+      'Produced a 60-page product catalog tied to a 15% lift in distributor orders',
+      'Built responsive email and landing templates that increased open rates by 18%',
+    ],
+    tips: [
+      'Lead with a portfolio showing range: brand, campaign, product, and print work',
+      'Explain your systems work — style guides and component kits signal seniority',
+      'Tie creative decisions to performance data such as CTR, engagement, and conversion',
+      'Show Adobe suite depth alongside Figma, since many established workflows still run on Illustrator and InDesign',
+      'Call out art direction and collaboration with copywriters, marketers, and developers',
+    ],
+    relatedRoles: ['ui-ux-designer', 'product-designer', 'marketing-manager']
+  },
+  'marketing-manager': {
+    name: 'Marketing Manager',
+    description: 'A Marketing Manager resume should read like a growth record. Lead with budget, pipeline, and channel performance, then show the team and stack that got you there.',
+    skills: [
+      'Marketing Strategy', 'Campaign Management', 'Digital Marketing', 'Content Marketing',
+      'SEO', 'SEM', 'PPC', 'Google Ads', 'Meta Ads', 'Email Marketing',
+      'Marketing Automation', 'HubSpot', 'Marketo', 'Salesforce', 'Google Analytics 4',
+      'Marketing KPIs', 'Budget Management', 'Brand Management', 'Product Marketing',
+      'Go-to-Market Strategy', 'Lead Generation', 'Conversion Rate Optimization',
+      'Copywriting', 'Market Research',
+    ],
+    summaryExample: `Marketing Manager with 8 years of experience building integrated demand programs for B2B and B2C brands. Grew marketing-sourced pipeline to $6.4M annually while lowering cost per lead by 37%. Skilled in owning strategy, budget, and a cross-functional team of 6.`,
+    experienceExamples: [
+      'Owned a $1.8M annual marketing budget and delivered 212% of pipeline target in FY24',
+      'Launched a paid search and paid social program that improved ROAS from 2.4x to 4.1x',
+      'Rebuilt the lead nurture program in HubSpot, lifting MQL-to-SQL conversion by 29%',
+      'Drove an SEO content initiative that grew organic traffic from 34K to 91K monthly visits in 12 months',
+      'Led a rebrand campaign across web, email, and events that grew branded search volume by 45%',
+    ],
+    tips: [
+      'Organize bullets around the funnel: awareness, demand generation, conversion, and retention',
+      'State budget ownership and channel mix explicitly — recruiters look for scale of control',
+      'Report ROAS, CAC, and marketing-sourced revenue instead of vanity reach figures',
+      'Name the stack you run daily: HubSpot, Marketo, GA4, and the ad platforms you manage',
+      'Show leadership scope: team size, agency management, and cross-functional launches',
+    ],
+    relatedRoles: ['product-manager', 'sales-manager', 'business-analyst']
+  },
+  'sales-manager': {
+    name: 'Sales Manager',
+    description: 'A Sales Manager resume should put quota, pipeline, and team results up front. Make your number unmistakable, then show the coaching and forecast discipline behind it.',
+    skills: [
+      'Sales Management', 'Pipeline Management', 'Sales Forecasting', 'Sales Strategy',
+      'B2B Sales', 'SaaS Sales', 'Account Management', 'New Business Development',
+      'Consultative Selling', 'MEDDICC', 'Challenger Sales', 'Salesforce', 'HubSpot Sales',
+      'CRM Administration', 'Cold Calling', 'Discovery Calls', 'Negotiation',
+      'Contract Closing', 'Quota Attainment', 'Territory Planning', 'Sales Enablement',
+      'Team Coaching', 'Pipeline Hygiene', 'Revenue Operations',
+    ],
+    summaryExample: `Sales Manager with 9 years of experience building and leading enterprise sales teams. Moved a 6-person team from 78% to 118% average quota attainment in four quarters and closed $14.2M in new ARR. Expert in MEDDICC qualification, forecast accuracy, and coaching reps through complex deals.`,
+    experienceExamples: [
+      'Led a team of 8 account executives to $14.2M in new ARR at 118% of team quota',
+      'Improved forecast accuracy from 32% variance to 6% by enforcing stage-based qualification',
+      'Built a territory and patch plan that grew qualified pipeline coverage from 2.1x to 3.4x',
+      'Coached 4 underperforming reps to top-decile quota attainment within 18 months',
+      'Negotiated 3 enterprise contracts worth $2.6M TCV, shortening the sales cycle from 96 to 61 days',
+    ],
+    tips: [
+      'Quantify with ARR or ACV, quota attainment percentage, and team size — the first three numbers screened',
+      'Name your methodology (MEDDICC, Challenger, Sandler) and how you enforce it in the field',
+      'Separate individual contributions from team results so your leadership scope is obvious',
+      'Cover CRM hygiene and forecasting accuracy; revenue operations leaders weigh them heavily',
+      'Mention sales cycle length and average deal size to convey the complexity you have handled',
+    ],
+    relatedRoles: ['marketing-manager', 'product-manager', 'business-analyst']
+  },
+  'accountant': {
+    name: 'Accountant',
+    description: 'An Accountant resume should prove accuracy and control. Lead with your close cycle, entity scale, and the reconciliations, forecasts, and audits you own end to end.',
+    skills: [
+      'General Ledger', 'Accounts Payable', 'Accounts Receivable', 'Bank Reconciliation',
+      'Month-End Close', 'Financial Reporting', 'Journal Entries', 'GAAP', 'IFRS',
+      'Tax Preparation', 'Tax Compliance', 'Payroll', 'Fixed Assets', 'Cost Accounting',
+      'Financial Modeling', 'Variance Analysis', 'Cash Flow Analysis', 'External Audits',
+      'Excel', 'QuickBooks', 'SAP', 'Oracle Financials', 'NetSuite', 'Forecasting',
+    ],
+    summaryExample: `Detail-oriented Accountant with 5 years of experience running full-cycle general ledger accounting for a $60M revenue company. Cut the month-end close from 12 days to 5 through process redesign and tighter accrual discipline. CPA-qualified with strong GAAP, tax, and audit coordination background.`,
+    experienceExamples: [
+      'Managed full-cycle accounting for a $60M revenue entity covering GL, AP, AR, and fixed assets',
+      'Reduced the monthly close cycle from 12 days to 5 days by rebuilding the close checklist',
+      'Identified $310K in duplicate vendor payments and recovered the funds within one quarter',
+      'Coordinated audit requests across 3 entities, resulting in a clean opinion with zero adjustments',
+      'Prepared quarterly forecasts and variance analysis that flagged a 14% cost overrun two months early',
+    ],
+    tips: [
+      'Name the ERP you live in daily — NetSuite, SAP, Oracle, or QuickBooks — plus advanced Excel skills',
+      'Show close ownership: days to close, number of entities, and monthly transaction volume',
+      'Highlight CPA, CMA, or EA credentials, including sections still in progress',
+      'Quantify controls work: reconciliations performed and balance-sheet accounts under your ownership',
+      'Emphasize audit and compliance exposure; it signals your work withstands outside review',
+    ],
+    relatedRoles: ['business-analyst', 'data-analyst', 'project-manager']
+  },
+  'hr-manager': {
+    name: 'HR Manager',
+    description: 'An HR Manager resume should balance people outcomes with compliance. Show your recruiting volume, retention gains, and the HR systems and policies you administer.',
+    skills: [
+      'Human Resources', 'Talent Acquisition', 'Full-Cycle Recruiting', 'Onboarding',
+      'Employee Relations', 'Performance Management', 'Compensation and Benefits', 'Workday',
+      'BambooHR', 'ADP', 'Payroll Administration', 'Labor Law Compliance', 'EEOC Compliance',
+      'FMLA', 'Employee Engagement', 'Workforce Planning', 'Succession Planning',
+      'Training and Development', 'Diversity, Equity and Inclusion', 'Conflict Resolution',
+      'HR Policies', 'Exit Interviews', 'Applicant Tracking Systems', 'HRIS Administration',
+    ],
+    summaryExample: `Strategic HR Manager with 7 years of experience partnering with leadership on talent, culture, and compliance for a 450-employee organization. Reduced voluntary turnover from 22% to 14% in two years while revamping performance management. SHRM-CP certified with hands-on HRIS, payroll, and employee relations expertise.`,
+    experienceExamples: [
+      'Managed full-cycle recruiting for 120+ annual hires, cutting time-to-fill from 58 to 39 days',
+      'Reduced voluntary turnover from 22% to 14% by launching stay interviews and career pathing',
+      'Led a Workday implementation and data migration for 450 employees with zero payroll disruptions',
+      'Investigated and resolved 40+ employee relations cases and successfully defended 2 EEOC charges',
+      'Redesigned the performance review cycle, raising completion rates from 61% to 94%',
+    ],
+    tips: [
+      'Quantify headcount, hire volume, and turnover the way finance quantifies revenue',
+      'Name your HRIS and ATS platforms precisely; they drive most keyword screening rounds',
+      'Signal employment law literacy: FMLA, EEOC, FLSA, and state-specific leave rules',
+      'Highlight change management — system implementations and policy rollouts show strategic range',
+      'Show the employee experience angle with engagement scores and retention program results',
+    ],
+    relatedRoles: ['business-analyst', 'project-manager', 'teacher']
+  },
+  'teacher': {
+    name: 'Teacher',
+    description: 'A Teacher resume should turn classroom work into measurable learning outcomes. Surface test growth, differentiation skills, and the curriculum and communication systems you use every day.',
+    skills: [
+      'Curriculum Development', 'Lesson Planning', 'Classroom Management',
+      'Differentiated Instruction', 'Common Core', 'State Standards Alignment',
+      'Google Classroom', 'Canvas', 'Seesaw', 'IEP Management', '504 Plans',
+      'Formative Assessment', 'Data-Driven Instruction', 'Student Engagement',
+      'Parent Communication', 'Behavior Management', 'Small-Group Instruction',
+      'Reading Intervention', 'Cooperative Learning', 'Project-Based Learning',
+      'ESL Instruction', 'Rubric Design', 'Educational Technology', 'Student Portfolios',
+    ],
+    summaryExample: `Dedicated 8th-grade teacher with 9 years of experience delivering standards-based instruction to diverse classrooms of 28+ students. Raised class proficiency from 64% to 86% on state assessments through data-driven small-group instruction. Skilled in IEP accommodations, parent communication, and technology-enhanced learning.`,
+    experienceExamples: [
+      'Improved state test proficiency from 64% to 86% across two academic years in a 28-student classroom',
+      'Designed tiered lessons and interventions supporting 6 IEP and 3 504 students to grade-level progress',
+      'Launched a project-based unit adopted grade-wide, lifting student engagement survey scores by 31%',
+      'Built a parent communication routine that raised conference attendance from 55% to 90%',
+      'Mentored 3 student teachers and led the department transition to a digital curriculum',
+    ],
+    tips: [
+      'Lead with student outcome data: proficiency gains, growth percentiles, and pass rates',
+      'Name your LMS and IEP platforms so district applicant tracking filters catch you',
+      'Describe classroom management with concrete results rather than a one-line philosophy',
+      'List certifications and endorsements prominently, including subject area and grade bands',
+      'Highlight family and community engagement; districts weigh it heavily at interview stage',
+    ],
+    relatedRoles: ['hr-manager', 'project-manager', 'accountant']
+  },
+  'nurse': {
+    name: 'Registered Nurse',
+    description: 'A Registered Nurse resume needs clinical specificity: unit, patient ratios, certifications, and charting systems. Show the care you delivered and the safety and satisfaction outcomes you protected.',
+    skills: [
+      'Patient Assessment', 'Medication Administration', 'IV Therapy', 'Wound Care',
+      'Care Planning', 'Patient Education', 'Triage', 'Telemetry Monitoring', 'Epic',
+      'Cerner', 'Meditech', 'Clinical Documentation', 'BLS Certification',
+      'ACLS Certification', 'PALS Certification', 'NIH Stroke Scale', 'Infection Control',
+      'Patient Safety', 'Blood Administration', 'Charge Nurse Leadership',
+      'Discharge Planning', 'Preceptorship', 'HIPAA Compliance', 'Critical Care Nursing',
+    ],
+    summaryExample: `Compassionate Registered Nurse with 6 years of experience on a 36-bed medical-surgical and telemetry unit. Managed assignments of up to 5 patients per shift while maintaining a 98% patient satisfaction score. BLS, ACLS, and NIHSS certified with strong Epic documentation and charge nurse experience.`,
+    experienceExamples: [
+      'Delivered skilled assessment and medication management for up to 5 med-surg patients per 12-hour shift',
+      'Recognized early deterioration in a post-op patient and escalated a rapid response, preventing an ICU transfer',
+      'Precepted 8 new graduate nurses through orientation, all completing competency sign-off two weeks early',
+      'Achieved 98% patient satisfaction for three consecutive quarters on HCAHPS-linked measures',
+      'Served as charge nurse coordinating admissions, discharges, and staffing for a 36-bed unit',
+    ],
+    tips: [
+      'Match your unit and patient ratio to the job posting; charge nurse and preceptor work signal seniority',
+      'Spell out certifications with expiration dates: BLS, ACLS, PALS, and NIHSS',
+      'List EHR systems by name — Epic, Cerner, Meditech — since facility match carries real weight',
+      'Include specialty competencies such as telemetry, wound care, central lines, or medication titration',
+      'Reference HIPAA-compliant documentation habits and the patient safety initiatives you took part in',
+    ],
+    relatedRoles: ['teacher', 'hr-manager']
   }
 }
 
@@ -311,7 +616,7 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
       'ATS resume'
     ],
     alternates: {
-      canonical: `/resume/${role}`,
+      canonical: `https://buildairesume.com/resume/${role}`,
     },
     openGraph: {
       title: `${data.name} Resume - Create with AI`,

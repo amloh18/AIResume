@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'ATS Resume Tips: Pass Every Application Tracking System | AIResume',
   description: 'Learn ATS resume tips to pass every application tracking system. Optimize keywords, formatting, and structure to get your resume past ATS.',
   keywords: ['ATS resume tips', 'pass ATS', 'application tracking system', 'ATS optimization'],
-  alternates: { canonical: '/blog/ats-optimization/ats-tips' },
+  alternates: { canonical: 'https://buildairesume.com/blog/ats-optimization/ats-tips' },
 };
 
 const navLinks = [

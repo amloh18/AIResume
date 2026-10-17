@@ -337,6 +337,14 @@ export async function POST(req: NextRequest) {
       atsType = 'unknown',
       notes = '',
       tags = [],
+      // Optional tracker details the browser extension collects in its
+      // capture form. Previously these were silently dropped on create,
+      // forcing a follow-up PUT to persist what the user had typed.
+      deadline,
+      applicationDate,
+      postedDate,
+      contactDetails,
+      sponsorship,
     } = body;
 
     if (!jobTitle || !company) {
@@ -386,6 +394,13 @@ export async function POST(req: NextRequest) {
       atsType: atsType || 'unknown',
       notes,
       tags,
+      deadline: deadline ? new Date(deadline) : undefined,
+      applicationDate: applicationDate ? new Date(applicationDate) : undefined,
+      // The posting date the extension read off the page. Without this a
+      // captured job always carried today's date as its "created" date.
+      postedDate: postedDate ? new Date(postedDate) : undefined,
+      contactDetails: contactDetails || undefined,
+      sponsorship: ['yes', 'no', 'unknown'].includes(sponsorship) ? sponsorship : undefined,
       statusHistory: [
         {
           status: status === 'created' ? 'created' : 'saved',

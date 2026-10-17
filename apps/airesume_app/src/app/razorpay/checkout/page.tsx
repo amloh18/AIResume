@@ -66,7 +66,7 @@ function RazorpayCheckoutContent() {
       const rzp = new (window as any).Razorpay({
         key: razorpayKey,
       subscription_id: subscriptionId,
-      name: 'BuildAIResume',
+      name: 'AIResume',
       description: `Subscription: ${planKey}`,
       handler: function (response: any) {
         setStatus('success');

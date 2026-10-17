@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Tech Resume Format Guide 2026 | AIResume',
   description: 'Learn the best resume format for software engineers, developers, and tech professionals. Get tips for tech roles.',
   keywords: ['tech resume format', 'software engineer resume', 'developer resume', 'tech resume tips'],
-  alternates: { canonical: '/blog/resume-writing/tech-resume-format' },
+  alternates: { canonical: 'https://buildairesume.com/blog/resume-writing/tech-resume-format' },
 };
 
 const navLinks = [

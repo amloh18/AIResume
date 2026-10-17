@@ -33,12 +33,12 @@ export async function generateMetadata(props: {
   return {
     title: `${article.title} | Career Tips & ATS Strategy | AIResume`,
     description: article.excerpt || article.subtitle,
-    alternates: { canonical: `/blog/${params.slug}` },
+    alternates: { canonical: `https://buildairesume.com/blog/${params.slug}` },
     openGraph: {
       type: 'article',
       title: article.title,
       description: article.excerpt || article.subtitle,
-      url: `/blog/${params.slug}`,
+      url: `https://buildairesume.com/blog/${params.slug}`,
       siteName: 'AIResume',
       publishedTime: article.date,
       authors: [article.author],

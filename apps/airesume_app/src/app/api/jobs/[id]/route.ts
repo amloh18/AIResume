@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
 import { mixedIdFilter } from '@/lib/utils/mixed-id';
+import { getSessionSecret } from '@/lib/auth/session-cookie';
 import {
   createQueuedGenerationState,
   getJourneyGenerationEntitlement
@@ -29,7 +30,7 @@ export async function GET(
       const token = authHeader.substring(7);
 
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+        const decoded = jwt.verify(token, getSessionSecret()) as MyJwtPayload;
 
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
@@ -184,7 +185,7 @@ export async function PUT(
       const token = authHeader.substring(7);
 
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+        const decoded = jwt.verify(token, getSessionSecret()) as MyJwtPayload;
 
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
@@ -1123,7 +1124,7 @@ export async function DELETE(
       const token = authHeader.substring(7);
 
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+        const decoded = jwt.verify(token, getSessionSecret()) as MyJwtPayload;
 
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');

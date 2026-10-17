@@ -88,6 +88,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     'data-scientist',
     'ui-ux-designer',
     'devops-engineer',
+    'project-manager',
+    'machine-learning-engineer',
+    'cloud-engineer',
+    'product-designer',
+    'visual-designer',
+    'marketing-manager',
+    'sales-manager',
+    'accountant',
+    'hr-manager',
+    'teacher',
+    'nurse',
   ]
 
   const roleSitemapEntries = rolePages.map((role) => page(`/resume/${role}`, 0.8, 'weekly'))
@@ -121,6 +132,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ── Comparisons ────────────────────────────────────────────────────────
   const comparisonPages = [
     'compare/ai-resume-vs-cakeresume',
+    'compare/ai-resume-vs-zety',
+    'compare/ai-resume-vs-resume-io',
+    'compare/ai-resume-vs-novoresume',
+    'compare/ai-resume-vs-teal',
     'compare/resume-builders',
   ]
 

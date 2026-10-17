@@ -34,6 +34,8 @@ export interface IJobApplication extends Document {
   priority: 'low' | 'medium' | 'high';
   applicationDate?: Date;
   deadline?: Date;
+  /** When the posting went live, read from the job page. Not `createdAt`. */
+  postedDate?: Date;
   notes?: string;
   contactDetails?: {
     name?: string;
@@ -321,6 +323,17 @@ const jobApplicationSchema = new Schema<IJobApplication>({
       },
       message: 'Invalid deadline date'
     }
+  },
+  /**
+   * When the posting went live, as read from the job page.
+   *
+   * Distinct from `createdAt` (when the row was added) and from
+   * `applicationDate` (when the user applied). The extension reads it off the
+   * page, so a month-old posting no longer looks like it was found today.
+   */
+  postedDate: {
+    type: Date,
+    required: false
   },
   notes: {
     type: String,

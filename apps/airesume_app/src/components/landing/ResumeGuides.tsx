@@ -23,6 +23,17 @@ const ROLE_GUIDES = [
   { slug: 'data-scientist', name: 'Data Scientist' },
   { slug: 'ui-ux-designer', name: 'UI/UX Designer' },
   { slug: 'devops-engineer', name: 'DevOps Engineer' },
+  { slug: 'project-manager', name: 'Project Manager' },
+  { slug: 'machine-learning-engineer', name: 'Machine Learning Engineer' },
+  { slug: 'cloud-engineer', name: 'Cloud Engineer' },
+  { slug: 'product-designer', name: 'Product Designer' },
+  { slug: 'visual-designer', name: 'Visual Designer' },
+  { slug: 'marketing-manager', name: 'Marketing Manager' },
+  { slug: 'sales-manager', name: 'Sales Manager' },
+  { slug: 'accountant', name: 'Accountant' },
+  { slug: 'hr-manager', name: 'HR Manager' },
+  { slug: 'teacher', name: 'Teacher' },
+  { slug: 'nurse', name: 'Registered Nurse' },
 ];
 
 const EXAMPLES = [

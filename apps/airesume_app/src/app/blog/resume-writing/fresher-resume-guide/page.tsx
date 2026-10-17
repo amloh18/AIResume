@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'How to Write a Resume for Freshers in 2026 | AIResume',
   description: 'Complete guide on how to write a resume for freshers. Learn what to include, how to highlight skills, and tips to get your first job.',
   keywords: ['how to write a resume for freshers', 'fresher resume guide', 'first job resume'],
-  alternates: { canonical: '/blog/resume-writing/fresher-resume-guide' },
+  alternates: { canonical: 'https://buildairesume.com/blog/resume-writing/fresher-resume-guide' },
 };
 
 const navLinks = [
