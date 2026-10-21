@@ -7,6 +7,7 @@ import { getDb } from '@/lib/db';
 import { toPublicJobDetail, type PublicJobDetail } from '@/lib/jobs/publicJobView';
 import { findPublicJobByIdentifier } from '@/lib/jobs/jobIdentifier';
 import PublicApplyButton from '@/components/jobs/PublicApplyButton';
+import { FormattedJobDescription } from '@/components/jobs/FormattedJobDescription';
 import Footer from '@/components/landing/Footer';
 import { MapPin, Building2, Briefcase, Calendar, DollarSign, CheckCircle2, ArrowLeft } from 'lucide-react';
 
@@ -449,11 +450,13 @@ function Section({
   return (
     <section className="mt-7">
       <h2 className="text-lg font-extrabold">{title}</h2>
-      {text && (
-        <div className="mt-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-line">
-          {text}
-        </div>
-      )}
+      {/*
+        Employer descriptions routinely arrive as HTML (`<div class="content-intro">`,
+        `<h3>`, `<ul>`, escaped `&nbsp;`). Rendering that as text printed the literal
+        tags to the page. FormattedJobDescription runs it through the shared
+        allowlist sanitiser, so markup renders and anything unsafe is dropped.
+      */}
+      {text && <FormattedJobDescription content={text} className="mt-2 text-sm" />}
       {items && items.length > 0 && (
         <ul className="mt-2 space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
           {items.map((item, i) => (

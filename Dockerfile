@@ -190,6 +190,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/airesume_app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/airesume_app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/apps/airesume_app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/apps/airesume_app/package.json ./package.json
+# `next start` re-reads next.config.ts at BOOT, and only the keys it loads at boot apply to the
+# request path — `images.*` above all. Without this file the container started with the *default*
+# image config (`qualities: [75]`, `formats: ['image/webp']`), so every next/image url carrying
+# `q=85` or `q=100` (the landing hero, the five HowItWorks screenshots) was answered with
+# `400 "q" parameter (quality) of 85 is not allowed` — broken images in production only, because a
+# local `next dev` reads the project's own next.config.ts. Keep this next to package.json; the
+# config imports only `path`, `@sentry/nextjs`, and `next`.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/airesume_app/next.config.ts ./next.config.ts
 # The build stamp, so `/api/health` can report when this image was built.
 COPY --from=builder --chown=nextjs:nodejs /app/.build-time ./.build-time
 

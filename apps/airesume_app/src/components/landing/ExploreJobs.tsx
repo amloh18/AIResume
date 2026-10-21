@@ -1,61 +1,78 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   ArrowRight,
   Search,
-  Sliders,
   MapPin,
   Sparkles,
-  Check,
-  Bot,
-  Send,
-  Bookmark,
-  Eye,
-  Briefcase,
   Zap,
+  Briefcase,
+  Clock,
 } from 'lucide-react';
+import type { PublicJobSummary, PublicJobsListResponse } from '@/lib/jobs/publicJobView';
 
 /**
  * Landing section: job discovery + auto-apply.
  *
- * Two product pillars that sit either side of the authentication boundary, and
- * the copy says so on purpose:
+ * Two product pillars either side of the authentication boundary, and the copy
+ * says so on purpose:
  *
- *   - **Explore Jobs is public.** No account, no sign-in wall — the CTA goes
- *     straight to `/explore/jobs`.
+ *   - **Explore Jobs is public.** No account, no sign-in wall — every card links
+ *     straight into `/explore/jobs`.
  *   - **Auto-apply needs an account.** It consumes the application pipeline and
- *     plan quota, so the CTA routes to sign-up rather than pretending it is free.
+ *     plan quota, so that CTA routes to sign-up rather than pretending it is free.
  *
- * The visuals are mockups in the same idiom as the rest of the landing page
- * (`Features`, `HowItWorks`, `ChromeExtension`). Nothing here calls an API.
+ * The job cards are REAL listings from `/api/public/jobs` — the same public
+ * projection the Explore Jobs page renders. This section used to show two mock
+ * panels with invented Linear/Stripe/Figma rows, which said nothing about
+ * whether the product actually has jobs. If the fetch fails the section degrades
+ * to the browse CTA rather than to placeholder data.
  */
-export default function ExploreJobs() {
-  const [typedText, setTypedText] = useState('');
-  const fullText = 'Product Designer • Remote';
 
-  // Typing animation for the search field — same treatment as the Features tile.
+const LIVE_JOB_COUNT = 3;
+
+function postedLabel(postedDate?: string): string | null {
+  if (!postedDate) return null;
+  const posted = new Date(postedDate).getTime();
+  if (Number.isNaN(posted)) return null;
+
+  const minutes = Math.floor((Date.now() - posted) / 60_000);
+  if (minutes < 60) return minutes <= 1 ? 'Just posted' : `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return null;
+}
+
+export default function ExploreJobs() {
+  const [jobs, setJobs] = useState<PublicJobSummary[] | null>(null);
+  const [failed, setFailed] = useState(false);
+
   useEffect(() => {
-    let index = 0;
-    let isDeleting = false;
-    const interval = setInterval(() => {
-      if (!isDeleting) {
-        setTypedText(fullText.slice(0, index + 1));
-        index++;
-        if (index === fullText.length) {
-          setTimeout(() => {
-            isDeleting = true;
-          }, 1800);
-        }
-      } else {
-        setTypedText(fullText.slice(0, index - 1));
-        index--;
-        if (index === 0) isDeleting = false;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/public/jobs?pageSize=${LIVE_JOB_COUNT}&sort=recent`,
+          { signal: controller.signal, headers: { Accept: 'application/json' } },
+        );
+        if (!res.ok) throw new Error(`Jobs request failed (${res.status})`);
+        const data = (await res.json()) as PublicJobsListResponse;
+        setJobs(Array.isArray(data.jobs) ? data.jobs.slice(0, LIVE_JOB_COUNT) : []);
+      } catch (error) {
+        if ((error as Error)?.name === 'AbortError') return;
+        console.error('[landing/ExploreJobs] Could not load live jobs:', error);
+        setFailed(true);
+        setJobs([]);
       }
-    }, 90);
-    return () => clearInterval(interval);
+    })();
+
+    return () => controller.abort();
   }, []);
 
   return (
@@ -76,7 +93,7 @@ export default function ExploreJobs() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* ── Heading ─────────────────────────────────────────────────── */}
         <motion.div
-          className="mb-14 lg:mb-16 flex flex-col items-start text-left"
+          className="mb-12 lg:mb-14 flex flex-col items-start text-left"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -128,222 +145,167 @@ export default function ExploreJobs() {
           </p>
         </motion.div>
 
-        {/* ── Two panels ──────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-          {/* ============ LEFT: Explore Jobs (public) ============ */}
-          <motion.div
-            className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+        {/* ── Live roles ──────────────────────────────────────────────── */}
+        <div className="mb-6 flex items-end justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <h3 className="text-sm font-bold text-white tracking-tight">Live right now</h3>
+          </div>
+          <Link
+            href="/explore/jobs"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-emerald-400 transition-colors"
           >
-            <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-3">
-              <Eye className="w-3 h-3" /> No account needed
-            </div>
+            Browse all open roles
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
 
-            <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
-              Explore Jobs
-            </h3>
-            <p className="text-sm text-gray-400 leading-relaxed mb-6">
-              Search by title, company, skills and location. Filter by remote, experience, employment
-              type and posting date. Read every listing in full — then decide whether to apply.
-            </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {(jobs === null || (jobs.length === 0 && !failed)) &&
+            Array.from({ length: LIVE_JOB_COUNT }).map((_, i) => (
+              <div
+                key={`skeleton-${i}`}
+                aria-hidden="true"
+                className="h-[148px] rounded-2xl border border-white/[0.06] bg-white/[0.02] animate-pulse"
+              />
+            ))}
 
-            {/* Search bar mock */}
-            <div className="rounded-2xl bg-[#090a0d] border border-white/[0.06] p-4">
-              <div className="relative flex items-center bg-[#13161c] border border-emerald-500/30 rounded-full px-4 py-3 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-                <Search className="w-4 h-4 text-emerald-400 shrink-0 mr-3" />
-                <span className="text-xs text-white font-medium flex-1 truncate">
-                  {typedText}
-                  <span className="inline-block w-1.5 h-3.5 bg-emerald-400 ml-0.5 animate-pulse" />
-                </span>
-                <Sliders className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              </div>
+          {jobs?.map((job) => {
+            const posted = postedLabel(job.postedDate);
+            const initial = (job.company.name || '?').trim().charAt(0).toUpperCase();
 
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                <span className="text-[10px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-2.5 py-0.5 rounded-full font-medium">
-                  Remote
-                </span>
-                <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2.5 py-0.5 rounded-full font-medium">
-                  Full-time
-                </span>
-                <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2.5 py-0.5 rounded-full font-medium">
-                  Past 7 days
-                </span>
-                <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2.5 py-0.5 rounded-full font-medium">
-                  Mid level
-                </span>
-              </div>
-            </div>
-
-            {/* Result cards mock */}
-            <div className="mt-3 space-y-2">
-              {[
-                { company: 'Linear', role: 'Senior Product Designer', loc: 'Remote · EU', tag: 'Design', fresh: 'Just posted' },
-                { company: 'Stripe', role: 'Frontend Engineer', loc: 'Berlin, Germany', tag: 'Engineering', fresh: '2h ago' },
-                { company: 'Figma', role: 'Product Designer II', loc: 'London, UK', tag: 'Design', fresh: '1d ago' },
-              ].map((job, i) => (
-                <motion.div
-                  key={job.company}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#13161c] border border-white/5 hover:border-emerald-500/30 transition-colors"
-                  initial={{ opacity: 0, x: -12 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.45, delay: 0.1 + i * 0.08 }}
+            return (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+              >
+                <Link
+                  href={`/explore/jobs/${job.slug || job.canonicalId}`}
+                  className="group flex h-full flex-col rounded-2xl border border-white/[0.08] bg-[#111317]/80 p-5 hover:border-emerald-500/40 hover:bg-[#13161c] transition-colors"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-lg bg-[#1d222e] border border-white/10 flex items-center justify-center text-[10px] font-bold text-emerald-400 shrink-0">
-                      {job.company.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-semibold text-white truncate">{job.role}</div>
-                      <div className="text-[9px] text-gray-400 flex items-center gap-1 truncate">
-                        <span className="truncate">{job.company}</span>
-                        <span className="opacity-40">·</span>
-                        <MapPin className="w-2.5 h-2.5 shrink-0" />
-                        <span className="truncate">{job.loc}</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#1d222e] border border-white/10 flex items-center justify-center text-xs font-bold text-emerald-400 shrink-0 overflow-hidden">
+                        {job.company.logoUrl ? (
+                          // Employer logos are arbitrary remote urls; a broken image
+                          // must not leave an empty square, so the initial stays behind it.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={job.company.logoUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          initial
+                        )}
                       </div>
+                      <span className="text-xs font-semibold text-gray-300 truncate">
+                        {job.company.name}
+                      </span>
                     </div>
+                    {posted && (
+                      <span className="shrink-0 text-[10px] font-bold text-orange-400 whitespace-nowrap">
+                        {posted}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="hidden sm:inline text-[9px] text-orange-400 font-semibold">{job.fresh}</span>
-                    <span className="text-[9px] bg-white/5 border border-white/10 text-gray-300 px-2 py-0.5 rounded-full">
-                      {job.tag}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
 
+                  <h4 className="mt-3 text-sm font-bold text-white leading-snug line-clamp-2 group-hover:text-emerald-400 transition-colors">
+                    {job.title}
+                  </h4>
+
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{job.location.label || 'Location not specified'}</span>
+                  </div>
+
+                  <div className="mt-auto pt-4 flex flex-wrap items-center gap-1.5">
+                    {job.location.remote && (
+                      <span className="text-[10px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-2 py-0.5 rounded-full font-medium">
+                        Remote
+                      </span>
+                    )}
+                    {job.employmentType && (
+                      <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2 py-0.5 rounded-full font-medium capitalize">
+                        {job.employmentType.replace(/[_-]+/g, ' ')}
+                      </span>
+                    )}
+                    {job.salary?.min != null && (
+                      <span className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2 py-0.5 rounded-full font-medium">
+                        {job.salary.currency || ''}{Math.round(job.salary.min / 1000)}k+
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+
+          {/* No live listings (or the request failed): one honest card that still routes to jobs. */}
+          {jobs !== null && jobs.length === 0 && (
             <Link
               href="/explore/jobs"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors"
+              className="flex h-full flex-col justify-between rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-5 hover:border-emerald-500/40 transition-colors"
             >
-              Browse all open roles <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <div className="flex items-center gap-2 text-gray-300">
+                <Briefcase className="w-4 h-4 text-emerald-400" />
+                <span className="text-sm font-bold text-white">Fresh roles land every day</span>
+              </div>
+              <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+                {failed
+                  ? 'Live listings could not be loaded here, but the full job search is available.'
+                  : 'The job feed is between syncs. Open the full search to see every open role.'}
+              </p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                Open job search <ArrowRight className="w-3.5 h-3.5" />
+              </span>
             </Link>
-          </motion.div>
+          )}
+        </div>
 
-          {/* ============ RIGHT: Auto-Apply (needs account) ============ */}
-          <motion.div
-            className="group relative rounded-3xl bg-[#111317]/80 border border-white/[0.08] hover:border-white/20 p-7 flex flex-col overflow-hidden shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(1,63,46,0.2)]"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider mb-3">
-              <Bot className="w-3 h-3" /> Auto-Apply Worker
+        {/* ── Auto-apply strip ────────────────────────────────────────── */}
+        <motion.div
+          className="mt-6 flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-[#111317]/80 p-5 sm:flex-row sm:items-center sm:justify-between"
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
             </div>
-
-            <h3 className="text-xl font-bold text-white mb-2 tracking-tight group-hover:text-emerald-400 transition-colors">
-              Apply on autopilot
-            </h3>
-            <p className="text-sm text-gray-400 leading-relaxed mb-6">
-              Pick a role, approve the tailored CV and cover letter, and let the deterministic engine
-              fill the ATS form and submit. You review; it does the typing.
-            </p>
-
-            {/* Pipeline mock */}
-            <div className="rounded-2xl bg-[#090a0d] border border-white/[0.06] p-3.5 flex flex-col gap-2">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5 text-[10px]">
-                <span className="flex items-center gap-1.5 font-medium text-white">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Application pipeline
-                </span>
-                <span className="text-[9px] bg-emerald-950/60 border border-emerald-800/40 text-emerald-400 px-1.5 py-0.5 rounded font-mono">
-                  3 in flight
-                </span>
-              </div>
-
-              {[
-                { c: 'Linear', r: 'Senior Product Designer', ats: 'Greenhouse ATS', state: 'Submitted' },
-                { c: 'Stripe', r: 'Frontend Engineer', ats: 'Auto-filling form fields…', state: 'Applying' },
-                { c: 'Figma', r: 'Product Designer II', ats: 'Lever ATS', state: 'Queued' },
-              ].map((row, i) => {
-                const isApplying = row.state === 'Applying';
-                const isSubmitted = row.state === 'Submitted';
-                return (
-                  <div
-                    key={row.c}
-                    className={`relative flex items-center justify-between p-2 rounded-lg bg-[#13161c] text-[11px] overflow-hidden ${
-                      isApplying ? 'border border-emerald-500/30' : 'border border-white/5'
-                    }`}
-                  >
-                    {isApplying && (
-                      <motion.div
-                        className="absolute inset-y-0 left-0 bg-emerald-500/10 pointer-events-none"
-                        animate={{ width: ['20%', '85%', '20%'] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                    )}
-                    <div className="flex items-center gap-2 min-w-0 relative z-10">
-                      <div
-                        className={`w-5 h-5 rounded-md bg-[#1d222e] border border-white/10 flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                          isSubmitted ? 'text-emerald-400' : isApplying ? 'text-teal-300' : 'text-gray-400'
-                        }`}
-                      >
-                        {row.c.charAt(0)}
-                      </div>
-                      <div className="min-w-0 truncate">
-                        <div className="font-semibold text-white truncate text-[11px]">
-                          {row.c} • {row.r}
-                        </div>
-                        <div className="text-[9px] text-gray-400 truncate">{row.ats}</div>
-                      </div>
-                    </div>
-                    <span
-                      className={`shrink-0 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 relative z-10 ${
-                        isSubmitted
-                          ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30'
-                          : isApplying
-                            ? 'text-teal-300 bg-teal-500/10 border border-teal-500/30'
-                            : 'text-gray-400 bg-white/5 border border-white/10'
-                      }`}
-                    >
-                      {isSubmitted && <Check className="w-2.5 h-2.5" />}
-                      {isApplying && <span className="w-1.5 h-1.5 rounded-full bg-teal-300 animate-ping" />}
-                      {row.state}
-                    </span>
-                  </div>
-                );
-              })}
-
-              <div className="mt-1 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px]">
-                <span className="text-gray-400 flex items-center gap-1.5">
-                  <Send className="w-3 h-3 text-emerald-400" />
-                  Quota used this month
-                </span>
-                <span className="text-emerald-400 font-mono font-bold">7 / 50</span>
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white">
+                Approved applications, prepared and submitted for you
+              </p>
+              <p className="mt-0.5 text-xs text-gray-400 leading-relaxed">
+                Pick a role, review the tailored CV and cover letter, and let the deterministic engine
+                fill the ATS form. You approve; it does the typing.
+              </p>
             </div>
-
-            {/* Mini benefit strip */}
-            <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
-              {[
-                { icon: <Bookmark className="w-3 h-3" />, label: 'Saved & tracked' },
-                { icon: <Sparkles className="w-3 h-3" />, label: 'Tailored CV + letter' },
-                { icon: <Briefcase className="w-3 h-3" />, label: 'ATS field autofill' },
-                { icon: <Check className="w-3 h-3" />, label: 'Approval before submit' },
-              ].map((b) => (
-                <span
-                  key={b.label}
-                  className="flex items-center gap-1.5 text-gray-300 bg-white/[0.03] border border-white/[0.06] rounded-lg px-2.5 py-2"
-                >
-                  <span className="text-emerald-400 shrink-0">{b.icon}</span>
-                  {b.label}
-                </span>
-              ))}
-            </div>
-
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-gray-300 sm:inline-flex">
+              <Clock className="w-3 h-3 text-emerald-400" />
+              Review before submit
+            </span>
             <Link
               href="/sign-up"
-              className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-300 group-hover:text-emerald-400 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-white/[0.06] px-4 py-2 text-xs font-bold text-white hover:bg-white/[0.1] transition-colors"
             >
-              Create a free account to apply <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              Create a free account
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

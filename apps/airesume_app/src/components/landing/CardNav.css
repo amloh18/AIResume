@@ -35,15 +35,32 @@
   display: block;
   height: 70px;
   padding: 0;
-  background-color: rgba(14, 18, 11, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  /*
+    Frosted pill.
+
+    The background is deliberately near-opaque. At 0.75 alpha the landing hero's
+    headline and CTA copy showed straight through the pill *and* the open mega
+    menu (both share this background), so nav links sat on top of legible page
+    text. backdrop-filter only blurs what is behind the element in browsers that
+    composite it — the alpha is what guarantees legibility when it does not (or
+    when the GPU path is unavailable), so legibility cannot depend on it.
+  */
+  background-color: rgba(12, 16, 10, 0.92);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 35px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
   position: relative;
   transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
   z-index: 100;
+}
+
+/* No backdrop-filter (older Safari/Firefox, or a blocked GPU path): go fully opaque. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card-nav {
+    background-color: #0d110c;
+  }
 }
 
 
@@ -144,16 +161,22 @@
   color: #84cc16;
 }
 
-/* Mega Menu Styles — matching default frosted glass blur */
+/* Mega Menu Styles — the open panel keeps the pill's frosted glass, tinted a touch darker */
 .card-nav-container.submenu-open .card-nav {
   overflow: visible;
   border-radius: 35px;
   height: 420px;
-  background-color: rgba(14, 18, 11, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 2px solid rgba(255, 255, 255, 0.12);
+  background-color: rgba(10, 14, 9, 0.96);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card-nav-container.submenu-open .card-nav {
+    background-color: #0b0f0a;
+  }
 }
 
 /* Products Mega Menu has 7 items (4 rows) + featured card */
@@ -273,7 +296,7 @@
 
 .submenu-link-desc {
   font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.62);
   line-height: 1.35;
   white-space: normal;
   display: -webkit-box;

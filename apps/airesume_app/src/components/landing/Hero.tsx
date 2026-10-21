@@ -179,7 +179,6 @@ const Hero = ({ withBanner = false }: { withBanner?: boolean }) => {
                 fill
                 className="object-cover transition-opacity duration-1000"
                 priority
-                quality={100}
               />
 
               {/* YouTube Embed */}

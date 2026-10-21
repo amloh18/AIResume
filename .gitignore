@@ -146,6 +146,7 @@ venv/
 **/test-*.ts
 **/debug-*.tsx
 **/debug-*.ts
+screenshots/
 
 # ── Tool / IDE Caches ──────────────────────────────────────────────────
 .freebuff/

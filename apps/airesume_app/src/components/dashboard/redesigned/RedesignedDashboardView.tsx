@@ -57,6 +57,7 @@ import DocumentPreviewSidebar from '@/components/dashboard/jobs/DocumentPreviewS
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 import {
   buildJourneyIndex,
   getJobJourneysFromIndex,
@@ -67,7 +68,6 @@ import {
   isJourneyCoverLetter,
   isMasterCv,
   isUserOwnedCv,
-  isUserOwnedCoverLetter,
   sortCoverLettersForDisplay,
   sortCvsForDisplay,
 } from '@/lib/utils/document-kind';
@@ -437,32 +437,33 @@ function computeKpiStats(cvs: any[], jobs: any[], goals: any, coverLetters: any[
 
 function KpiStrip() {
   const { cvs, coverLetters, jobs, goals, criticalLoading, secondaryLoading } = useDashboardData();
-  const { plan, getLimit, loading: membershipLoading } = useEntitlements();
+  const { getAutoApplyUsage, loading: membershipLoading } = useEntitlements();
   const stats = computeKpiStats(cvs, jobs, goals, coverLetters);
   const kpisLoading = criticalLoading || membershipLoading || secondaryLoading.streak || secondaryLoading.goals || secondaryLoading.cvs || secondaryLoading.jobs;
 
-  // Use the authoritative auto_apply_monthly limit from the entitlement engine
-  const autoApplyLimit = getLimit('auto_apply_monthly');
-  const isUnlimited = autoApplyLimit?.remaining === null;
-  const limit = isUnlimited ? Infinity : (autoApplyLimit?.limit ?? (plan === 'free' ? 10 : 25));
-  const used = autoApplyLimit?.used ?? stats.aiJourneyUsage;
-  const remaining = isUnlimited ? null : Math.max(0, limit - used);
+  /*
+    ONE quota reading for the whole app.
 
-  const usageMetric = isUnlimited
-    ? {
-        label: 'Usage',
-        value: `${used} used`,
-        icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: 'Unlimited',
-        trendUp: true,
-      }
-    : {
-        label: 'Usage',
-        value: `${used} / ${limit}`,
-        icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${remaining} left`,
-        trendUp: used < limit,
-      };
+    This strip used to read `getLimit('auto_apply_monthly')` while the Jobs Hub pill
+    read `getAutoApplyUsage()`. Those disagree by construction: on Focused the monthly
+    bucket is uncapped (-1) and only the DAILY cap binds, so this strip rendered
+    "0 used · Unlimited" next to the Jobs Hub's "1 / 50". `getAutoApplyUsage()` is the
+    single resolver for the binding cap — if a surface shows auto-apply usage, it uses
+    that and nothing else.
+  */
+  const autoApplyQuota = getAutoApplyUsage();
+  const quotaUsed = autoApplyQuota.used;
+  const quotaLimit = autoApplyQuota.limit;
+
+  const quotaMetric = {
+    label: 'Auto-Apply',
+    value: autoApplyQuota.isUnlimited ? `${quotaUsed} used` : `${quotaUsed} / ${quotaLimit}`,
+    icon: <Zap size={16} strokeWidth={1.75} />,
+    trend: autoApplyQuota.isUnlimited
+      ? 'Unlimited'
+      : `${Math.max(0, quotaLimit - quotaUsed)} left ${autoApplyQuota.resetAt ? formatResetLabel(autoApplyQuota.resetAt, '· resets') : ''}`.trim(),
+    trendUp: autoApplyQuota.isUnlimited || quotaUsed < quotaLimit,
+  };
 
   const metrics: Array<{
     label: string;
@@ -473,10 +474,16 @@ function KpiStrip() {
     trendIcon?: React.ReactNode;
     trendExtra?: string;
   }> = [
+    quotaMetric,
     {
-      label: 'Auto Usage',
+      /*
+        Renamed from "Auto Usage": this is the count of tailored documents, not
+        quota consumption, and two metrics both named "Usage" is what made the
+        numbers look inconsistent between screens.
+      */
+      label: 'Tailored Docs',
       value: String(stats.aiJourneyUsage),
-      icon: <Zap size={16} strokeWidth={1.75} />,
+      icon: <FileText size={16} strokeWidth={1.75} />,
       trend: stats.cvsThisWeek > 0 ? `↑ ${stats.cvsThisWeek} this week` : 'Documents generated',
       trendUp: stats.cvsThisWeek > 0,
     },
@@ -512,7 +519,6 @@ function KpiStrip() {
       trend: stats.strongMatches > 0 ? `${stats.strongMatches} documents ≥ 70%` : 'No documents scored',
       trendUp: stats.strongMatches > 0,
     },
-    usageMetric,
   ];
 
   return (
@@ -759,10 +765,12 @@ function MyCvsPanel() {
 /**
  * The cover-letter counterpart to the CV table, rendered directly beneath it.
  *
- * Journey cover letters are excluded for the same reason journey CVs are: they
- * are generated per job application, already reachable from the tracker, and
- * listing them here turns the panel into a wall of near-identical documents.
- * What remains is the set of cover letters the user owns.
+ * Every cover letter the user owns is listed here — including the ones a job
+ * application generated. Filtering job-linked letters out meant a letter that
+ * had just been written (in the studio, or automatically for a journey) never
+ * appeared anywhere the user looks for their documents: not here, not in Docs.
+ * The "Target Role" column is what distinguishes them, and `isJourneyCoverLetter`
+ * is still used for labelling, not for hiding.
  */
 function CoverLettersPanel() {
   const router = useRouter();
@@ -770,10 +778,7 @@ function CoverLettersPanel() {
   const { toast } = useToast();
   const [previewCl, setPreviewCl] = useState<any>(null);
 
-  const sorted = useMemo(
-    () => sortCoverLettersForDisplay(coverLetters.filter(isUserOwnedCoverLetter)),
-    [coverLetters]
-  );
+  const sorted = useMemo(() => sortCoverLettersForDisplay(coverLetters), [coverLetters]);
 
   const openEditor = (cl: any) => {
     const id = clId(cl);

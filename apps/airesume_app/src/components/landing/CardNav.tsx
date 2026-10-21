@@ -42,6 +42,14 @@ interface CardNavProps {
   className?: string;
   onCtaClick?: () => void;
   withBanner?: boolean;
+  /**
+   * Label for the single primary button in the pill.
+   *
+   * The public jobs pages reuse this nav, and a signed-in visitor must not be
+   * offered "Login" — they get "Dashboard". The destination still comes from
+   * `onCtaClick`, so there is one button and one navigation rule.
+   */
+  ctaLabel?: string;
 }
 
 const CardNav = ({
@@ -50,6 +58,7 @@ const CardNav = ({
   className = '',
   onCtaClick,
   withBanner = false,
+  ctaLabel = 'Login',
 }: CardNavProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
@@ -272,7 +281,7 @@ const CardNav = ({
               className="card-nav-cta-button"
               onClick={handleCtaClick}
             >
-              Login
+              {ctaLabel}
             </button>
                         {/* Mobile Menu Button */}
             <button
@@ -329,7 +338,7 @@ const CardNav = ({
             className="mobile-cta-button"
             onClick={handleCtaClick}
           >
-            Login
+            {ctaLabel}
           </button>
         </div>
       </div>,

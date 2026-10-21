@@ -30,6 +30,7 @@ import {
 } from '@/lib/jobs/workplace';
 import { readSessionCache, writeSessionCache } from '@/lib/utils/session-cache';
 import { formatResetLabel } from '@/lib/utils/reset-countdown';
+import { useEntitlements } from '@/lib/hooks/useEntitlements';
 
 interface AutoApplyPreferences {
   enabled: boolean;
@@ -123,6 +124,11 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
   const [newLocation, setNewLocation] = useState('');
   const [entitlements, setEntitlements] = useState<UserEntitlements | null>(null);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
+
+  // Declared with the other hooks, not next to the usage block it feeds: the render
+  // below returns a skeleton early, so a hook called after that would change hook
+  // order between the loading and loaded renders.
+  const { getAutoApplyUsage, plan: currentPlan, planLabel } = useEntitlements();
   
   const [whatHappensOpen, setWhatHappensOpen] = useState(false);
 
@@ -450,24 +456,32 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
 
   const currentCurrency = CURRENCY_CONFIG[preferences.salaryCurrency] || CURRENCY_CONFIG.INR_LPA;
   
-  const isStarter = entitlements?.plan === 'starter';
-  const usedCount = isStarter
-    ? entitlements?.application.used || 0
-    : entitlements?.autoApply.used || 0;
-  const limitCount = isStarter
-    ? entitlements?.application.limit ?? 10
-    : entitlements?.autoApply.limit ?? 50;
-  const remainingCount = isStarter
-    ? entitlements?.application.remaining ?? 0
-    : entitlements?.autoApply.remaining ?? 0;
+  /*
+    Usage comes from the entitlement engine, not from `/api/entitlements`.
 
-  const percentUsed = limitCount > 0
+    `/api/entitlements` is the legacy resolver: it reports a flat "500" for an admin
+    plan and its own per-plan buckets, which is why this card read "1 of 500 used"
+    while the Jobs Hub pill read "1 / 50" and the Dashboard strip read "0 used ·
+    Unlimited" — three numbers, one quota. `getAutoApplyUsage()` resolves the cap
+    that actually binds for the plan (Focused → daily, Starter/Free → monthly), and
+    it is the same call the Jobs Hub and the Dashboard strips use.
+
+    `entitlements` is still fetched because ContextualLimitModal needs the legacy
+    shape for its upgrade copy; it no longer drives any number on this card.
+  */
+  const autoApplyQuota = getAutoApplyUsage();
+  const isStarter = currentPlan === 'starter';
+  const usedCount = autoApplyQuota.used;
+  const limitCount = autoApplyQuota.limit;
+  const remainingCount = autoApplyQuota.isUnlimited
+    ? null
+    : Math.max(0, limitCount - usedCount);
+
+  const percentUsed = !autoApplyQuota.isUnlimited && limitCount > 0
     ? Math.min(100, Math.round((usedCount / limitCount) * 100))
     : 0;
 
-  const resetAtDate = isStarter
-    ? entitlements?.application.resetAt
-    : entitlements?.autoApply.resetAt;
+  const resetAtDate = autoApplyQuota.resetAt;
   const resetCountdown = formatResetLabel(resetAtDate, 'Resets');
   const resetDateDisplay = resetCountdown
     ?? (resetAtDate
@@ -592,10 +606,10 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
           <div className="p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 space-y-2 mt-auto">
             <div className="flex items-center justify-between text-xs sm:text-sm">
               <span className="font-bold text-gray-900 dark:text-white">
-                {isStarter ? 'Applications this month' : 'Auto-Apply today'}
+                {currentPlan === 'focused' ? 'Auto-Apply today' : 'Applications this month'}
               </span>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-200/60 dark:bg-white/10 text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                {entitlements?.planName || 'Starter'} · {entitlements?.billingInterval === 'yearly' ? 'Yearly' : 'Monthly'}
+                {planLabel} · {entitlements?.billingInterval === 'yearly' ? 'Yearly' : 'Monthly'}
               </span>
             </div>
 
@@ -614,7 +628,9 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
 
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span className="font-medium text-gray-700 dark:text-gray-300">
-                {usedCount} of {limitCount} used · {remainingCount} remaining
+                {autoApplyQuota.isUnlimited
+                  ? `${usedCount} used · Unlimited`
+                  : `${usedCount} of ${limitCount} used · ${remainingCount} remaining`}
               </span>
               <span
                 className={resetCountdown ? 'font-semibold' : undefined}
@@ -624,7 +640,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
               </span>
             </div>
 
-            {remainingCount <= 0 && resetCountdown && (
+            {remainingCount !== null && remainingCount <= 0 && resetCountdown && (
               <div className="pt-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 <span>Limit reached — new applications unlock when your quota {resetCountdown.toLowerCase()}</span>

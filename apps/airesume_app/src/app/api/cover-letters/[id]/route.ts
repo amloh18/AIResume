@@ -4,6 +4,7 @@ import { CoverLetter } from '@/models';
 import mongoose from 'mongoose';
 import { toObjectId } from '@/lib/db-utils';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { linkCoverLetterToJourney } from '@/lib/services/coverLetterLinkService';
 
 export async function GET(
   request: NextRequest,
@@ -113,6 +114,9 @@ export async function PUT(
 
     // Save the cover letter document (runs pre-save hook to merge content)
     const updatedCoverLetter = await coverLetter.save();
+
+    // Keep the journey's own link in step with the letter's (see service docs).
+    await linkCoverLetterToJourney(updatedCoverLetter);
 
     if (!updatedCoverLetter) {
       return NextResponse.json(

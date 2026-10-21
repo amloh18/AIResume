@@ -16,7 +16,6 @@ import { getCvScoreForDisplay } from '@/lib/utils/cv-scoring';
 import {
   isJourneyCv,
   isUserOwnedCv,
-  isUserOwnedCoverLetter,
 } from '@/lib/utils/document-kind';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import CVPreviewDocument from '@/components/cv-preview/CVPreviewDocument';
@@ -886,22 +885,24 @@ export default function Step1Dashboard({
   /**
    * The documents page lists the documents the user owns.
    *
-   * Journey documents are generated per job application — one CV and one cover
-   * letter each — and they are already surfaced from the application they
-   * belong to. Listing them here meant every generated application added rows
-   * that read as duplicates of the user's real CVs, and pushed the documents
-   * they actually maintain off the first screen. They remain reachable through
-   * the explicit "Tailored to Jobs" filter and from the job tracker.
+   * Journey CVs are generated per job application and remain reachable through
+   * the explicit "Tailored to Jobs" filter and from the job tracker, so they are
+   * not mixed into the CV library.
+   *
+   * Cover letters are different: they are the document users come here to find,
+   * and a letter written from the studio or generated for an application is just
+   * as real as a "freestanding" one. Hiding job-linked letters meant a letter was
+   * visible the moment it was written and gone on the next fetch — once the job /
+   * journey links were stamped on it. Every letter is listed; `isJourneyCoverLetter`
+   * only labels them.
    */
   const userOwnedCVs = React.useMemo(
     () => existingCVs.filter(isUserOwnedCv),
     [existingCVs]
   );
 
-  const userOwnedCoverLetters = React.useMemo(
-    () => existingCoverLetters.filter(isUserOwnedCoverLetter),
-    [existingCoverLetters]
-  );
+  // All cover letters, job-linked ones included — the one list every surface reads.
+  const allCoverLetters = existingCoverLetters;
 
   const kpiStats = React.useMemo(() => {
     const now = Date.now();
@@ -912,7 +913,7 @@ export default function Step1Dashboard({
       return !isNaN(t) && now - t < weekMs;
     }).length;
 
-    const coverLettersThisWeek = userOwnedCoverLetters.filter((cl) => {
+    const coverLettersThisWeek = allCoverLetters.filter((cl) => {
       const t = new Date(cl.createdAt || cl.updatedAt).getTime();
       return !isNaN(t) && now - t < weekMs;
     }).length;
@@ -927,14 +928,14 @@ export default function Step1Dashboard({
     return {
       cvCount: userOwnedCVs.length,
       cvsThisWeek,
-      clCount: userOwnedCoverLetters.length,
+      clCount: allCoverLetters.length,
       coverLettersThisWeek,
       avgAts,
       strongAts,
       scoredCount: scoredCVs.length,
       journeyCount,
     };
-  }, [userOwnedCVs, userOwnedCoverLetters, existingCVs, getScoreForCV]);
+  }, [userOwnedCVs, allCoverLetters, existingCVs, getScoreForCV]);
 
   const [filterType, setFilterType] = useState<'all' | 'cv' | 'cover-letter' | 'master' | 'standalone' | 'journey' | 'interview-ready' | 'archived'>('all');
 
@@ -1338,9 +1339,9 @@ export default function Step1Dashboard({
     }
 
     const map = new Map<string, any[]>();
-    // `userOwnedCoverLetters` already excludes job-specific letters, so a
-    // journey cover letter cannot reappear here via its cvId link.
-    userOwnedCoverLetters.forEach((cl: any) => {
+    // Journey cover letters are generated with their CV's id, so they pair here
+    // exactly like a hand-written letter does.
+    allCoverLetters.forEach((cl: any) => {
       const rawCvId = cl?.cvId;
       const cvId = rawCvId ? String(rawCvId) : null;
       if (cvId && cvId !== 'undefined' && cvId !== 'null') {
@@ -1357,7 +1358,7 @@ export default function Step1Dashboard({
       }
     });
     return map;
-  }, [userOwnedCoverLetters, existingCVs, filterType]);
+  }, [allCoverLetters, existingCVs, filterType]);
 
   const orphanedCoverLetters = React.useMemo(() => {
     // Hide cover letters when filtering specifically for CVs or primary CVs.
@@ -1372,7 +1373,7 @@ export default function Step1Dashboard({
       them, and including them made the list read as duplicates.
     */
     if (filterType === 'cover-letter') {
-      return userOwnedCoverLetters;
+      return allCoverLetters;
     }
 
     const pairedCvIds = new Set<string>();
@@ -1380,7 +1381,7 @@ export default function Step1Dashboard({
       const cvId = String(cv.id || cv._id);
       if (coverLetterMap.has(cvId)) pairedCvIds.add(cvId);
     });
-    return userOwnedCoverLetters.filter((cl: any) => {
+    return allCoverLetters.filter((cl: any) => {
       const rawCvId = cl?.cvId;
       const cvId = rawCvId ? String(rawCvId) : null;
       
@@ -1396,7 +1397,7 @@ export default function Step1Dashboard({
       }
       return true;
     });
-  }, [filterType, filteredCVs, userOwnedCoverLetters, coverLetterMap]);
+  }, [filterType, filteredCVs, allCoverLetters, coverLetterMap]);
 
   // Handle editing an existing CV - navigate to editor with full fetch
   const handleEditExistingCV = (cv: ExistingCV) => {

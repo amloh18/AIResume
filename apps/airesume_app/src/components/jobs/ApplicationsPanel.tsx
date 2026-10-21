@@ -24,6 +24,7 @@ import { Button, IconButton, Pill, SearchInput, Dropdown } from '@/components/ui
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import type { BadgeActionId } from '@/lib/utils/application-status-badge';
 import { formatQueueEta } from '@/lib/utils/queue-eta';
+import { formatResetLabel } from '@/lib/utils/reset-countdown';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useEntitlements } from '@/lib/hooks/useEntitlements';
@@ -110,7 +111,7 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
   const searchParams = useSearchParams();
   const { user } = useUnifiedAuth();
   const { userData } = useUserData();
-  const { plan, getLimit } = useEntitlements();
+  const { getAutoApplyUsage } = useEntitlements();
   const { openPaymentModal } = usePaymentModal();
   const { preferences, savePreferences } = useJobsPersistence();
   const { isFocusMode } = useFocusMode();
@@ -838,28 +839,28 @@ export function ApplicationsPanel({ userId: propUserId, metrics }: ApplicationsP
     }
   };
 
-  // Use the authoritative auto_apply_monthly limit from the entitlement engine
-  const autoApplyLimit = getLimit('auto_apply_monthly');
-  const isUnlimited = autoApplyLimit?.remaining === null;
-  const limit = isUnlimited ? Infinity : (autoApplyLimit?.limit ?? (plan === 'free' ? 10 : 25));
-  const used = autoApplyLimit?.used ?? stats.aiJourneyUsage;
-  const remaining = isUnlimited ? null : Math.max(0, limit - used);
+  /*
+    Auto-apply quota — the same reading the Jobs Hub pill uses.
 
-  const usageMetric = isUnlimited
-    ? {
-        label: 'Usage',
-        value: `${used} used`,
-        icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: 'Unlimited',
-        trendUp: true,
-      }
-    : {
-        label: 'Usage',
-        value: `${used} / ${limit}`,
-        icon: <Zap size={16} strokeWidth={1.75} />,
-        trend: `${remaining} left`,
-        trendUp: used < limit,
-      };
+    This strip previously read the `auto_apply_monthly` bucket directly. On Focused
+    that bucket is uncapped while the DAILY cap binds, so it printed "0 used ·
+    Unlimited" beside the Jobs Hub's "1 / 50", and on Starter it showed the monthly
+    bucket even when the daily one was the operative cap. `getAutoApplyUsage()` is the
+    one resolver for the binding cap; every surface showing usage uses it or nothing.
+  */
+  const autoApplyQuota = getAutoApplyUsage();
+  const quotaUsed = autoApplyQuota.used;
+  const quotaLimit = autoApplyQuota.limit;
+
+  const usageMetric = {
+    label: 'Auto-Apply',
+    value: autoApplyQuota.isUnlimited ? `${quotaUsed} used` : `${quotaUsed} / ${quotaLimit}`,
+    icon: <Zap size={16} strokeWidth={1.75} />,
+    trend: autoApplyQuota.isUnlimited
+      ? 'Unlimited'
+      : `${Math.max(0, quotaLimit - quotaUsed)} left · ${formatResetLabel(autoApplyQuota.resetAt, 'resets') ?? 'this period'}`,
+    trendUp: autoApplyQuota.isUnlimited || quotaUsed < quotaLimit,
+  };
 
   const kpiMetrics = [
     {

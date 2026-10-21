@@ -11,7 +11,8 @@ import {
   Sparkles, 
   ExternalLink,
   ShieldAlert,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { auditCvForJob, type TailoringIssue, type TailoringAuditReport } from '@/lib/cv-tailoring/tailoringAudit';
@@ -22,6 +23,17 @@ interface TailoringIssuesPanelProps {
   className?: string;
   onResolveIssue?: (issue: TailoringIssue) => void;
   compact?: boolean;
+  /**
+   * The Profile/Master CV is still being fetched.
+   *
+   * The audit is synchronous and treats a missing CV as a set of blocking
+   * issues, so rendering it before the fetch resolves showed "CV Requires
+   * Attention" for a frame, then replaced it with "Quality Gate Passed" once the
+   * CV arrived. That flash reads as a state change that never happened — the
+   * verdict was simply computed from data that had not loaded yet. While this is
+   * true the panel reports that it is checking, and computes nothing.
+   */
+  isLoading?: boolean;
 }
 
 export const TailoringIssuesPanel: React.FC<TailoringIssuesPanelProps> = ({
@@ -30,6 +42,7 @@ export const TailoringIssuesPanel: React.FC<TailoringIssuesPanelProps> = ({
   className = '',
   onResolveIssue,
   compact = false,
+  isLoading = false,
 }) => {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(!compact);
@@ -55,6 +68,32 @@ export const TailoringIssuesPanel: React.FC<TailoringIssuesPanelProps> = ({
     // Default action navigates to master CV editor
     router.push('/dashboard/resumes');
   };
+
+  if (isLoading) {
+    return (
+      <div
+        className={`rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#131810] ${className}`}
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <div className="flex items-center gap-2.5">
+          <Loader2 className="w-4 h-4 text-lime-600 dark:text-emerald-400 animate-spin shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h4 className="text-xs font-bold text-gray-900 dark:text-white">
+              Checking tailoring quality
+            </h4>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Comparing your Profile CV with this role&apos;s requirements…
+            </p>
+            <div className="mt-2 space-y-1.5">
+              <div className="h-2.5 w-4/5 rounded-full bg-gray-200/80 dark:bg-white/10 animate-pulse" />
+              <div className="h-2.5 w-2/3 rounded-full bg-gray-200/60 dark:bg-white/[0.07] animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (issues.length === 0) {
     return (

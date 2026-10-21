@@ -1485,33 +1485,73 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             Please review your subscription details below
                           </p>
 
-                          {/* Plan Details Display */}
-                          <div className="mb-6">
-                            <h3 className="text-2xl font-black text-gray-900 dark:text-white mb-1">
-                              {(() => {
-                                if (!selectedPlan) return 'No Plan Selected';
-                                if (selectedPlan.key === 'focused_yearly') return 'Focused Annual Plan';
-                                if (selectedPlan.key === 'focused_yearly') return 'Focused Yearly Plan';
-                                if (selectedPlan.key === 'focused_quarterly') return 'Focused Quarterly Plan';
-                                if (selectedPlan.key === 'focused_monthly') return 'Focused Monthly Plan';
-                                return selectedPlan.name || `Plan ${selectedPlan.key}`;
-                              })()}
-                            </h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs">
-                              {(() => {
-                                if (!selectedPlan) return 'Please select a plan';
-                                const billingInterval = getBillingInterval(selectedPlan);
-                                if (billingInterval === 'one-time') {
-                                  return 'One-time payment. Access to all premium features.';
-                                } else if (billingInterval === 'yearly') {
-                                  return 'Billed once yearly. Access to all premium features.';
-                                } else if (billingInterval === 'quarterly') {
-                                  return 'Billed once quarterly. Access to all premium features.';
-                                } else {
-                                  return 'Billed monthly. Access to all premium features.';
-                                }
-                              })()}
-                            </p>
+                          {/*
+                            One receipt card, not a stack of unrelated boxes.
+
+                            This step used to be a centred plan title, a floating
+                            benefits box, a coupon form and a price box, each with its
+                            own border and its own max-width — so the plan name, what
+                            you get, and what you pay never lined up, and the coupon
+                            form sat between the contents and the price as though it
+                            were part of the plan. Coupon codes are entered on the
+                            payment gateway's own checkout, so that form is gone.
+                          */}
+                          <div className="w-full max-w-md mx-auto rounded-3xl border border-gray-200/70 dark:border-white/10 bg-white dark:bg-white/[0.03] shadow-sm overflow-hidden text-left">
+                          {/* Plan header: name + what it costs, side by side */}
+                          <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-200/60 dark:border-white/10">
+                            <div className="min-w-0">
+                              <span className="block text-[10px] font-mono uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                                Selected plan
+                              </span>
+                              <h3 className="mt-1 text-lg font-black text-gray-900 dark:text-white leading-tight">
+                                {(() => {
+                                  if (!selectedPlan) return 'No Plan Selected';
+                                  if (selectedPlan.key === 'focused_yearly') return 'Focused Annual Plan';
+                                  if (selectedPlan.key === 'focused_quarterly') return 'Focused Quarterly Plan';
+                                  if (selectedPlan.key === 'focused_monthly') return 'Focused Monthly Plan';
+                                  return selectedPlan.name || `Plan ${selectedPlan.key}`;
+                                })()}
+                              </h3>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {(() => {
+                                  if (!selectedPlan) return 'Please select a plan';
+                                  const billingInterval = getBillingInterval(selectedPlan);
+                                  if (billingInterval === 'one-time') {
+                                    return 'One-time payment. Access to all premium features.';
+                                  } else if (billingInterval === 'yearly') {
+                                    return 'Billed once yearly. Access to all premium features.';
+                                  } else if (billingInterval === 'quarterly') {
+                                    return 'Billed once quarterly. Access to all premium features.';
+                                  } else {
+                                    return 'Billed monthly. Access to all premium features.';
+                                  }
+                                })()}
+                              </p>
+                            </div>
+                            {selectedPlan && (
+                              <div className="text-right shrink-0">
+                                <span className="block text-xl font-black text-gray-900 dark:text-white tabular-nums">
+                                  {(() => {
+                                    const regionalPrice = (selectedPlan as any).regionalPricing;
+                                    const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                    const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                    const price = getFinalPrice().toFixed(2);
+                                    return currency === 'USD'
+                                      ? `${currencySymbol}${price}`
+                                      : `$${getUSDFinalPrice().toFixed(2)}`;
+                                  })()}
+                                </span>
+                                <span className="block text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                                  {(() => {
+                                    const billingInterval = getBillingInterval(selectedPlan);
+                                    if (billingInterval === 'one-time') return 'one-time';
+                                    if (billingInterval === 'yearly') return 'per year';
+                                    if (billingInterval === 'quarterly') return 'per quarter';
+                                    return 'per month';
+                                  })()}
+                                </span>
+                              </div>
+                            )}
                           </div>
 
                           {/* Transition Info Banner */}
@@ -1522,7 +1562,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             
                             if (transitionInfo.isDowngrade) {
                               return (
-                                <div className="my-2 p-4 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 text-left max-w-md w-full mx-auto shadow-sm">
+                                <div className="m-3 p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-500/30 text-left shadow-sm">
                                   <div className="flex gap-2">
                                     <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                                     <div>
@@ -1541,7 +1581,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               const extensionDays = targetPrice > 0 ? Math.round(prorationCredit / (targetPrice / daysInPeriod)) : 0;
                               
                               return (
-                                <div className="my-2 p-4 rounded-3xl bg-lime-50/70 dark:bg-lime-950/10 border border-lime-200 dark:border-lime-500/30 text-left max-w-md w-full mx-auto shadow-sm">
+                                <div className="m-3 p-4 rounded-2xl bg-lime-50/70 dark:bg-lime-950/10 border border-lime-200 dark:border-lime-500/30 text-left shadow-sm">
                                   <div className="flex gap-2">
                                     <Sparkles className="w-5 h-5 text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" />
                                     <div>
@@ -1561,18 +1601,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             }
                           })()}
 
-                          {/* Selected Plan Benefits box */}
-                          <div className="w-full max-w-md mx-auto my-6 p-6 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-gray-200/50 dark:border-white/5 text-left">
-                            <h4 className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-4 text-center">
-                              [ INCLUDED BENEFITS ]
+                          {/* What's included — a section of the receipt, not another card */}
+                          <div className="p-5 border-b border-gray-200/60 dark:border-white/10">
+                            <h4 className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-3">
+                              What&apos;s included
                             </h4>
-                            <div className="space-y-3">
+                            <div className="grid gap-2.5 sm:grid-cols-2">
                               {selectedPlan.features.slice(0, 6).map((feature, i) => (
-                                <div key={i} className="flex items-start gap-2.5">
+                                <div key={i} className="flex items-start gap-2">
                                   <div className="w-4 h-4 rounded-full bg-lime-500/10 dark:bg-lime-500/20 flex items-center justify-center mt-0.5 flex-shrink-0">
                                     <Check className="w-2.5 h-2.5 text-lime-600 dark:text-lime-400" />
                                   </div>
-                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 leading-snug">
                                     {feature.split(':')[0]}
                                   </span>
                                 </div>
@@ -1580,52 +1620,21 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             </div>
                           </div>
 
-                          {/* Coupon Code Section */}
-                          <div className="w-full max-w-md mx-auto mb-6 text-left">
-                            <p className="text-gray-900 dark:text-white mb-2 text-xs font-mono uppercase tracking-wider text-center">[ Have a coupon code? ]</p>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={discountCode}
-                                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                                placeholder="Enter code here"
-                                className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#013f2e]/50 focus:border-lime-500 dark:focus:border-[#013f2e]/50 transition-colors"
-                              />
-                              <button
-                                onClick={applyDiscountCode}
-                                disabled={!discountCode.trim() || loading}
-                                className="px-6 py-2.5 bg-gray-950 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold text-sm"
-                              >
-                                Apply
-                              </button>
-                            </div>
+                          {/*
+                            No coupon form.
 
-                            {appliedDiscount && (
-                              <div className="mt-3 flex items-center justify-between rounded-xl p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
-                                <div className="flex items-center">
-                                  <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
-                                  <span className="text-sm text-lime-700 dark:text-lime-300">
-                                    {appliedDiscount.description}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={removeDiscountCode}
-                                  className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
+                            Codes are applied on the payment gateway's own checkout page
+                            (Stripe / Cashfree / Razorpay), which is the only place that can
+                            validate them against the real coupon. Keeping a second input
+                            here invited users to type a code that this modal could never
+                            honour, and the gateway then asked for it again.
+                          */}
 
-                            {discountError && (
-                              <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                                {discountError}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Price Summary */}
-                          <div className="w-full max-w-md mx-auto mb-6 space-y-3 p-4 bg-gray-50/30 dark:bg-white/5 rounded-2xl border border-gray-200/40 dark:border-white/5">
+                          {/* Order summary — the receipt rows of the same card */}
+                          <div className="p-5 space-y-3">
+                            <h4 className="text-[10px] font-mono tracking-widest text-gray-400 dark:text-gray-500 uppercase">
+                              Order summary
+                            </h4>
                             <div className="flex justify-between text-gray-600 dark:text-gray-400 text-xs">
                               <span>Subtotal</span>
                               <span className="font-semibold text-gray-900 dark:text-white">
@@ -1741,14 +1750,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           {/* Provider Health Status */}
                           {!getTransitionInfo(selectedPlan.key).isDowngrade && (
                             providerHealthLoading ? (
-                              <div className="mb-4 p-3 bg-gray-100 dark:bg-white/5 rounded-lg text-sm text-gray-500 dark:text-white/40 flex items-center justify-center gap-2 max-w-md w-full mx-auto">
+                              <div className="mx-5 mb-4 p-3 bg-gray-100 dark:bg-white/5 rounded-lg text-sm text-gray-500 dark:text-white/40 flex items-center justify-center gap-2">
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
                                 <span>Checking system status...</span>
                               </div>
                             ) : (
                               <>
                                 {providerHealth.healthy === false && (
-                                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg max-w-md w-full mx-auto text-left">
+                                  <div className="mx-5 mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg text-left">
                                     <div className="flex items-start gap-2">
                                       <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                       <div className="flex-1">
@@ -1766,11 +1775,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             )
                           )}
 
+                          <div className="px-5 pb-5 pt-1">
                           {/* Proceed to Payment Button */}
                           <button
                             onClick={handlePayment}
                             disabled={loading}
-                            className="w-full max-w-md py-4 bg-[#013f2e] hover:bg-[#02523c] text-white rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3 mx-auto"
+                            className="w-full py-4 bg-[#013f2e] hover:bg-[#02523c] text-white rounded-2xl font-black disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-xl shadow-lime-500/20 active:scale-95 text-base flex items-center justify-center gap-3"
                           >
                             {loading ? (
                               <>
@@ -1792,7 +1802,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           </button>
 
                           {/* Terms and Conditions */}
-                          <div className="mt-4 text-center max-w-md mx-auto">
+                          <div className="mt-3 text-center">
                             <p className="text-[10px] text-gray-500 dark:text-white/40 leading-relaxed">
                               By proceeding, you agree to our{' '}
                               <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline">
@@ -1802,6 +1812,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 Privacy Policy
                               </a>
                             </p>
+                          </div>
+                          </div>
                           </div>
                         </div>
                       </div>

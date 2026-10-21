@@ -759,11 +759,20 @@ Thank you for your time and consideration. I would welcome the opportunity to di
           status: 'draft',
           userId: new mongoose.Types.ObjectId(userId),
           jobId: currentJourney.jobId,
+          // Link the letter to the CV it was written from, exactly as the studio's
+          // save path does. Without it a generated letter had a job and a journey
+          // but no CV, so the documents page could not pair it with its resume and
+          // the two halves of one application read as unrelated documents.
+          cvId,
           journeyId: currentJourney._id.toString(),
           metadata: {
             lastModified: new Date(),
             viewCount: 0,
             downloadCount: 0,
+            // Same target fields the studio save writes, so Docs and the dashboard's
+            // "My Cover Letters" table can name the role instead of showing blanks.
+            targetCompany: currentJourney.company,
+            targetPosition: currentJourney.jobTitle,
             generatedWithAI: coverLetterWasTailored,
             generationMode: coverLetterWasTailored ? 'tailored' : 'fallback',
             generationReason: getTrackerCoverLetterGenerationReason({

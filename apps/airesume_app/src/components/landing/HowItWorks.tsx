@@ -249,7 +249,6 @@ const HowItWorks = () => {
                       alt={feature.title}
                       fill
                       className="object-contain object-center"
-                      quality={85}
                       priority={index === 0}
                     />
                   </div>

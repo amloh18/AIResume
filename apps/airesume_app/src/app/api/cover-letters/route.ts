@@ -3,6 +3,7 @@ import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
 import { toObjectId } from '@/lib/db-utils';
 import { mixedIdFilter } from '@/lib/utils/mixed-id';
+import { linkCoverLetterToJourney } from '@/lib/services/coverLetterLinkService';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
@@ -223,6 +224,10 @@ export async function POST(request: NextRequest) {
 
     await coverLetter.save();
 
+    // Point the journey at the letter it just received (see the service for why
+    // both sides of this link have to be written).
+    await linkCoverLetterToJourney(coverLetter);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -290,6 +295,8 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    await linkCoverLetterToJourney(coverLetter);
 
     return NextResponse.json({
       success: true,

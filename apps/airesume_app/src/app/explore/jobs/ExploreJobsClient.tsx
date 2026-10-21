@@ -8,6 +8,9 @@ import type { JobListing } from '@/types/automation-schema';
 import type { PublicJobSummary, PublicJobsListResponse } from '@/lib/jobs/publicJobView';
 import { buildPublicApplyHref } from '@/lib/jobs/publicJobHandoff';
 import Footer from '@/components/landing/Footer';
+import CardNav from '@/components/landing/CardNav';
+import { navLinks } from '@/data/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Search,
   MapPin,
@@ -86,6 +89,8 @@ function toCardJob(job: PublicJobSummary): JobListing & { openForApplication: bo
 
 export default function ExploreJobsClient() {
   const router = useRouter();
+  const { status: sessionStatus } = useSession();
+  const signedIn = sessionStatus === 'authenticated';
 
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -194,40 +199,24 @@ export default function ExploreJobsClient() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0d0f0b] text-gray-900 dark:text-white">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-gray-200 dark:border-white/10 bg-white/90 dark:bg-[#0d0f0b]/90 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 font-extrabold tracking-tight">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#013f2e] text-[#36D39B] dark:bg-lime-500 dark:text-black">
-              AI
-            </span>
-            <span className="text-base sm:text-lg">AIResume</span>
-          </Link>
+      {/*
+        ── Header ────────────────────────────────────────────────────────
+        The landing page's frosted pill, not a bespoke bar. This surface is the
+        first thing an anonymous visitor sees after leaving the landing page, so
+        the brand mark, link set and button styling must not change under them.
 
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/explore/jobs"
-              className="hidden sm:inline text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-            >
-              Explore Jobs
-            </Link>
-            <Link
-              href="/sign-in"
-              className="px-3.5 py-2 rounded-xl text-sm font-bold border border-gray-200 dark:border-white/15 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="px-3.5 py-2 rounded-xl text-sm font-bold bg-[#013f2e] text-white hover:bg-[#02523c] dark:bg-lime-500 dark:text-black dark:hover:bg-lime-400 transition-colors"
-            >
-              Get started
-            </Link>
-          </nav>
-        </div>
-      </header>
+        The single CTA is session-aware: "Dashboard" for a signed-in visitor
+        (this page is public, so a session is entirely possible) and "Login"
+        otherwise. `mt-*` compensates for the pill being fixed.
+      */}
+      <CardNav
+        logo="AIResume"
+        links={navLinks}
+        ctaLabel={signedIn ? 'Dashboard' : 'Login'}
+        onCtaClick={() => router.push(signedIn ? '/dashboard/jobs' : '/sign-in')}
+      />
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-10">
         {/* ── Hero ─────────────────────────────────────────────────────── */}
         <div className="max-w-3xl">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">

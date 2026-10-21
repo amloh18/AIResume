@@ -87,8 +87,63 @@ export function decodeHtmlEntities(html: string): string {
 }
 
 /**
+ * Tags the rich-text renderer is willing to emit.
+ *
+ * This HTML comes from job boards and ATS feeds — untrusted external content —
+ * and is injected with `dangerouslySetInnerHTML`, so the sanitiser is an
+ * allowlist rather than a blocklist. Anything not listed here is removed with
+ * its own tag but its text survives, which is what keeps a malformed employer
+ * description readable instead of blank.
+ */
+const RICH_TEXT_ALLOWED_TAGS = new Set([
+    'p', 'br', 'hr', 'strong', 'b', 'em', 'i', 'u', 's', 'span', 'div',
+    'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote',
+    'table', 'thead', 'tbody', 'tr', 'td', 'th', 'a',
+]);
+
+const RICH_TEXT_VOID_TAGS = new Set(['br', 'hr']);
+
+function escapeHtmlAttribute(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+/**
+ * Rewrite every tag through the allowlist, dropping all attributes except a
+ * safe `href` on links (see the security note on `renderRichText`).
+ */
+function sanitizeRichTextHtml(html: string): string {
+    return html.replace(/<\/?([a-zA-Z][a-zA-Z0-9-]*)\b([^>]*)>/g, (match, rawTag: string, rawAttrs: string) => {
+        const tag = rawTag.toLowerCase();
+        if (!RICH_TEXT_ALLOWED_TAGS.has(tag)) return '';
+        if (match.startsWith('</')) return `</${tag}>`;
+        if (RICH_TEXT_VOID_TAGS.has(tag)) return `<${tag} />`;
+
+        if (tag === 'a') {
+            const hrefMatch = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(rawAttrs);
+            const href = (hrefMatch?.[1] ?? hrefMatch?.[2] ?? hrefMatch?.[3] ?? '').trim();
+            // Only absolute http(s) and mailto links; `javascript:`, `data:` and
+            // protocol-relative urls are dropped (the anchor stays, inert).
+            if (!/^(https?:|mailto:)/i.test(href)) return '<a>';
+            return `<a href="${escapeHtmlAttribute(href)}" target="_blank" rel="noopener noreferrer nofollow">`;
+        }
+
+        return `<${tag}>`;
+    });
+}
+
+/**
  * Sanitize and render rich text HTML for safe display.
  * Supports headings, paragraphs, lists, and safe typography formatting.
+ *
+ * ⚠️ The input is untrusted (job descriptions are scraped from third-party
+ * sites). The output is injected with `dangerouslySetInnerHTML`, so every tag
+ * and attribute is filtered against an allowlist; never loosen this to a
+ * regex blocklist — `<img src=x onerror=alert(1)>` and `<svg onload=…>` both
+ * survive the usual script/`javascript:` patterns.
  */
 export function renderRichText(raw: string): string {
     if (!raw || !raw.trim()) return '';
@@ -100,15 +155,15 @@ export function renderRichText(raw: string): string {
         return html.replace(/\n/g, '<br>');
     }
 
-    // Remove scripts, styles, iframes, and event handlers
-    const sanitized = html
+    // Remove entire elements that can never be made safe.
+    const stripped = html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
-        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-        .replace(/javascript:/gi, '');
+        .replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '')
+        .replace(/<embed[^>]*>/gi, '');
 
-    return sanitized;
+    return sanitizeRichTextHtml(stripped);
 }
 
 /**

@@ -3141,7 +3141,7 @@ ${userName}`
               {/* Two-Column Main Workspace */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
                 {/* Column 1: Small Width & Borderless Vertical Stage Timeline */}
-                <div className="lg:col-span-4 w-full max-w-[260px] shrink-0 space-y-2 lg:sticky lg:top-0">
+                <div className="lg:col-span-4 w-full lg:max-w-[260px] shrink-0 space-y-2 lg:sticky lg:top-0">
                   <div className="px-1 py-0.5">
                     {terminalStageLabel && (
                       <div className="mb-4">
@@ -3151,7 +3151,85 @@ ${userName}`
                       </div>
                     )}
 
-                    <div className="relative space-y-4 pl-1">
+                    {/*
+                      Mobile: horizontal stage timeline.
+
+                      On a phone the sidebar is a single column, so the vertical
+                      track consumed the whole first screen before the tab content —
+                      five stacked nodes with descriptions, read top-to-bottom. A
+                      horizontal strip keeps the same stage order and status colours
+                      in one screen-height row and leaves the content above the fold.
+                      Desktop keeps the vertical timeline, where the extra vertical
+                      space is free and the per-stage detail is useful.
+                    */}
+                    <div className="lg:hidden" role="list" aria-label="Application stages">
+                      <div className="flex items-start justify-between gap-0 overflow-x-auto scrollbar-none pb-1">
+                        {stageItems.map((stage, stageIndex) => {
+                          const Icon = stage.icon;
+                          const status = stage.status as StageStatus;
+                          const isDone = status === 'completed';
+                          const isLive = status === 'current' || status === 'processing';
+                          const connector = isDone
+                            ? 'bg-emerald-500'
+                            : isLive
+                              ? 'bg-lime-500/50'
+                              : 'bg-gray-200 dark:bg-white/10';
+                          const nodeClasses = isDone
+                            ? `${stage.completedColor} shadow-sm`
+                            : isLive
+                              ? 'text-lime-700 dark:text-lime-300 bg-lime-500/15 border-lime-500/40'
+                              : status === 'blocked'
+                                ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30'
+                                : status === 'failed'
+                                  ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30'
+                                  : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10';
+
+                          return (
+                            <div
+                              key={stage.key}
+                              role="listitem"
+                              className="relative flex flex-1 min-w-[62px] flex-col items-center gap-1.5 px-0.5"
+                              title={`${stage.label} — ${stage.statusLabel || stage.subLabel || ''}`}
+                            >
+                              {stageIndex > 0 && (
+                                <span aria-hidden="true" className={`absolute left-0 top-4 h-[2px] w-1/2 -translate-x-1/2 ${connector}`} />
+                              )}
+                              {stageIndex < stageItems.length - 1 && (
+                                <span aria-hidden="true" className={`absolute right-0 top-4 h-[2px] w-1/2 translate-x-1/2 ${connector}`} />
+                              )}
+                              <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all ${nodeClasses}`}>
+                                {isDone ? (
+                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                ) : status === 'processing' ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : status === 'blocked' ? (
+                                  <span className="text-xs font-black">!</span>
+                                ) : status === 'failed' ? (
+                                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                ) : (
+                                  <Icon className="w-3.5 h-3.5 stroke-[2]" />
+                                )}
+                              </div>
+                              <span
+                                className={`text-center text-[9px] font-bold leading-tight ${
+                                  isLive || isDone
+                                    ? 'text-gray-800 dark:text-gray-100'
+                                    : status === 'blocked'
+                                      ? 'text-amber-700 dark:text-amber-400'
+                                      : status === 'failed'
+                                        ? 'text-rose-700 dark:text-rose-400'
+                                        : 'text-gray-500 dark:text-gray-400'
+                                }`}
+                              >
+                                {stage.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="relative hidden lg:block space-y-4 pl-1">
                       {/* Connecting Vertical Track */}
                       <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-gray-200/80 dark:bg-white/10" />
 
@@ -3501,8 +3579,59 @@ ${userName}`
                       );
                     })()}
 
-                    {/* Tailoring Intelligence & Issues Panel */}
-                    <TailoringIssuesPanel job={job} masterCv={cvData || undefined} />
+                    {/* Tailoring Intelligence & Issues Panel — fed the loading flag so it never
+                        renders a verdict computed from a CV that has not loaded yet. */}
+                    <TailoringIssuesPanel
+                      job={job}
+                      masterCv={cvData || undefined}
+                      isLoading={loadingCV && !cvData}
+                    />
+
+                    {/* Live Progress — the CURRENT step, not the whole pipeline.
+                        Sits above the stage/readiness card (and therefore above the
+                        Progress Speed graph): the live step is what the user can act
+                        on now, the graph is retrospective context. */}
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          {liveProgress && liveProgress.state !== 'idle' ? 'Live Progress' : 'Application Flow'}
+                        </span>
+                        {liveProgress && liveProgress.state !== 'idle' && (
+                          <span
+                            className={`${chipTone(
+                              liveProgress.state === 'running'
+                                ? 'blue'
+                                : liveProgress.state === 'waiting_user'
+                                  ? 'amber'
+                                  : liveProgress.state === 'failed'
+                                    ? 'rose'
+                                    : 'emerald',
+                              'sm',
+                            )} font-bold`}
+                          >
+                            {liveProgress.phaseLabel}
+                          </span>
+                        )}
+                      </div>
+
+                      {liveProgress && liveProgress.state !== 'idle' ? (
+                        <LiveProgressBar
+                          progress={liveProgress}
+                          variant="full"
+                          onAction={(actionId) => void handleAutomationAction(actionId as BadgeActionId)}
+                        />
+                      ) : (
+                        <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                          {applicationFlow.note}
+                        </p>
+                      )}
+
+                      {liveProgress && liveProgress.state !== 'idle' && (
+                        <p className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                          {applicationFlow.note}
+                        </p>
+                      )}
+                    </div>
 
                     {/* Current Stage + Readiness */}
                     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
@@ -3826,49 +3955,6 @@ ${userName}`
                         </div>
                       </div>
                     )}
-
-                    {/* Live Progress — the CURRENT step, not the whole pipeline */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          {liveProgress && liveProgress.state !== 'idle' ? 'Live Progress' : 'Application Flow'}
-                        </span>
-                        {liveProgress && liveProgress.state !== 'idle' && (
-                          <span
-                            className={`${chipTone(
-                              liveProgress.state === 'running'
-                                ? 'blue'
-                                : liveProgress.state === 'waiting_user'
-                                  ? 'amber'
-                                  : liveProgress.state === 'failed'
-                                    ? 'rose'
-                                    : 'emerald',
-                              'sm',
-                            )} font-bold`}
-                          >
-                            {liveProgress.phaseLabel}
-                          </span>
-                        )}
-                      </div>
-
-                      {liveProgress && liveProgress.state !== 'idle' ? (
-                        <LiveProgressBar
-                          progress={liveProgress}
-                          variant="full"
-                          onAction={(actionId) => void handleAutomationAction(actionId as BadgeActionId)}
-                        />
-                      ) : (
-                        <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                          {applicationFlow.note}
-                        </p>
-                      )}
-
-                      {liveProgress && liveProgress.state !== 'idle' && (
-                        <p className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                          {applicationFlow.note}
-                        </p>
-                      )}
-                    </div>
 
                     {/* Next Action */}
                     <div className={`rounded-2xl border p-4 shadow-sm ${guidanceHub.toneClasses}`}>
