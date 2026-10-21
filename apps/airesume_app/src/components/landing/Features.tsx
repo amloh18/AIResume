@@ -264,7 +264,7 @@ export default function Features() {
           </div>
 
           {/* ================= COLUMN 2 (CENTER) ================= */}
-          <div className="flex flex-col gap-6 h-full justify-between">
+          <div className="flex flex-col gap-6 h-full">
 
             {/* Tile 3: Global Visa & Jobs Search (Glowing Search Bar) */}
             <motion.div 
@@ -442,7 +442,7 @@ export default function Features() {
           </div>
 
           {/* ================= COLUMN 3 (RIGHT) ================= */}
-          <div className="flex flex-col gap-6 h-full justify-between">
+          <div className="flex flex-col gap-6 h-full">
 
             {/* Tile 6: Universal Ecosystem & Extension (Concentric Orbiting Hub) */}
             <motion.div 

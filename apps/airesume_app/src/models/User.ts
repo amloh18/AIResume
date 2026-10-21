@@ -166,7 +166,7 @@ export interface IUser extends Document {
     purchasePrice?: number; // Original purchase price
     // Auto-renewal (only for monthly plans)
     autoRenew?: boolean; // Whether subscription auto-renews
-    provider: 'stripe' | 'razorpay' | 'polar' | 'admin' | 'none';
+    provider: 'stripe' | 'cashfree' | 'razorpay' | 'polar' | 'admin' | 'none';
     providerSubscriptionId?: string;
     providerCustomerId?: string;
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
@@ -773,7 +773,7 @@ const userSchema = new Schema<IUser>({
     },
     provider: {
       type: String,
-      enum: ['stripe', 'polar', 'admin', 'none'],
+      enum: ['stripe', 'cashfree', 'razorpay', 'polar', 'admin', 'none'],
       default: 'stripe'
     },
     providerSubscriptionId: String,

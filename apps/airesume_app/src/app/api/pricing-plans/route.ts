@@ -27,6 +27,108 @@ const PLAN_USD_PRICES: Record<string, number> = {
   focused_yearly:   79.99, // $7/month ($79.99 total billed annually)
 };
 
+const DEFAULT_PLANS = [
+  {
+    key: 'starter_monthly',
+    name: 'Starter Monthly',
+    description: 'Essential tools for resume creation and editing',
+    billingCycle: 'monthly',
+    price_monthly: 0,
+    price: 0,
+    sortOrder: 1,
+    status: 'active',
+    displayOnLanding: true,
+    targetAudience: 'all',
+    storageLimit: 100,
+    features: [
+      'Access to ALL templates and snippets',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'PDF & DOCX Downloads',
+      'Mori AI chat',
+      '10 Auto Job Applications (includes CV generation & Journeys)',
+    ],
+    credits: { jobCredits: 10, resetSchedule: 'monthly' },
+    isPopular: false,
+    isBestValue: false,
+  },
+  {
+    key: 'starter_yearly',
+    name: 'Starter Yearly',
+    description: 'Annual plan for ongoing resume improvements',
+    billingCycle: 'yearly',
+    price_yearly: 19.99,
+    price: 19.99,
+    sortOrder: 2,
+    status: 'active',
+    displayOnLanding: true,
+    targetAudience: 'all',
+    storageLimit: 250,
+    features: [
+      'Access to ALL templates and snippets',
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'PDF & DOCX Downloads',
+      'Mori AI chat',
+    ],
+    credits: { jobCredits: 50, resetSchedule: 'yearly' },
+    isPopular: false,
+    isBestValue: false,
+  },
+  {
+    key: 'focused_monthly',
+    name: 'Focused Monthly',
+    description: 'Complete suite for active job hunters and interview prep',
+    billingCycle: 'monthly',
+    price_monthly: 9.99,
+    price: 9.99,
+    sortOrder: 3,
+    status: 'active',
+    displayOnLanding: true,
+    targetAudience: 'all',
+    storageLimit: 500,
+    features: [
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
+      'Application Tracker (Full Kanban access)',
+      'All features unlimited',
+    ],
+    credits: { jobCredits: -1, resetSchedule: 'monthly' },
+    isPopular: false,
+    isBestValue: false,
+  },
+  {
+    key: 'focused_yearly',
+    name: 'Focused Yearly',
+    description: 'Ultimate package with priority features for high-growth careers',
+    billingCycle: 'yearly',
+    price_yearly: 79.99,
+    price: 79.99,
+    sortOrder: 4,
+    status: 'active',
+    displayOnLanding: true,
+    targetAudience: 'all',
+    storageLimit: 1000,
+    features: [
+      'Unlimited CV & Cover Letter Edits',
+      'Real-time ATS Scoring & Editor',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'AI Interview Coach Mock Simulator',
+      'Application Tracker (Full Kanban access)',
+      'All features unlimited',
+    ],
+    credits: { jobCredits: -1, resetSchedule: 'yearly' },
+    isPopular: true,
+    isBestValue: true,
+  },
+];
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -45,128 +147,33 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    await getConnection();
-    const PricingPlanModel = await getAdminPricingPlan();
+    let plans: any[] = [];
 
-    const query: any = {};
-    if (!includeInactive) query.status = 'active';
-    if (publicOnly) {
-      query.displayOnLanding = true;
-      query.targetAudience   = 'all';
-    }
+    try {
+      await getConnection();
+      const PricingPlanModel = await getAdminPricingPlan();
 
-    let plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
-
-    if (!plans?.length) {
-      console.warn('⚠️ No pricing plans found in database. Initializing default plans...');
-      const defaultPlans = [
-        {
-          key: 'starter_monthly',
-          name: 'Starter Monthly',
-          description: 'Essential tools for resume creation and editing',
-          billingCycle: 'monthly',
-          price_monthly: 0,
-          price: 0,
-          sortOrder: 1,
-          status: 'active',
-          displayOnLanding: true,
-          targetAudience: 'all',
-          storageLimit: 100,
-          features: [
-            'Access to ALL templates and snippets',
-            'Unlimited CV & Cover Letter Edits',
-            'Real-time ATS Scoring & Editor',
-            'AI Cover Letter Generator',
-            'PDF & DOCX Downloads',
-            'Mori AI chat',
-            '10 Auto Job Applications (includes CV generation & Journeys)',
-          ],
-          credits: { jobCredits: 10, resetSchedule: 'monthly' },
-          isPopular: false,
-          isBestValue: false,
-        },
-        {
-          key: 'starter_yearly',
-          name: 'Starter Yearly',
-          description: 'Annual plan for ongoing resume improvements',
-          billingCycle: 'yearly',
-          price_yearly: 19.99,
-          price: 19.99,
-          sortOrder: 2,
-          status: 'active',
-          displayOnLanding: true,
-          targetAudience: 'all',
-          storageLimit: 250,
-          features: [
-            'Access to ALL templates and snippets',
-            'Unlimited CV & Cover Letter Edits',
-            'Real-time ATS Scoring & Editor',
-            'AI Cover Letter Generator',
-            'PDF & DOCX Downloads',
-            'Mori AI chat',
-          ],
-          credits: { jobCredits: 50, resetSchedule: 'yearly' },
-          isPopular: false,
-          isBestValue: false,
-        },
-        {
-          key: 'focused_monthly',
-          name: 'Focused Monthly',
-          description: 'Complete suite for active job hunters and interview prep',
-          billingCycle: 'monthly',
-          price_monthly: 9.99,
-          price: 9.99,
-          sortOrder: 3,
-          status: 'active',
-          displayOnLanding: true,
-          targetAudience: 'all',
-          storageLimit: 500,
-          features: [
-            'Unlimited CV & Cover Letter Edits',
-            'Real-time ATS Scoring & Editor',
-            'AI Cover Letter Generator',
-            'LinkedIn Enhancer',
-            'AI Interview Coach Mock Simulator',
-            'Application Tracker (Full Kanban access)',
-            'All features unlimited',
-          ],
-          credits: { jobCredits: -1, resetSchedule: 'monthly' },
-          isPopular: false,
-          isBestValue: false,
-        },
-        {
-          key: 'focused_yearly',
-          name: 'Focused Yearly',
-          description: 'Ultimate package with priority features for high-growth careers',
-          billingCycle: 'yearly',
-          price_yearly: 79.99,
-          price: 79.99,
-          sortOrder: 4,
-          status: 'active',
-          displayOnLanding: true,
-          targetAudience: 'all',
-          storageLimit: 1000,
-          features: [
-            'Unlimited CV & Cover Letter Edits',
-            'Real-time ATS Scoring & Editor',
-            'AI Cover Letter Generator',
-            'LinkedIn Enhancer',
-            'AI Interview Coach Mock Simulator',
-            'Application Tracker (Full Kanban access)',
-            'All features unlimited',
-          ],
-          credits: { jobCredits: -1, resetSchedule: 'yearly' },
-          isPopular: true,
-          isBestValue: true,
-        },
-      ];
-
-      try {
-        await PricingPlanModel.insertMany(defaultPlans, { ordered: false });
-        plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
-      } catch (seedErr) {
-        plans = defaultPlans as any;
+      const query: any = {};
+      if (!includeInactive) query.status = 'active';
+      if (publicOnly) {
+        query.displayOnLanding = true;
+        query.targetAudience   = 'all';
       }
+
+      plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+
+      if (!plans?.length) {
+        console.warn('⚠️ No pricing plans found in database. Initializing default plans...');
+        try {
+          await PricingPlanModel.insertMany(DEFAULT_PLANS, { ordered: false });
+          plans = await PricingPlanModel.find(query).sort({ sortOrder: 1 }).lean();
+        } catch (seedErr) {
+          plans = DEFAULT_PLANS as any;
+        }
+      }
+    } catch (dbError) {
+      console.warn('⚠️ Database connection or query failed for pricing plans. Using fallback default plans:', dbError);
+      plans = DEFAULT_PLANS as any;
     }
 
     // Dynamic Sync from Polar Dashboard Products catalog

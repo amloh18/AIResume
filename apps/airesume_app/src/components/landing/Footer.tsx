@@ -126,13 +126,19 @@ const Footer = () => {
                 >
                   <Mail className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-[#36D39B]" />
                 </motion.div>
-                <div>
+                <div className="flex flex-col">
                   <p className="text-white/60 text-small tablet:text-small">Email</p>
                   <a
                     href="mailto:support@buildairesume.com"
                     className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small break-all"
                   >
                     support@buildairesume.com
+                  </a>
+                  <a
+                    href="mailto:amlowwh@gmail.com"
+                    className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small break-all"
+                  >
+                    amlowwh@gmail.com
                   </a>
                 </div>
               </motion.div>
@@ -152,13 +158,19 @@ const Footer = () => {
                 >
                   <Phone className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-[#36D39B]" />
                 </motion.div>
-                <div>
+                <div className="flex flex-col">
                   <p className="text-white/60 text-small tablet:text-small">Phone</p>
                   <a
                     href="tel:+447879768984"
                     className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small"
                   >
                     +44 7879768984
+                  </a>
+                  <a
+                    href="tel:+919662345079"
+                    className="text-white hover:text-[#36D39B] transition-colors duration-300 font-medium text-small tablet:text-small"
+                  >
+                    +919662345079
                   </a>
                 </div>
               </motion.div>

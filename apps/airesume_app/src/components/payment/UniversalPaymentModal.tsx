@@ -83,9 +83,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
   const [providerHealth, setProviderHealth] = useState<{
-    activeProvider: 'stripe' | 'razorpay';
+    activeProvider: 'stripe' | 'cashfree' | 'razorpay';
     healthy: boolean | null;
-  }>({ activeProvider: 'razorpay', healthy: null });
+  }>({ activeProvider: 'stripe', healthy: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
   const [userSubscription, setUserSubscription] = useState<any>(null);
 
@@ -1435,7 +1435,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             <Shield className="w-5 h-5 text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
                             <div>
                               <span className="block text-xs font-black text-gray-950 dark:text-white uppercase tracking-wider">Secure Checkout</span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">256-bit SSL encrypted transaction via {providerHealth.activeProvider === 'stripe' ? 'Stripe' : 'Razorpay'}.</span>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">256-bit SSL encrypted transaction via {providerHealth.activeProvider === 'stripe' ? 'Stripe' : providerHealth.activeProvider === 'cashfree' ? 'Cashfree Payments' : 'Secure Gateway'}.</span>
                             </div>
                           </div>
                           <div className="flex items-start gap-3 p-3 bg-gray-50/50 dark:bg-white/5 rounded-xl border border-gray-200/50 dark:border-white/5">

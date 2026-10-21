@@ -97,79 +97,72 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}/dashboard?tab=billing&success=true`;
     const cancelUrl = `${baseUrl}/dashboard?tab=billing&cancelled=true`;
 
-    // Use the active payment provider (Stripe or Razorpay)
+    // Use the active runtime payment provider (Stripe or Cashfree)
     const provider = await getActivePaymentProvider();
 
-    if (provider.name === 'stripe') {
-      // Stripe checkout — pass region metadata for price resolution
-      const result = await provider.createCheckoutSession({
-        planKey: `${plan}_${billingInterval}`,
-        billingCycle: billingInterval as BillingInterval,
-        userId: user._id.toString(),
-        userEmail: user.email,
-        userName: `${user.firstName} ${user.lastName}`,
-        successUrl,
-        cancelUrl,
-        metadata: {
-          region,
-          billingCountry: billingCountry || 'unknown',
-        },
-      });
+    const result = await provider.createCheckoutSession({
+      planKey: `${plan}_${billingInterval}`,
+      billingCycle: billingInterval as BillingInterval,
+      userId: user._id.toString(),
+      userEmail: user.email,
+      userName: `${user.firstName} ${user.lastName}`,
+      successUrl,
+      cancelUrl,
+      metadata: {
+        region,
+        billingCountry: billingCountry || 'unknown',
+        plan,
+        billingInterval,
+      },
+    });
 
-      if (!result.success) {
-        return NextResponse.json(
-          { success: false, error: result.error },
-          { status: 400 }
-        );
-      }
-
-      // Track checkout initiation
-      try {
-        const { getPostHogClient } = await import('@/lib/posthog-server');
-        const posthog = getPostHogClient();
-        posthog.capture({
-          distinctId: user._id.toString(),
-          event: 'checkout_initiated',
-          properties: {
-            plan,
-            billing_interval: billingInterval,
-            region,
-            currency: priceEntry.currency,
-            amount: priceEntry.amount,
-            payment_provider: 'stripe',
-            launch_trial: launchTrialActive,
-          },
-        });
-      } catch (phError) {
-        console.error('PostHog capture error:', phError);
-      }
-
-      return NextResponse.json({
-        success: true,
-        sessionId: result.sessionId,
-        url: result.url,
-        paymentMethod: 'stripe',
-        launchTrial: launchTrialActive ? {
-          active: true,
-          message: launchTrialMessage,
-          trialEnd: '2027-01-01T00:00:00Z',
-        } : null,
-        price: {
-          currency: priceEntry.currency,
-          amount: priceEntry.amount,
-          displayAmount: priceEntry.currency === 'INR'
-            ? `₹${(priceEntry.amount / 100).toFixed(0)}`
-            : `$${(priceEntry.amount / 100).toFixed(2)}`,
-          interval: priceEntry.interval,
-        },
-      });
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error || 'Payment initiation failed' },
+        { status: 400 }
+      );
     }
 
-    // Fallback for other providers
+    // Track checkout initiation
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user._id.toString(),
+        event: 'checkout_initiated',
+        properties: {
+          plan,
+          billing_interval: billingInterval,
+          region,
+          currency: priceEntry.currency,
+          amount: priceEntry.amount,
+          payment_provider: provider.name,
+          launch_trial: launchTrialActive,
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error:', phError);
+    }
+
     return NextResponse.json({
-      success: false,
-      error: 'Stripe is the active payment provider but could not be initialized',
-    }, { status: 500 });
+      success: true,
+      sessionId: result.sessionId,
+      url: result.url,
+      paymentMethod: provider.name,
+      launchTrial: launchTrialActive ? {
+        active: true,
+        message: launchTrialMessage,
+        trialEnd: '2027-01-01T00:00:00Z',
+      } : null,
+      price: {
+        currency: priceEntry.currency,
+        amount: priceEntry.amount,
+        displayAmount: priceEntry.currency === 'INR'
+          ? `₹${(priceEntry.amount / 100).toFixed(0)}`
+          : `$${(priceEntry.amount / 100).toFixed(2)}`,
+        interval: priceEntry.interval,
+      },
+    });
 
   } catch (error) {
     console.error('Error creating payment intent:', error);

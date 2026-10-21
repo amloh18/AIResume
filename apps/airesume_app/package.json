@@ -34,6 +34,7 @@
     "verify:public-route-policy": "npx tsx tests/verify-public-route-policy.ts",
     "verify:job-card-journey": "npx tsx tests/verify-job-card-journey-integration.ts",
     "verify:match-scoring": "npx tsx tests/verify-match-scoring.ts",
+    "verify:payment-switching": "npx tsx tests/verify-payment-switching.ts",
     "verify:public-access": "npm run verify:public-jobs && npm run verify:public-route-policy",
     "build:worker": "node scripts/build-worker.mjs",
     "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",

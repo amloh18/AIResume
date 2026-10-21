@@ -6,7 +6,7 @@
  * are all abstracted behind this contract.
  */
 
-export type PaymentProvider = 'stripe' | 'razorpay';
+export type PaymentProvider = 'stripe' | 'cashfree' | 'razorpay';
 
 export interface CheckoutSessionParams {
   planKey: string;
@@ -69,7 +69,7 @@ export interface IPaymentProvider {
   createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSessionResult>;
 
   /** Verify and parse a webhook event from the raw request */
-  verifyWebhookEvent(rawBody: string, signature: string): Promise<WebhookEvent | null>;
+  verifyWebhookEvent(rawBody: string, signature: string, headers?: Record<string, any>): Promise<WebhookEvent | null>;
 
   /** Process a verified webhook event and return the outcome */
   handleWebhookEvent(event: WebhookEvent): Promise<WebhookResult>;

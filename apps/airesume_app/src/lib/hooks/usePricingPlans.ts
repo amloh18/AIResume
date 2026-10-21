@@ -204,7 +204,15 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           }
         } else {
           const errorData = await response.json().catch(() => ({}));
-          setError(errorData.error || `Failed to fetch pricing plans (Status: ${response.status})`);
+          const errorMessage =
+            typeof errorData.error === 'string'
+              ? errorData.error
+              : typeof errorData.error === 'object' && errorData.error !== null
+                ? errorData.error.message || JSON.stringify(errorData.error)
+                : typeof errorData.message === 'string'
+                  ? errorData.message
+                  : `Failed to fetch pricing plans (Status: ${response.status})`;
+          setError(errorMessage);
         }
       } catch (error) {
         console.error('Error fetching pricing data:', error);

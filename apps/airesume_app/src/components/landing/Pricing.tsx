@@ -255,11 +255,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   }
 
   if (error) {
+    const errorMessage =
+      typeof error === 'string'
+        ? error
+        : typeof error === 'object' && error !== null
+          ? (error as any).message || 'Failed to load pricing plans'
+          : 'Failed to load pricing plans';
+
     return (
       <div className="flex items-center justify-center py-32 bg-[#0a0a0c]">
         <div className="text-white text-center">
           <p className="text-red-400 mb-2">Error loading pricing plans</p>
-          <p className="text-xs text-white/60">{error}</p>
+          <p className="text-xs text-white/60">{errorMessage}</p>
         </div>
       </div>
     );

@@ -58,6 +58,11 @@ export interface IPricingPlan extends Document {
   razorpayPlanId_monthly?: string;
   razorpayPlanId_quarterly?: string;
   razorpayPlanId_yearly?: string;
+  // Provider IDs — Cashfree (Interface)
+  cashfreePlanId_monthly?: string;
+  cashfreePlanId_quarterly?: string;
+  cashfreePlanId_yearly?: string;
+  cashfreePlanId_one_time?: string;
   // Canonical USD prices
   price_monthly?: number;
   price_quarterly?: number;
@@ -244,6 +249,11 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   razorpayPlanId_monthly: String,
   razorpayPlanId_quarterly: String,
   razorpayPlanId_yearly: String,
+  // Provider IDs — Cashfree (Schema)
+  cashfreePlanId_monthly: String,
+  cashfreePlanId_quarterly: String,
+  cashfreePlanId_yearly: String,
+  cashfreePlanId_one_time: String,
   // Canonical USD prices
   price_monthly: {
     type: Number,

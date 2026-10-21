@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getActiveProviderName, checkProviderHealth } from '@/lib/payment/paymentProvider';
 import PaymentProviderSettings from '@/models/PaymentProviderSettings';
 import { getConnection } from '@/lib/database';
@@ -17,9 +17,15 @@ export async function GET() {
       stripe: {
         enabled: settings?.stripe?.enabled ?? true,
         publishableKey: settings?.stripe?.publishableKey || process.env.STRIPE_PUBLISHABLE_KEY || null,
+        environment: settings?.stripe?.environment || 'production',
+      },
+      cashfree: {
+        enabled: settings?.cashfree?.enabled ?? true,
+        appId: settings?.cashfree?.appId || process.env.CASHFREE_APP_ID || null,
+        environment: settings?.cashfree?.environment || process.env.CASHFREE_ENVIRONMENT || 'sandbox',
       },
       razorpay: {
-        enabled: settings?.razorpay?.enabled ?? true,
+        enabled: settings?.razorpay?.enabled ?? false,
         keyId: settings?.razorpay?.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || null,
       },
     });

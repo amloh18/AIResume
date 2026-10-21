@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IWebhookLog extends Document {
-  provider: 'stripe' | 'razorpay' | 'polar';
+  provider: 'stripe' | 'cashfree' | 'razorpay' | 'polar';
   eventType: string;
   externalId: string; // Provider's event ID (e.g. Stripe event ID) for deduplication
   payload: Record<string, any>; // Raw webhook payload
@@ -18,7 +18,7 @@ const webhookLogSchema = new Schema<IWebhookLog>({
   provider: {
     type: String,
     required: [true, 'Provider is required'],
-    enum: ['stripe', 'razorpay', 'polar']
+    enum: ['stripe', 'cashfree', 'razorpay', 'polar']
   },
   eventType: {
     type: String,

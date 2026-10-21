@@ -360,7 +360,7 @@ class SubscriptionService {
     price: number,
     providerSubscriptionId?: string,
     providerCustomerId?: string,
-    provider: 'stripe' | 'razorpay' | 'polar' | 'admin' = 'polar'
+    provider: 'stripe' | 'cashfree' | 'razorpay' | 'polar' | 'admin' = 'polar'
   ): Promise<SubscriptionActivationResult> {
     try {
       await connectToDatabase();
