@@ -371,7 +371,7 @@ export class CashfreeProvider implements IPaymentProvider {
       amount,
       orderId,
       customerData.customer_id,
-      'cashfree'
+      'cashfree' as any
     );
 
     if (result.success) {
