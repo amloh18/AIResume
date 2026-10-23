@@ -4,6 +4,7 @@ import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import { createErrorResponse } from '@/lib/api/error-handler';
 import PolarService from '@/lib/payment/polar';
+import { getCachedPricing, setCachedPricing } from '@/lib/services/pricingCache';
 
 /**
  * GET /api/pricing-plans
@@ -15,9 +16,7 @@ import PolarService from '@/lib/payment/polar';
  * Returns active plans with their canonical USD prices + Polar product/price IDs.
  */
 
-// In-memory cache
-const pricingCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 min
+/** In-memory cache lives in @/lib/services/pricingCache (shared with admin API). */
 
 /** Canonical USD prices — single source of truth. Matches Polar catalog. */
 const PLAN_USD_PRICES: Record<string, number> = {
@@ -136,10 +135,9 @@ export async function GET(request: NextRequest) {
     const publicOnly      = searchParams.get('public') === 'true';
 
     const cacheKey = `plans-${includeInactive}-${publicOnly}`;
-    const now = Date.now();
-    const cached = pricingCache.get(cacheKey);
-    if (cached && now - cached.timestamp < CACHE_TTL) {
-      return NextResponse.json(cached.data, {
+    const cached = getCachedPricing<any>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
         headers: {
           'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
           'X-Cache': 'HIT',
@@ -215,7 +213,15 @@ export async function GET(request: NextRequest) {
     const filteredDbPlans = plans.filter((plan: any) => !plan.key?.includes('smart'));
 
     const enhancedPlans = filteredDbPlans.map((plan: any) => {
-      const usdPrice = PLAN_USD_PRICES[plan.key] ?? 0;
+      // DB is the source of truth for price (admin-editable via /api/admin/plans).
+      // The hardcoded map is only a fallback for seeds/fresh envs with no price set.
+      const dbPrice =
+        plan.key?.includes('quarterly') ? plan.price_quarterly
+        : plan.key?.includes('yearly') ? plan.price_yearly
+        : plan.key?.includes('monthly') ? plan.price_monthly
+        : plan.price_one_time;
+      const usdPrice =
+        typeof dbPrice === 'number' ? dbPrice : (PLAN_USD_PRICES[plan.key] ?? 0);
 
       // Promotion check
       const isPromotionActive =
@@ -236,9 +242,13 @@ export async function GET(request: NextRequest) {
       if (plan.key?.includes('monthly'))  durationInfo = { durationInDays: 30,   durationType: 'month',    displayText: '1 month' };
       else if (plan.key?.includes('yearly'))   durationInfo = { durationInDays: 365, durationType: 'year',   displayText: '1 year' };
 
-      // Set canonical features for each of the 4 plans
-      let updatedFeatures: string[] = [];
-      if (plan.key === 'starter_monthly') {
+      // DB features win when present (admin-editable). Fall back to the legacy
+      // hardcoded lists only for plans that predate DB-backed feature lists.
+      const dbFeatures = Array.isArray(plan.features) ? plan.features : [];
+      let updatedFeatures: string[];
+      if (dbFeatures.length > 0) {
+        updatedFeatures = dbFeatures;
+      } else if (plan.key === 'starter_monthly') {
         updatedFeatures = [
           'Access to ALL templates and snippets',
           'Unlimited CV & Cover Letter Edits',
@@ -268,12 +278,13 @@ export async function GET(request: NextRequest) {
           'All features unlimited'
         ];
       } else {
-        updatedFeatures = Array.isArray(plan.features) ? [...plan.features] : [];
+        updatedFeatures = [];
       }
 
       return {
         ...plan,
-        isPopular: plan.key === 'focused_yearly',
+        // DB flag wins; only default the badge for the known plan when unset.
+        isPopular: typeof plan.isPopular === 'boolean' ? plan.isPopular : plan.key === 'focused_yearly',
         features: updatedFeatures,
         // Canonical USD price — use this for checkout amount validation
         usdPrice: effectiveUsdPrice,
@@ -301,7 +312,7 @@ export async function GET(request: NextRequest) {
 
     const responseData = { plans: enhancedPlans };
 
-    pricingCache.set(cacheKey, { data: responseData, timestamp: now });
+    setCachedPricing(cacheKey, responseData);
 
     return NextResponse.json(responseData, {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },

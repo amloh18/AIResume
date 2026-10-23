@@ -57,7 +57,7 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
   // Try Ollama first via router
   try {
     console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
-    const result = await aiRoute(messages);
+    const result = await aiRoute(messages, { model: options.model });
     console.log(`✅ AI call successful via ${result.provider} (${result.model}, ${result.latencyMs}ms)`);
 
     // Log usage

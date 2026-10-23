@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { ActivityLogService } from '@/lib/services/activityLogService';
+import { resolveGeminiModel } from '@/lib/services/aiModelConfigService';
 
 function getGeminiApiKey(): string {
   const key =
@@ -26,7 +27,8 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const base64Audio = Buffer.from(arrayBuffer).toString('base64');
 
-    const model = 'gemini-2.5-flash-lite';
+    // Lite tier hint — admin AI settings can override via fastModel/primaryModel.
+    const model = await resolveGeminiModel('gemini-2.5-flash-lite');
     const prompt = `You are an expert interview coach analyzing a candidate's voice response.
 Please provide:
 1. The exact transcription of the audio.

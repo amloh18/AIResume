@@ -54,7 +54,7 @@ export async function callGeminiWithAllKeysFallback(
   try {
     console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
     const callStart = Date.now();
-    const result = await aiRoute(messages);
+    const result = await aiRoute(messages, { model: options?.model });
     const latencySeconds = (Date.now() - callStart) / 1000;
 
     if (result.content) {
