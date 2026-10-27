@@ -16,6 +16,34 @@ import CodeVerificationScreen from './CodeVerificationScreen';
 
 export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-code';
 
+/**
+ * Human wording for the error codes next-auth can append to the sign-in URL
+ * (`/sign-in?error=OAuthSignin`). See the effect in UnifiedAuthPageContent for
+ * why the sign-in page receives them at all.
+ */
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  OAuthSignin:
+    "We couldn't start sign-in with that provider. This is on our side, not yours — try again in a moment, or sign in with your email and password.",
+  OAuthCallback:
+    "We couldn't finish sign-in with that provider. This is on our side, not yours — try again in a moment, or sign in with your email and password.",
+  Callback:
+    "We couldn't finish sign-in with that provider. This is on our side, not yours — try again in a moment, or sign in with your email and password.",
+  OAuthCreateAccount:
+    "We couldn't create an account from that provider. Try again, or sign up with your email and password.",
+  EmailCreateAccount:
+    "We couldn't create an account with that email. Try signing up with your email and password instead.",
+  OAuthAccountNotLinked:
+    'This email is already registered with a different sign-in method. Sign in the way you originally did, then link the provider from your account settings.',
+  AccessDenied:
+    'Sign-in was cancelled or access was denied. You can try again whenever you are ready.',
+  Verification:
+    'That verification link has expired or has already been used. Request a new one and try again.',
+  SessionRequired: 'Please sign in to continue.',
+  Configuration:
+    'Sign-in is misconfigured on our side. Please contact support if this keeps happening.',
+  Default: 'Something went wrong while signing in. Please try again.',
+};
+
 export interface AuthPageProps {
   initialMode?: AuthMode;
   isModal?: boolean;
@@ -54,6 +82,44 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
   const [twoFactorUserId, setTwoFactorUserId] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
+
+  /**
+   * Surface a next-auth error code that arrived on the query string.
+   *
+   * Why the sign-in page receives one: when an OAuth kickoff fails on the
+   * server — for example the container cannot reach `accounts.google.com` and
+   * openid-client throws `RPError: outgoing request timed out` inside
+   * `Issuer.discover` — next-auth answers `POST /api/auth/signin/google` with
+   * `{ url: '/api/auth/error?error=OAuthSignin' }`, and the browser is sent
+   * there. Without this effect the user is moved to a different route with no
+   * explanation, which reads exactly like "clicking Google just refreshed the
+   * page" — the actual failure is never shown.
+   *
+   * Read once on mount, then strip the parameter so a reload (or a successful
+   * retry) does not resurrect a stale message.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('error');
+    if (!authError) return;
+
+    // Must be an effect, not a render-time initialiser: the query string only
+    // exists on the client, so seeding state during render would make the first
+    // client render disagree with the prerendered HTML. One synchronous set on
+    // mount is the intended behaviour here, not a render cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(AUTH_ERROR_MESSAGES[authError] ?? AUTH_ERROR_MESSAGES.Default);
+
+    params.delete('error');
+    const query = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
+    );
+  }, []);
 
   // Check if user is already signed in
   useEffect(() => {

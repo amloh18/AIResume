@@ -27,6 +27,40 @@ import {
 } from './session-cookie';
 
 /**
+ * Timeout (ms) for the OAuth/OIDC calls next-auth makes to the provider itself:
+ * discovery (`https://accounts.google.com/.well-known/openid-configuration`),
+ * the token exchange and the JWKS fetch.
+ *
+ * Why this exists: openid-client's default is **3500 ms**, and a production
+ * incident on 2026-10-27 showed every Google *and* Apple sign-in dying with
+ *
+ *     RPError: outgoing request timed out after 3500ms
+ *       at async g.discover
+ *
+ * i.e. the container never completed a TCP connect to `accounts.google.com`.
+ * The same window showed `api.polar.sh:443` failing with
+ * `UND_ERR_CONNECT_TIMEOUT` after a 10 s budget, so the underlying fault was
+ * **VPS egress, not this configuration** — and raising a timeout cannot fix a
+ * blocked route.
+ *
+ * What it does buy: a slow-but-working link (the VPS is far from the providers)
+ * no longer fails at a 3.5 s default that nobody chose. Keep it env-configurable
+ * so the value can be tuned on the host without a rebuild.
+ *
+ * NOTE: `custom.setHttpOptionsDefaults()` in next-auth's openid-client wrapper is
+ * **module-global**, so the last provider to be constructed wins. That is
+ * harmless here only because every OAuth provider is given the same value — do
+ * not give them different ones.
+ */
+const OAUTH_PROVIDER_HTTP_TIMEOUT_MS = (() => {
+  const raw = process.env.OAUTH_HTTP_TIMEOUT_MS;
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 15000;
+})();
+
+const oauthHttpOptions = { timeout: OAUTH_PROVIDER_HTTP_TIMEOUT_MS };
+
+/**
  * Unified Authentication Service
  * 
  * Single source of truth for authentication.
@@ -133,6 +167,8 @@ export class UnifiedAuthService {
         GoogleProvider({
           clientId: GOOGLE_CLIENT_ID,
           clientSecret: GOOGLE_CLIENT_SECRET,
+          // See OAUTH_PROVIDER_HTTP_TIMEOUT_MS above.
+          httpOptions: oauthHttpOptions,
         }),
 
         AppleProvider({
@@ -142,6 +178,7 @@ export class UnifiedAuthService {
           // when not configured, which leaves the provider unavailable without
           // affecting the other providers.
           clientSecret: getAppleClientSecret(),
+          httpOptions: oauthHttpOptions,
         }),
 
         CredentialsProvider({
@@ -883,7 +920,19 @@ export class UnifiedAuthService {
 
       pages: {
         signIn: '/sign-in',
-        error: '/auth/error',
+        // Land auth errors back on the sign-in form, not on a separate
+        // /auth/error route.
+        //
+        // next-auth answers a failed OAuth kickoff with
+        // `{ url: '/api/auth/error?error=OAuthSignin' }`, and the error route
+        // then redirects to `pages.error?error=...`. Pointing that at /sign-in
+        // means the user keeps their form and sees the reason inline
+        // (UnifiedAuthPage reads `?error=`) instead of being silently moved to
+        // a different-looking page — which is what made a server-side OAuth
+        // failure read as "clicking Google just refreshed the page".
+        //
+        // /auth/error still exists as a standalone route and is unchanged.
+        error: '/sign-in',
         verifyRequest: '/auth/verify-email',
       },
 
