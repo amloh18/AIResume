@@ -1105,10 +1105,79 @@ body.dark {
   color: #a3a3a3 !important;
 }
 
+/* Muted labels inside onboarding panels. `text-gray-400` was never remapped, so
+   "or click to browse files" and similar hints stayed near-black-scale grey on a
+   dark surface — invisible anywhere the surrounding tile was light. */
+.dark .welcome-page [class*="text-gray-400"],
+.dark .welcome-page [class*="text-gray-300"] {
+  color: #8f8f8f !important;
+}
+
 .dark .welcome-page [class*="border-gray-200"],
 .dark .welcome-page [class*="border-gray-150"],
 .dark .welcome-page [class*="border-gray-100"] {
   border-color: rgba(38, 38, 38, 1) !important;
+}
+
+.dark .welcome-page [class*="border-gray-300"] {
+  border-color: rgba(64, 64, 64, 1) !important;
+}
+
+/* Neutral inner surfaces.
+   Onboarding panels nest light-tinted boxes inside a dark card — the CV upload
+   drop zone (`hover:bg-gray-50`), the parse checklist (`bg-gray-50/50`), icon
+   wells and pills (`bg-gray-100` / `bg-gray-150`). Those classes were never
+   covered by the dark rules above, so the boxes rendered as light grey slabs
+   with light text on top: unreadable, and flashing white on hover. They now map
+   to a raised surface that belongs in the dark card. */
+/* `:not([class*="dark:"])` leaves elements that already state their own dark
+   surface alone — the step pips on this page are `bg-gray-200 dark:bg-neutral-700`
+   and must keep that, not fade to the neutral wash. */
+.dark .welcome-page [class*="bg-gray-50"]:not([class*="dark:"]),
+.dark .welcome-page [class*="bg-gray-100"]:not([class*="dark:"]),
+.dark .welcome-page [class*="bg-gray-150"]:not([class*="dark:"]),
+.dark .welcome-page [class*="bg-gray-200"]:not([class*="dark:"]) {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Hover must never flash a light surface in dark mode. Elements with their own
+   dark hover variant are skipped so they keep their intended treatment. */
+.dark .welcome-page [class*="hover:bg-gray-"]:not([class*="dark:"]):hover,
+.dark .welcome-page [class*="hover:bg-slate-"]:not([class*="dark:"]):hover,
+.dark .welcome-page [class*="hover:bg-white"]:not([class*="dark:"]):hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Tinted informational surfaces (badges, notices, analysis panels).
+   Token-exact selectors (`~=`) because a substring match on `bg-emerald-50`
+   would also capture `bg-emerald-500`. */
+.dark .welcome-page [class~="bg-emerald-50"],
+.dark .welcome-page [class~="bg-emerald-50/70"],
+.dark .welcome-page [class~="bg-emerald-100/70"],
+.dark .welcome-page [class~="bg-emerald-100/80"],
+.dark .welcome-page [class~="bg-lime-100"],
+.dark .welcome-page [class~="bg-green-50"] {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+}
+
+.dark .welcome-page [class~="bg-amber-50"],
+.dark .welcome-page [class~="bg-amber-50/70"],
+.dark .welcome-page [class~="bg-amber-100/80"] {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+}
+
+.dark .welcome-page [class~="bg-red-50"],
+.dark .welcome-page [class~="bg-rose-50"] {
+  background-color: rgba(239, 68, 68, 0.14) !important;
+}
+
+.dark .welcome-page [class~="bg-blue-50"],
+.dark .welcome-page [class~="bg-blue-50/70"],
+.dark .welcome-page [class~="bg-blue-100/80"],
+.dark .welcome-page [class~="bg-indigo-50"],
+.dark .welcome-page [class~="bg-indigo-50/70"],
+.dark .welcome-page [class~="bg-indigo-100/80"] {
+  background-color: rgba(99, 102, 241, 0.14) !important;
 }
 
 .dark .welcome-page footer {

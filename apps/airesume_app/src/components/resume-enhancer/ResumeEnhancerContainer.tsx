@@ -1321,7 +1321,9 @@ export default function ResumeEnhancerContainer({
               const masterResponse = await fetch('/api/cvs/master');
               if (masterResponse.ok) {
                 const masterResult = await masterResponse.json();
-                const masterCv = masterResult.data?.cv || masterResult.cv;
+                // /api/cvs/master returns `data.masterCV` (not `data.cv`), so the
+                // old key meant edit-master silently resolved to nothing.
+                const masterCv = masterResult.data?.masterCV || masterResult.data?.cv || masterResult.cv;
                 if (masterCv?.id || masterCv?._id) {
                   actualCvId = masterCv.id || masterCv._id;
                 }

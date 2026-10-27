@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // First, try to find the master CV created via ai-career-report (the authoritative source)
     // or explicitly marked as master
-    let masterCV = await CV.findOne({
+    const masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       $or: [
         { 'metadata.createdVia': 'ai-career-report' },
@@ -38,22 +38,22 @@ export async function GET(request: NextRequest) {
       ]
     }).sort({ createdAt: -1 }).lean() as any;
 
-    // FALLBACK: If no ai-career-report master CV found, use oldest CV by creation date
-    if (!masterCV) {
-      console.log('🔍 Master CV API - No ai-career-report master CV found, using oldest CV as fallback');
-      const allCVs = await CV.find({
-        userId: new mongoose.Types.ObjectId(userId)
-      }).sort({ createdAt: 1 }).lean() as any[]; // Sort ascending (oldest first)
-
-      if (allCVs && allCVs.length > 0) {
-        masterCV = allCVs[0]; // Get the oldest CV
-        console.log('🔍 Master CV API - Using oldest CV as master CV fallback:', {
-          id: masterCV._id,
-          title: masterCV.title,
-          createdAt: masterCV.createdAt
-        });
-      }
-    }
+    // NO FALLBACK.
+    //
+    // This endpoint used to promote a user's *oldest* CV to "the master CV"
+    // whenever no explicit master marker existed. That made the application
+    // unable to observe a genuinely missing profile: after a user deleted their
+    // Master CV from Documents, the surviving journey/standalone CVs were
+    // silently reported as the master, so every gate (`hasMasterCV`, the
+    // dashboard profile prompts, tailoring source resolution) kept believing a
+    // profile existed — even across sign-out/sign-in, because the fabrication
+    // happened fresh on every request.
+    //
+    // A master CV is now only what is explicitly marked as one. When none exists
+    // the answer is honestly "no profile", which is what makes the UI prompt the
+    // user to rebuild it. (A CV that should be master can be promoted through
+    // POST /api/cvs/set-master, and CV creation already forces the first CV to
+    // be the master, so this cannot strand new users.)
     console.log('🔍 Master CV API - Query executed, result:', {
       found: !!masterCV,
       masterCVId: masterCV?._id,
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     // CRITICAL: Master CV is ONLY identified by ai-career-report creation
     // Find the master CV created via ai-career-report
-    let masterCV = await CV.findOne({
+    const masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       $or: [
         { 'metadata.createdVia': 'ai-career-report' },
@@ -141,23 +141,10 @@ export async function POST(request: NextRequest) {
       ]
     }).sort({ createdAt: -1 });
 
-    // FALLBACK: If no ai-career-report master CV found, use oldest CV by creation date
-    if (!masterCV) {
-      console.log('🔍 Master CV POST API - No ai-career-report master CV found, using oldest CV as fallback');
-      const allCVs = await CV.find({
-        userId: new mongoose.Types.ObjectId(userId)
-      }).sort({ createdAt: 1 }); // Sort ascending (oldest first)
-
-      if (allCVs && allCVs.length > 0) {
-        masterCV = allCVs[0]; // Get the oldest CV
-        console.log('🔍 Master CV POST API - Using oldest CV as master CV fallback:', {
-          id: masterCV._id,
-          title: masterCV.title,
-          createdAt: masterCV.createdAt
-        });
-      }
-    }
-
+    // No "oldest CV" fallback here either: duplicating a non-master CV as if it
+    // were the profile produced a standalone copy of an arbitrary document
+    // labelled as derived from the master (see the GET handler for the full
+    // rationale).
     if (!masterCV) {
       return NextResponse.json(
         { success: false, message: 'No master CV found to duplicate' },

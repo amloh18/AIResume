@@ -35,10 +35,17 @@ interface EnvConfig {
   // AI Services (primary key used across the app)
   GEMINI_API_KEY: string;
   
-  // Ollama (VPS) — Primary AI model
+  // Ollama (VPS) — legacy primary AI model
   OLLAMA_BASE_URL?: string;
   OLLAMA_MODEL?: string;
   GEMINI_MODEL?: string;
+
+  // VPS OpenAI-compatible bridge gateway (preferred AI connection layer).
+  // OPENAI_BASE_URL is what enables it; the other two are optional.
+  OPENAI_BASE_URL?: string;
+  OPENAI_API_KEY?: string;
+  DEFAULT_AI_MODEL?: string;
+  AI_GATEWAY_TIMEOUT_MS?: string;
   
   // Payment Processing (Stripe, Razorpay, Polar)
   STRIPE_SECRET_KEY?: string;
@@ -94,7 +101,6 @@ const REQUIRED_VARS: (keyof EnvConfig)[] = [
   'EMAIL_SERVER_PORT',
   'EMAIL_SERVER_USER',
   'EMAIL_SERVER_PASSWORD',
-  'GEMINI_API_KEY',
   'UPLOAD_DIR',
   'AWS_ACCESS_KEY_ID',
   'AWS_SECRET_ACCESS_KEY',
@@ -112,8 +118,7 @@ const PRODUCTION_VARS: (keyof EnvConfig)[] = [
   'GOOGLE_CLIENT_SECRET',
   'EMAIL_SERVER_HOST',
   'EMAIL_SERVER_USER',
-  'EMAIL_SERVER_PASSWORD',
-  'GEMINI_API_KEY'
+  'EMAIL_SERVER_PASSWORD'
 ];
 
 const SENSITIVE_VARS: (keyof EnvConfig)[] = [
@@ -123,6 +128,7 @@ const SENSITIVE_VARS: (keyof EnvConfig)[] = [
   'GOOGLE_CLIENT_SECRET',
   'EMAIL_SERVER_PASSWORD',
   'GEMINI_API_KEY',
+  'OPENAI_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'RAZORPAY_KEY_SECRET',
@@ -155,6 +161,21 @@ export function validateEnvironment(): EnvValidationResult {
       result.missing.push(varName);
       result.isValid = false;
     }
+  }
+
+  // ── AI provider ────────────────────────────────────────────────────────────
+  // The app can reach AI either through the VPS OpenAI-compatible gateway
+  // (OPENAI_BASE_URL, no key required) or directly via the Gemini API
+  // (GEMINI_API_KEY). Either satisfies the requirement; neither is mandatory
+  // on its own, so this is checked explicitly rather than as a fixed var.
+  const hasGateway = Boolean(env.OPENAI_BASE_URL?.trim());
+  const hasGeminiKey = Boolean(env.GEMINI_API_KEY?.trim());
+  if (!hasGateway && !hasGeminiKey) {
+    result.missing.push('GEMINI_API_KEY or OPENAI_BASE_URL');
+    result.isValid = false;
+  }
+  if (isProduction && !hasGateway && !hasGeminiKey) {
+    result.errors.push('Production requires GEMINI_API_KEY or OPENAI_BASE_URL to be set');
   }
 
   // Additional production checks

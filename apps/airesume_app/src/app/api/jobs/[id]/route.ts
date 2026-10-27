@@ -1258,6 +1258,73 @@ export async function DELETE(
       }
     }
 
+    // Step 2b: Sweep documents that point at this job *directly*.
+    //
+    // The per-journey loop above only finds documents whose ids were persisted
+    // onto the journey (journey.cvId / journey.coverLetterId). Tailored
+    // documents also carry their own references — a CoverLetter stores jobId and
+    // journeyId, a CV stores journeyId, and older/legacy job documents hold
+    // cvId / coverLetterId — and in practice those links are what exist while the
+    // journey's own fields stay empty. That is why deleting an applied job left
+    // its tailored CV and cover letter behind in Documents. Sweep every
+    // reference, never a Master CV.
+    const journeyIds = journeys.flatMap((journey: any) => [
+      journey._id,
+      journey._id?.toString(),
+      journey.journeyId,
+    ]).filter(Boolean);
+
+    const jobIdCandidates = [job._id, job._id?.toString(), jobId, job.jobId].filter(Boolean);
+    const userIdStr = userId.toString();
+
+    let sweptCoverLetters = 0;
+    try {
+      const coverLetterFilter: Record<string, any> = {
+        userId: { $in: [new mongoose.Types.ObjectId(userIdStr), userIdStr] },
+        $or: [
+          { jobId: { $in: jobIdCandidates } },
+          { journeyId: { $in: journeyIds } },
+        ],
+      };
+      // The id recorded on the job itself, for documents whose own jobId /
+      // journeyId links were never written. Scoped by userId above.
+      const legacyCoverLetterIds = [job.coverLetterId].filter(Boolean);
+      if (legacyCoverLetterIds.length > 0) {
+        coverLetterFilter.$or.push({ _id: { $in: legacyCoverLetterIds } });
+      }
+
+      const result = await CoverLetter.deleteMany(coverLetterFilter);
+      sweptCoverLetters = result.deletedCount || 0;
+      if (sweptCoverLetters > 0) {
+        console.log(`✅ Job DELETE API - Swept ${sweptCoverLetters} cover letter(s) linked by jobId/journeyId`);
+      }
+    } catch (error) {
+      console.error('❌ Job DELETE API - Error sweeping cover letters:', error);
+    }
+
+    let sweptCVs = 0;
+    try {
+      // Guard: a Master CV is never job-scoped, and deleting a profile as a side
+      // effect of removing a tracker row would be catastrophic.
+      const cvFilter: Record<string, any> = {
+        userId: { $in: [new mongoose.Types.ObjectId(userIdStr), userIdStr] },
+        $or: [
+          { journeyId: { $in: journeyIds } },
+          { _id: { $in: [job.cvId].filter(Boolean) } },
+        ],
+        'metadata.isMaster': { $ne: true },
+        cvType: { $ne: 'master' },
+      };
+
+      const result = await CV.deleteMany(cvFilter);
+      sweptCVs = result.deletedCount || 0;
+      if (sweptCVs > 0) {
+        console.log(`✅ Job DELETE API - Swept ${sweptCVs} CV(s) linked by job/journey`);
+      }
+    } catch (error) {
+      console.error('❌ Job DELETE API - Error sweeping CVs:', error);
+    }
+
     // Step 3: Delete notifications that reference this job
     let deletedNotificationsCount = 0;
     try {
@@ -1299,8 +1366,8 @@ export async function DELETE(
     console.log('✅ Job DELETE API - Job and all associated data deleted successfully');
 
     // Get counts for response
-    const deletedCVsCount = journeys.filter(j => j.cvId).length;
-    const deletedCoverLettersCount = journeys.filter(j => j.coverLetterId).length;
+    const deletedCVsCount = journeys.filter(j => j.cvId).length + sweptCVs;
+    const deletedCoverLettersCount = journeys.filter(j => j.coverLetterId).length + sweptCoverLetters;
 
     return NextResponse.json({
       message: 'Job deleted successfully',

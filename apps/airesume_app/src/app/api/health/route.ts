@@ -112,7 +112,20 @@ async function checkExternalServices(): Promise<Record<string, DependencyResult>
   const results: Record<string, DependencyResult> = {};
 
   const probes: Array<[string, () => Promise<void> | void, boolean]> = [
-    // ── Ollama (primary AI model) ────────────────────────────────────────────
+    // ── VPS OpenAI-compatible bridge gateway (preferred AI layer) ────────────
+    // GET <origin>/health returns { status, busy_slots, max_slots }. Reported as
+    // `unknown` (not `unhealthy`) when OPENAI_BASE_URL was never set, and the
+    // router simply skips it in that case.
+    [
+      'ai_gateway',
+      async () => {
+        const { gatewayHealthCheck } = await import('@/lib/utils/ai-gateway-client');
+        if (!(await gatewayHealthCheck())) throw new Error('AI gateway health check failed');
+      },
+      Boolean(process.env.OPENAI_BASE_URL),
+    ],
+
+    // ── Ollama (legacy primary AI model) ────────────────────────────────────
     // Absent OLLAMA_BASE_URL this probes 127.0.0.1:11434 inside the container, which refuses
     // connections. Report `unknown` rather than `unhealthy` when it was never configured.
     [

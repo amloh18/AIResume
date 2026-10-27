@@ -941,9 +941,34 @@ export async function DELETE(
     // Store CV info before deletion for logging
     const cvTitle = cv.title;
     const cvTemplateId = cv.templateId?.toString();
+    const wasMasterCV =
+      cv.cvType === 'master' ||
+      cv.metadata?.isMaster === true ||
+      (cv.metadata?.isMaster as any) === 'true' ||
+      (cv as any).isMaster === true;
 
     await CV.deleteOne({ _id: cvId });
     console.log('✅ CV DELETE API - CV deleted successfully');
+
+    // If the profile (Master CV) was deleted, the user's saved primary CV
+    // pointer becomes a dangling reference. Onboarding/dashboard surfaces read
+    // it back and would keep reporting a profile that no longer exists — the
+    // reason a deleted profile appeared to survive a sign-out/sign-in. Clear it
+    // so "no profile" is the consistent answer everywhere.
+    if (wasMasterCV) {
+      try {
+        const { User } = await import('@/models');
+        await User.updateOne(
+          {
+            _id: new mongoose.Types.ObjectId(userId),
+            'onboarding.primary_cv_id': { $in: [cvId.toString(), cvId] }
+          },
+          { $unset: { 'onboarding.primary_cv_id': '' } }
+        );
+      } catch (unlinkError) {
+        console.error('Failed to clear onboarding.primary_cv_id after master deletion:', unlinkError);
+      }
+    }
 
     // Log CV deletion activity
     try {
@@ -984,7 +1009,8 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'CV deleted successfully'
+      message: 'CV deleted successfully',
+      wasMasterCV
     });
 
   } catch (error: any) {

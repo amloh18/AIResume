@@ -28,6 +28,10 @@
     "build:worker-service": "npm --prefix apps/resumebuilder-worker run build",
 
     "install:all": "npm --prefix apps/airesume_app ci --legacy-peer-deps && npm --prefix apps/resumebuilder-worker ci && npm --prefix apps/admin install",
-    "verify:publish": "bash scripts/publish/verify-public-repos.sh"
+    "verify:publish": "bash scripts/publish/verify-public-repos.sh",
+
+    "scan:secrets": "node tools/scan-secrets.mjs",
+    "scan:secrets:history": "node tools/scan-secrets.mjs --history",
+    "hooks:install": "node tools/install-git-hooks.mjs"
   }
 }

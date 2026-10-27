@@ -39,6 +39,19 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
       setShowMasterCVCard(false);
     };
 
+    // The user just deleted their Master CV / profile. The server no longer
+    // reports a master (see /api/cvs/master), so reflect that here immediately
+    // and offer to rebuild the profile instead of leaving the dashboard in a
+    // state that still assumes one exists.
+    const handleMasterCVDeleted = () => {
+      console.log('🔄 Master CV deleted, dropping hasMasterCV and prompting rebuild');
+      setHasMasterCV(false);
+      setIsChecking(false);
+      setShowMasterCVCard(true);
+      // Allow a later real check (e.g. after the profile is rebuilt).
+      hasCheckedRef.current = false;
+    };
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'masterCVCreated' && e.newValue === 'true') {
         console.log('🔄 Master CV created detected via storage event, updating state');
@@ -59,12 +72,14 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
 
     // Listen for custom events (same tab)
     window.addEventListener('masterCVCreated', handleMasterCVCreated);
+    window.addEventListener('masterCVDeleted', handleMasterCVDeleted);
     window.addEventListener('welcomeDismissed', handleWelcomeDismissed);
     // Listen for storage events (cross tab)
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('masterCVCreated', handleMasterCVCreated);
+      window.removeEventListener('masterCVDeleted', handleMasterCVDeleted);
       window.removeEventListener('welcomeDismissed', handleWelcomeDismissed);
       window.removeEventListener('storage', handleStorageChange);
     };

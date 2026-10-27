@@ -4,7 +4,18 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { recoverMoriChatResult, resolveMoriEditTarget, sanitizeMoriChatMessage } from '@/lib/utils/mori-chat-response';
 import MoriChatLimitPanel from '@/components/payment/MoriChatLimitPanel';
-import { MoriMessageBubble, MoriLoadingIndicator, MoriSuggestionChips } from '@/components/mori';
+import { MoriMessageBubble, MoriLoadingIndicator, MoriSuggestionChips, MoriProposalCard } from '@/components/mori';
+import type { MoriProposalStatus } from '@/components/mori';
+import { buildMoriProposal, type MoriProposedChange } from '@/lib/utils/mori-proposed-changes';
+import {
+  MORI_WELCOME_MESSAGE,
+  moriChatStore,
+  useMoriChatSession,
+  type MoriChatHistoryItem as ChatHistoryItem,
+  type MoriChatMessage as Message,
+  type MoriChatOption as Option,
+  type MoriChatProposal as MoriProposalState,
+} from '@/lib/stores/moriChatStore';
 import { useSession } from 'next-auth/react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { 
@@ -12,38 +23,23 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Option {
-  label: string;
-  prompt: string;
-}
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-  selection?: {
-    path: string;
-    text: string;
-  };
-  options?: Option[];
-  isError?: boolean;
-}
-
-interface ChatHistoryItem {
-  _id: string;
-  title: string;
-  updatedAt: string;
-  cvId?: string;
-}
+/*
+ * Message / Option / proposal types live in `moriChatStore`, together with the
+ * conversation itself: the editor's side panel and the floating dock are two
+ * views of one chat, so they must not each declare their own message shape.
+ */
 
 /**
- * Dock controls.
+ * Collapsed-bar controls (optional).
  *
  * When `collapsed` is true the interface renders only its input as a slim bar
- * and asks the parent (MoriChatDock) to grow it into the full chat overlay
- * instead of owning the transition itself — that keeps a single chat state
- * across the collapsed ↔ expanded states.
+ * and asks the parent to grow it into the full chat instead of owning the
+ * transition itself.
+ *
+ * The editor no longer uses this: Mori's home is the utility panel, and the
+ * floating dock that rendered this mode was removed so the canvas can never
+ * show a second live chat beside it. The mode is kept because the transition
+ * itself is the only thing that was dock-specific — the engine is unchanged.
  */
 export interface MoriChatDockControls {
   collapsed: boolean;
@@ -56,11 +52,13 @@ interface MoriChatInterfaceProps {
   /**
    * Render the conversation ALONE — no header, no input bar.
    *
-   * The section/document AI overlay grows its own search bar into an inline
-   * conversation, so it needs the messages and the engine but must not inherit
-   * the dock's chrome or a second input. With this flag the component is just
-   * the scrolling message list; the overlay's search bar stays the only place
-   * to type.
+   * A host that supplies its own input (and therefore its own send affordance)
+   * needs the messages and the engine but must not inherit a second input. With
+   * this flag the component is just the scrolling message list.
+   *
+   * NOTE: the canvas selection bar used to be that host. It no longer renders a
+   * conversation at all — it queues its prompt into the side-panel chat — so
+   * nothing in the editor currently passes this flag.
    *
    * The prompt contract is unchanged: the overlay still dispatches
    * `mori-cv-selection` + `mori-chat-send-prompt`, which this component already
@@ -109,22 +107,20 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock, embedded = 
   const { openModal } = useAuthModalStore();
   const isGuestMode = sessionStatus === 'unauthenticated';
 
-  const [limitExhausted, setLimitExhausted] = useState(false);
+  // Conversation state is SHARED (see moriChatStore): the side-panel chat and the
+  // floating dock are two UIs over one thread, so mounting one after the other
+  // continues the conversation instead of starting over.
+  const chatSession = useMoriChatSession();
+  const { messages, chatId, chatHistory, limitExhausted } = chatSession;
+  const setMessages = moriChatStore.setMessages;
+  const setChatId = (next: string | null) => moriChatStore.setChatId(next);
+  const setChatHistory = (next: ChatHistoryItem[] | ((prev: ChatHistoryItem[]) => ChatHistoryItem[])) =>
+    moriChatStore.setChatHistory(next);
+  const setLimitExhausted = (next: boolean) => moriChatStore.setLimitExhausted(next);
+
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hi! I'm Mori. I can help you edit your CV using natural language. You can also select any part of the CV on the left to focus our conversation.",
-      timestamp: Date.now()
-    }
-  ]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentSelection, setCurrentSelection] = useState<{ path: string; text: string } | null>(null);
-  
-  // History State
-  const [chatId, setChatId] = useState<string | null>(null);
-  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -326,115 +322,28 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock, embedded = 
         fetchHistory(); // Refresh history to show new chat
       }
 
-      // Use the server-merged CV directly. The server already normalized IDs,
-      // applied operations, and verified the result. Re-merging client-side
-      // with original (unnormalized) state would cause operations to target
-      // IDs that don't exist, producing incorrect results.
+      // The server may return an edited CV. It is NOT written into the editor
+      // here: the user reviews the diff in the chat and chooses Apply or
+      // Decline, so an AI edit can never silently overwrite their document.
       const mergedCV = result.updatedCV || recovered.updatedCV;
       if (mergedCV) {
-        const oldCV = state.cvData;
-        const newCV = mergedCV;
-
-        updateCVData(newCV);
-
-        if (oldCV && newCV) {
-          // Compare experience (work)
-          if (Array.isArray(newCV.work) && Array.isArray(oldCV.work)) {
-            newCV.work.forEach((newJob: any, idx: number) => {
-              const oldJob = oldCV.work.find((j: any) => j.id === newJob.id) || oldCV.work[idx];
-              if (!oldJob) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'experience', index: idx }
-                }));
-                return;
-              }
-              if (newJob.summary !== oldJob.summary || newJob.position !== oldJob.position || newJob.name !== oldJob.name) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'experience', index: idx }
-                }));
-              }
-              if (Array.isArray(newJob.highlights) && Array.isArray(oldJob.highlights)) {
-                newJob.highlights.forEach((bullet: string, hIdx: number) => {
-                  if (bullet !== oldJob.highlights[hIdx]) {
-                    window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                      detail: { collection: 'experience', index: idx, highlightIndex: hIdx }
-                    }));
-                  }
-                });
-              }
-            });
-          }
-
-          // Compare volunteer
-          if (Array.isArray(newCV.volunteer) && Array.isArray(oldCV.volunteer)) {
-            newCV.volunteer.forEach((newVol: any, idx: number) => {
-              const oldVol = oldCV.volunteer.find((v: any) => v.id === newVol.id) || oldCV.volunteer[idx];
-              if (!oldVol) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'volunteer', index: idx }
-                }));
-                return;
-              }
-              if (newVol.summary !== oldVol.summary || newVol.position !== oldVol.position || newVol.organization !== oldVol.organization) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'volunteer', index: idx }
-                }));
-              }
-              if (Array.isArray(newVol.highlights) && Array.isArray(oldVol.highlights)) {
-                newVol.highlights.forEach((bullet: string, hIdx: number) => {
-                  if (bullet !== oldVol.highlights[hIdx]) {
-                    window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                      detail: { collection: 'volunteer', index: idx, highlightIndex: hIdx }
-                    }));
-                  }
-                });
-              }
-            });
-          }
-
-          // Compare education
-          if (Array.isArray(newCV.education) && Array.isArray(oldCV.education)) {
-            newCV.education.forEach((newEdu: any, idx: number) => {
-              const oldEdu = oldCV.education.find((e: any) => e.id === newEdu.id) || oldCV.education[idx];
-              if (!oldEdu || newEdu.description !== oldEdu.description || newEdu.studyType !== oldEdu.studyType || newEdu.area !== oldEdu.area || newEdu.institution !== oldEdu.institution) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'education', index: idx }
-                }));
-              }
-            });
-          }
-
-          // Compare languages
-          if (Array.isArray(newCV.languages) && Array.isArray(oldCV.languages)) {
-            newCV.languages.forEach((_lang: any, idx: number) => {
-              const oldLang = oldCV.languages[idx];
-              if (!oldLang || JSON.stringify(newCV.languages[idx]) !== JSON.stringify(oldLang)) {
-                window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                  detail: { collection: 'languages', index: idx }
-                }));
-              }
-            });
-          }
-
-          // Compare skills
-          if (JSON.stringify(newCV.skills) !== JSON.stringify(oldCV.skills)) {
-            window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-              detail: { collection: 'skills', index: 0 }
-            }));
-          }
-
-          // Compare interests
-          if (Array.isArray(newCV.interests)) {
-            newCV.interests.forEach((_item: any, idx: number) => {
-              window.dispatchEvent(new CustomEvent('mori-cv-updated-section', {
-                detail: { collection: 'interests', index: idx }
-              }));
-            });
-          }
+        const proposal = buildMoriProposal(state.cvData, mergedCV);
+        if (proposal) {
+          const proposalState: MoriProposalState = {
+            cvData: mergedCV,
+            changes: proposal.changes,
+            hiddenCount: proposal.hiddenCount,
+            status: "pending",
+          };
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === assistantMessage.id ? { ...msg, proposal: proposalState } : msg
+            )
+          );
+        } else {
+          // Model replied conversationally, or its edits cancelled out.
+          console.warn("[mori-chat] No reviewable CV changes in response");
         }
-      } else if (result.updatedCV === null && recovered.updatedCV === null) {
-        // No CV changes returned — Mori may have returned only a message/options
-        console.warn('[mori-chat] No CV changes in response');
       }
 
       setCurrentSelection(null);
@@ -453,6 +362,91 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock, embedded = 
   };
 
   handleSendRef.current = handleSend;
+
+  /**
+   * Drain a prompt queued by a canvas affordance (suggestion chip, ask bar).
+   * Those actions open this panel, so the chat can mount a tick AFTER the prompt
+   * was produced. Queueing makes the hand-off order-independent, which is what
+   * let the canvas drop its own inline conversation.
+   */
+  useEffect(() => {
+    if (isGuestMode || isLoading || !chatSession.pendingPrompt) return;
+    if (!handleSendRef.current) return;
+    const pending = moriChatStore.takePrompt();
+    if (!pending) return;
+    void handleSendRef.current(pending.prompt, pending.selection ?? null);
+  }, [chatSession.pendingPrompt, isLoading, isGuestMode]);
+
+  /**
+   * Notify the canvas which sections changed so it can flash them.
+   * `work` is normalized to `experience` because the canvas only knows the
+   * unified collection names.
+   */
+  const announceAppliedSections = useCallback((changes: MoriProposedChange[], cvData: any) => {
+    const seen = new Set<string>();
+    for (const change of changes) {
+      const collection = change.sectionKey === 'work' ? 'experience' : change.sectionKey;
+      if (seen.has(collection)) continue;
+      seen.add(collection);
+      const list = Array.isArray(cvData?.[collection]) ? cvData[collection] : [];
+      if (list.length === 0) {
+        window.dispatchEvent(new CustomEvent('mori-cv-updated-section', { detail: { collection, index: 0 } }));
+        continue;
+      }
+      list.forEach((_entry: any, index: number) => {
+        window.dispatchEvent(new CustomEvent('mori-cv-updated-section', { detail: { collection, index } }));
+      });
+    }
+  }, []);
+
+  /**
+   * Commit a reviewed proposal to the editor. This is the ONLY path by which a
+   * Mori edit reaches the user's CV.
+   */
+  const applyProposal = useCallback((messageId: string) => {
+    const target = messages.find((m) => m.id === messageId && m.proposal?.status === 'pending');
+    if (!target?.proposal) return;
+
+    const previousCv = state.cvData;
+    const nextCv = target.proposal.cvData;
+
+    updateCVData(nextCv);
+    announceAppliedSections(target.proposal.changes, nextCv);
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.proposal
+          ? { ...m, proposal: { ...m.proposal, status: 'applied', previousCv } }
+          : m
+      )
+    );
+  }, [messages, state.cvData, updateCVData, announceAppliedSections]);
+
+  const declineProposal = useCallback((messageId: string) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.proposal
+          ? { ...m, proposal: { ...m.proposal, status: 'declined' } }
+          : m
+      )
+    );
+  }, []);
+
+  const undoProposal = useCallback((messageId: string) => {
+    const target = messages.find((m) => m.id === messageId && m.proposal?.status === 'applied');
+    if (!target?.proposal?.previousCv) return;
+
+    updateCVData(target.proposal.previousCv);
+    announceAppliedSections(target.proposal.changes, target.proposal.previousCv);
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId && m.proposal
+          ? { ...m, proposal: { ...m.proposal, status: 'pending' } }
+          : m
+      )
+    );
+  }, [messages, updateCVData, announceAppliedSections]);
 
   const handleLoadChat = async (id: string) => {
     try {
@@ -789,6 +783,19 @@ const MoriChatInterface: React.FC<MoriChatInterfaceProps> = ({ dock, embedded = 
                   isLatest={isLatestAssistant}
                   disabled={isLoading}
                 />
+                {/* Review-before-write: a proposed edit is shown in full with
+                    Apply / Decline, and nothing touches the CV until Apply. */}
+                {m.proposal && (
+                  <MoriProposalCard
+                    changes={m.proposal.changes}
+                    hiddenCount={m.proposal.hiddenCount}
+                    status={m.proposal.status}
+                    disabled={isLoading}
+                    onApply={() => applyProposal(m.id)}
+                    onDecline={() => declineProposal(m.id)}
+                    onUndo={() => undoProposal(m.id)}
+                  />
+                )}
                 {/* Welcome suggestion chips */}
                 {isWelcome && (
                   <MoriSuggestionChips

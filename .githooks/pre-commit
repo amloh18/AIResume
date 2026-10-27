@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Pre-commit secret scan.
+#
+# Installed by `npm run hooks:install` (sets core.hooksPath to .githooks).
+# Scans only the staged diff, so it stays fast. Bypass in an emergency with:
+#   git commit --no-verify
+# — then rotate whatever you committed, because this repository is public and
+# a later deletion does not remove the value from history.
+#
+# No `set -e`: we want to run the scanner and act on its exit code.
+node tools/scan-secrets.mjs --staged
+status=$?
+
+if [ "$status" -eq 1 ]; then
+  echo ""
+  echo "Commit blocked: the staged changes look like they contain credentials."
+  echo "  - rotate the value if it is real (deleting it is not enough in a public repo)"
+  echo "  - or append  secret-scan:allow <reason>  to the line if it is a test fixture"
+  echo ""
+  exit 1
+fi
+
+if [ "$status" -eq 2 ]; then
+  echo "secret-scan could not run (git or node unavailable); allowing the commit."
+fi
+
+exit 0

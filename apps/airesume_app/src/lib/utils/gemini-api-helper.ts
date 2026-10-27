@@ -1,11 +1,14 @@
 /**
  * Gemini API Helper Utility
- * Provides unified interface for AI API calls with Ollama primary + Gemini fallback
- * Uses Ollama (gemma3:4b) as primary, Gemini as fallback
+ * Provides unified interface for AI API calls.
+ *
+ * Provider chain (see ai-router): VPS OpenAI-compatible gateway → Ollama → Gemini.
+ * The name `Gemini` is kept for backwards compatibility with existing importers.
  */
 
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { aiRoute } from '@/lib/utils/ai-router';
+import { isGatewayConfigured } from '@/lib/utils/ai-gateway-client';
 
 interface GeminiCallOptions {
   prompt: string;
@@ -21,7 +24,7 @@ interface GeminiCallOptions {
 
 interface GeminiResponse {
   content: string;
-  provider: 'ollama' | 'gemini';
+  provider: 'gateway' | 'ollama' | 'gemini';
   apiKeyUsed: string;
 }
 
@@ -38,7 +41,15 @@ function getGeminiApiKey(): string {
 }
 
 /**
- * Call AI API — Ollama (gemma3:4b) primary, Gemini fallback.
+ * Cost accounting: the gateway and Ollama run on our own VPS (CLI-backed /
+ * local weights), so only the direct Gemini API bills per token.
+ */
+function estimateCost(provider: GeminiResponse['provider'], tokensUsed: number): number {
+  return provider === 'gemini' ? (tokensUsed / 1_000_000) * 0.075 : 0;
+}
+
+/**
+ * Call AI API — gateway → Ollama → Gemini (see ai-router).
  */
 export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
   // Build messages for the router
@@ -48,15 +59,14 @@ export async function callGeminiWithFallback(options: GeminiCallOptions): Promis
   }
   messages.push({ role: 'user', content: options.prompt });
 
-  // Try Ollama first via router
   try {
-    console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
+    console.log(`🔑 Attempting AI call (gateway → Ollama → Gemini fallback)...`);
     const result = await aiRoute(messages, { model: options.model });
     console.log(`✅ AI call successful via ${result.provider} (${result.model}, ${result.latencyMs}ms)`);
 
     // Log usage
     const tokensUsed = Math.ceil((options.prompt.length + result.content.length) / 4);
-    const cost = result.provider === 'ollama' ? 0 : (tokensUsed / 1_000_000) * 0.075;
+    const cost = estimateCost(result.provider, tokensUsed);
 
     try {
       await ActivityLogService.logAI({
@@ -77,7 +87,7 @@ export async function callGeminiWithFallback(options: GeminiCallOptions): Promis
     return {
       content: result.content,
       provider: result.provider,
-      apiKeyUsed: result.provider === 'ollama' ? 'ollama' : 'gemini_api_key'
+      apiKeyUsed: result.provider === 'gemini' ? 'gemini_api_key' : result.provider
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -86,11 +96,15 @@ export async function callGeminiWithFallback(options: GeminiCallOptions): Promis
 }
 
 /**
- * Check if Gemini API key is available
+ * Whether any AI provider is usable in this process.
+ *
+ * The VPS gateway needs no Gemini key, so a gateway-only deployment must not
+ * report "AI unavailable" — every route that gates on this helper would
+ * otherwise refuse to call the gateway at all.
  */
 export function hasGeminiApiKeys(): boolean {
   try {
-    return Boolean(getGeminiApiKey());
+    return isGatewayConfigured() || Boolean(getGeminiApiKey());
   } catch {
     return false;
   }
@@ -101,7 +115,10 @@ export function hasGeminiApiKeys(): boolean {
  */
 export function getAvailableGeminiKeys(): string[] {
   try {
-    return [getGeminiApiKey() ? 'gemini_api_key' : 'none'];
+    const keys: string[] = [];
+    if (isGatewayConfigured()) keys.push('ai_gateway');
+    if (getGeminiApiKey()) keys.push('gemini_api_key');
+    return keys.length ? keys : ['none'];
   } catch {
     return [];
   }

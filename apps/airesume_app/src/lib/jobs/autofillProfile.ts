@@ -127,8 +127,12 @@ export async function loadMasterCV(userId: string): Promise<any | null> {
 
   if (explicit) return explicit;
 
-  // Fallback: the oldest CV is what /api/cvs/master treats as master.
-  return CV.findOne({ userId: objectId }).sort({ createdAt: 1 }).lean();
+  // No "oldest CV" fallback. It used to mirror /api/cvs/master, which fabricated
+  // a profile out of whichever CV happened to be oldest — including journey CVs
+  // left behind after the real Master CV was deleted. Autofill must agree with
+  // the master CV endpoint that there is no profile rather than pre-filling a
+  // form from an unrelated tailored document.
+  return null;
 }
 
 /** Pull the profile links (LinkedIn/GitHub/portfolio) out of a CV. */

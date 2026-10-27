@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronRight, Sparkles } from 'lucide-react';
-import MoriChatInterface from './MoriChatInterface';
+import { moriChatStore } from '@/lib/stores/moriChatStore';
 
 export type MoriDocument = 'cv' | 'cover-letter';
 
@@ -25,9 +25,10 @@ interface MoriSelectionBarProps {
   /** Renders nothing while the docked conversation panel is open. */
   enabled: boolean;
   /**
-   * Opens the docked conversation. Only used for the COVER LETTER, which keeps
-   * its own chat engine. The CV grows the search bar into an inline
-   * conversation instead, so this is never called for a CV target.
+   * Opens the conversation in the utility panel — the one and only chat host.
+   * Called after `send` queues the prompt, so the panel's chat drains it the
+   * moment it becomes visible. Used for both documents (the CV routes to Mori,
+   * the letter to its own chat engine in the same panel slot).
    */
   onOpenChat: () => void;
 }
@@ -78,9 +79,6 @@ const MARGIN = 12;
 const GAP = 10;
 const BAR_W = 340;
 const BAR_H = 44;
-const PANEL_W = 372;
-const PANEL_MIN_H = 180;
-const PANEL_MAX_H = 360;
 const CHIP_H = 28;
 const CHIP_GAP = 6;
 /** The widest a suggestion pill may grow before it truncates. */
@@ -111,13 +109,13 @@ const CHIP_SURFACE =
 const flatten = (el: HTMLElement, max: number) =>
   (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, max);
 
-/** Hands a prompt to the chat engine over the existing window contract. */
-const dispatchToMori = (prompt: string, path: string, text: string) => {
-  const selection = { path, text };
-  window.dispatchEvent(new CustomEvent('mori-cv-selection', { detail: selection }));
-  window.dispatchEvent(
-    new CustomEvent('mori-chat-send-prompt', { detail: { prompt, selection } })
-  );
+/**
+ * Points the chat engine at a target over the existing window contract. The
+ * prompt itself goes through `moriChatStore.queuePrompt`, so the chat receives
+ * it whenever it mounts — not only when a conversation is already on screen.
+ */
+const dispatchToMoriTarget = (path: string, text: string) => {
+  window.dispatchEvent(new CustomEvent('mori-cv-selection', { detail: { path, text } }));
 };
 
 /**
@@ -148,11 +146,11 @@ const dispatchToMori = (prompt: string, path: string, text: string) => {
  *            the chips in the gutter beside it, and the conversation grows
  *            upward from the bar.
  *
- * Prompts travel over the same window events the existing Mori chat already
- * listens to (`mori-cv-selection` + `mori-chat-send-prompt`), so the chat engine
- * itself is unchanged. For the CV the conversation is that same engine rendered
- * inline (MoriChatInterface, embedded); the cover letter keeps its own engine and
- * still opens in the dock.
+ * Prompts never open a second chat surface here. The bar used to grow into its
+ * own inline conversation, which meant the canvas could show a live chat while
+ * the editor's AI panel showed another. Now every prompt is queued into the ONE
+ * chat (lib/stores/moriChatStore) and the caller opens the AI panel to show it,
+ * so there is a single conversation whatever the entry point.
  */
 const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enabled, onOpenChat }) => {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -168,20 +166,16 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
   /** The bottom page controls container — used to align the full-CV bar inline with controls. */
   const [controlsRect, setControlsRect] = useState<DOMRect | null>(null);
   const [value, setValue] = useState('');
-  /** True once the search bar has grown into a conversation. */
-  const [expanded, setExpanded] = useState(false);
 
   /** The suggestion-pill stack. */
   const barRef = useRef<HTMLDivElement | null>(null);
   /**
-   * The search bar. It is a SIBLING of the chip stack and of the conversation
-   * panel (three separately-positioned `fixed` boxes), so the outside-click guard
-   * has to know about all of them — otherwise clicking into the input would read
-   * as a click outside and dismiss the menu.
+   * The search bar. It is a SIBLING of the chip stack (two separately-positioned
+   * `fixed` boxes), so the outside-click guard has to know about both —
+   * otherwise clicking into the input would read as a click outside and dismiss
+   * the menu.
    */
   const askBarRef = useRef<HTMLFormElement | null>(null);
-  /** The inline conversation. */
-  const panelRef = useRef<HTMLDivElement | null>(null);
   /**
    * When the menu was opened. The whole-CV menu is opened *by* the same
    * `pointerdown` that the outside-click handler below reacts to (the canvas
@@ -189,13 +183,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
    * this guard the handler would close the menu in the same tick it appeared.
    */
   const openedAtRef = useRef(0);
-  /**
-   * A prompt typed before the conversation existed. The inline chat mounts on
-   * the same render that expands the bar, and React runs the child's effects
-   * before the parent's, so the listener is registered by the time the effect
-   * below fires this — no timeout is needed to win that race.
-   */
-  const pendingPromptRef = useRef<string | null>(null);
 
   const readSection = useCallback((el: HTMLElement): Anchor | null => {
     // The letter is one document rather than a stack of sections, so the whole
@@ -242,7 +229,32 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
   useEffect(() => {
     if (!enabled) {
       setAnchor(null);
-      return undefined;
+      /*
+       * The AI panel already owns the chat, so this bar withdraws — but the
+       * canvas pills still name a target. Forward it to the panel's chat instead
+       * of doing nothing: clicking "AI" on a section then reads as "focus the
+       * chat on this section", and no second menu/input appears.
+       */
+      const targetFromBlock = (blockId?: string) => {
+        if (!blockId) return;
+        const block = document.querySelector(`[data-block-id="${CSS.escape(blockId)}"]`) as HTMLElement | null;
+        if (!block) return;
+        const resolved = readSection(block);
+        if (resolved) dispatchToMoriTarget(resolved.path, resolved.text);
+      };
+      const onTargetSection = (e: Event) =>
+        targetFromBlock((e as CustomEvent).detail?.blockId as string | undefined);
+      const onTargetDocument = () => {
+        const resolved = readDocument();
+        if (resolved) dispatchToMoriTarget(resolved.path, resolved.text);
+      };
+
+      window.addEventListener('mori-open-section-menu', onTargetSection as EventListener);
+      window.addEventListener('mori-open-document-menu', onTargetDocument);
+      return () => {
+        window.removeEventListener('mori-open-section-menu', onTargetSection as EventListener);
+        window.removeEventListener('mori-open-document-menu', onTargetDocument);
+      };
     }
 
     const onOpenSection = (e: Event) => {
@@ -252,16 +264,12 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       if (!block) return;
       openedAtRef.current = Date.now();
       setValue('');
-      // A new target is a new intent — collapse back to the search bar so the
-      // previous conversation is not left hanging over the new section.
-      setExpanded(false);
       setAnchor(readSection(block));
     };
 
     const onOpenDocument = () => {
       openedAtRef.current = Date.now();
       setValue('');
-      setExpanded(false);
       setAnchor(readDocument());
     };
 
@@ -280,7 +288,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       // inside the focused section must keep the bottom AI nav bar active.
       if (barRef.current?.contains(target)) return;
       if (askBarRef.current?.contains(target)) return;
-      if (panelRef.current?.contains(target)) return;
       if (target.closest('[data-section-rail]')) return;
       if (target.closest('[data-canvas-toolrail]')) return;
       if (target.closest('.entry-controls')) return;
@@ -364,43 +371,26 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     };
   }, [anchor]);
 
-  /**
-   * Fires a prompt that was typed before the inline conversation existed.
-   * `expanded` flipping to true mounts MoriChatInterface in the same commit, and
-   * a child's effects run before its parent's, so its `mori-chat-send-prompt`
-   * listener is already attached when this runs.
-   */
-  useEffect(() => {
-    if (!expanded || !pendingPromptRef.current || !anchor) return;
-    const prompt = pendingPromptRef.current;
-    pendingPromptRef.current = null;
-    dispatchToMori(prompt, anchor.path, anchor.text);
-  }, [expanded, anchor]);
-
   const send = useCallback(
     (prompt: string) => {
       const text = prompt.trim();
       if (!text || !anchor) return;
       setValue('');
 
-      // The cover letter keeps its own chat engine in the dock; only the CV grows
-      // the bar into an inline conversation.
-      if (doc !== 'cv') {
-        onOpenChat();
-        window.setTimeout(() => dispatchToMori(text, anchor.path, anchor.text), 120);
-        setAnchor(null);
-        return;
-      }
-
-      if (expanded) {
-        // The engine is already mounted, so this can go straight out.
-        dispatchToMori(text, anchor.path, anchor.text);
-      } else {
-        pendingPromptRef.current = text;
-        setExpanded(true);
-      }
+      // Queue the prompt on the shared chat session and open the AI panel.
+      // Queueing (rather than dispatching straight at the chat) is what makes
+      // this independent of who mounts first: the panel's chat drains the queue
+      // when it appears, so the prompt is never lost to a timing race and no
+      // second, inline conversation has to be created to receive it.
+      moriChatStore.queuePrompt({
+        prompt: text,
+        selection: { path: anchor.path, text: anchor.text },
+      });
+      dispatchToMoriTarget(anchor.path, anchor.text);
+      onOpenChat();
+      setAnchor(null);
     },
-    [anchor, doc, expanded, onOpenChat]
+    [anchor, onOpenChat]
   );
 
   if (!enabled || !anchor || !rect) return null;
@@ -418,7 +408,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
   const viewportH = typeof window !== 'undefined' ? window.innerHeight : 900;
 
   const barW = Math.min(BAR_W, viewportW - 2 * MARGIN);
-  const panelW = Math.min(PANEL_W, viewportW - 2 * MARGIN);
   const chipsHeight = suggestions.length * CHIP_H + Math.max(0, suggestions.length - 1) * CHIP_GAP;
 
   /* ── Horizontal: the bar and the conversation are centred on the target's own
@@ -438,12 +427,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       barLeft = Math.max(MARGIN, controlsRect.left - GAP - barW);
     }
   }
-  const panelLeft = clamp(
-    targetCentre - panelW / 2,
-    MARGIN,
-    Math.max(MARGIN, viewportW - MARGIN - panelW)
-  );
-
   /* ── Horizontal: hug the PAPER, not the window ─────────────────────────────
    * They used to be centred on the same axis as the bar, which stacked the whole
    * suggestion column on top of the CV's own text — the section you were asking
@@ -469,14 +452,9 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
   const chipStackW = Math.min(CHIP_MAX_W, Math.max(CHIP_MIN_W, chipRightLimit - chipsLeft));
 
   /* ── Vertical ──────────────────────────────────────────────────────────────
-   * The bar is always the piece closest to the target and the conversation is
-   * always on the far side of the bar from it, so an expanded chat can never
-   * cover the thing being discussed. The chips no longer take part in this
-   * stacking at all: they live in the gutter beside the bar (see above), so
-   * nothing has to be reserved for them between the bar and the panel. */
+   * Only the bar has to be placed now: the conversation lives in the editor's
+   * AI panel, so nothing has to be reserved beside the target for it. */
   let barTop: number;
-  let panelTop: number;
-  let panelHeight: number;
 
   if (isDocument) {
     /* Pinned inline with the bottom page controls; the conversation grows
@@ -488,8 +466,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       const bottom = frame ? frame.bottom : viewportH;
       barTop = clamp(bottom - MARGIN - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
     }
-    panelHeight = clamp(barTop - GAP - MARGIN, PANEL_MIN_H, PANEL_MAX_H);
-    panelTop = barTop - GAP - panelHeight;
   } else {
     /* Outside the section, centred on it. Prefer BELOW: the conversation then
        opens into the empty paper under the section, which is what keeps the
@@ -509,19 +485,14 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
 
     const roomBelow = viewportH - MARGIN - rect.bottom;
     const roomAbove = effectiveTopAnchor - MARGIN;
-    const needForPanel = expanded ? PANEL_MIN_H + GAP : 0;
-    const belowFits = roomBelow >= BAR_H + GAP + needForPanel;
-    const aboveFits = roomAbove >= BAR_H + GAP + needForPanel;
+    const belowFits = roomBelow >= BAR_H + GAP;
+    const aboveFits = roomAbove >= BAR_H + GAP;
     const placeBelow = belowFits || !aboveFits;
 
     if (placeBelow) {
       barTop = clamp(rect.bottom + GAP, MARGIN, viewportH - MARGIN - BAR_H);
-      panelTop = barTop + BAR_H + GAP;
-      panelHeight = clamp(viewportH - MARGIN - panelTop, PANEL_MIN_H, PANEL_MAX_H);
     } else {
       barTop = clamp(effectiveTopAnchor - GAP - BAR_H, MARGIN, viewportH - MARGIN - BAR_H);
-      panelHeight = clamp(barTop - GAP - MARGIN, PANEL_MIN_H, PANEL_MAX_H);
-      panelTop = barTop - GAP - panelHeight;
     }
   }
 
@@ -544,8 +515,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       {/* Suggestion chips — in the canvas GUTTER beside the bar, right-aligned
           against the workspace edge so they never sit on the page. Hidden while
           the conversation is open: it takes that space instead. */}
-      {!expanded && (
-        <div
+      <div
           ref={barRef}
           data-mori-selection-bar
           className="fixed z-[190] flex flex-col items-start no-print"
@@ -563,7 +533,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
             </button>
           ))}
         </div>
-      )}
 
       {/* The search bar — centred on the target and, for a section, sitting
           outside it. This is the only input in the inline flow. */}
@@ -594,19 +563,6 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
           <ChevronRight size={15} />
         </button>
       </form>
-
-      {/* The inline conversation. Only the CV has an inline engine; the cover
-          letter still opens its own panel, so nothing renders here for it. */}
-      {doc === 'cv' && expanded && (
-        <div
-          ref={panelRef}
-          data-mori-inline-chat
-          className={`fixed z-[190] flex flex-col overflow-hidden rounded-2xl no-print ${SURFACE}`}
-          style={{ top: panelTop, left: panelLeft, width: panelW, height: panelHeight }}
-        >
-          <MoriChatInterface embedded />
-        </div>
-      )}
     </>
   );
 };

@@ -2,15 +2,19 @@
  * Shared AI API Utility
  *
  * Provides a single wrapper for API routes to call AI.
- * Uses Ollama (gemma3:4b) as primary, Gemini as fallback.
  *
- * Key resolution (checked in priority order):
+ * Provider chain (see ai-router):
+ *   1. VPS OpenAI-compatible gateway — active when OPENAI_BASE_URL is set
+ *   2. Ollama (gemma3:4b) — when enabled in AI settings and reachable
+ *   3. Gemini REST API — when a key is configured
+ *
+ * Key resolution for the Gemini fallback (checked in priority order):
  *   1. gemini_api_key
  *   2. GEMINI_API_KEY
  *   3. gemini_api_key1
  *   4. GEMINI_API_KEY1
  *
- * Hard-fails at startup if none of the above is configured.
+ * A gateway-only deployment needs no Gemini key.
  *
  * The public function is intentionally named callGeminiWithAllKeysFallback for
  * backwards compatibility with existing importers, but it uses exactly one key.
@@ -21,7 +25,7 @@ import { randomUUID } from 'crypto';
 import { aiRoute } from '@/lib/utils/ai-router';
 
 /**
- * Call AI API — Ollama (gemma3:4b) primary, Gemini fallback.
+ * Call AI API — gateway → Ollama → Gemini (see ai-router).
  * Accepts a string prompt or a messages array.
  */
 export async function callGeminiWithAllKeysFallback(
@@ -52,7 +56,7 @@ export async function callGeminiWithAllKeysFallback(
   }
 
   try {
-    console.log(`🔑 Attempting AI call (Ollama → Gemini fallback)...`);
+    console.log(`🔑 Attempting AI call (gateway → Ollama → Gemini fallback)...`);
     const callStart = Date.now();
     const result = await aiRoute(messages, { model: options?.model });
     const latencySeconds = (Date.now() - callStart) / 1000;
@@ -62,7 +66,8 @@ export async function callGeminiWithAllKeysFallback(
 
       const promptString = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
       const tokensUsed = Math.ceil((promptString.length + result.content.length) / 4);
-      const cost = result.provider === 'ollama' ? 0 : (tokensUsed / 1_000_000) * 0.075;
+      // Only the direct Gemini API bills per token; gateway and Ollama are self-hosted.
+      const cost = result.provider === 'gemini' ? (tokensUsed / 1_000_000) * 0.075 : 0;
 
       try {
         await ActivityLogService.logAI({
@@ -89,7 +94,7 @@ export async function callGeminiWithAllKeysFallback(
           event: '$ai_generation',
           properties: {
             $ai_trace_id: randomUUID(),
-            $ai_provider: result.provider === 'ollama' ? 'ollama' : 'google',
+            $ai_provider: result.provider === 'gemini' ? 'google' : result.provider,
             $ai_model: result.model,
             $ai_input_tokens: Math.ceil(promptString.length / 4),
             $ai_output_tokens: Math.ceil(result.content.length / 4),

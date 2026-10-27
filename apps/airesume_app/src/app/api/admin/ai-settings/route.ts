@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
 
     const { getAIModelConfig } = await import('@/lib/services/aiModelConfigService');
     const { getAIUsageStats } = await import('@/lib/services/adminStatsService');
+    const { isGatewayConfigured, getGatewayBaseUrl, getGatewayDefaultModel } = await import('@/lib/utils/ai-gateway-client');
 
     const [config, usage] = await Promise.all([getAIModelConfig(), getAIUsageStats()]);
 
@@ -29,6 +30,13 @@ export async function GET(request: NextRequest) {
       config,
       usage,
       envModel: process.env.GEMINI_MODEL || null,
+      // Which connection layer the router will actually try first. Read-only
+      // diagnostics: the gateway is configured through env vars, not this API.
+      gateway: {
+        configured: isGatewayConfigured(),
+        baseUrl: getGatewayBaseUrl() || null,
+        defaultModel: getGatewayDefaultModel(),
+      },
     });
   } catch (error: any) {
     if (error?.message === 'UNAUTHORIZED') {

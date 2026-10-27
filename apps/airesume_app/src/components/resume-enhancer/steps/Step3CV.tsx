@@ -34,7 +34,7 @@ import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from '@/lib/hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
-import MoriChatDock from '@/components/resume-enhancer/panels/MoriChatDock';
+import MoriChatInterface from '@/components/resume-enhancer/panels/MoriChatInterface';
 import MoriCoverLetterChat from '@/components/resume-enhancer/panels/MoriCoverLetterChat';
 import MoriSelectionBar from '@/components/resume-enhancer/panels/MoriSelectionBar';
 import UtilityPanelRail, { type UtilityPanelId } from '@/components/resume-enhancer/components/UtilityPanelRail';
@@ -643,8 +643,16 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     // opening/closing; these listeners just mirror the canvas-engine events so
     // the rail, the 60:40 column and the canvas all agree on the active panel.
     const [activeUtilityPanel, setActiveUtilityPanel] = React.useState<UtilityPanelId | null>(null);
-    // Mori lives in the always-visible dock below the canvas instead of a tile.
-    const [isMoriOpen, setIsMoriOpen] = React.useState(false);
+    /*
+     * Mori has exactly ONE host: the utility panel column (`mori` tile).
+     *
+     * It used to float over the canvas as a popup dock. The popup and a panel
+     * chat would be two live chat surfaces on one screen, and canvas targeting
+     * (which dispatches `mori-cv-selection`) would feed whichever happened to be
+     * listening — so the panel is the single home and `isMoriOpen` is derived,
+     * never a second source of truth.
+     */
+    const isMoriOpen = activeUtilityPanel === 'mori';
 
     /* ── Cover letter, edited in this same step ───────────────────────────
        The letter shares the session (cvData + jobData + autosave) with the CV;
@@ -678,8 +686,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
     const closeUtilityPanel = React.useCallback(() => {
       setActiveUtilityPanel(null);
+      // Closing the AI panel also leaves CV targeting mode, otherwise the canvas
+      // would keep highlighting sections for a chat that is no longer visible.
+      dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
       window.dispatchEvent(new CustomEvent('close-utility-panel'));
-    }, []);
+    }, [dispatch]);
 
     React.useEffect(() => {
       const handleSidebar = (e: Event) => {
@@ -697,6 +708,11 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       };
       const handleClose = () => {
         setActiveUtilityPanel(null);
+        dispatch({ type: 'SET_MORI_CHAT_MODE', payload: false });
+      };
+      const handleOpenMoriPanel = () => {
+        setActiveUtilityPanel('mori');
+        dispatch({ type: 'SET_MORI_CHAT_MODE', payload: true });
       };
       const handleOpenAnalysis = () => {
         setActiveUtilityPanel('analysis');
@@ -709,14 +725,16 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       window.addEventListener('close-utility-panel', handleClose);
       window.addEventListener('open-analysis-panel', handleOpenAnalysis);
       window.addEventListener('open-add-snippet', handleOpenAddSnippet);
+      window.addEventListener('open-mori-panel', handleOpenMoriPanel);
       return () => {
         window.removeEventListener('set-builder-sidebar', handleSidebar);
         window.removeEventListener('open-templates', handleTemplates);
         window.removeEventListener('close-utility-panel', handleClose);
         window.removeEventListener('open-analysis-panel', handleOpenAnalysis);
         window.removeEventListener('open-add-snippet', handleOpenAddSnippet);
+        window.removeEventListener('open-mori-panel', handleOpenMoriPanel);
       };
-    }, []);
+    }, [dispatch]);
 
     // Switching documents can strand a panel that does not exist on the new one
     // (JSON is CV-only). Close it rather than leaving the column showing a panel
@@ -782,11 +800,12 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
       return () => window.removeEventListener('cv-paper-size-changed', handlePaperSizeChange);
     }, [dispatch]);
 
-    // Opening the Mori dock also enables CV targeting mode (hover/click a field
-    // to focus Mori on it), mirroring the old Mori panel contract.
+    // Opening the AI chat also enables CV targeting mode (hover/click a field to
+    // focus Mori on it). The chat itself opens in the utility panel — never as a
+    // popup over the canvas — so there is only ever one chat surface on screen.
     const handleMoriOpenChange = React.useCallback(
       (open: boolean) => {
-        setIsMoriOpen(open);
+        setActiveUtilityPanel(open ? 'mori' : null);
         dispatch({ type: 'SET_MORI_CHAT_MODE', payload: open });
       },
       [dispatch]
@@ -794,8 +813,8 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
 
     React.useEffect(() => {
       // External triggers ("Improve this bullet", "Ask Mori", …) set moriChatMode
-      // then dispatch open-mori-chat; make sure the dock reflects that state.
-      if (state.moriChatMode) setIsMoriOpen(true);
+      // then dispatch open-mori-chat; make sure the panel reflects that state.
+      if (state.moriChatMode) setActiveUtilityPanel('mori');
     }, [state.moriChatMode]);
 
     React.useEffect(() => {
@@ -1503,6 +1522,16 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           />
         ) : activeUtilityPanel === 'design' ? (
           <CoverLetterDesignPanel design={clDesign} setDesign={setClDesign} onClose={closeUtilityPanel} />
+        ) : activeUtilityPanel === 'mori' ? (
+          /* Same engine as the CV chat, pointed at the letter: the AI tile means
+             "the AI for the document I am looking at", and it opens here rather
+             than as a popup floating over the canvas. */
+          <MoriCoverLetterChat
+            onBodyChange={(content: string) =>
+              dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: content } })
+            }
+            onClose={closeUtilityPanel}
+          />
         ) : (
           /* `analysis` — and `null`, so the panel is never blank while its width
              animates open. `json` cannot reach here: the tile is disabled for
@@ -1527,9 +1556,15 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             <ATSMeterPanel isUtilityPanelOpen={!!activeUtilityPanel} onClose={closeUtilityPanel} />
           </div>
         </div>
+        {/* AI chat. Same MoriChatInterface (same engine, same thread — see
+            lib/stores/moriChatStore) hosted in the panel instead of floating
+            over the canvas. */}
+        <div className={activeUtilityPanel === 'mori' ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : 'hidden'}>
+          <MoriChatInterface />
+        </div>
         <div
           id="builder-utility-panel-portal"
-          className={`flex-1 min-h-0 ${activeUtilityPanel === 'analysis' ? 'hidden' : 'flex'} flex-col overflow-hidden`}
+          className={`flex-1 min-h-0 ${activeUtilityPanel === 'analysis' || activeUtilityPanel === 'mori' ? 'hidden' : 'flex'} flex-col overflow-hidden`}
         />
       </div>
     );
@@ -1762,25 +1797,13 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           onOpenChat={() => handleMoriOpenChange(true)}
         />
 
-        {isCoverLetterDoc && coverLettersAvailable ? (
-          isMoriOpen && (
-            <div className="fixed z-[195] bottom-4 right-4 w-[min(92vw,420px)] h-[min(60vh,520px)] flex flex-col overflow-hidden rounded-2xl border border-[var(--border-primary)] bg-white dark:bg-[var(--bg-secondary)] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.35)] no-print">
-              <MoriCoverLetterChat
-                onBodyChange={(content: string) =>
-                  dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: content } })
-                }
-                onClose={() => handleMoriOpenChange(false)}
-              />
-            </div>
-          )
-        ) : (
-          <MoriChatDock open={isMoriOpen} onOpenChange={handleMoriOpenChange} floating />
-        )}
+        {/* The floating chat popup is gone by design: every AI entry point above
+            (the rail tile, "Ask Mori" on a section, external open-mori-chat)
+            opens the SAME conversation in the panel column. Two live chat
+            surfaces on one screen was the thing to avoid. */}
 
 
         </div >
-        {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}
-
 
         {/* First-run product tour. Only during the onboarding hand-off, and only
             over the CV (the cover letter has its own, much smaller, surface).

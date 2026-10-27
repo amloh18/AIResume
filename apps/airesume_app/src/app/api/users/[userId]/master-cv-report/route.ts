@@ -85,7 +85,7 @@ export async function GET(
     const targetUserId = paramUserId || userId;
     
     // Find master CV - support multiple identification methods for compatibility
-    let masterCV = await CV.findOne({
+    const masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(targetUserId),
       $or: [
         { 'metadata.createdVia': 'ai-career-report' },
@@ -94,22 +94,10 @@ export async function GET(
       ]
     }).sort({ createdAt: -1 }).lean() as any;
     
-    // FALLBACK: If no master CV found, use oldest CV by creation date
-    if (!masterCV) {
-      console.log('🔍 Master CV Report API - No master CV found, using oldest CV as fallback');
-      const allCVs = await CV.find({
-        userId: new mongoose.Types.ObjectId(targetUserId)
-      }).sort({ createdAt: 1 }).lean() as any[];
-      
-      if (allCVs && allCVs.length > 0) {
-        masterCV = allCVs[0];
-        console.log('🔍 Master CV Report API - Using oldest CV as fallback:', {
-          id: masterCV._id,
-          title: masterCV.title,
-          createdAt: masterCV.createdAt
-        });
-      }
-    }
+    // No "oldest CV" fallback: this report describes the user's Profile, and
+    // promoting an unrelated journey CV to fill the gap is what made a deleted
+    // profile look like it still existed. With none, the caller gets the normal
+    // "no profile" response.
     
     if (!masterCV) {
       return NextResponse.json(

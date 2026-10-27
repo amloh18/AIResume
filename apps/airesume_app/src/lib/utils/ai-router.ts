@@ -1,4 +1,5 @@
 import { ollamaChat, ollamaHealthCheck } from './ollama-client';
+import { gatewayChat, isGatewayConfigured } from './ai-gateway-client';
 import {
   resolveGeminiModel,
   shouldUseOllama,
@@ -16,7 +17,7 @@ const OLLAMA_TIMEOUT_MS = 60000;
 export interface RouteResult {
   content: string;
   model: string;
-  provider: 'ollama' | 'gemini';
+  provider: 'gateway' | 'ollama' | 'gemini';
   latencyMs: number;
 }
 
@@ -28,13 +29,48 @@ export interface AIRouteOptions {
   model?: string;
 }
 
+/**
+ * Route one chat completion through the configured providers.
+ *
+ * Order (each step only runs if the previous one failed):
+ *
+ *   1. VPS OpenAI-compatible gateway — when OPENAI_BASE_URL is set
+ *   2. Ollama — when enabled in AI settings and reachable
+ *   3. Gemini REST API — when GEMINI_API_KEY is set
+ *
+ * The gateway is the preferred path because it fronts local CLI tooling
+ * (Gemini 3.8 Flash via `agy`, free OpenRouter models via `opencode`). The
+ * older providers stay as fallbacks so an unreachable gateway degrades
+ * instead of taking AI features down.
+ */
 export async function aiRoute(
   messages: { role: string; content: string }[],
   options?: AIRouteOptions
 ): Promise<RouteResult> {
   const start = Date.now();
 
-  // Try Ollama first (admin can disable this path in AI settings)
+  // ── 1. VPS OpenAI-compatible bridge gateway ────────────────────────────────
+  // Skipped entirely when OPENAI_BASE_URL is unset, so a deployment that has
+  // not adopted the gateway pays no connection timeout.
+  if (isGatewayConfigured()) {
+    try {
+      // Model hints are normalised inside the client (Gemini ids → gateway ids).
+      const result = await gatewayChat({
+        messages: messages as any,
+        model: options?.model,
+      });
+      return {
+        content: result.content,
+        model: result.model,
+        provider: 'gateway',
+        latencyMs: Date.now() - start,
+      };
+    } catch (err: any) {
+      console.warn('[ai-router] AI gateway failed, falling back:', err?.message || err);
+    }
+  }
+
+  // ── 2. Ollama (admin can disable this path in AI settings) ────────────────
   if (await shouldUseOllama()) {
     if (await ollamaHealthCheck()) {
       try {
@@ -47,8 +83,8 @@ export async function aiRoute(
   }
 
 
-  // Fallback to Gemini
-  if (!GEMINI_API_KEY) throw new Error('No AI provider available (Ollama down, no GEMINI_API_KEY)');
+  // ── 3. Gemini REST (direct) ───────────────────────────────────────────────
+  if (!GEMINI_API_KEY) throw new Error('No AI provider available (gateway unset, Ollama down, no GEMINI_API_KEY)');
 
   // Single resolution point: admin settings → env → default (see aiModelConfigService)
   const model = await resolveGeminiModel(options?.model);

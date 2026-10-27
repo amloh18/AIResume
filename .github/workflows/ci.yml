@@ -21,6 +21,27 @@ permissions:
   contents: read
 
 jobs:
+  # Runs first and without any install step: a leaked credential must fail the
+  # build before anything else is worth looking at. Values are redacted in the
+  # output because CI logs of a public repository are public.
+  secrets:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: a deleted key is still readable in old commits
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Scan tracked files
+        run: node tools/scan-secrets.mjs
+      - name: Scan history
+        # Advisory until the historical leaks listed in
+        # docs/deployment/secret-rotation.md have been purged or rotated.
+        continue-on-error: true
+        run: node tools/scan-secrets.mjs --history
+
   app:
     name: app
     runs-on: ubuntu-latest

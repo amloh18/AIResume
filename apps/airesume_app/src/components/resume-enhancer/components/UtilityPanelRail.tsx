@@ -11,7 +11,7 @@ import DocumentTabs, { type EditorDocument } from './DocumentTabs';
  * the id is kept as `layout` so the existing canvas events
  * (`open-templates` / `set-builder-sidebar`) keep working unchanged.
  */
-export type UtilityPanelId = 'analysis' | 'sections' | 'design' | 'layout' | 'json';
+export type UtilityPanelId = 'analysis' | 'mori' | 'sections' | 'design' | 'layout' | 'json';
 
 interface UtilityPanelRailProps {
   /** Currently open panel, or null when the canvas is in its wide (tiles-only) state. */
@@ -59,6 +59,11 @@ const openPanel = (panel: UtilityPanelId) => {
   }
   if (panel === 'layout') {
     window.dispatchEvent(new CustomEvent('open-templates'));
+    return;
+  }
+  if (panel === 'mori') {
+    // The AI chat lives in this panel, not in a floating popup over the canvas.
+    window.dispatchEvent(new CustomEvent('open-mori-panel'));
     return;
   }
   if (panel === 'sections') {
@@ -144,6 +149,20 @@ const JsonPreview: React.FC = () => (
   </span>
 );
 
+const AiPreview: React.FC = () => (
+  <span className="up-pv">
+    <span className="up-ai" aria-hidden="true">
+      <i className="up-ai-bubble a" />
+      <i className="up-ai-bubble b" />
+      <i className="up-ai-dots">
+        <b />
+        <b />
+        <b />
+      </i>
+    </span>
+  </span>
+);
+
 const SectionsPreview: React.FC = () => (
   <span className="up-pv">
     <span className="up-sec" aria-hidden="true">
@@ -169,6 +188,7 @@ interface TileDef {
 
 const TILES: TileDef[] = [
   { id: 'analysis', label: 'Analysis', Preview: AnalysisPreview },
+  { id: 'mori', label: 'AI Chat', Preview: AiPreview },
   { id: 'sections', label: 'Add Section', Preview: SectionsPreview },
   { id: 'design', label: 'Design', Preview: DesignPreview },
   { id: 'layout', label: 'Template', Preview: TemplatePreview },
@@ -264,6 +284,45 @@ const RAIL_STYLES = `
 @keyframes up-sheen {
   from { background-position: 170% 0; }
   to   { background-position: -70% 0; }
+}
+
+/* ---------- AI chat preview: two reply bars + a typing pulse ---------- */
+.up-ai {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 0 7px;
+}
+.up-ai-bubble {
+  display: block;
+  height: 4px;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: .5;
+}
+.up-ai-bubble.a { width: 92%; }
+.up-ai-bubble.b { width: 58%; opacity: .3; }
+.up-ai-dots {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+.up-ai-dots b {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: up-ai-pulse 1.5s ease-in-out infinite;
+}
+.up-ai-dots b:nth-child(2) { animation-delay: .18s; }
+.up-ai-dots b:nth-child(3) { animation-delay: .36s; }
+@keyframes up-ai-pulse {
+  0%, 100% { opacity: .25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1.5px); }
 }
 
 .up-pv {
@@ -702,6 +761,7 @@ const RAIL_STYLES = `
 @media (prefers-reduced-motion: reduce) {
   .up-tile, .up-pv, .up-doc-hd, .up-doc-ln,
   .up-doc-chips i, .up-tpl span, .up-json i, .up-caret,
+  .up-ai-dots b,
   .up-tile[aria-selected="true"]::after, .up-close {
     animation: none !important;
   }

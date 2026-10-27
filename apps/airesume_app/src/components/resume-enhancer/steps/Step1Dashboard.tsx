@@ -660,6 +660,7 @@ export default function Step1Dashboard({
   const [showJDInput, setShowJDInput] = useState(false);
   const [existingCVs, setExistingCVs] = useState<ExistingCV[]>([]);
   const [isLoadingCVs, setIsLoadingCVs] = useState(false);
+  const [cvListLoaded, setCvListLoaded] = useState(false);
   // True when GET /api/cvs failed after a retry — without this, a failed list
   // fetch rendered as the "No Documents" empty state and every CV looked deleted.
   const [cvListError, setCvListError] = useState(false);
@@ -757,9 +758,28 @@ export default function Step1Dashboard({
         method: 'DELETE',
       });
       if (response.ok) {
+        // Was this the user's Master CV / profile? If so the rest of the app has
+        // to stop believing a profile exists — otherwise tailoring, autofill and
+        // the dashboard keep pointing at a document that no longer exists.
+        const wasMaster = existingCVs.some(
+          (cv) =>
+            (cv.id || cv._id) === cvId &&
+            (cv.cvType === 'master' || (cv.metadata as any)?.isMaster === true)
+        );
+        const remaining = existingCVs.filter((cv) => (cv.id || cv._id) !== cvId);
+        const stillHasMaster = remaining.some(
+          (cv) => cv.cvType === 'master' || (cv.metadata as any)?.isMaster === true
+        );
+
         toast.success('Resume deleted successfully');
-        setExistingCVs(prev => prev.filter(cv => (cv.id || cv._id) !== cvId));
+        setExistingCVs(remaining);
         pruneCachedCVs(cv => (cv.id || cv._id) !== cvId);
+
+        if (wasMaster && !stillHasMaster) {
+          dispatch({ type: 'SET_HAS_MASTER_CV', payload: false });
+          // Ask the dashboard shell to re-evaluate its "profile exists" gate.
+          window.dispatchEvent(new CustomEvent('masterCVDeleted', { detail: { cvId } }));
+        }
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to delete resume');
@@ -1188,6 +1208,7 @@ export default function Step1Dashboard({
     if (cacheUserId === cacheScope && cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
       setExistingCVs(cachedExistingCVs);
       setCvListError(false);
+      setCvListLoaded(true);
       return;
     }
     setIsLoadingCVs(true);
@@ -1231,6 +1252,10 @@ export default function Step1Dashboard({
       setCvListError(true);
     } finally {
       setIsLoadingCVs(false);
+      // The list has been resolved once. Only now does "no CVs" mean "no CVs"
+      // rather than "not fetched yet" — the profile-existence sync below waits
+      // for this, otherwise it would report a missing profile on every mount.
+      setCvListLoaded(true);
     }
   }, [user?.id]);
 
@@ -1291,13 +1316,17 @@ export default function Step1Dashboard({
   }, [fetchExistingCVs, fetchExistingCoverLetters, fetchDraftCV, user?.id]);
 
   useEffect(() => {
-    if (existingCVs.length === 0) return;
-    const hasMaster = existingCVs.some((cv) => cv.cvType === 'master');
+    // Wait for the list itself: an empty array before the first fetch resolves is
+    // "not loaded yet", not "no CVs".
+    if (!cvListLoaded || isLoadingCVs) return;
+    const hasMaster = existingCVs.some(
+      (cv) => cv.cvType === 'master' || (cv.metadata as any)?.isMaster === true
+    );
     // Only dispatch if the value is actually different from current state to prevent loops
     if (state.hasMasterCV !== hasMaster) {
       dispatch({ type: 'SET_HAS_MASTER_CV', payload: hasMaster });
     }
-  }, [dispatch, existingCVs, state.hasMasterCV]);
+  }, [dispatch, existingCVs, state.hasMasterCV, isLoadingCVs, cvListLoaded]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
