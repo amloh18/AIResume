@@ -24,6 +24,7 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics, workspacePaddingYFor } from './layout-utils';
 import { buildHybridBands, legacyHybridOrders, moveToEndOfHybridFlow, nextHybridOrder, type HybridBand } from './hybrid-flow';
+import { selectionAfterSnippetRemoval } from './canvas-selection';
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { LayoutDebugOverlay, type DebugBlock, type LayoutDebugInfo } from './LayoutDebugOverlay';
 import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
@@ -1701,6 +1702,23 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
   const removeSnippet = (zoneId: string, index: number) => {
     const destZone = bareCanvasZoneId(zoneId);
+    /* A deleted section never comes back, so the selection must not outlive it.
+     *
+     * `selectedBlockId` drives the spotlight (`.cv-has-selection` blurs and dims
+     * every `.cv-section-wrapper` that is not `[data-selected="true"]`). When the
+     * id pointed at a block that no longer exists, NO wrapper was selected, so
+     * the whole sheet stayed blurred/dimmed and the editor read as "the whole CV
+     * is in focus mode" with no section to un-focus — the only ways out were
+     * Escape or a click on empty paper. See `canvas-selection.ts`.
+     *
+     * The id is read BEFORE the splice: after it, the block is gone from the
+     * list and there is nothing left to compare against. */
+    const { removedId, clearSelection } = selectionAfterSnippetRemoval({
+      zones,
+      destZone,
+      index,
+      selectedBlockId: selectedBlockIdRef.current,
+    });
     setZones(prev => {
       const newZones = cloneZoneMap(prev);
       if (!newZones[destZone]) return prev;
@@ -1709,6 +1727,22 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
       newZones[destZone] = list;
       return newZones;
     });
+    if (!clearSelection) return;
+
+    // Un-focus the section, and drop the caret's stale DOM reference with it —
+    // the focused field lived inside the removed wrapper, so the rail and the
+    // floating toolbar would otherwise keep holding a detached node. A field
+    // focused in some OTHER section is left alone: React has not re-rendered yet,
+    // so its wrapper is still in the DOM and `closest` can tell the two apart.
+    const focusBlockId =
+      focusedNode?.closest?.('[data-block-id]')?.getAttribute('data-block-id') ?? null;
+    setSelectedBlockId(null);
+    if (!focusedNode || !focusedNode.isConnected || focusBlockId === removedId) {
+      setFocusedNode(null);
+      setFocusedJsonPath(null);
+    }
+    // Same as Escape: close the section's Mori menu along with the spotlight.
+    window.dispatchEvent(new CustomEvent('mori-close-menus'));
   };
 
   const moveEntry = (collection: string, index: number, dir: number) => {

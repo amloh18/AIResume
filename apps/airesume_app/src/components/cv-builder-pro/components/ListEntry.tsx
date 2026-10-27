@@ -2,7 +2,7 @@
 
 import React, { useEffect, useLayoutEffect, useState, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Copy, Trash2 } from 'lucide-react';
 import {
   CanvasContext,
   SnippetContext,
@@ -11,6 +11,7 @@ import {
   ENTRY_RAIL_WIDTH_PX,
   computeEntryRailPosition,
 } from './CoreUI';
+import { duplicateEntryAt } from '../helpers';
 
 /**
  * Grace period between the pointer leaving an entry (or its rail) and the rail
@@ -256,6 +257,27 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
     setConfirmingDelete(false);
   };
 
+  /**
+   * Duplicate this entry into the slot directly BELOW it.
+   *
+   * The copy is a shallow clone with a FRESH id: the id is the entry's identity
+   * everywhere else — the pagination key (`<blockId>_entry_<entryId>`), the
+   * React key, and the `collection.index` field paths the snippet renders — so
+   * reusing it would make the two entries share a page assignment and collide on
+   * render.
+   *
+   * Writing through `ctx.handleDataChange` (rather than a prop threaded through
+   * the 70+ snippet definitions) keeps the copy on the same path as every other
+   * entry edit: the engine's normaliser runs, `onDataChange` fires, and the
+   * editor's undo stack records it.
+   */
+  const handleDuplicate = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const next = duplicateEntryAt(ctx?.cvData?.[collection], index);
+    if (!next) return;
+    ctx?.handleDataChange?.(collection, next);
+  };
+
   /* Keep the rail alive while the pointer is over the ENTRY *or* the RAIL — they
    * are no longer the same subtree, so neither can imply the other. */
   const handleBlurWithin = (event: React.FocusEvent<HTMLDivElement>) => {
@@ -357,6 +379,15 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
           type="button"
         >
           <ChevronDown size={14}/>
+        </button>
+        <button
+          onClick={handleDuplicate}
+          className={`${TOOLRAIL_BTN} hover:text-emerald-600 dark:hover:text-emerald-400`}
+          title="Duplicate entry below"
+          aria-label="Duplicate entry below"
+          type="button"
+        >
+          <Copy size={14}/>
         </button>
         <button
           onClick={handleDelete}

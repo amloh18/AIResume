@@ -24,6 +24,30 @@ export const setNestedValue = (obj: any, path: string, value: any) => {
 
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
+/**
+ * A copy of `list[index]`, inserted directly AFTER it, with a fresh id.
+ *
+ * The id is the entry's identity everywhere else — the pagination key
+ * (`<blockId>_entry_<entryId>`), the React key, and the `collection.index`
+ * field paths the snippet renders — so the copy must get its own or the two
+ * entries would share a page assignment and collide on render.
+ *
+ * Pure, with the id factory injected, so the placement rule is assertable
+ * without a browser (`npm run verify:entry-duplicate`). Returns `null` when
+ * there is nothing to duplicate, which the caller must treat as a no-op rather
+ * than as an empty list.
+ */
+export const duplicateEntryAt = (
+  list: any[] | null | undefined,
+  index: number,
+  makeId: () => string = generateId
+): any[] | null => {
+  if (!Array.isArray(list) || index < 0 || index >= list.length || !list[index]) return null;
+  const next = [...list];
+  next.splice(index + 1, 0, { ...list[index], id: makeId() });
+  return next;
+};
+
 export const escapeRegExp = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 };

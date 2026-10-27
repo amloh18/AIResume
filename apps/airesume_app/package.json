@@ -38,6 +38,8 @@
     "verify:match-scoring": "npx tsx tests/verify-match-scoring.ts",
     "verify:payment-switching": "npx tsx tests/verify-payment-switching.ts",
     "verify:ai-gateway": "npx tsx tests/verify-ai-gateway.ts",
+    "verify:canvas-focus": "npx tsx tests/verify-canvas-focus.ts",
+    "verify:entry-duplicate": "npx tsx tests/verify-entry-duplicate.ts",
     "verify:public-access": "npm run verify:public-jobs && npm run verify:public-route-policy",
     "build:worker": "node scripts/build-worker.mjs",
     "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",

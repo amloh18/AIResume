@@ -993,6 +993,69 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const sectionSlot = usePortalSlot(TOOLRAIL_SECTION_SLOT);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
+  /* Both are read by the memoised heading below, so they have to be resolved
+   * above it (a `const` referenced in a hook's dependency list is evaluated
+   * immediately — placing these after the early returns would be a TDZ error). */
+  const isNarrow = ['sidebar', 'left', 'right'].includes((zoneId || '').replace(/_page_\d+$/, ''));
+  const pageIdxMatch = (zoneId || '').match(/_page_(\d+)$/);
+  const pageIdx = pageIdxMatch ? parseInt(pageIdxMatch[1]) : 0;
+
+  /* ─── The section heading MUST keep one component identity ────────────────
+   *
+   * ~70 snippet definitions render their heading as `<Title titleKey="…"/>`, so
+   * this component is handed to them through `render()`'s props.
+   *
+   * It used to be defined inline here, which gave it a NEW identity on every
+   * CanvasSnippet render. Focusing the heading calls `setFocusedNode` /
+   * `setFocusedJsonPath` on the engine, which re-renders this component, which
+   * REMOUNTED the heading's DOM between mousedown and mouseup — and a browser
+   * then dispatches NO `click` at all. `handleSectionClick` never ran, so the
+   * first click on a section heading selected nothing and raised no rail. Once
+   * an entry in that section had been clicked the rail was already up, which is
+   * why the heading looked like it only worked second.
+   *
+   * (Measured in Chrome, not assumed: replacing the mousedown target before
+   * mouseup drops the click entirely — it never reaches the parent.)
+   *
+   * `useMemo` pins the identity. The deps are everything the heading renders
+   * from and all of them are stable across a focus-driven re-render — the block
+   * id, the page, the theme flag, the template object and the field wrapper.
+   * `ctx` is read with useContext INSIDE the component, so the engine's
+   * per-render context object cannot re-create it. */
+  const Title = useMemo(() => {
+    const SectionTitle = ({ titleKey, overrideClass }: any) => {
+      const ctx = React.useContext(CanvasContext);
+      const headerUnitId = `${instance?.id}_header`;
+      const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance?.id] ?? 0;
+      if (assignedPage !== pageIdx) {
+        return null;
+      }
+
+      const isSidebar = isNarrow;
+      const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
+      const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+
+      const fallbackTitle = DEFAULT_SECTION_TITLES[titleKey] || (typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section');
+      const titleVal = getNestedValue(ctx?.cvData, `sectionTitles.${titleKey}`) || fallbackTitle;
+
+      /* Section headings are renameable inline ("Work Experience" ↔ "Experience"
+         ↔ "Selected Projects"): the text is an ordinary editable field bound to
+         `sectionTitles.<key>`, persisted with the rest of the CV. `cv-section-title`
+         is the hook the canvas + snapshot stylesheets use for the title's own
+         spacing (it follows the Design panel's item gap), for icon sizing relative
+         to the title's type, and for the hover cue that says "click to rename". */
+      const titleField = <EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap />;
+
+      if (overrideClass) {
+        return <h3 className={`${overrideClass} cv-section-title`}>{titleField}</h3>;
+      }
+
+      return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}>{titleField}</Renderer>;
+    };
+    return SectionTitle;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see the note above: the deps are deliberately only the values the heading RENDERS from.
+  }, [instance?.id, pageIdx, isDark, activeTemplate, EditableWrapper]);
+
   if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
@@ -1003,7 +1066,6 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   //  AI button. See the note in the section-controls block below.)
 
   const primaryTitleKey = (SnippetComponent?.category || '').toLowerCase();
-  const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId.replace(/_page_\d+$/, ''));
   const showDropLine = !readOnly && isDropTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
   // "Last snippet" must be page-local: the final snippet rendered on THIS page gets
   // no trailing section gap (the pagination model only budgets gaps *between* blocks).
@@ -1063,38 +1125,6 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
         if (dragState.overZoneId !== zoneId || dragState.overIndex !== insertIndex) {
       document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: insertIndex } }));
     }
-  };
-
-  const match = zoneId.match(/_page_(\d+)$/);
-  const pageIdx = match ? parseInt(match[1]) : 0;
-
-  const Title = ({ titleKey, overrideClass }: any) => {
-    const headerUnitId = `${instance.id}_header`;
-    const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance.id] ?? 0;
-    if (assignedPage !== pageIdx) {
-      return null;
-    }
-
-    const isSidebar = isNarrow;
-    const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
-    const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-
-    const fallbackTitle = DEFAULT_SECTION_TITLES[titleKey] || (typeof titleKey === 'string' ? titleKey.charAt(0).toUpperCase() + titleKey.slice(1) : 'Section');
-    const titleVal = getNestedValue(ctx?.cvData, `sectionTitles.${titleKey}`) || fallbackTitle;
-
-    /* Section headings are renameable inline ("Work Experience" ↔ "Experience"
-       ↔ "Selected Projects"): the text is an ordinary editable field bound to
-       `sectionTitles.<key>`, persisted with the rest of the CV. `cv-section-title`
-       is the hook the canvas + snapshot stylesheets use for the title's own
-       spacing (it follows the Design panel's item gap), for icon sizing relative
-       to the title's type, and for the hover cue that says "click to rename". */
-    const titleField = <EditableWrapper path={`sectionTitles.${titleKey}`} overrideValue={titleVal} nowrap />;
-
-    if (overrideClass) {
-      return <h3 className={`${overrideClass} cv-section-title`}>{titleField}</h3>;
-    }
-
-    return <Renderer isDark={isDark} showIcons={ctx?.design?.showHeaderIcons ?? true} titleKey={titleKey}>{titleField}</Renderer>;
   };
 
   const headerUnitId = `${instance.id}_header`;
