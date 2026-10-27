@@ -3,28 +3,20 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Download, Eye, Sparkles, CheckCircle, BarChart3, Database, TrendingUp } from 'lucide-react'
+import CardNav from '@/components/landing/CardNav'
+import Footer from '@/components/landing/Footer'
+import { navLinks } from '@/data/navigation'
 
 export default function DataAnalystExamplePage() {
   return (
     <div className="min-h-screen bg-[#0d1209]">
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0d1209]/90 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#013f2e] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CV</span>
-              </div>
-              <span className="text-white font-bold text-lg">AIResume</span>
-            </Link>
-            <div className="hidden md:flex items-center gap-8">
-              <Link href="/#features" className="text-gray-400 hover:text-white text-sm">Features</Link>
-              <Link href="/templates" className="text-gray-400 hover:text-white text-sm">Templates</Link>
-              <Link href="/blog" className="text-gray-400 hover:text-white text-sm">Blog</Link>
-              <Link href="/sign-up" className="bg-[#013f2e] text-white px-4 py-2 rounded-full font-bold text-sm">Start Free</Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/*
+        Navigation — the same floating CardNav the landing page renders. This page
+        used to carry its own <nav> (CV badge, Features / Templates / Blog / Start
+        Free), so the header changed shape as soon as a visitor arrived from the
+        landing page or from the Products megamenu.
+      */}
+      <CardNav logo="AIResume" links={navLinks} />
 
       <section className="relative pt-32 pb-20 px-4">
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -152,12 +144,12 @@ export default function DataAnalystExamplePage() {
         </div>
       </section>
 
-      <footer className="py-8 px-4 border-t border-white/5">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2"><div className="w-6 h-6 bg-[#013f2e] rounded flex items-center justify-center"><span className="text-white font-bold text-xs">CV</span></div><span className="text-gray-500 text-sm">© 2026 AIResume</span></div>
-          <div className="flex gap-6"><Link href="/privacy-policy" className="text-gray-500 text-sm">Privacy</Link><Link href="/terms" className="text-gray-500 text-sm">Terms</Link></div>
-        </div>
-      </footer>
+      {/*
+        Footer — the landing page's Footer, not a local copyright strip. See the
+        note on /ats-resume-checker: the strip carried no navigation, so this page
+        silently dropped the site's internal-linking hub.
+      */}
+      <Footer />
     </div>
   )
 }

@@ -1,6 +1,9 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { Breadcrumbs, FaqSection, JsonLd, breadcrumbSchema, faqSchema } from '@/components/seo/StructuredData'
+import CardNav from '@/components/landing/CardNav'
+import Footer from '@/components/landing/Footer'
+import { navLinks } from '@/data/navigation'
 import { ROLE_GUIDES } from '@/data/role-guides'
 
 // Role data with unique content for each role
@@ -671,8 +674,19 @@ export default async function RolePage({ params }: { params: Promise<{ role: str
       <JsonLd data={breadcrumb} />
       {guide ? <JsonLd data={faqSchema(guide.faq)} /> : null}
 
+      {/*
+        Same header and footer as every other public page.
+
+        These role guides are indexable, long-form marketing pages, but they were
+        the only public surface with no header at all: a visitor arriving from
+        search had no route back into the product, no Products megamenu, and no
+        footer links. `pt-32` clears the floating CardNav pill (top 2em, ~64px
+        tall), matching the padding the other CardNav pages use.
+      */}
+      <CardNav logo="AIResume" links={navLinks} />
+
       {/* Hero Section */}
-      <section className="py-20 px-4">
+      <section className="pt-32 pb-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <Breadcrumbs
             center
@@ -889,6 +903,8 @@ export default async function RolePage({ params }: { params: Promise<{ role: str
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   )
 }
