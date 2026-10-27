@@ -1662,9 +1662,6 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
                   onOpenHeaderStyles={() => setActiveUtilityPanel('layout')}
                   onRequestJob={() => setShowJobParserDialog(true)}
                   onToggleMoriChat={() => handleMoriOpenChange(true)}
-                  // The focus-mode rail edits the letter's design directly, so it
-                  // writes through the same setter the sidebar panel uses.
-                  onDesignChange={(patch) => setClDesign((prev) => ({ ...prev, ...patch }))}
                   undoStack={state.undoStack}
                   redoStack={state.redoStack}
                   onUndo={() => dispatch({ type: 'UNDO' })}

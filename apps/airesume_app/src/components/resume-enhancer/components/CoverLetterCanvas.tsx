@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ZoomIn, ZoomOut, Maximize2, FileText, Layout, Sparkles, LayoutTemplate, Type, Minus, Plus, Palette } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, FileText, Layout, Sparkles, LayoutTemplate } from 'lucide-react';
 import CoverLetterLayoutEngine, {
   type CoverLetterDesignProps,
 } from '@/components/cover-letter-engine/CoverLetterLayoutEngine';
@@ -9,7 +9,6 @@ import { CanvasToolRail, TOOLRAIL_BTN } from '@/components/cv-builder-pro/compon
 import { getPageDimensions } from '@/lib/templates/page-dimensions';
 import { useCanvasFit, ZOOM_STEP, ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanvasFit';
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
-import { TOP_SANS_SERIF_FONTS, TOP_SERIF_FONTS } from '@/lib/templates/document-fonts';
 
 /**
  * Height of the floating tool strip pinned to the bottom of the frame.
@@ -50,12 +49,6 @@ export interface CoverLetterCanvasProps {
   onRedo?: () => void;
   /** Opens the letter's AI (the Mori letter chat). */
   onToggleMoriChat?: () => void;
-  /**
-   * Applies a patch to the letter's design. The focus-mode rail edits the design
-   * directly, so the canvas needs a way to write it — the same props the sidebar
-   * design panel edits.
-   */
-  onDesignChange?: (patch: Partial<CoverLetterDesignProps>) => void;
 }
 
 const stripHtml = (value: unknown): string =>
@@ -84,7 +77,6 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
   onUndo,
   onRedo,
   onToggleMoriChat,
-  onDesignChange,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   /**
@@ -239,10 +231,15 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
     };
   }, []);
 
-  /** The selected unit's actions, shown in the rail's section slot. */
+  /**
+   * The selected unit's actions — the rail's entire contents.
+   *
+   * No leading divider: the rail's format slot is empty for the letter (its
+   * design controls live in the design tab), so a separator would have nothing
+   * on its left. The header keeps both icons, the body only the AI one.
+   */
   const unitActions = selectedUnit === 'header' ? (
     <>
-      <RailDivider />
       <button
         type="button"
         className={TOOLRAIL_BTN}
@@ -261,17 +258,14 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
       </button>
     </>
   ) : selectedUnit === 'body' ? (
-    <>
-      <RailDivider />
-      <button
-        type="button"
-        className={`${TOOLRAIL_BTN} text-emerald-600 dark:text-emerald-400`}
-        onClick={() => onToggleMoriChat?.()}
-        title="Ask Mori to improve"
-      >
-        <Sparkles size={13} />
-      </button>
-    </>
+    <button
+      type="button"
+      className={`${TOOLRAIL_BTN} text-emerald-600 dark:text-emerald-400`}
+      onClick={() => onToggleMoriChat?.()}
+      title="Ask Mori to improve"
+    >
+      <Sparkles size={13} />
+    </button>
   ) : null;
 
   const headerProps = useMemo(() => {
@@ -425,6 +419,13 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
             affordance a CV section gets — the rail hangs above whichever one is
             the focused object.
 
+            It carries the UNIT's actions only (change header style / ask Mori).
+            The letter's design numbers — typeface, size, line spacing, margin,
+            accent — used to fill the rail's format slot too, which made the rail
+            a second, cramped route to the design panel. They live in the design
+            tab (`CoverLetterDesignPanel`) and nowhere else now, so the rail is a
+            two-icon strip for the header and a one-icon strip for the body.
+
             It is rendered only while something is selected. The CV can leave its
             rail permanently mounted because a focused FIELD also anchors it; the
             letter's units are the only anchors, so with nothing selected there is
@@ -436,9 +437,6 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
             zoom={zoom}
             onAiClick={() => onToggleMoriChat?.()}
             sectionControls={unitActions}
-            formatControls={
-              <LetterDesignControls design={design} onChange={onDesignChange} />
-            }
           />
         )}
       </div>
@@ -511,115 +509,6 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
         </div>
       </div>
     </div>
-  );
-};
-
-/** The thin separator the CV's rail uses between groups. */
-const RailDivider = () => <div className="w-px h-4 bg-gray-500/20 mx-0.5 shrink-0" />;
-
-/** One labelled −/value/+ stepper inside the rail's format slot. */
-const RailStepper = ({
-  label, value, unit = '', step, min, max, onChange,
-}: {
-  label: string; value: number; unit?: string; step: number; min: number; max: number;
-  onChange: (next: number) => void;
-}) => {
-  // `toFixed` before the unary plus: 1.6 - 0.1 is 1.4999999999999998 in binary
-  // floating point, and stepping down twice from 1.6 would otherwise show 1.4 as
-  // 1.3999999999999997 in the label.
-  const clamp = (n: number) => +Math.min(max, Math.max(min, n)).toFixed(2);
-  return (
-    <div className="flex items-center gap-0.5 shrink-0">
-      <button
-        type="button"
-        className={TOOLRAIL_BTN}
-        onClick={() => onChange(clamp(value - step))}
-        title={`Decrease ${label}`}
-        aria-label={`Decrease ${label}`}
-      >
-        <Minus size={12} />
-      </button>
-      <span className="min-w-[40px] text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-300 tabular-nums">
-        {value}{unit}
-      </span>
-      <button
-        type="button"
-        className={TOOLRAIL_BTN}
-        onClick={() => onChange(clamp(value + step))}
-        title={`Increase ${label}`}
-        aria-label={`Increase ${label}`}
-      >
-        <Plus size={12} />
-      </button>
-    </div>
-  );
-};
-
-/**
- * The letter's formatting group, filling the rail's format slot.
- *
- * These are the letter's equivalent of the CV's per-field text formatting: the
- * four design numbers plus the two families the whole document is set in. They
- * are the same values the sidebar's design panel edits, deliberately — the rail
- * is a second, closer route to them, not a second source of truth, so both go
- * through the one `onDesignChange`.
- */
-const LetterDesignControls = ({
-  design, onChange,
-}: {
-  design: CoverLetterDesignProps;
-  onChange?: (patch: Partial<CoverLetterDesignProps>) => void;
-}) => {
-  return (
-    <>
-      <RailDivider />
-      <div className="flex items-center px-1">
-        <select
-          value={design.fontFamily || 'Calibri'}
-          onChange={(e) => onChange?.({ fontFamily: e.target.value })}
-          className="text-[11px] h-7 px-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-[#141414] text-gray-800 dark:text-gray-200 font-medium cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
-          title="Typeface"
-          aria-label="Typeface"
-        >
-          <optgroup label="Sans-Serif (Modern & Clean)">
-            {TOP_SANS_SERIF_FONTS.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </optgroup>
-          <optgroup label="Serif (Classic & Formal)">
-            {TOP_SERIF_FONTS.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </optgroup>
-        </select>
-      </div>
-      <RailStepper
-        label="Font size" value={design.fontSize} unit="px" step={1} min={8} max={24}
-        onChange={(v) => onChange?.({ fontSize: v })}
-      />
-      <RailStepper
-        label="Line spacing" value={design.lineHeight} step={0.1} min={1} max={3}
-        onChange={(v) => onChange?.({ lineHeight: v })}
-      />
-      <RailStepper
-        label="Page margin" value={design.pageMargin} unit="%" step={1} min={0} max={20}
-        onChange={(v) => onChange?.({ pageMargin: v })}
-      />
-      <label className="flex items-center gap-1 px-1 shrink-0" title="Accent colour">
-        <Palette size={12} className="text-gray-500 dark:text-gray-300" />
-        <input
-          type="color"
-          value={design.accentColor}
-          onChange={(e) => onChange?.({ accentColor: e.target.value })}
-          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent p-0"
-          aria-label="Accent colour"
-        />
-      </label>
-    </>
   );
 };
 
