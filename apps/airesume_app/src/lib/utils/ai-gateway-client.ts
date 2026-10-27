@@ -17,7 +17,7 @@
  * Configuration (all read at call time, never at module load, so tests and
  * container restarts pick up changes):
  *
- *   OPENAI_BASE_URL      e.g. http://172.19.0.1:8100/v1   (enables the gateway)
+ *   OPENAI_BASE_URL      e.g. http://<gateway-host>:8100/v1   (enables the gateway)
  *   OPENAI_API_KEY       any string; the gateway bypasses auth (default: dummy-token)
  *   DEFAULT_AI_MODEL     default model id (default: gemini-3.8-flash-medium)
  *   AI_GATEWAY_TIMEOUT_MS per-request timeout (default: 120000 — CLI-backed
@@ -32,8 +32,13 @@
  * network or the LAN — never through Cloudflare.
  */
 
-/** Docker-bridge address of the gateway, as documented for server-side use. */
-export const DEFAULT_GATEWAY_BASE_URL = 'http://172.19.0.1:8100/v1';
+/**
+ * Default model id. The base URL has no default on purpose: the gateway is
+ * opt-in via OPENAI_BASE_URL, and a hardcoded private-network address here
+ * would both leak internal topology into a public repository and make an
+ * unconfigured deployment pay a connection timeout to an address that may not
+ * exist. See getGatewayBaseUrl().
+ */
 export const DEFAULT_GATEWAY_MODEL = 'gemini-3.8-flash-medium';
 /** Fast tier — short edits, real-time completions. */
 export const GATEWAY_FAST_MODEL = 'gemini-3.8-flash-low';
