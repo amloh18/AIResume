@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="460" viewBox="0 0 1440 460" role="img" aria-labelledby="title desc">
+<title id="title">AIResume workflow overview</title>
+<desc id="desc">A dark, polished six-stage workflow: Build, Match, Tailor, Apply, Track and Learn.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#081b17"/><stop offset="1" stop-color="#122b25"/></linearGradient>
+  <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#92f5c5"/><stop offset="1" stop-color="#26c982"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#000" flood-opacity=".22"/></filter>
+  <style>
+    .eyebrow{font:700 13px Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:3px;fill:#91e8bd}
+    .heading{font:700 36px Inter,ui-sans-serif,system-ui,sans-serif;fill:#f5fff9}
+    .sub{font:400 16px Inter,ui-sans-serif,system-ui,sans-serif;fill:#b4c9c0}
+    .step{font:700 17px Inter,ui-sans-serif,system-ui,sans-serif;fill:#f3fff8}
+    .desc{font:400 12px Inter,ui-sans-serif,system-ui,sans-serif;fill:#a8c1b5}
+    .num{font:700 12px Inter,ui-sans-serif,system-ui,sans-serif;fill:#062a1d}
+  </style>
+</defs>
+<rect width="1440" height="460" rx="28" fill="url(#bg)"/>
+<circle cx="1282" cy="56" r="170" fill="#1ccf83" opacity=".06"/><circle cx="1344" cy="390" r="190" fill="#50e0a0" opacity=".05"/>
+<text x="64" y="57" class="eyebrow">AIRESUME · CAREER WORKFLOW</text>
+<text x="64" y="106" class="heading">One connected journey from CV to outcome.</text>
+<text x="64" y="137" class="sub">Build once. Tailor for each opportunity. Keep every application moving.</text>
+<g filter="url(#shadow)">
+  <rect x="64" y="190" width="184" height="154" rx="18" fill="#17362b" stroke="#3e775d"/>
+  <rect x="284" y="190" width="184" height="154" rx="18" fill="#17362b" stroke="#3e775d"/>
+  <rect x="504" y="190" width="184" height="154" rx="18" fill="#17362b" stroke="#3e775d"/>
+  <rect x="724" y="190" width="184" height="154" rx="18" fill="#17362b" stroke="#3e775d"/>
+  <rect x="944" y="190" width="184" height="154" rx="18" fill="#17362b" stroke="#3e775d"/>
+  <rect x="1164" y="190" width="212" height="154" rx="18" fill="#194b36" stroke="#72e2a5"/>
+</g>
+<!-- compact icon tiles -->
+<g>
+  <rect x="84" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><path d="M95 220h16v20H95z M99 225h8 M99 230h8 M99 235h5" fill="none" stroke="#073021" stroke-width="1.8" stroke-linecap="round"/>
+  <rect x="304" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><circle cx="320" cy="227" r="7" fill="none" stroke="#073021" stroke-width="2"/><path d="m325 232 5 5" stroke="#073021" stroke-width="2.2" stroke-linecap="round"/>
+  <rect x="524" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><path d="M535 221h16v18h-16z M538 226h10 M538 231h7" fill="none" stroke="#073021" stroke-width="1.8" stroke-linecap="round"/><path d="m547 217 2-3 2 3" fill="none" stroke="#073021" stroke-width="1.8"/>
+  <rect x="744" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><path d="M754 222h17v13h-17z M759 217h7 M760 235l-2 4h9l-2-4" fill="none" stroke="#073021" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="964" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><path d="M974 239v-15h6v15 M984 239v-10h6v10 M972 239h21" fill="none" stroke="#073021" stroke-width="1.8" stroke-linejoin="round"/>
+  <rect x="1184" y="211" width="38" height="38" rx="11" fill="url(#accent)"/><path d="M1202 218l2.7 5.5 6 .9-4.4 4.3 1 6.1-5.3-2.9-5.3 2.9 1-6.1-4.4-4.3 6-.9z" fill="none" stroke="#073021" stroke-width="1.6" stroke-linejoin="round"/>
+</g>
+<g>
+  <text x="84" y="279" class="step">Build</text><text x="84" y="302" class="desc">Create your Master CV</text><text x="84" y="320" class="desc">and reusable career record</text>
+  <text x="304" y="279" class="step">Match</text><text x="304" y="302" class="desc">Find relevant roles</text><text x="304" y="320" class="desc">across job sources</text>
+  <text x="524" y="279" class="step">Tailor</text><text x="524" y="302" class="desc">Align CV and cover letter</text><text x="524" y="320" class="desc">to each target role</text>
+  <text x="744" y="279" class="step">Apply</text><text x="744" y="302" class="desc">Submit with the level</text><text x="744" y="320" class="desc">of assistance you choose</text>
+  <text x="964" y="279" class="step">Track</text><text x="964" y="302" class="desc">Keep stages, documents</text><text x="964" y="320" class="desc">and events together</text>
+  <text x="1184" y="279" class="step">Learn</text><text x="1184" y="302" class="desc">Review responses and</text><text x="1184" y="320" class="desc">improve your next move</text>
+</g>
+<g fill="none" stroke="#6be1a5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M253 267h21m-6-6 6 6-6 6"/><path d="M473 267h21m-6-6 6 6-6 6"/><path d="M693 267h21m-6-6 6 6-6 6"/><path d="M913 267h21m-6-6 6 6-6 6"/><path d="M1133 267h21m-6-6 6 6-6 6"/></g>
+<text x="64" y="406" class="sub">Evidence-first AI</text><circle cx="220" cy="401" r="3" fill="#6be1a5"/><text x="238" y="406" class="sub">ATS-aware documents</text><circle cx="430" cy="401" r="3" fill="#6be1a5"/><text x="448" y="406" class="sub">Measurable application pipeline</text>
+<text x="1376" y="438" text-anchor="end" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#7fa394">buildairesume.com</text>
+</svg>

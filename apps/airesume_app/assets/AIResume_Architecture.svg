@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="650" viewBox="0 0 1440 650" role="img" aria-labelledby="title desc">
+<title id="title">AIResume high-level architecture</title>
+<desc id="desc">Job sources flow into the resumebuilder worker, which normalizes and deduplicates jobs before writing to MongoDB. The Next.js AIResume application reads from MongoDB and serves candidates. A separate private admin panel connects to the app's operational layer. The app has web and worker runtime targets.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6faf7"/><stop offset="1" stop-color="#eaf5ee"/></linearGradient>
+ <linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dbffeb"/><stop offset="1" stop-color="#b8f4d1"/></linearGradient>
+ <linearGradient id="darkgreen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#083b2a"/><stop offset="1" stop-color="#13583d"/></linearGradient>
+ <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#244c37" flood-opacity=".11"/></filter>
+ <style>
+ .title{font:700 30px Inter,ui-sans-serif,system-ui,sans-serif;fill:#143a2b}.subtitle{font:400 15px Inter,ui-sans-serif,system-ui,sans-serif;fill:#587365}.cardtitle{font:700 18px Inter,ui-sans-serif,system-ui,sans-serif;fill:#153e2d}.body{font:400 13px Inter,ui-sans-serif,system-ui,sans-serif;fill:#527163}.small{font:600 11px Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:1.1px;fill:#337552}.white{font:700 18px Inter,ui-sans-serif,system-ui,sans-serif;fill:#f4fff8}.whitebody{font:400 13px Inter,ui-sans-serif,system-ui,sans-serif;fill:#c4e2d1}.tag{font:700 11px Inter,ui-sans-serif,system-ui,sans-serif;fill:#0d6945}
+ </style>
+</defs>
+<rect width="1440" height="650" rx="24" fill="url(#bg)"/>
+<text x="56" y="57" class="small">SYSTEM OVERVIEW</text>
+<text x="56" y="96" class="title">A simple split between ingestion, data, and the app</text>
+<text x="56" y="125" class="subtitle">Job discovery is isolated from the web tier; the application reads normalized demand and manages the candidate workflow.</text>
+<!-- source list -->
+<g filter="url(#shadow)"><rect x="56" y="195" width="240" height="170" rx="18" fill="#ffffff" stroke="#d4e6da"/></g>
+<rect x="76" y="215" width="105" height="25" rx="12.5" fill="#e6f7ed"/><text x="128.5" y="232" text-anchor="middle" class="tag">INPUTS</text>
+<text x="76" y="269" class="cardtitle">Job sources</text>
+<text x="76" y="296" class="body">Adzuna · Remotive</text><text x="76" y="317" class="body">RemoteOK · JobSpy</text><text x="76" y="338" class="body">LinkedIn · ATS platforms</text>
+<!-- worker -->
+<g filter="url(#shadow)"><rect x="356" y="195" width="284" height="170" rx="18" fill="url(#green)" stroke="#94d8af"/></g>
+<rect x="376" y="215" width="125" height="25" rx="12.5" fill="#c2f3d5"/><text x="438.5" y="232" text-anchor="middle" class="tag">INGESTION</text>
+<text x="376" y="269" class="cardtitle">resumebuilder-worker</text>
+<text x="376" y="296" class="body">Adapters and normalization</text><text x="376" y="317" class="body">Canonical deduplication</text><text x="376" y="338" class="body">Distributed-lock scheduler</text>
+<!-- db -->
+<g filter="url(#shadow)"><rect x="700" y="195" width="224" height="170" rx="18" fill="#ffffff" stroke="#d4e6da"/></g>
+<rect x="720" y="215" width="91" height="25" rx="12.5" fill="#e6f7ed"/><text x="765.5" y="232" text-anchor="middle" class="tag">STORAGE</text>
+<ellipse cx="812" cy="276" rx="34" ry="10" fill="#d0efdb" stroke="#72bd8e"/><path d="M778 276v36c0 6 15 11 34 11s34-5 34-11v-36" fill="#eaf8ef" stroke="#72bd8e"/><ellipse cx="812" cy="312" rx="34" ry="10" fill="#d0efdb" stroke="#72bd8e"/>
+<text x="812" y="346" text-anchor="middle" class="cardtitle">MongoDB</text>
+<!-- app -->
+<g filter="url(#shadow)"><rect x="984" y="168" width="400" height="224" rx="20" fill="url(#darkgreen)"/></g>
+<text x="1012" y="202" class="small" style="fill:#a6efc2">APPLICATION LAYER</text>
+<text x="1012" y="236" class="white">AIResume · Next.js</text>
+<text x="1012" y="261" class="whitebody">Build · Match · Tailor · Apply · Track · Learn</text>
+<rect x="1012" y="287" width="160" height="70" rx="12" fill="#1a6849" stroke="#4b9e72"/><text x="1092" y="312" text-anchor="middle" class="white" style="font-size:15px">Web tier</text><text x="1092" y="333" text-anchor="middle" class="whitebody" style="font-size:11px">Runner target</text>
+<rect x="1190" y="287" width="166" height="70" rx="12" fill="#1a6849" stroke="#4b9e72"/><text x="1273" y="312" text-anchor="middle" class="white" style="font-size:15px">Background worker</text><text x="1273" y="333" text-anchor="middle" class="whitebody" style="font-size:11px">Worker target</text>
+<!-- connectors top -->
+<g fill="none" stroke="#42996a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M296 280h53l-8-7m8 7-8 7"/><path d="M640 280h53l-8-7m8 7-8 7"/><path d="M924 280h51l-8-7m8 7-8 7"/></g>
+<text x="322" y="263" text-anchor="middle" class="small">FETCH</text><text x="667" y="263" text-anchor="middle" class="small">WRITE</text><text x="950" y="263" text-anchor="middle" class="small">READ</text>
+<!-- candidate and admin support -->
+<g filter="url(#shadow)"><rect x="56" y="445" width="430" height="142" rx="18" fill="#ffffff" stroke="#d4e6da"/></g>
+<circle cx="94" cy="483" r="17" fill="#e2f6e9"/><circle cx="94" cy="478" r="5" fill="none" stroke="#218552" stroke-width="2"/><path d="M83 493c2-9 20-9 22 0" fill="none" stroke="#218552" stroke-width="2" stroke-linecap="round"/>
+<text x="126" y="482" class="cardtitle">Candidate experience</text><text x="82" y="519" class="body">Resume editor, ATS scoring, tailored documents,</text><text x="82" y="541" class="body">job discovery, application history and analytics.</text>
+<g filter="url(#shadow)"><rect x="530" y="445" width="430" height="142" rx="18" fill="#ffffff" stroke="#d4e6da"/></g>
+<rect x="556" y="463" width="115" height="25" rx="12.5" fill="#fff1d6"/><text x="613.5" y="480" text-anchor="middle" style="font:700 11px Inter,ui-sans-serif,system-ui,sans-serif;fill:#94610d">PRIVATE</text>
+<text x="556" y="517" class="cardtitle">Admin panel</text><text x="556" y="541" class="body">Separate private repository and deployment;</text><text x="556" y="562" class="body">not included in this public source repository.</text>
+<g filter="url(#shadow)"><rect x="1004" y="445" width="380" height="142" rx="18" fill="#e2f7eb" stroke="#b7e4c7"/></g>
+<text x="1030" y="478" class="small">DEPLOYMENT</text><text x="1030" y="509" class="cardtitle">Self-managed infrastructure</text><text x="1030" y="535" class="body">Docker · Dokploy · Traefik · Cloudflare</text><text x="1030" y="557" class="body">Separate runner and worker runtime targets</text>
+<!-- dashed relationship from app down -->
+<path d="M1180 394v34H270v12 M1180 428H745v12" fill="none" stroke="#79b995" stroke-width="1.8" stroke-dasharray="5 7"/>
+<text x="1382" y="625" text-anchor="end" font-family="Inter,ui-sans-serif,system-ui,sans-serif" font-size="12" fill="#739282">AIResume · buildairesume.com</text>
+</svg>
