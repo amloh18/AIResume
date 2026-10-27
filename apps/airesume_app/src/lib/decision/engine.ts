@@ -8,6 +8,7 @@ import { assessApplicationRisk, type RiskAssessment } from './riskAssessment';
 
 export interface DecisionInput {
   userId: string;
+  applicationId?: string;
   job: {
     title: string;
     company: string;
@@ -60,11 +61,18 @@ export async function makeApplicationDecision(input: DecisionInput): Promise<Dec
   }
 
   // 2. Duplicate Check
-  const duplicate = await checkDuplicate(input.userId, {
-    title: input.job.title,
-    company: input.job.company,
-    jobUrl: input.job.jobUrl,
-  });
+  const duplicate = await checkDuplicate(
+    input.userId,
+    {
+      title: input.job.title,
+      company: input.job.company,
+      jobUrl: input.job.jobUrl,
+    },
+    {
+      excludeApplicationId: input.applicationId,
+      onlyApplied: true,
+    }
+  );
   if (duplicate.isDuplicate) {
     return {
       mode: 'skip',

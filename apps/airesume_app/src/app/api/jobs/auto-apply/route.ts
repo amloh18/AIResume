@@ -169,6 +169,7 @@ async function enqueueAutoApply(request: NextRequest) {
     const { makeApplicationDecision } = await import('@/lib/decision/engine');
     const decision = await makeApplicationDecision({
       userId: auth.userId,
+      applicationId: jobId && typeof jobId === 'string' ? jobId : undefined,
       // An explicit `mode: 'auto'` in the body is the user's own approval (the "Approve & submit"
       // action on a staged application). The engine treats it as an override, which is what lets a
       // `review`-mode item be re-queued for real submission after the user has looked at it.
@@ -204,14 +205,27 @@ async function enqueueAutoApply(request: NextRequest) {
     } catch { /* use string */ }
 
     let jobApp;
-    const existingByTitle = await JobApplication.findOne({
-      $or: [{ userId: userObjId }, { userId: String(auth.userId) }],
-      company: { $regex: new RegExp(`^${company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-      jobTitle: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
-    });
+    if (jobId) {
+      try {
+        const mongoose = await import('mongoose');
+        if (mongoose.default.Types.ObjectId.isValid(jobId)) {
+          jobApp = await JobApplication.findOne({
+            _id: jobId,
+            $or: [{ userId: userObjId }, { userId: String(auth.userId) }],
+          });
+        }
+      } catch { /* fallback to title query */ }
+    }
 
-    if (existingByTitle) {
-      jobApp = existingByTitle;
+    if (!jobApp) {
+      jobApp = await JobApplication.findOne({
+        $or: [{ userId: userObjId }, { userId: String(auth.userId) }],
+        company: { $regex: new RegExp(`^${company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+        jobTitle: { $regex: new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      });
+    }
+
+    if (jobApp) {
 
       /*
         Repair an application that was enqueued before SB-20.

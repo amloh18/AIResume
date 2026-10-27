@@ -416,6 +416,8 @@ const nextConfig: NextConfig = {
     'pdf2pic',
     'pdf-parse',
     'stripe',
+    'playwright',
+    'playwright-core',
   ],
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,

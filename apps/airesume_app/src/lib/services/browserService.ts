@@ -147,7 +147,24 @@ export async function acquirePlaywrightBrowser(): Promise<{ browser: any; mode: 
     throw new BrowserUnavailableError(runtime.reason);
   }
 
-  const playwright = await import('playwright');
+  let playwright: any;
+  try {
+    const dynamicRequire =
+      typeof (globalThis as any).__non_webpack_require__ !== 'undefined'
+        ? (globalThis as any).__non_webpack_require__
+        : eval('require');
+    playwright = dynamicRequire('playwright');
+  } catch {
+    try {
+      playwright = await import('playwright');
+    } catch {
+      const dynamicRequire =
+        typeof (globalThis as any).__non_webpack_require__ !== 'undefined'
+          ? (globalThis as any).__non_webpack_require__
+          : eval('require');
+      playwright = dynamicRequire('playwright-core');
+    }
+  }
 
   if (runtime.mode === 'remote-cdp') {
     const target = await resolveCdpTarget(runtime.endpoint!);
