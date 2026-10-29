@@ -293,9 +293,25 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
                 ? skills.map(() => clampLevel(group.rating))
                 : undefined;
 
+            /* `skillsText` travels back verbatim.
+             *
+             * It used to be dropped and re-derived from the split `skills`
+             * array, which quietly ate whatever the user typed that does not
+             * survive a split/join round trip: a comma being typed ("React," →
+             * the trailing empty entry is filtered → "React"), a double space, a
+             * newline. The canvas then re-rendered from the rewritten text, so
+             * the next keystroke landed on a value that no longer matched the
+             * DOM — which is what made editing a skill lose focus/characters
+             * after the first input. Keeping the raw text makes the round trip
+             * lossless; `skills`/`levels` stay derived for the pill renderers. */
+            const preservedSkillsText = typeof group.skillsText === 'string'
+              ? group.skillsText
+              : skills.join(', ');
+
             return {
               category: (group.category || '').trim(),
               skills,
+              skillsText: preservedSkillsText,
               ...(levels ? { levels } : {}),
               ...(typeof group.rating === 'number' ? { rating: group.rating } : {})
             };

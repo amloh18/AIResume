@@ -135,41 +135,41 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
       // Mark as checked to prevent multiple calls
       hasCheckedRef.current = true;
 
-      // Check if user has AI career report data in localStorage (in-progress CV creation)
-      if (typeof window !== 'undefined') {
+      /* Resume an in-progress AI career report draft — but ONLY when the account
+       * has no CV on the server.
+       *
+       * This used to run before anything was fetched, so a leftover
+       * `ai-career-report-data` entry in localStorage (any draft where the user
+       * had clicked past step 1) hijacked every dashboard visit: the user was
+       * pushed back into the wizard on top of a perfectly good profile CV that
+       * already existed server-side, and could never reach their dashboard while
+       * that entry survived. The server record is the truth; a local draft is
+       * only worth resuming when it is all the user has. */
+      const resumeLocalDraft = (): boolean => {
+        if (typeof window === 'undefined') return false;
         const aiCareerReportData = localStorage.getItem('ai-career-report-data');
-        if (aiCareerReportData) {
-          try {
-            const parsed = JSON.parse(aiCareerReportData);
-            // Check if we have meaningful CV data (not just empty structure)
-            const hasCvData = !!(
-              parsed.cvData?.basics?.name ||
-              parsed.cvData?.basics?.email ||
-              parsed.cvData?.work?.length > 0 ||
-              parsed.cvData?.education?.length > 0 ||
-              parsed.cvData?.projects?.length > 0 ||
-              parsed.currentStep > 1
-            );
+        if (!aiCareerReportData) return false;
+        try {
+          const parsed = JSON.parse(aiCareerReportData);
+          const hasCvData = !!(
+            parsed.cvData?.basics?.name ||
+            parsed.cvData?.basics?.email ||
+            parsed.cvData?.work?.length > 0 ||
+            parsed.cvData?.education?.length > 0 ||
+            parsed.cvData?.projects?.length > 0 ||
+            parsed.currentStep > 1
+          );
+          if (!hasCvData) return false;
 
-            if (hasCvData) {
-              console.log('✅ User has AI career report data in localStorage, redirecting to continue...');
-              console.log('🔍 CVCheckRedirect - AI Career Report data:', {
-                currentStep: parsed.currentStep,
-                hasWork: parsed.cvData?.work?.length > 0,
-                hasEducation: parsed.cvData?.education?.length > 0
-              });
-
-              // Redirect to AI career report to continue where they left off
-              const step = parsed.currentStep || 3;
-              router.push(`/ai-career-report?step=${step}`);
-              setIsChecking(false);
-              return;
-            }
-          } catch (e) {
-            console.warn('Failed to parse AI career report data:', e);
-          }
+          console.log('✅ Resuming in-progress AI career report draft (no server CV exists)');
+          const step = parsed.currentStep || 3;
+          router.push(`/ai-career-report?step=${step}`);
+          return true;
+        } catch (e) {
+          console.warn('Failed to parse AI career report data:', e);
+          return false;
         }
-      }
+      };
 
       // Check if user just completed onboarding or AI career report
       if (typeof window !== 'undefined' && (
@@ -203,13 +203,33 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
           isNextAuthUser: user.isNextAuthUser,
         });
 
-        // Fast path: Check all CVs first immediately without any timeout delay
+        /* ─── Onboarding is only for accounts with NOTHING ───────────────────
+         *
+         * This guard's contract is "a brand-new account with no CV at all gets
+         * taken to onboarding". It used to also treat "a CV exists but none is
+         * flagged master" as needing onboarding, which ambushed users whose
+         * profile CV was created without the master marker (or whose marker a
+         * later edit cleared): the CV list proved they had a profile and the
+         * redirect ignored it.
+         *
+         * So the decision is now made on ANY CV existing. A missing master is
+         * still reported (the Create Master CV card), but it is not a reason to
+         * drag someone away from their dashboard.
+         */
         console.log('🔍 CVCheckRedirect - Fetching all CVs for user...');
         const response = await fetch(`/api/cvs?userId=${user.id}`);
         const result = await response.json();
 
-        if (result.success) {
-          if (!result.data || !result.data.cvs || result.data.cvs.length === 0) {
+        if (response.ok && result.success) {
+          const cvs: any[] = Array.isArray(result.data?.cvs) ? result.data.cvs : [];
+
+          if (cvs.length === 0) {
+            // Nothing on the server. Only now is an unfinished local draft worth
+            // returning to; otherwise this is a genuinely new account.
+            if (resumeLocalDraft()) {
+              setIsChecking(false);
+              return;
+            }
             console.log('📝 User has no CVs at all, redirecting to welcome immediately');
             router.push('/welcome');
             setIsChecking(false);
@@ -217,7 +237,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
           }
 
           // Check if any CV is a master CV
-          const hasMaster = result.data.cvs.some((cv: any) => {
+          const hasMaster = cvs.some((cv: any) => {
             const isMasterAtRoot = cv.isMaster === true;
             const isMasterInMetadata = cv.metadata?.isMaster === true;
             const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
@@ -228,19 +248,23 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
 
           if (hasMaster) {
             console.log('✅ Master CV found in CV list, staying on dashboard');
-            setHasMasterCV(true);
-            // Clear any onboarding flags since user has master CV
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('fromOnboarding');
-              sessionStorage.removeItem('needsCVSetup');
-            }
-            setIsChecking(false);
-            return;
+          } else {
+            console.log('✅ CVs exist without a master marker — staying on dashboard, offering the master card');
+            setShowMasterCVCard(true);
           }
+          setHasMasterCV(true);
+          // Clear any onboarding flags since user has master CV
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('fromOnboarding');
+            sessionStorage.removeItem('needsCVSetup');
+          }
+          setIsChecking(false);
+          return;
         }
 
-        // Fallback/Verification path: Check master CV endpoint directly if list check didn't confirm master CV
-        console.log('🔍 CVCheckRedirect - Master CV not found in list, checking master CV API directly...');
+        // The list call itself failed (not "no CVs" — that case returned above).
+        // Verify against the master CV endpoint before deciding anything.
+        console.log('🔍 CVCheckRedirect - CV list unusable, checking master CV API directly...');
         try {
           const masterCVResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
           const masterCVResult = await masterCVResponse.json();
@@ -252,16 +276,26 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             return;
           }
         } catch (masterCVError) {
-          console.log('⚠️ Master CV API call failed, continuing to welcome redirect:', masterCVError);
+          console.log('⚠️ Master CV API call failed:', masterCVError);
         }
 
-        // If we reach here, user has no master CV
-        console.log('📝 User has no master CV, redirecting to welcome');
-        router.push('/welcome');
+        /* Still unknown — neither call could tell us anything reliable.
+         *
+         * This used to redirect to /welcome, which turned a transient 500/timeout
+         * on the CV list into "you must onboard again" for a user who already had
+         * a profile. An unverified answer is not evidence of a new account: keep
+         * the dashboard rendered, and clear the checked flag so the next mount can
+         * retry with a working API rather than locking the decision in. */
+        console.log('⚠️ CV status unknown (API unavailable) — staying on dashboard, will retry');
+        hasCheckedRef.current = false;
       } catch (error) {
         console.error('❌ Error checking CV status:', error);
-        // Fallback: redirect to onboarding
-        router.push('/welcome');
+        /* A network/parse failure is NOT evidence that the user has no profile.
+         * Forcing onboarding here meant one flaky request (or an offline blip)
+         * threw a user with a perfectly good CV back into the wizard. Leaving the
+         * dashboard rendered is the safe default; the check re-runs on the next
+         * mount because `hasCheckedRef` is reset below. */
+        hasCheckedRef.current = false;
       } finally {
         setIsChecking(false);
       }

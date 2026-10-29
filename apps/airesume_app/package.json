@@ -39,6 +39,7 @@
     "verify:payment-switching": "npx tsx tests/verify-payment-switching.ts",
     "verify:ai-gateway": "npx tsx tests/verify-ai-gateway.ts",
     "verify:canvas-focus": "npx tsx tests/verify-canvas-focus.ts",
+    "verify:cv-snippets": "npx tsx tests/verify-cv-snippets.ts",
     "verify:entry-duplicate": "npx tsx tests/verify-entry-duplicate.ts",
     "verify:turbopack-patch": "npx tsx tests/verify-turbopack-patch.ts",
     "verify:cover-letter-attachment": "npx tsx tests/verify-cover-letter-attachment.ts",

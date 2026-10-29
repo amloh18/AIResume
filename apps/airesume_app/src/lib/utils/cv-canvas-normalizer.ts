@@ -179,7 +179,15 @@ export function normalizeCvDataForCanvas(cvData: UnifiedCVDataStructure | null |
       // Support both Unified format ({studyType, area}) and canvas format ({degree})
       let degree = e.degree || '';
       if (!degree && (e.studyType || e.area)) {
-        degree = e.studyType ? `${e.studyType} in ${e.area || ''}`.trim() : (e.area || '');
+        /* Join with " in " ONLY when there are two halves to join.
+         *
+         * This used to always interpolate `${studyType} in ${area || ''}` and
+         * trim, so any education entry with a study type but no area rendered
+         * as "Bachelor of Engineering in" — a dangling connector after the
+         * degree that no field contained and no edit could remove. */
+        const studyType = String(e.studyType || '').trim();
+        const area = String(e.area || '').trim();
+        degree = studyType && area ? `${studyType} in ${area}` : (studyType || area);
       }
 
       /*

@@ -608,6 +608,8 @@ export default function Step5Review({ onSave }: { onSave?: () => Promise<void> }
             // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
             await downloadCanvasAsPDF(`${baseName}.pdf`, {
               paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+              cvData: state.cvData,
+              template: state.selectedTemplate || state.cvData?.metadata?.canvasTemplate,
             });
           } else if (format === 'svg') {
             // ── Pure Vector SVG: 100% vector scalability with 0 pixelation on zoom ───

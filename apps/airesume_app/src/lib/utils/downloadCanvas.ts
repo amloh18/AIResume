@@ -3,14 +3,28 @@
 /**
  * downloadCanvas.ts
  *
- * High-fidelity, low-file-size PDF and SVG export utility for the CV Canvas Engine.
+ * High-fidelity PDF / SVG export for the CV Canvas Engine.
  *
- * Solves pixelation on zoom & reduces file size by:
- *  1. Using SVG-driven browser native rendering (html-to-image) at 300 DPI (pixelRatio: 3).
- *  2. Using optimized compression (quality: 0.85) to cut file size by ~75% compared to 0.95.
- *  3. Providing a pure vector SVG export (downloadCanvasAsSVG) with 0 pixelation at infinite zoom.
- *  4. Providing a browser-native vector print-to-PDF method (printCanvasAsVectorPDF) for 100% text vectors.
- *  5. Graceful fallback to high-DPI html2canvas (scale: 3) if html-to-image encounters restricted cross-origin fonts.
+ * PDF is now a REAL, TEXT-BASED document.
+ *
+ * It used to be a picture: each page was rasterised with html-to-image and the
+ * resulting JPEG was dropped into a jsPDF page. Every CV download was therefore
+ * an image, with all of the consequences that has — text that cannot be
+ * selected, copied or searched, no embedded fonts, an ATS that reads nothing but
+ * a blank image, and a file whose pages never quite matched the canvas because
+ * they were a flattened screenshot of it.
+ *
+ * The export now sends the LIVE canvas markup (the same DOM you see, with the
+ * editor's chrome stripped) to the server, where Puppeteer lays it out at the
+ * exact paper size and prints a tagged, text-based PDF — the same renderer the
+ * rest of the product already uses. Because the markup and its stylesheet are
+ * the canvas's own, every snippet renders in the PDF exactly as it does on the
+ * canvas, and the text stays selectable.
+ *
+ * The raster path survives only as a FALLBACK for when that request fails (no
+ * network, renderer unavailable). It is never the first choice.
+ *
+ * SVG export is untouched and remains a pure vector download.
  */
 
 import { getPageDimensions, PaperSize } from '@/lib/templates/page-dimensions';
@@ -21,10 +35,17 @@ export interface CanvasDownloadOptions {
   elementId?: string;
   /** Direct element reference to capture */
   element?: HTMLElement;
-  /** Capture quality 0–1 for JPEG (default 0.85 for optimal sharpness vs file size) */
+  /** Capture quality 0–1 for JPEG fallback (default 0.85) */
   quality?: number;
-  /** Resolution scale multiplier (default 3 = ~300 DPI print quality) */
+  /** Resolution scale multiplier for the raster FALLBACK (default 3 = ~300 DPI) */
   scale?: number;
+  /**
+   * The document's data/template. Optional; supplied by the editor so the server
+   * export has the CV's name for the filename and metadata. The PDF itself is
+   * produced from `htmlContent`, so exports still work without them.
+   */
+  cvData?: any;
+  template?: any;
 }
 
 const EDITOR_SELECTORS = [
@@ -37,6 +58,37 @@ const EDITOR_SELECTORS = [
   '.section-hover-controls',
   '.inline-add-section-button',
   '.cv-section-drag-overlay',
+  '.entry-controls',
+  '[data-canvas-toolrail]',
+  '[data-entry-rail]',
+];
+
+/** Nodes that exist only for editing and must never reach an exported file. */
+const EXPORT_EXCLUDE_SELECTOR = [
+  '.no-print',
+  '[data-no-print]',
+  '.entry-controls',
+  '[data-entry-rail]',
+  '[data-canvas-toolrail]',
+  '[data-section-frame]',
+  '[data-insert-snippet-btn]',
+  '[role="dialog"]',
+].join(',');
+
+/** CSS custom properties the canvas sets inline on an ancestor of the pages. */
+const CANVAS_VARIABLES = [
+  '--cv-font',
+  '--cv-base-size',
+  '--cv-spacing',
+  '--cv-accent',
+  '--cv-page-margin',
+  '--cv-sidebar-bg',
+  '--cv-section-gap',
+  '--cv-item-gap',
+  '--cv-column-gap',
+  '--cv-page-width',
+  '--cv-page-height',
+  '--cv-page-gap',
 ];
 
 function shouldExcludeNode(node: HTMLElement): boolean {
@@ -65,10 +117,113 @@ function resolveCvDocument(options: CanvasDownloadOptions): {
   };
 }
 
+/** Absolute href for a stylesheet the export document has to re-fetch. */
+function absoluteHref(href: string): string {
+  try {
+    return new URL(href, window.location.href).href;
+  } catch {
+    return href;
+  }
+}
+
 /**
- * Download the live CV canvas preview as a crisp, low-file-size PDF.
- * Uses high-DPI SVG foreignObject rendering with optimized compression to ensure
- * text is razor-sharp on 200%-400% zoom without ballooning file sizes.
+ * Serialise the live canvas into a self-contained HTML document for the server
+ * PDF renderer.
+ *
+ * Three things have to travel with the markup or the print loses the design:
+ *  1. the canvas CSS variables (they live on an ANCESTOR of the pages, and the
+ *     pages are cloned out of that ancestor);
+ *  2. the stylesheets (Tailwind's link + the canvas engine's inline <style>);
+ *  3. printable overrides — zero page margin (the markup already carries the
+ *     document's own margins), no sheet shadow, one PDF page per `.cv-page`,
+ *     and no empty-field placeholders.
+ */
+function buildVectorExportHtml(pages: HTMLElement[], paperSize: 'A4' | 'Letter'): string | null {
+  if (typeof document === 'undefined' || pages.length === 0) return null;
+
+  const dims = getPageDimensions(paperSize as PaperSize);
+
+  // The variables are inherited, so a computed read on any page resolves them.
+  const computed = window.getComputedStyle(pages[0]);
+  const variables = CANVAS_VARIABLES
+    .map((name) => {
+      const value = computed.getPropertyValue(name).trim();
+      return value ? `${name}: ${value};` : '';
+    })
+    .filter(Boolean)
+    .join(' ');
+
+  const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+    .map((link) => {
+      const href = (link as HTMLLinkElement).getAttribute('href');
+      return href ? `<link rel="stylesheet" href="${absoluteHref(href)}">` : '';
+    })
+    .join('\n');
+
+  const inlineStyles = Array.from(document.querySelectorAll('style'))
+    .map((style) => style.outerHTML)
+    .join('\n');
+
+  const body = pages
+    .map((page) => {
+      const clone = page.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(EXPORT_EXCLUDE_SELECTOR).forEach((node) => node.remove());
+      // Editor-only state that would otherwise be baked into the export.
+      clone.classList.remove('cv-has-selection');
+      clone.querySelectorAll('[contenteditable]').forEach((node) => node.removeAttribute('contenteditable'));
+      clone.querySelectorAll('[data-selected]').forEach((node) => node.removeAttribute('data-selected'));
+      clone.querySelectorAll('.cv-has-selection').forEach((node) => node.classList.remove('cv-has-selection'));
+      clone.style.boxShadow = 'none';
+      clone.style.margin = '0';
+      return clone.outerHTML;
+    })
+    .join('\n');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CV</title>
+  ${links}
+  ${inlineStyles}
+  <style>
+    :root, body { ${variables} }
+    @page { size: ${dims.widthMm}mm ${dims.heightMm}mm; margin: 0; }
+    html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
+    body { width: ${dims.widthPx}px; }
+    .cv-page, .cover-letter-document {
+      width: ${dims.widthPx}px !important;
+      height: ${dims.heightPx}px !important;
+      min-height: ${dims.heightPx}px !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
+    }
+    .cv-page:last-child, .cover-letter-document:last-child { page-break-after: auto; break-after: auto; }
+    /* Selection/hover states must never be printed. */
+    .cv-section-wrapper { filter: none !important; opacity: 1 !important; }
+    /* Empty-field hints are an editing affordance, not document content. */
+    [data-empty-text]:empty::after, [data-empty-text]:empty::before { content: '' !important; display: none !important; }
+    [contenteditable]:empty::before { content: '' !important; display: none !important; }
+  </style>
+</head>
+<body>
+  ${body}
+</body>
+</html>`;
+}
+
+/**
+ * Download the live CV canvas as a TEXT-BASED (vector, selectable) PDF.
+ *
+ * Primary path: the live markup is posted to `/api/cv/export`, which prints it
+ * with Puppeteer at the exact paper size — the same renderer the product uses
+ * everywhere else, so what you see in the canvas is what lands in the file.
+ *
+ * Fallback path (only if that request fails): the previous high-DPI raster
+ * capture, so an export is never simply unavailable.
  */
 export async function downloadCanvasAsPDF(
   filename = 'cv.pdf',
@@ -76,10 +231,64 @@ export async function downloadCanvasAsPDF(
 ): Promise<void> {
   if (typeof window === 'undefined') return;
 
+  const paperSize = (options.paperSize || 'A4') as 'A4' | 'Letter';
+  const { pages } = resolveCvDocument(options);
+
+  if (pages.length > 0) {
+    const htmlContent = buildVectorExportHtml(pages, paperSize);
+    if (htmlContent) {
+      try {
+        const response = await fetch('/api/cv/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // `basics` is read by the route for the filename/metadata; the PDF
+            // itself is built from htmlContent.
+            cvData: options.cvData ?? { basics: {} },
+            template: options.template ?? null,
+            format: 'pdf',
+            paperSize,
+            orientation: 'portrait',
+            filename: filename.replace(/\.pdf$/i, ''),
+            htmlContent,
+          }),
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && contentType.includes('application/pdf')) {
+          const blob = await response.blob();
+          downloadBlob(blob, filename);
+          return;
+        }
+        console.warn(
+          'Vector PDF export unavailable, falling back to raster capture:',
+          response.status,
+          contentType
+        );
+      } catch (error) {
+        console.warn('Vector PDF export failed, falling back to raster capture:', error);
+      }
+    }
+  }
+
+  await downloadCanvasAsRasterPDF(filename, { ...options, paperSize });
+}
+
+/**
+ * Raster fallback: high-DPI page screenshots embedded in a PDF.
+ *
+ * Kept only for when the text-based renderer cannot be reached. Output is an
+ * image — text is not selectable and ATS parsers see nothing — so nothing
+ * should call this directly.
+ */
+async function downloadCanvasAsRasterPDF(
+  filename = 'cv.pdf',
+  options: CanvasDownloadOptions = {}
+): Promise<void> {
   const {
     paperSize = 'A4',
-    quality = 0.85, // 0.85 produces visually lossless output at ~75% smaller file size than 0.95
-    scale = 3,      // 3x pixel ratio gives ~300 DPI print resolution (no pixelation on zoom)
+    quality = 0.85,
+    scale = 3,
   } = options;
 
   const { cvDoc, pages } = resolveCvDocument(options);
@@ -106,7 +315,6 @@ export async function downloadCanvasAsPDF(
       let imgData: string;
 
       try {
-        // High-DPI SVG-backed capture (crisp font rasterization, native SVG icons)
         imgData = await htmlToImage.toJpeg(page, {
           quality,
           pixelRatio: scale,
@@ -115,7 +323,6 @@ export async function downloadCanvasAsPDF(
         });
       } catch (htmlToImageErr) {
         console.warn('html-to-image capture fallback triggered:', htmlToImageErr);
-        // Fallback to high-DPI html2canvas if external font or canvas policy blocks foreignObject
         const html2canvasModule = await import('html2canvas');
         const html2canvas = html2canvasModule.default || html2canvasModule;
         const canvas = await html2canvas(page, {
@@ -280,6 +487,13 @@ export function printCanvasAsVectorPDF(options: CanvasDownloadOptions = {}): voi
       document.body.removeChild(iframe);
     }, 1000);
   }, 250);
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  downloadDataUri(url, filename);
+  // Give the browser a tick to start the download before revoking.
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 function downloadDataUri(uri: string, filename: string): void {

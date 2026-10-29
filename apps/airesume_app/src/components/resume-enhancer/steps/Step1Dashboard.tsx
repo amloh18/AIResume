@@ -8,6 +8,7 @@ import { Upload, FileText, Files, Gauge, Edit3, CheckCircle2, Loader2, Briefcase
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
+import { withStarterContent } from '@/lib/utils/cv-starter-content';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
@@ -1605,7 +1606,15 @@ export default function Step1Dashboard({
   };
 
   const handleManualEntry = async () => {
-    const freshCvData = JSON.parse(JSON.stringify(DEFAULT_UNIFIED_CV_DATA)) as UnifiedCVDataStructure;
+    /* "Create from scratch" means no EXISTING content — not an empty canvas.
+     * Seeding one placeholder entry per section is what makes the editor usable
+     * on the first screen: headings have something under them, every snippet can
+     * be judged in the template preview, and the user has a concrete thing to
+     * replace instead of guessing where text goes. Identity fields stay blank on
+     * purpose. See lib/utils/cv-starter-content.ts. */
+    const freshCvData = withStarterContent(
+      JSON.parse(JSON.stringify(DEFAULT_UNIFIED_CV_DATA))
+    ) as UnifiedCVDataStructure;
     const cvType = determineCVType();
 
     if (isGuestMode) {

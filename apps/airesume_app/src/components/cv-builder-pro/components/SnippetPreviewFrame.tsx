@@ -28,7 +28,10 @@ export const SnippetPreviewFrame = ({
     const update = () => {
       const contentHeight = Math.max(el.scrollHeight, el.offsetHeight);
       const next = Math.ceil(contentHeight * scale + 16);
-      setHeight(Math.min(640, Math.max(110, next)));
+      // The ceiling follows the caller's scale: a larger scale paints more
+      // pixels per snippet, so a fixed 640px cap would clip the very content the
+      // bigger preview was added to show.
+      setHeight(Math.min(Math.round(640 * Math.max(1, scale / 0.44)), Math.max(110, next)));
     };
 
     update();

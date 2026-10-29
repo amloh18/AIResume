@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
+import { suggestNextSections } from '../section-suggestions';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
 import { AnimatePresence } from 'framer-motion';
 import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
@@ -1347,17 +1348,15 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const handleSectionClick = (e: React.MouseEvent) => {
     if (readOnly) return;
-    if (ctx?.selectedBlockId && ctx.selectedBlockId !== instance.id) {
-      // When in focused section, clicking outside should close the focus from
-      // the section rather than activating it on the other section.
-      e.stopPropagation();
-      ctx.setSelectedBlockId(null);
-      return;
-    }
-    // Clicking anywhere inside the section makes it the focused OBJECT: solid
-    // lime frame, every other section on the sheet blurred and dimmed, and its
-    // own rail pinned open. (Alt-click keeps the old "hand this section to the
-    // chat" shortcut.)
+    /* Clicking a section ALWAYS makes it the focused object.
+     *
+     * This used to do the opposite when another section was focused: the click
+     * only cleared the previous focus and swallowed the event, so moving focus
+     * from one section to another took two clicks (and, because the caret's
+     * mousedown had already been handled by the outside-click guard, often looked
+     * like it did nothing at all). Clicking a section is an unambiguous request
+     * to select THAT section; leaving focus mode is what clicking the paper or
+     * pressing Escape is for. */
     ctx?.setSelectedBlockId?.(instance.id);
     if (!e.altKey) return;
     e.stopPropagation();
@@ -1368,7 +1367,33 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     }));
   };
 
-  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId: zoneId.replace(/_page_\d+$/, ''), isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones, readOnly });
+  /* `isNarrow` and the two skill handlers travel with every snippet.
+   *
+   * — `isNarrow` lets a snippet collapse its own two-up grids in a sidebar or a
+   *   50/50 column instead of each snippet having to guess its zone from
+   *   `zoneId` (several render in zones they never receive, e.g. the skills
+   *   snippets used to be handed no zone at all).
+   * — `onAddSkill` / `onAddSkillCategory` back the inline "add skill" controls
+   *   INSIDE a skills section. They live here (rather than in a snippet-local
+   *   context) because the registry cannot import CanvasContext from this file
+   *   without a circular import. */
+  const content = SnippetComponent.render({
+    data: cvData,
+    Editable: EditableWrapper,
+    zoneId: zoneId.replace(/_page_\d+$/, ''),
+    isNarrow,
+    isDark,
+    Title,
+    moveEntry,
+    deleteEntry,
+    showIcons: ctx?.design?.showContactIcons ?? true,
+    design: ctx?.design,
+    activeTemplate,
+    layoutZones,
+    readOnly,
+    onAddSkill: ctx?.addSkillToGroup,
+    onAddSkillCategory: ctx?.addSkillCategory,
+  });
   
   // In chat mode, hovering a section highlights it as a chat target. Suppressed
   // while the section is the SELECTED object: the lime frame already owns that
@@ -1461,7 +1486,63 @@ export const InsertSnippetHandle = ({
   alwaysVisible = false,
   isNextSelected = false,
   isPrevSelected = false,
+  presentCategories = [] as string[],
+  afterCategory,
 }: any) => {
+  const ctx = React.useContext(CanvasContext);
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
+
+  const openPanel = () => {
+    if (closeTimer.current !== null) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+    setOpen(true);
+  };
+  const closePanelSoon = () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      closeTimer.current = null;
+      setOpen(false);
+    }, 160);
+  };
+  useEffect(() => () => {
+    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+  }, []);
+
+  /* What this document is missing — not a fixed checklist.
+   *
+   * The strip between two sections is the moment the user is deciding what the
+   * CV needs next, so it answers THAT question: a small panel of sections ranked
+   * from what is already on the canvas (and what the CV data contains), each with
+   * one line of why. Hovering under Languages suggests Interests/Publications,
+   * under a full CV it stops offering sections it already has. "Browse all" is
+   * still one click away for the full catalogue. */
+  const suggestions = useMemo(
+    () => suggestNextSections({ presentCategories, cvData: ctx?.cvData, afterCategory, limit: 3 }),
+    [presentCategories, ctx?.cvData, afterCategory]
+  );
+
+  const browseAll = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddSnippet(zoneId, index);
+  };
+
+  const addSuggested = (e: React.MouseEvent, snippetType: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(false);
+    // `onAddSnippet` accepts an explicit style so a suggestion is added in one
+    // click instead of opening the catalogue pre-filtered.
+    onAddSnippet(zoneId, index, snippetType);
+  };
+
+  const anchorStyle = isNextSelected
+    ? { bottom: `calc(100% + ${PILL_ABOVE_TOOLRAIL_OFFSET_PX}px)`, top: 'auto' }
+    : { top: `calc(100% + ${PILL_TOP_OFFSET_PX}px)` };
+
   return (
     // z-[160], not z-40. This strip is a SIBLING of the section wrappers, and a
     // selected section wrapper carries `z-[60]` — so at z-40 the pill was
@@ -1476,26 +1557,62 @@ export const InsertSnippetHandle = ({
     // format rail (CanvasToolRail) mounted above it. The pill is offset ABOVE that format
     // rail (`PILL_ABOVE_TOOLRAIL_OFFSET_PX`) so the top format rail, section frame, and
     // section content remain completely visible and unoccluded.
-    <div className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-[160] transition-all no-print">
-      <div className="absolute inset-0 cursor-pointer" />
-      <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
-      <button
-        type="button"
-        data-insert-snippet-btn
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onAddSnippet(zoneId, index);
-        }}
-        style={
-          isNextSelected
-            ? { bottom: `calc(100% + ${PILL_ABOVE_TOOLRAIL_OFFSET_PX}px)`, top: 'auto' }
-            : { top: `calc(100% + ${PILL_TOP_OFFSET_PX}px)` }
-        }
-        className={`${alwaysVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover/insert:opacity-100 group-hover/insert:scale-100'} transition-all duration-200 delay-150 group-hover/insert:delay-0 hover:!opacity-100 hover:!scale-100 flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans absolute left-1/2 -translate-x-1/2 cursor-pointer pointer-events-auto`}
+    <div
+      className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-[160] transition-all no-print"
+      onMouseEnter={openPanel}
+      onMouseLeave={closePanelSoon}
+      onFocus={openPanel}
+    >
+      <div className="absolute inset-0 cursor-pointer" onClick={browseAll} />
+      <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible || open ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
+
+      {/* The panel replaces the old one-word pill: it is the same affordance,
+          answering the question the pill left open (which section?). */}
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 z-[170] pointer-events-auto transition-all duration-150 ease-out ${open ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-1 scale-95 pointer-events-none'}`}
+        style={anchorStyle}
+        data-add-section-panel
       >
-        <Plus size={11} /> Add Section
-      </button>
+        {suggestions.length > 0 ? (
+          <div className={`w-[248px] p-1.5 ${TOOLRAIL_SURFACE}`}>
+            <div className="px-1.5 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
+              Suggested next
+            </div>
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.category}
+                type="button"
+                data-insert-suggestion={suggestion.category}
+                onClick={(e) => addSuggested(e, suggestion.snippetType)}
+                className="w-full flex items-start gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-emerald-500/10 focus:bg-emerald-500/10 focus:outline-none"
+              >
+                <span className="mt-[3px] shrink-0 text-emerald-600 dark:text-emerald-400"><Plus size={11} /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-bold leading-tight text-gray-900 dark:text-gray-100">{suggestion.category}</span>
+                  <span className="block text-[10px] leading-snug text-gray-500 dark:text-gray-400">{suggestion.reason}</span>
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              data-insert-browse
+              onClick={browseAll}
+              className="mt-0.5 w-full flex items-center justify-between rounded-lg px-1.5 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
+            >
+              All sections <ChevronRight size={11} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            data-insert-snippet-btn
+            onClick={browseAll}
+            className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans cursor-pointer"
+          >
+            <Plus size={11} /> Add Section
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -1541,6 +1658,15 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
     setDropIntent(null);
     document.dispatchEvent(new CustomEvent('snippet-drag-end'));
   };
+  /* Categories already on the canvas — the same list for every zone, so the
+   * add-section panel never suggests a section the document already has. */
+  const presentCategories = useMemo(() => {
+    const zonesMap = layoutZones || {};
+    return (Object.values(zonesMap).flat() as any[])
+      .map((block: any) => SNIPPETS[block?.type]?.category)
+      .filter(Boolean) as string[];
+  }, [layoutZones]);
+
   const isAppendTarget = dragState?.overZoneId === zoneId && dragState?.overIndex === blocks.length;
   const showAppendLine = !readOnly && isAppendTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
   
@@ -1563,7 +1689,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
         
         <div className="flex flex-col gap-0">
           {!readOnly && blocks.length === 0 && (layoutZones?.[bareZoneId]?.length ?? 0) === 0 && (
-            <InsertSnippetHandle onAddSnippet={onAddSnippet} zoneId={zoneId} index={0} alwaysVisible={true} />
+            <InsertSnippetHandle onAddSnippet={onAddSnippet} zoneId={zoneId} index={0} alwaysVisible={true} presentCategories={presentCategories} />
           )}
           <AnimatePresence mode="popLayout">
             {blocks.map((instance: any, index: number) => (
@@ -1596,6 +1722,10 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
                     zoneId={zoneId}
                     index={index + 1}
                     alwaysVisible={false}
+                    presentCategories={presentCategories}
+                    // The section directly above this strip, so the panel answers
+                    // "what belongs HERE" rather than "what is usually first".
+                    afterCategory={SNIPPETS[instance?.type]?.category}
                     isNextSelected={Boolean(selectedBlockId && blocks[index + 1]?.id === selectedBlockId)}
                     isPrevSelected={Boolean(selectedBlockId && instance?.id === selectedBlockId)}
                   />
@@ -1644,7 +1774,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
           const isLastSnippet = index === snippets.length - 1;
           return (
             <div key={index} className="flex flex-col">
-              <div className="cv-section-wrapper cv-page-breakable" style={{ marginBottom: isLastSnippet ? 0 : 'var(--cv-section-gap, 16px)', ...(interactive ? {} : { pointerEvents: 'none' }) }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} readOnly={true} /></div>
+              <div className="cv-section-wrapper cv-page-breakable" style={{ marginBottom: isLastSnippet ? 0 : 'var(--cv-section-gap, 16px)', ...(interactive ? {} : { pointerEvents: 'none' }) }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isNarrow={isSidebar} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} readOnly={true} /></div>
               {snippetExtra?.(type)}
             </div>
           );

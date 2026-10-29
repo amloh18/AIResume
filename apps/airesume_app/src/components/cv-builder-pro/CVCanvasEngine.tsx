@@ -34,7 +34,7 @@ import { useCanvasFit, ZOOM_STEP, ZOOM_WHEEL_SENSITIVITY } from '@/hooks/useCanv
 import { useCanvasPinchZoom } from '@/hooks/useCanvasPinchZoom';
 import toast from '@/lib/hot-toast';
 import { useResumeEnhancerSafe } from '@/contexts/ResumeEnhancerContext';
-import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, appendSkillRecord } from '@/lib/utils/cv-snippet-data';
+import { fluencyToLevel, ensureCanvasListShapes, coerceLanguagesForEdit, coerceInterestsForEdit, coerceSkillsForEdit } from '@/lib/utils/cv-snippet-data';
 import {
   TOP_SANS_SERIF_FONTS,
   TOP_SERIF_FONTS,
@@ -808,6 +808,32 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     }
   }, [cvData.metadata]);
 
+  /* Focus mode must not outlive the section it belongs to.
+   *
+   * `selectedBlockId` drives the spotlight: while it is set, every section that
+   * is not `[data-selected="true"]` is blurred and dimmed. When the selected
+   * section is deleted — from its rail, from the AI menu, or by an external
+   * `canvasZones` update — the id pointed at a block that no longer existed, so
+   * NO wrapper was selected and the whole sheet stayed blurred. The editor then
+   * looked like it was stuck in focus mode with nothing to unfocus, recoverable
+   * only with Escape or a click on empty paper.
+   *
+   * `removeSnippet` clears the selection for its own path; this effect is the
+   * backstop that covers every OTHER path (including data replaced from above).
+   * It runs on the zones model, so it fires however the section went away. */
+  useEffect(() => {
+    const activeId = selectedBlockIdRef.current;
+    if (!activeId) return;
+    const stillExists = Object.values(zonesRef.current || {}).some(
+      (list) => Array.isArray(list) && list.some((block: any) => block?.id === activeId)
+    );
+    if (stillExists) return;
+    setSelectedBlockId(null);
+    setFocusedNode(null);
+    setFocusedJsonPath(null);
+    window.dispatchEvent(new CustomEvent('mori-close-menus'));
+  }, [zones]);
+
   useEffect(() => {
     // Template prop takes priority — when user selects a new template in Step 2,
     // it should always override cvData.metadata.canvasTemplate
@@ -1324,6 +1350,65 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     },
   }));
 
+  /**
+   * Keep the document's SECTIONS when the template changes.
+   *
+   * Selecting a template is a change of visual language, not of content, so it
+   * must not reset the section list to the template's own suggestion. It used to
+   * do exactly that: picking a template rebuilt `zones` from
+   * `template.zones`, so a CV with Education → Skills → Languages came back with
+   * whatever the template shipped (and lost any section the template did not
+   * list). A template's section set is only a SEED — used when the document has
+   * no sections yet, i.e. when a template is chosen while creating a CV.
+   *
+   * What does change is the LAYOUT: the new template may have different zones
+   * (main ↔ left/right, a sidebar, no header row). Blocks are therefore re-homed
+   * into the nearest valid zone for the new layout, preserving their relative
+   * order, and nothing is dropped or duplicated.
+   */
+  const remapZonesForTemplate = useCallback((incoming: Record<string, any[]>, nextTemplate: any) => {
+    const flow = templateLayoutFlows[nextTemplate?.type] || templateLayoutFlows['1-col'];
+    const allowed = new Set<string>([...(flow.global || []), ...((flow.columns || []).flat())]);
+    if (allowed.size === 0) allowed.add('main');
+
+    const primaryZone = allowed.has('main')
+      ? 'main'
+      : (flow.columns?.[0]?.[0] || flow.global?.[0] || 'main');
+    const headerZone = allowed.has('header') ? 'header' : primaryZone;
+
+    const targetFor = (zoneKey: string, block: any) => {
+      if (zoneKey === 'header') return headerZone;
+      if (allowed.has(zoneKey)) return zoneKey;
+      // A sidebar block in a template without one, or a column block in a
+      // single-column template: the primary zone always accepts it.
+      if (SNIPPETS[block?.type]?.category === 'Header') return headerZone;
+      return primaryZone;
+    };
+
+    const remapped: Record<string, any[]> = {};
+    const push = (zoneKey: string, block: any) => {
+      if (!remapped[zoneKey]) remapped[zoneKey] = [];
+      remapped[zoneKey].push(block);
+    };
+
+    // Header first so it stays at the top of the flow, then everything else in
+    // its previous order.
+    const zoneKeys = Object.keys(incoming || {}).sort((a, b) => {
+      if (a === 'header') return -1;
+      if (b === 'header') return 1;
+      return 0;
+    });
+
+    zoneKeys.forEach((zoneKey) => {
+      (incoming[zoneKey] || []).forEach((block) => {
+        if (!block?.type) return;
+        push(targetFor(zoneKey, block), block);
+      });
+    });
+
+    return nextTemplate?.type === 'hybrid-split' ? legacyHybridOrders(remapped) : remapped;
+  }, []);
+
   const loadTemplate = (template: any) => {
     if (!template) return;
     // Normalise before storing so the layout switch always has a known `type`
@@ -1331,13 +1416,18 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     const resolved = resolveCanvasTemplate(template);
     template = resolved;
     setActiveTemplate(resolved);
-    const initialZones: Record<string, any[]> = {};
-    if (template?.zones) {
-      Object.keys(template.zones).forEach((zoneId: string) => {
-        initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
-      });
-    }
+
+    const existing = cloneZoneMap(zonesRef.current || {});
+    const hasSections = Object.values(existing).some((list) => Array.isArray(list) && list.length > 0);
+
+    const initialZones: Record<string, any[]> = hasSections
+      ? remapZonesForTemplate(existing, resolved)
+      : Object.keys(template?.zones || {}).reduce((acc: Record<string, any[]>, zoneId: string) => {
+          acc[zoneId] = (template.zones[zoneId] || []).map((type: string) => ({ id: generateId(), type }));
+          return acc;
+        }, {});
     setZones(initialZones);
+    zonesRef.current = initialZones;
     setDesign((prev: any) => ({
       ...prev,
       sectionGap: template.preferredSectionGap ?? prev.sectionGap,
@@ -1763,21 +1853,93 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), index, currentType, category, isAdd: false });
     window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
-  const handleAddClick = (zoneId: string, insertIndex?: number) => {
+  /**
+   * Open the section catalogue, or add a KNOWN style immediately.
+   *
+   * `type` comes from the add-section panel's smart suggestions: picking one of
+   * those is a decision about the section, so it should not then reopen a
+   * catalogue to pick a style. Anything else (the "All sections" row, the old
+   * pill) still opens the catalogue. */
+  const handleAddClick = (zoneId: string, insertIndex?: number, type?: string) => {
+    if (type && SNIPPETS[type]) {
+      executeReplaceOrAdd(type, { zoneId: bareCanvasZoneId(zoneId), isAdd: true, insertIndex });
+      return;
+    }
     setReplacingSnippet({ zoneId: bareCanvasZoneId(zoneId), isAdd: true, insertIndex });
     window.dispatchEvent(new CustomEvent('set-builder-sidebar', { detail: 'sections' }));
   };
 
+  /**
+   * Append a GROUP (category) to the skills section.
+   *
+   * This is what the rail's "+" does for a Skills section. It used to call
+   * `appendSkillRecord`, which pushed one more skill onto the LAST group — so the
+   * button that reads "add entry" appeared to sprinkle skills into whatever
+   * category happened to be last, with no way to create the category itself.
+   * Adding a skill now belongs to the inline per-category control inside the
+   * section (see `addSkillToGroup`), and "+" creates the thing its label says:
+   * a new entry — here, a new category. */
+  const addSkillCategory = useCallback(() => {
+    const groups = coerceSkillsForEdit(cvData?.skills);
+    const next = [
+      ...groups,
+      {
+        id: generateId(),
+        category: groups.length === 0 ? 'Skills' : 'New Category',
+        skills: ['New skill'],
+        skillsText: 'New skill',
+        levels: [3],
+      },
+    ];
+    onDataChange({ ...ensureCanvasListShapes(cvData), skills: next });
+  }, [cvData, onDataChange]);
+
+  /** Append one skill to the group at `groupIndex` (inline "add skill"). */
+  const addSkillToGroup = useCallback((groupIndex: number) => {
+    const groups = coerceSkillsForEdit(cvData?.skills);
+    if (groups.length === 0) {
+      onDataChange({
+        ...ensureCanvasListShapes(cvData),
+        skills: [{ id: generateId(), category: 'Skills', skills: ['New skill'], skillsText: 'New skill', levels: [3] }],
+      });
+      return;
+    }
+    const index = Math.max(0, Math.min(Number.isFinite(groupIndex) ? groupIndex : groups.length - 1, groups.length - 1));
+    const target = groups[index];
+    const skills = [...target.skills, 'New skill'];
+    const levels = [...(target.levels || []), 3];
+    const next = groups.map((group, i) => (
+      i === index
+        ? { ...group, skills, levels, skillsText: skills.join(', ') }
+        : group
+    ));
+    onDataChange({ ...ensureCanvasListShapes(cvData), skills: next });
+  }, [cvData, onDataChange]);
+
+  /** Add one entry to a list collection (used by the per-entry hover affordance). */
+  const addEntryForCollection = useCallback((collection: string) => {
+    if (!collection) return;
+    const shaped = ensureCanvasListShapes({ ...cvData });
+    if (collection === 'skills') {
+      addSkillCategory();
+      return;
+    }
+    const entry = createDefaultListEntry(collection);
+    if (!entry) return;
+    const arr = collectionAsArray(shaped, collection);
+    onDataChange({ ...shaped, [collection]: [...arr, entry] });
+  }, [cvData, onDataChange, addSkillCategory]);
+
   const handleAddListEntry = (type: string) => {
     const collection = getCollectionNameForCategory(type);
+    if (collection === 'skills') {
+      addSkillCategory();
+      return;
+    }
     const entry = createDefaultListEntry(type);
     if (!collection || !entry) return;
     const updated = ensureCanvasListShapes({ ...cvData });
-    if (collection === 'skills') {
-      updated.skills = appendSkillRecord(updated.skills);
-    } else {
-      updated[collection] = [...collectionAsArray(updated, collection), entry];
-    }
+    updated[collection] = [...collectionAsArray(updated, collection), entry];
     onDataChange(updated);
   };
 
@@ -1890,6 +2052,11 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
   const pageAssignmentsRef = React.useRef(pageAssignments);
   pageAssignmentsRef.current = pageAssignments;
   const recentAssignmentsRef = React.useRef<string[]>([]);
+  /** Heights that accompanied each recent assignment — the other half of the
+   *  oscillation test (see the guard in the pagination effect). */
+  const recentHeightsRef = React.useRef<string[]>([]);
+  const lastAppliedAssignmentsRef = React.useRef<string>('');
+  const lastAppliedHeightsRef = React.useRef<string>('');
   const zoomRef = React.useRef(zoom);
   zoomRef.current = zoom;
 
@@ -2266,23 +2433,53 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         });
       }
 
-      // Cycle oscillation detection
+      /* 4. Apply the new pagination — but only when it is really new.
+       *
+       * The old guard aborted ANY assignment set it had seen in the last five
+       * passes. That is not oscillation detection, it is amnesia: a legitimate
+       * A → B → A (add a bullet, then remove it; change the item gap back) had its
+       * final state silently discarded, leaving pages laid out for the previous
+       * content — the "long empty gap after a section that only fixes when you
+       * touch the Design panel" bug.
+       *
+       * A cycle is only a cycle when the measurements have NOT changed since the
+       * last time this same assignment was produced. So the guard compares the
+       * measured heights too: new heights mean the layout genuinely differs and
+       * the result must be applied. */
       const assignmentsStr = JSON.stringify(newAssignments);
-      if (recentAssignmentsRef.current.includes(assignmentsStr)) {
-        return; // Abort cycle
+      const heightsStr = JSON.stringify(unitHeights);
+
+      if (
+        assignmentsStr === lastAppliedAssignmentsRef.current &&
+        heightsStr === lastAppliedHeightsRef.current
+      ) {
+        return; // Nothing new to apply
       }
 
-      // 4. Update page assignments state only if changed to avoid loop
       const oldAssignments = pageAssignmentsRef.current;
       const isChanged = Object.keys(newAssignments).some(id => newAssignments[id] !== oldAssignments[id]) ||
                         Object.keys(oldAssignments).some(id => newAssignments[id] !== oldAssignments[id]);
-      if (isChanged) {
-        recentAssignmentsRef.current.push(assignmentsStr);
-        if (recentAssignmentsRef.current.length > 5) {
-          recentAssignmentsRef.current.shift();
-        }
-        setPageAssignments(newAssignments);
+      if (!isChanged) {
+        lastAppliedAssignmentsRef.current = assignmentsStr;
+        lastAppliedHeightsRef.current = heightsStr;
+        return;
       }
+
+      const sameMeasurementsAsLastSeen = recentHeightsRef.current.includes(heightsStr);
+      if (recentAssignmentsRef.current.includes(assignmentsStr) && sameMeasurementsAsLastSeen) {
+        return; // Genuine oscillation: same layout, same heights, flipping pages
+      }
+
+      recentAssignmentsRef.current.push(assignmentsStr);
+      if (recentAssignmentsRef.current.length > 5) recentAssignmentsRef.current.shift();
+      recentHeightsRef.current.push(heightsStr);
+      if (recentHeightsRef.current.length > 5) recentHeightsRef.current.shift();
+      lastAppliedAssignmentsRef.current = assignmentsStr;
+      lastAppliedHeightsRef.current = heightsStr;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[cv-paginate] applied', { pages: nextTotalPages, changed: isChanged });
+      }
+      setPageAssignments(newAssignments);
     };
 
     // Run adjust layout loop on requestAnimationFrame
@@ -2306,15 +2503,42 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     const observer = new MutationObserver(() => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
+        refreshObserved();
         measureAndPaginate();
       }, 30);
     });
     observer.observe(docElement, { childList: true, subtree: true, characterData: true });
 
+    /* …and RESIZE, not just mutation.
+     *
+     * Heights change with NO DOM mutation at all: a webfont swaps in, an avatar
+     * image finishes loading, the Design panel changes a gap, a CSS transition
+     * settles, a `content-visibility` box becomes visible. The MutationObserver
+     * above sees none of those, so the page assignment stayed at its previous
+     * measurement — exactly the "huge blank gap under a section until you touch
+     * a design control" symptom. Watching every section and entry means the
+     * pagination follows the layout on its own.
+     */
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(measureAndPaginate, 24);
+        })
+      : null;
+
+    function refreshObserved() {
+      if (!resizeObserver || !docElement) return;
+      docElement.querySelectorAll('[data-block-id], .cv-item').forEach((node) => {
+        resizeObserver.observe(node);
+      });
+    }
+    refreshObserved();
+
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(debounceTimer);
       observer.disconnect();
+      resizeObserver?.disconnect();
     };
   }, [cvData, zones, design.pageSize, activeTemplate.id, layoutMetrics.pageMarginPx, layoutMetrics.pageHeightPx, layoutMetrics.sectionGapPx]);
 
@@ -2519,8 +2743,8 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               handleReplaceClick(zoneId, gIdx, type);
             }
           }}
-          onAddSnippet={(targetZoneId: string, pageSpecificInsertIdx?: number) => {
-            handleAddClick(zoneId, getGlobalInsertIndex(pageSpecificInsertIdx));
+          onAddSnippet={(targetZoneId: string, pageSpecificInsertIdx?: number, type?: string) => {
+            handleAddClick(zoneId, getGlobalInsertIndex(pageSpecificInsertIdx), type);
           }}
           onTogglePhoto={handleTogglePhoto}
           onAddListEntry={handleAddListEntry}
@@ -2754,6 +2978,9 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
          * chain). Read-only consumers therefore have to be told explicitly, or
          * the controls would reappear in CV previews. */
         readOnly,
+        addSkillToGroup,
+        addSkillCategory,
+        addEntryForCollection,
         aiIssues: [...aiIssues, ...grammarIssues],
         activeIssueId,
         moriChatMode,
@@ -3464,7 +3691,15 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                 const isATS = ATS_SNIPPETS.includes(snippet.id);
                 
                 const isHeader = snippet.category === 'Header';
-                const scale = isHeader ? 0.36 : 0.40;
+                /* Big enough to actually judge the style by.
+                 *
+                 * These previews used to render at 36–40%, i.e. body text at
+                 * ~4.5px, which is unreadable — the card showed a grey smudge and
+                 * the choice came down to guessing from the name. At ~70% the text
+                 * is legible and the layout is still recognisable, and because the
+                 * frame scales the whole snippet uniformly the design itself is
+                 * not distorted: the same proportions, just larger. */
+                const scale = isHeader ? 0.66 : 0.72;
 
                 return (
                   <div
@@ -3876,16 +4111,54 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           /* Never let a move that was still in flight reach the printer. */
           .cv-section-wrapper, .cv-document-wrapper { animation: none !important; transform: none !important; }
         }
-        @keyframes snippetEntrance { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .snippet-anim { 
-          animation: snippetEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        /* ─── MOTION ───────────────────────────────────────────────────────
+         * One curve for every structural change, so adding a section, adding an
+         * entry and switching template feel like the same product (the same
+         * easing the editor's side panels use). Short on purpose: a CV editor is
+         * used dozens of times a minute and anything above ~320ms reads as lag.
+         *
+         * CSS animations (not JS) because they only have to run ONCE per element
+         * and stay on the compositor: a new section or entry is a NEW element, so
+         * the animation plays exactly when it appears and never replays on an
+         * unrelated re-render. */
+        @keyframes snippetEntrance {
+          from { opacity: 0; transform: translateY(6px) scale(0.995); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
+        @keyframes cvTemplateIn {
+          from { opacity: 0; transform: scale(0.994); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes cvEntryIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .snippet-anim { 
+          animation: snippetEntrance 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; 
+          transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* Template change: the canvas content remounts (keyed by templateAnimKey),
+           so this is the transition between two templates rather than a hard cut. */
+        .cv-document-wrapper { animation: cvTemplateIn 0.26s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .cv-page {
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .cv-section, .cv-item {
-          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        /* A freshly-inserted entry (new key ⇒ new node) slides in; existing
+           entries are untouched because their animation already finished. */
+        .cv-item { animation: cvEntryIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+        /* Accessibility: honour the OS setting. Reduces to a cross-fade at worst,
+           and removes every transform so nothing moves. */
+        @media (prefers-reduced-motion: reduce) {
+          .snippet-anim, .cv-document-wrapper, .cv-item {
+            animation: none !important;
+          }
+          .cv-page, .cv-item, .cv-section, .snippet-anim {
+            transition: opacity 0.15s linear !important;
+          }
         }
       `}} />
       </div>

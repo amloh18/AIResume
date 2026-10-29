@@ -123,7 +123,10 @@ export async function GET(request: NextRequest) {
 
     // Profile completion status (lightweight)
     const onboarding = user?.onboarding;
-    const profileComplete = onboarding?.activation_status === 'complete';
+    // The schema's enum is 'pending' | 'completed' (models/User.ts). Comparing
+    // against 'complete' meant this was never true, so every account reported a
+    // pending profile no matter how far through onboarding it was.
+    const profileComplete = onboarding?.activation_status === 'completed';
 
     const duration = Date.now() - startTime;
     console.log(`⚡ Bootstrap API: ${duration}ms for user ${userId}`);

@@ -183,6 +183,10 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
           // preview. High-DPI 300 DPI SVG-backed rendering prevents pixelation on zoom.
           await downloadCanvasAsPDF(`${baseName}.pdf`, {
             paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+            // The export is rendered from the live markup; passing the document
+            // lets the server name the file and tag the PDF from the CV itself.
+            cvData: state.cvData,
+            template: state.selectedTemplate,
           });
           toast.success('Downloaded successfully!');
         } else if (format === 'svg') {
