@@ -680,12 +680,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     formatControls,
     sectionControls,
     onAiClick,
+    isSidebarOpen,
   }: {
     selectedBlockId?: string | null;
     /** The field the user is editing; its SECTION is used as the anchor. */
     focusNode?: HTMLElement | null;
     /** Only used as a re-measure trigger: the canvas eases its zoom transform. */
     zoom?: number;
+    /** Whether any builder or utility sidebar is open (hides the rail). */
+    isSidebarOpen?: boolean;
     /**
      * Controls rendered straight into the rail's two slots.
      *
@@ -707,10 +710,17 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     onAiClick?: (selectedBlockId: string | null) => void;
   }) => {
     const barRef = useRef<HTMLDivElement | null>(null);
+    const ctx = React.useContext(CanvasContext);
     /** `null` = nothing to act on (or the anchor is scrolled out of view). */
     const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
+    const shouldHide = Boolean(isSidebarOpen || ctx?.isSidebarOpen);
+
     useEffect(() => {
+      if (shouldHide) {
+        setPos(null);
+        return undefined;
+      }
       // Either document's scroll container will do. The rail only needs the box
       // whose content coordinates its absolute `top`/`left` are measured in, and
       // the cover letter's workspace is that box for the letter.
@@ -790,6 +800,13 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
 
       host.addEventListener('scroll', measure, { passive: true });
       window.addEventListener('resize', measure);
+      const onCanvasReordered = () => {
+        measure();
+        window.requestAnimationFrame(measure);
+        window.setTimeout(measure, 120);
+        window.setTimeout(measure, 270);
+      };
+      window.addEventListener('cv-canvas-reordered', onCanvasReordered);
       // The bar changes width when the field-formatting group appears/disappears.
       const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
       if (observer && barRef.current) observer.observe(barRef.current);
@@ -799,9 +816,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         window.clearTimeout(settle);
         host.removeEventListener('scroll', measure);
         window.removeEventListener('resize', measure);
+        window.removeEventListener('cv-canvas-reordered', onCanvasReordered);
         observer?.disconnect();
       };
-    }, [selectedBlockId, focusNode, zoom]);
+    }, [selectedBlockId, focusNode, zoom, shouldHide]);
+
+    if (shouldHide) return null;
 
     return (
       <div
@@ -1505,7 +1525,7 @@ export const InsertSnippetHandle = ({
     closeTimer.current = window.setTimeout(() => {
       closeTimer.current = null;
       setOpen(false);
-    }, 160);
+    }, 260);
   };
   useEffect(() => () => {
     if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
@@ -1513,12 +1533,9 @@ export const InsertSnippetHandle = ({
 
   /* What this document is missing — not a fixed checklist.
    *
-   * The strip between two sections is the moment the user is deciding what the
-   * CV needs next, so it answers THAT question: a small panel of sections ranked
-   * from what is already on the canvas (and what the CV data contains), each with
-   * one line of why. Hovering under Languages suggests Interests/Publications,
-   * under a full CV it stops offering sections it already has. "Browse all" is
-   * still one click away for the full catalogue. */
+   * The section-based box between two sections is the moment the user is deciding what the
+   * CV needs next. It renders IN-FLOW (inserted into the document rather than an overlay) so
+   * hovering expands the canvas and physically previews the new section's space before adding. */
   const suggestions = useMemo(
     () => suggestNextSections({ presentCategories, cvData: ctx?.cvData, afterCategory, limit: 3 }),
     [presentCategories, ctx?.cvData, afterCategory]
@@ -1534,82 +1551,81 @@ export const InsertSnippetHandle = ({
     e.preventDefault();
     e.stopPropagation();
     setOpen(false);
-    // `onAddSnippet` accepts an explicit style so a suggestion is added in one
-    // click instead of opening the catalogue pre-filtered.
     onAddSnippet(zoneId, index, snippetType);
   };
 
-  const anchorStyle = isNextSelected
-    ? { bottom: `calc(100% + ${PILL_ABOVE_TOOLRAIL_OFFSET_PX}px)`, top: 'auto' }
-    : { top: `calc(100% + ${PILL_TOP_OFFSET_PX}px)` };
+  const isExpanded = open || alwaysVisible;
+
+  if (!isExpanded) {
+    return (
+      <div
+        className="group/insert relative w-full h-[12px] -my-[6px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
+        onMouseEnter={openPanel}
+        onFocus={openPanel}
+        onClick={openPanel}
+        title="Add section here"
+      >
+        <div className="w-full h-[2px] bg-emerald-400/0 group-hover/insert:bg-emerald-500/80 transition-all rounded-full pointer-events-none" />
+      </div>
+    );
+  }
 
   return (
-    // z-[160], not z-40. This strip is a SIBLING of the section wrappers, and a
-    // selected section wrapper carries `z-[60]` — so at z-40 the pill was
-    // painted UNDER the selected section, and its own bottom lime border ran
-    // straight across the pill. 160 also clears the `hover:z-[150]` that a
-    // section's inner wrapper takes while the pointer is over it.
-    //
-    // The button hangs BELOW the line for the bottom pill (`isPrevSelected` or default),
-    // clearing the section's lime frame by PILL_BORDER_CLEARANCE.
-    //
-    // When the section BELOW is selected (`isNextSelected`), that section has the top
-    // format rail (CanvasToolRail) mounted above it. The pill is offset ABOVE that format
-    // rail (`PILL_ABOVE_TOOLRAIL_OFFSET_PX`) so the top format rail, section frame, and
-    // section content remain completely visible and unoccluded.
     <div
-      className="group/insert relative w-full h-[6px] my-[-3px] flex items-center justify-center z-[160] transition-all no-print"
+      className="w-full my-3 z-[50] transition-all duration-200 no-print"
       onMouseEnter={openPanel}
       onMouseLeave={closePanelSoon}
-      onFocus={openPanel}
+      data-add-section-panel
     >
-      <div className="absolute inset-0 cursor-pointer" onClick={browseAll} />
-      <div className={`w-full h-[2px] bg-emerald-400 ${alwaysVisible || open ? 'opacity-100' : 'opacity-0 group-hover/insert:opacity-100'} transition-opacity pointer-events-none absolute left-0 right-0`} />
-
-      {/* The panel replaces the old one-word pill: it is the same affordance,
-          answering the question the pill left open (which section?). */}
-      <div
-        className={`absolute left-1/2 -translate-x-1/2 z-[170] pointer-events-auto transition-all duration-150 ease-out ${open ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-1 scale-95 pointer-events-none'}`}
-        style={anchorStyle}
-        data-add-section-panel
-      >
-        {suggestions.length > 0 ? (
-          <div className={`w-[248px] p-1.5 ${TOOLRAIL_SURFACE}`}>
-            <div className="px-1.5 pt-0.5 pb-1 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
-              Suggested next
+      <div className="w-full rounded-2xl border-2 border-dashed border-emerald-400/70 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/25 p-3.5 shadow-xs transition-all duration-200">
+        <div className="flex items-center justify-between gap-3 mb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+              <Plus size={12} strokeWidth={3} />
             </div>
+            <div>
+              <span className="text-[12px] font-bold text-gray-900 dark:text-gray-100 block leading-tight">Add Section</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 block leading-tight">Visualise section space & insert here</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            data-insert-browse
+            onClick={browseAll}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+          >
+            All sections <ChevronRight size={12} />
+          </button>
+        </div>
+
+        {suggestions.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {suggestions.map((suggestion) => (
               <button
                 key={suggestion.category}
                 type="button"
                 data-insert-suggestion={suggestion.category}
                 onClick={(e) => addSuggested(e, suggestion.snippetType)}
-                className="w-full flex items-start gap-2 rounded-lg px-1.5 py-1.5 text-left transition-colors hover:bg-emerald-500/10 focus:bg-emerald-500/10 focus:outline-none"
+                className="flex flex-col items-start gap-1 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-white/90 dark:bg-black/30 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-left transition-all duration-150 cursor-pointer group shadow-2xs"
               >
-                <span className="mt-[3px] shrink-0 text-emerald-600 dark:text-emerald-400"><Plus size={11} /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[11px] font-bold leading-tight text-gray-900 dark:text-gray-100">{suggestion.category}</span>
-                  <span className="block text-[10px] leading-snug text-gray-500 dark:text-gray-400">{suggestion.reason}</span>
-                </span>
+                <div className="flex items-center gap-1.5 w-full">
+                  <span className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Plus size={10} strokeWidth={2.5} />
+                  </span>
+                  <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate">{suggestion.category}</span>
+                </div>
+                <span className="text-[9.5px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">{suggestion.reason}</span>
               </button>
             ))}
-            <button
-              type="button"
-              data-insert-browse
-              onClick={browseAll}
-              className="mt-0.5 w-full flex items-center justify-between rounded-lg px-1.5 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-white/10"
-            >
-              All sections <ChevronRight size={11} />
-            </button>
           </div>
         ) : (
           <button
             type="button"
             data-insert-snippet-btn
             onClick={browseAll}
-            className="flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-2.5 py-1 rounded-full text-[10px] shadow-md hover:shadow-lg font-sans cursor-pointer"
+            className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-black/20 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] hover:bg-emerald-500/10 transition-colors cursor-pointer"
           >
-            <Plus size={11} /> Add Section
+            <Plus size={13} strokeWidth={2.5} /> Browse & Add Section
           </button>
         )}
       </div>

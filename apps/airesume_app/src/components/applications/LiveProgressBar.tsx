@@ -332,7 +332,7 @@ export function LiveProgressBar({
       </div>
 
       {/* ── Context line: current step, or the control this row needs ─── */}
-      {(counter || progress.eta || progress.action) && (
+      {(counter || progress.action) && (
         <div className="flex items-center justify-between gap-2 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0 text-[10px] text-gray-500 dark:text-gray-400">
             {counter && current && (
@@ -342,7 +342,6 @@ export function LiveProgressBar({
                 <span className="truncate">{current.label}</span>
               </>
             )}
-            {!counter && progress.eta && <span className="truncate">Starts {progress.eta}</span>}
           </div>
 
           {progress.action && onAction && (

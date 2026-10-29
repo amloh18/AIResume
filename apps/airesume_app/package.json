@@ -44,6 +44,8 @@
     "verify:turbopack-patch": "npx tsx tests/verify-turbopack-patch.ts",
     "verify:cover-letter-attachment": "npx tsx tests/verify-cover-letter-attachment.ts",
     "verify:cover-letter-source": "npx tsx tests/verify-cover-letter-source.ts",
+    "verify:apply-copy": "npx tsx --require ./scripts/server-only-shim.js tests/verify-apply-copy.ts",
+    "verify:role-relevance": "npx tsx --require ./scripts/server-only-shim.js tests/verify-role-relevance.ts",
     "verify:public-access": "npm run verify:public-jobs && npm run verify:public-route-policy",
     "build:worker": "node scripts/build-worker.mjs",
     "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",

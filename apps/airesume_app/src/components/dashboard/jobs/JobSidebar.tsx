@@ -3182,7 +3182,7 @@ ${userName}`
                                 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30'
                                 : status === 'failed'
                                   ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30'
-                                  : 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10';
+                                  : 'bg-gray-50 text-gray-400 dark:bg-white/5 dark:text-gray-500 border-gray-200/80 dark:border-white/10';
 
                           return (
                             <div
@@ -3250,7 +3250,7 @@ ${userName}`
                             case 'failed':
                               return 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30 shadow-sm';
                             default:
-                              return 'bg-gray-50 text-gray-400 dark:bg-[#151a11] dark:text-gray-500 border-gray-200/80 dark:border-white/10';
+                              return 'bg-gray-50 text-gray-400 dark:bg-white/5 dark:text-gray-500 border-gray-200/80 dark:border-white/10';
                           }
                         })();
 
@@ -3387,7 +3387,7 @@ ${userName}`
                     className="space-y-3"
                   >
                     {/* Core Metadata Card */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                       <div className="mb-3 flex items-center justify-between gap-2 border-b border-gray-100 dark:border-white/5 pb-2.5">
                         <div>
                           <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Information</p>
@@ -3396,7 +3396,7 @@ ${userName}`
                         <button
                           type="button"
                           onClick={() => setShowEditJobSidebar(true)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021] transition-colors"
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-white/15 transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Edit Job
@@ -3469,7 +3469,7 @@ ${userName}`
                     </div>
 
                     {/* Job Description */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                       <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Job Description</h4>
                       <div className="max-h-[350px] overflow-y-auto pr-2 border border-gray-100 dark:border-white/5 rounded-xl p-4 bg-gray-50/50 dark:bg-white/[0.02]">
                         <FormattedJobDescription content={job.jobDescription || fallbacks.defaultJobDescription} />
@@ -3478,7 +3478,7 @@ ${userName}`
 
                     {/* Requirements & Skills if parsed */}
                     {job.extractedJd?.role_content && (
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 space-y-4">
                         <h4 className="text-h3 font-semibold text-gray-900 dark:text-white">Role Requirements</h4>
                         {job.extractedJd.role_content.requirements_must_have?.length > 0 && (
                           <div>
@@ -3511,7 +3511,7 @@ ${userName}`
 
                     {/* Technical Skills */}
                     {job.extractedJd?.skills?.skills_technical?.length > 0 && (
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                         <h4 className="text-h3 font-semibold text-gray-900 dark:text-white mb-3">Key Technical Skills</h4>
                         <div className="flex flex-wrap gap-2">
                           {job.extractedJd.skills.skills_technical.map((item: any, i: number) => (
@@ -3541,523 +3541,663 @@ ${userName}`
                     transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                     className="space-y-3"
                   >
-                    {/* Live Status (absorbed from JobLiveStatusCard) */}
+                    {/*
+                      ONE card for "where is this application right now", then a
+                      single disclosure for everything historical.
+
+                      This tab used to stack seven boxes — a client-only live card,
+                      a progress card, a stage/readiness card, an activity card, a
+                      next-action card and two more disclosures — each with its own
+                      heading, border and padding. "What is happening" was spread
+                      over two screen-heights, and two of those boxes described the
+                      same run in different words (one of them from a client-side
+                      timer that survived a reload while the server row said
+                      otherwise). The tab now reads as one surface: the stage it is
+                      on, the step running now, what is ready, what to do next.
+                      Pace, activity and reference material fold into one
+                      disclosure underneath, so nothing was dropped to get here.
+                    */}
                     {(() => {
-                      const liveStatus = useJobLiveStatusStore.getState().statuses[jobId];
-                      if (!liveStatus) return null;
-                      const isSuccess = liveStatus.step === 'submitted' || liveStatus.success;
+                      const currentStage =
+                        stageItems.find((s) => s.status === 'current') ||
+                        stageItems.find((s) => s.status === 'processing') ||
+                        stageItems.find((s) => s.status === 'blocked') ||
+                        stageItems.find((s) => s.status === 'failed') ||
+                        stageItems[0];
+                      const currentStageStatus = currentStage?.status || 'current';
+                      /*
+                        `liveProgress` is the server-derived run state; the tab only
+                        treats it as live when it is actually moving or waiting, so
+                        a settled application shows the stage note instead of a
+                        progress bar frozen at 100%.
+                      */
+                      const activeProgress =
+                        liveProgress && liveProgress.state !== 'idle' ? liveProgress : null;
+                      const headerTone =
+                        currentStageStatus === 'failed'
+                          ? 'rose'
+                          : currentStageStatus === 'blocked'
+                            ? 'amber'
+                            : currentStageStatus === 'processing'
+                              ? 'blue'
+                              : currentStageStatus === 'completed'
+                                ? 'emerald'
+                                : 'neutral';
+
                       return (
-                        <div className={`rounded-2xl border p-4 shadow-sm ${
-                          isSuccess
-                            ? 'border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-b from-emerald-50/30 to-white dark:from-emerald-950/20 dark:to-[#131810]'
-                            : 'border-blue-200 dark:border-blue-800/40 bg-gradient-to-b from-blue-50/30 to-white dark:from-blue-950/20 dark:to-[#131810]'
-                        }`}>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {isSuccess ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                              ) : (
-                                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
-                              )}
-                              <span className="text-xs font-bold text-gray-900 dark:text-white">{liveStatus.title}</span>
+                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/5">
+                          {/* Where it is, in one line */}
+                          <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-4">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                Application journey
+                              </span>
+                              <p className="mt-0.5 truncate text-sm font-bold text-gray-900 dark:text-white">
+                                {currentStage?.label}
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                                {currentStage?.statusLabel || currentStage?.subLabel}
+                              </p>
                             </div>
-                            <button
-                              onClick={() => useJobLiveStatusStore.getState().clearStatus(jobId)}
-                              className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                            <span className={`${chipTone(headerTone, 'sm')} font-bold`}>
+                              {activeProgress ? activeProgress.phaseLabel : currentStage?.dateLabel}
+                            </span>
                           </div>
-                          <p className="text-[11px] text-gray-600 dark:text-gray-400 mb-2">{liveStatus.description}</p>
-                          <div className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${isSuccess ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                              style={{ width: `${liveStatus.progress}%` }}
-                            />
+
+                          {/* The stage rail — every stage, live, one row */}
+                          <div
+                            role="list"
+                            aria-label="Application stages"
+                            className="flex items-start justify-between border-t border-gray-100 px-2 pb-2 pt-3 dark:border-white/5"
+                          >
+                            {stageItems.map((stage, stageIndex) => {
+                              const Icon = stage.icon;
+                              const status = stage.status as StageStatus;
+                              const isDone = status === 'completed';
+                              const isLive = status === 'current' || status === 'processing';
+                              const connector = isDone
+                                ? 'bg-emerald-500'
+                                : isLive
+                                  ? 'bg-lime-500/50'
+                                  : 'bg-gray-200 dark:bg-white/10';
+                              const nodeClasses = isDone
+                                ? `${stage.completedColor} shadow-sm`
+                                : status === 'processing'
+                                  ? 'animate-pulse border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                  : status === 'current'
+                                    ? 'border-lime-500/40 bg-lime-500/15 text-lime-700 dark:text-lime-300'
+                                    : status === 'blocked'
+                                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                      : status === 'failed'
+                                        ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                        : 'border-gray-200/80 bg-gray-50 text-gray-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-500';
+
+                              return (
+                                <div
+                                  key={stage.key}
+                                  role="listitem"
+                                  className="relative flex min-w-0 flex-1 flex-col items-center gap-1.5 px-0.5"
+                                  title={`${stage.label} — ${stage.statusLabel || stage.subLabel || ''}`}
+                                >
+                                  {stageIndex > 0 && (
+                                    <span
+                                      aria-hidden="true"
+                                      className={`absolute left-0 top-4 h-[2px] w-1/2 -translate-x-1/2 ${connector}`}
+                                    />
+                                  )}
+                                  {stageIndex < stageItems.length - 1 && (
+                                    <span
+                                      aria-hidden="true"
+                                      className={`absolute right-0 top-4 h-[2px] w-1/2 translate-x-1/2 ${connector}`}
+                                    />
+                                  )}
+                                  <div
+                                    className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all ${nodeClasses}`}
+                                  >
+                                    {isDone ? (
+                                      <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                                    ) : status === 'processing' ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : status === 'blocked' ? (
+                                      <span className="text-xs font-black">!</span>
+                                    ) : status === 'failed' ? (
+                                      <X className="h-3.5 w-3.5 stroke-[2.5]" />
+                                    ) : (
+                                      <Icon className="h-3.5 w-3.5 stroke-[2]" />
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`w-full truncate text-center text-[9px] font-bold leading-tight ${
+                                      isLive || isDone
+                                        ? 'text-gray-800 dark:text-gray-100'
+                                        : status === 'blocked'
+                                          ? 'text-amber-700 dark:text-amber-400'
+                                          : status === 'failed'
+                                            ? 'text-rose-700 dark:text-rose-400'
+                                            : 'text-gray-500 dark:text-gray-400'
+                                    }`}
+                                  >
+                                    {stage.label}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* The step running now — or an honest note about the stage */}
+                          <div className="border-t border-gray-100 px-4 py-3 dark:border-white/5">
+                            {activeProgress ? (
+                              <>
+                                <LiveProgressBar
+                                  progress={activeProgress}
+                                  variant="full"
+                                  onAction={(actionId) =>
+                                    void handleAutomationAction(actionId as BadgeActionId)
+                                  }
+                                />
+                                <p className="mt-3 border-t border-gray-100 pt-3 text-[11px] leading-snug text-gray-600 dark:border-white/5 dark:text-gray-400">
+                                  {applicationFlow.note}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                                {applicationFlow.note}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* What the run needs ready — inline, not in another card */}
+                          <div className="space-y-2.5 border-t border-gray-100 px-4 py-3 dark:border-white/5">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                              Readiness
+                            </span>
+
+                            {/* Tailored CV */}
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                {hasCvReady ? (
+                                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                                ) : (
+                                  <div className="h-3.5 w-3.5 shrink-0 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600" />
+                                )}
+                                <div className="min-w-0">
+                                  <span
+                                    className={`text-[11px] font-semibold ${hasCvReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                                  >
+                                    Tailored CV
+                                  </span>
+                                  {hasCvReady && keywordMatchScore > 0 && (
+                                    <span
+                                      className={`ml-1.5 text-[10px] font-bold ${
+                                        keywordMatchScore >= 70
+                                          ? 'text-emerald-600 dark:text-emerald-400'
+                                          : keywordMatchScore >= 50
+                                            ? 'text-amber-600 dark:text-amber-400'
+                                            : 'text-rose-600 dark:text-rose-400'
+                                      }`}
+                                    >
+                                      {keywordMatchScore}%
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {hasCvReady ? (
+                                <button
+                                  onClick={() =>
+                                    primaryJourney
+                                      ? handleContinueJourney(primaryJourney as any)
+                                      : void handleOpenDocumentPreview('cv')
+                                  }
+                                  className="whitespace-nowrap text-[10px] font-bold text-[#013f2e] hover:underline dark:text-emerald-400"
+                                >
+                                  Edit
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => void handleTailorAndApply()}
+                                  disabled={isCreatingJourney || isApplying}
+                                  className="whitespace-nowrap text-[10px] font-bold text-[#013f2e] hover:underline disabled:opacity-50 dark:text-emerald-400"
+                                >
+                                  {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Generate'}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Cover letter */}
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                {hasCoverLetterReady ? (
+                                  <CheckCircle className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                                ) : (
+                                  <div className="h-3.5 w-3.5 shrink-0 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600" />
+                                )}
+                                <span
+                                  className={`text-[11px] font-semibold ${hasCoverLetterReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                                >
+                                  Cover Letter
+                                </span>
+                              </div>
+                              {hasCoverLetterReady ? (
+                                <button
+                                  onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                                  className="whitespace-nowrap text-[10px] font-bold text-[#013f2e] hover:underline dark:text-emerald-400"
+                                >
+                                  View
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => void handleTailorAndApply()}
+                                  disabled={isCreatingJourney || isApplying}
+                                  className="whitespace-nowrap text-[10px] font-bold text-gray-400 hover:text-[#013f2e] disabled:opacity-50 dark:text-gray-500 dark:hover:text-emerald-400"
+                                >
+                                  {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Optional'}
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Job details the application needs */}
+                            <div className="flex items-center gap-2">
+                              {Boolean(job.company && job.jobTitle) ? (
+                                <CheckCircle className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                              ) : (
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                              )}
+                              <span
+                                className={`text-[11px] font-semibold ${Boolean(job.company && job.jobTitle) ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                              >
+                                {job.company && job.jobTitle
+                                  ? `${job.company} · ${job.jobTitle}`
+                                  : 'Missing job details'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* What to do next — same card, so the action follows the state */}
+                          <div className="border-t border-gray-100 px-4 py-3 dark:border-white/5">
+                            <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                              Next action
+                            </span>
+                            <p className="mb-2.5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
+                              {guidanceHub.description}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {guidanceHub.primaryAction && (
+                                <motion.button
+                                  type="button"
+                                  onClick={() => {
+                                    haptic('medium');
+                                    guidanceHub.primaryAction!.onClick();
+                                  }}
+                                  disabled={guidanceHub.primaryAction.disabled}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.97 }}
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#013f2e] px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                                >
+                                  {guidanceHub.primaryAction.loading ? (
+                                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                                  ) : (
+                                    guidanceHub.primaryAction.icon && (
+                                      <guidanceHub.primaryAction.icon className="h-3.5 w-3.5 shrink-0" />
+                                    )
+                                  )}
+                                  <span>
+                                    {guidanceHub.primaryAction.loading
+                                      ? guidanceHub.primaryAction.loadingLabel || 'Applying...'
+                                      : guidanceHub.primaryAction.label}
+                                  </span>
+                                </motion.button>
+                              )}
+                              {guidanceHub.secondaryActions.map((action, idx) => (
+                                <motion.button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    haptic('light');
+                                    action.onClick();
+                                  }}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.97 }}
+                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition-all hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                                >
+                                  {action.icon && (
+                                    <action.icon className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                                  )}
+                                  <span>{action.label}</span>
+                                </motion.button>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       );
                     })()}
 
-                    {/* Tailoring Intelligence & Issues Panel — fed the loading flag so it never
-                        renders a verdict computed from a CV that has not loaded yet. */}
+                    {/* Quality gate — its own card because it scores the CV itself,
+                        not this application's position. */}
                     <TailoringIssuesPanel
                       job={job}
                       masterCv={cvData || undefined}
                       isLoading={loadingCV && !cvData}
                     />
 
-                    {/* Live Progress — the CURRENT step, not the whole pipeline.
-                        Sits above the stage/readiness card (and therefore above the
-                        Progress Speed graph): the live step is what the user can act
-                        on now, the graph is retrospective context. */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                          {liveProgress && liveProgress.state !== 'idle' ? 'Live Progress' : 'Application Flow'}
-                        </span>
-                        {liveProgress && liveProgress.state !== 'idle' && (
-                          <span
-                            className={`${chipTone(
-                              liveProgress.state === 'running'
-                                ? 'blue'
-                                : liveProgress.state === 'waiting_user'
-                                  ? 'amber'
-                                  : liveProgress.state === 'failed'
-                                    ? 'rose'
-                                    : 'emerald',
-                              'sm',
-                            )} font-bold`}
-                          >
-                            {liveProgress.phaseLabel}
-                          </span>
-                        )}
-                      </div>
+                    {/* History and reference material, folded away: pace, activity,
+                        market context and the JD audit are context, not the current
+                        step, so they no longer compete with it for the first screen. */}
+                    <details className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/5">
+                      <summary className="cursor-pointer select-none p-4 text-xs font-bold text-gray-700 dark:text-gray-300">
+                        Pace, activity &amp; reference
+                      </summary>
+                      <div className="space-y-3 border-t border-gray-100 px-4 py-3 dark:border-white/5">
+                        {/* Timeline: Application Date → Deadline */}
+                        {(job.applicationDate || job.createdAt || job.deadline) && (() => {
+                          const appDateRaw = job.applicationDate || job.createdAt;
+                          const appDate = appDateRaw ? new Date(appDateRaw) : null;
+                          const deadlineDate = job.deadline ? new Date(job.deadline) : null;
+                          const now = new Date();
+                          const totalDays = appDate && deadlineDate ? Math.ceil((deadlineDate.getTime() - appDate.getTime()) / 86400000) : null;
+                          const elapsedDays = appDate ? Math.ceil((now.getTime() - appDate.getTime()) / 86400000) : null;
+                          const remainingDays = deadlineDate ? Math.ceil((deadlineDate.getTime() - now.getTime()) / 86400000) : null;
+                          const progressPct = totalDays && elapsedDays !== null ? Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)) : null;
+                          const isOverdue = remainingDays !== null && remainingDays < 0;
+                          const isUrgent = remainingDays !== null && remainingDays >= 0 && remainingDays <= 3;
 
-                      {liveProgress && liveProgress.state !== 'idle' ? (
-                        <LiveProgressBar
-                          progress={liveProgress}
-                          variant="full"
-                          onAction={(actionId) => void handleAutomationAction(actionId as BadgeActionId)}
-                        />
-                      ) : (
-                        <p className="text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                          {applicationFlow.note}
-                        </p>
-                      )}
-
-                      {liveProgress && liveProgress.state !== 'idle' && (
-                        <p className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">
-                          {applicationFlow.note}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Current Stage + Readiness */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                      {(() => {
-                        const currentStage = stageItems.find(s => s.status === 'current') || stageItems.find(s => s.status === 'processing');
-                        const Icon = currentStage?.icon || Bookmark;
-                        const status = currentStage?.status || 'current';
-                        return (
-                          <>
-                            {/* Stage-specific content */}
-
-                            {/* Timeline: Application Date → Deadline */}
-                            {(job.applicationDate || job.createdAt || job.deadline) && (() => {
-                              const appDateRaw = job.applicationDate || job.createdAt;
-                              const appDate = appDateRaw ? new Date(appDateRaw) : null;
-                              const deadlineDate = job.deadline ? new Date(job.deadline) : null;
-                              const now = new Date();
-                              const totalDays = appDate && deadlineDate ? Math.ceil((deadlineDate.getTime() - appDate.getTime()) / 86400000) : null;
-                              const elapsedDays = appDate ? Math.ceil((now.getTime() - appDate.getTime()) / 86400000) : null;
-                              const remainingDays = deadlineDate ? Math.ceil((deadlineDate.getTime() - now.getTime()) / 86400000) : null;
-                              const progressPct = totalDays && elapsedDays !== null ? Math.min(100, Math.max(0, (elapsedDays / totalDays) * 100)) : null;
-                              const isOverdue = remainingDays !== null && remainingDays < 0;
-                              const isUrgent = remainingDays !== null && remainingDays >= 0 && remainingDays <= 3;
-
-                              return (
-                                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
-                                  <div className="flex items-center justify-between text-[10px] mb-1.5">
-                                    {appDate && (
-                                      <span className="text-gray-500 dark:text-gray-400">
-                                        Applied {formatStageDateTime(appDate) || formatTimelineDate(appDate)}
-                                      </span>
-                                    )}
-                                    {deadlineDate && (
-                                      <span className={`font-bold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {isOverdue ? `${Math.abs(remainingDays)}d overdue` : `${remainingDays}d left`}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {progressPct !== null && (
-                                    <div className="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                      <div
-                                        className={`h-full rounded-full transition-all duration-500 ${
-                                          isOverdue ? 'bg-rose-500' : isUrgent ? 'bg-amber-500' : 'bg-[#013f2e]'
-                                        }`}
-                                        style={{ width: `${progressPct}%` }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-
-                            {/* Speed Graph: Expected vs Actual — Smooth Curve with Date Labels */}
-                            {(() => {
-                              // Entry point: job posted date from postedAgeDays (how many days ago the job was made live)
-                              const now = new Date();
-                              const postedAgeDays = (job as any).postedAgeDays;
-                              const postedDate = typeof postedAgeDays === 'number' && postedAgeDays >= 0
-                                ? new Date(now.getTime() - postedAgeDays * 86400000)
-                                : job.createdAt
-                                  ? new Date(job.createdAt)
-                                  : null;
-                              if (!postedDate) return null;
-
-                              const daysSincePosted = Math.max(0, (now.getTime() - postedDate.getTime()) / 86400000);
-
-                              const appDateRaw = job.applicationDate;
-                              const appDate = appDateRaw ? new Date(appDateRaw) : null;
-
-                              const stageDefinitions: Array<{ key: string; label: string; expected: number; actual: number | null; date: Date | null }> = [
-                                { key: 'posted', label: 'Posted', expected: 0, actual: 0, date: postedDate },
-                                { key: 'created', label: 'Tailored', expected: 3, actual: null, date: null },
-                                { key: 'applied', label: 'Applied', expected: 5, actual: null, date: null },
-                                { key: 'interview', label: 'Interview', expected: 18, actual: null, date: null },
-                                { key: 'offer', label: 'Offer', expected: 35, actual: null, date: null },
-                                { key: 'accepted', label: 'Accepted', expected: 40, actual: null, date: null },
-                              ];
-
-                              // Fill actual values from statusHistory
-                              const history = (job.statusHistory || []) as any[];
-                              stageDefinitions.forEach((def) => {
-                                if (def.key === 'posted') return;
-                                const entry = history.find((h: any) => h.status === def.key && h.changedAt);
-                                if (entry) {
-                                  const entryDate = new Date(entry.changedAt);
-                                  def.actual = Math.max(0, (entryDate.getTime() - postedDate.getTime()) / 86400000);
-                                  def.date = entryDate;
-                                }
-                              });
-
-                              // Use applicationDate if available for the "Applied" stage
-                              if (appDate) {
-                                const appliedDef = stageDefinitions.find(d => d.key === 'applied');
-                                if (appliedDef && appliedDef.actual === null) {
-                                  appliedDef.actual = Math.max(0, (appDate.getTime() - postedDate.getTime()) / 86400000);
-                                  appliedDef.date = appDate;
-                                }
-                              }
-
-                              // Mark current stage
-                              const currentStageKey = stageItems.find(s => s.status === 'current')?.key || stageItems.find(s => s.status === 'processing')?.key;
-                              if (currentStageKey) {
-                                const def = stageDefinitions.find(d => d.key === currentStageKey);
-                                if (def && def.actual === null) {
-                                  def.actual = daysSincePosted;
-                                  def.date = now;
-                                }
-                              }
-
-                              // Show stages up to current + 1
-                              const currentIdx = currentStageKey ? stageDefinitions.findIndex(d => d.key === currentStageKey) : 0;
-                              const visibleStages = stageDefinitions.slice(0, Math.max(2, Math.min(stageDefinitions.length, currentIdx + 2)));
-
-                              const maxDays = Math.max(
-                                ...visibleStages.map(s => s.expected),
-                                ...visibleStages.filter(s => s.actual !== null).map(s => s.actual!),
-                                daysSincePosted,
-                                1
-                              );
-
-                              // SVG dimensions
-                              const W = 200, H = 64, PAD_L = 4, PAD_R = 4, PAD_T = 4, PAD_B = 4;
-                              const plotW = W - PAD_L - PAD_R;
-                              const plotH = H - PAD_T - PAD_B;
-                              const n = visibleStages.length;
-
-                              const toX = (i: number) => (i / Math.max(1, n - 1)) * plotW + PAD_L;
-                              const toY = (days: number) => H - PAD_B - (maxDays > 0 ? (days / maxDays) * plotH : 0);
-
-                              const ptsExpected = visibleStages.map((s, i) => ({ x: toX(i), y: toY(s.expected) }));
-                              const actualStages = visibleStages.filter(s => s.actual !== null);
-                              const ptsActual = actualStages.map((s) => {
-                                const origIdx = visibleStages.indexOf(s);
-                                return { x: toX(origIdx), y: toY(s.actual!) };
-                              });
-
-                              // Smooth cubic bezier path
-                              const smoothPath = (pts: Array<{ x: number; y: number }>) => {
-                                if (pts.length < 2) return '';
-                                if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
-                                let d = `M ${pts[0].x},${pts[0].y}`;
-                                for (let i = 0; i < pts.length - 1; i++) {
-                                  const p0 = pts[Math.max(0, i - 1)];
-                                  const p1 = pts[i];
-                                  const p2 = pts[i + 1];
-                                  const p3 = pts[Math.min(pts.length - 1, i + 2)];
-                                  const t = 0.3;
-                                  d += ` C ${p1.x + (p2.x - p0.x) * t},${p1.y + (p2.y - p0.y) * t} ${p2.x - (p3.x - p1.x) * t},${p2.y - (p3.y - p1.y) * t} ${p2.x},${p2.y}`;
-                                }
-                                return d;
-                              };
-
-                              const smoothFill = (pts: Array<{ x: number; y: number }>) => {
-                                if (pts.length < 2) return '';
-                                return `${smoothPath(pts)} L ${pts[pts.length - 1].x},${H} L ${pts[0].x},${H} Z`;
-                              };
-
-                              // Format date: "Sep 19"
-                              const fmtDate = (d: Date | null) => {
-                                if (!d) return '';
-                                const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                                return `${m[d.getMonth()]} ${d.getDate()}`;
-                              };
-
-                              return (
-                                <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress Speed</span>
-                                    <div className="flex items-center gap-3">
-                                      <span className="flex items-center gap-1 text-[9px] text-gray-400 dark:text-gray-500">
-                                        <span className="w-2 h-[2px] bg-gray-300 dark:bg-gray-600 rounded" /> Expected
-                                      </span>
-                                      <span className="flex items-center gap-1 text-[9px] text-[#013f2e] dark:text-emerald-400">
-                                        <span className="w-2 h-[2px] bg-[#013f2e] dark:bg-emerald-400 rounded" /> Actual
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="relative w-full">
-                                    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
-                                      {[0.25, 0.5, 0.75].map(pct => (
-                                        <line key={pct} x1={PAD_L} y1={H - PAD_B - pct * plotH} x2={W - PAD_R} y2={H - PAD_B - pct * plotH}
-                                          stroke="currentColor" className="text-gray-100 dark:text-white/5" strokeWidth="0.5" />
-                                      ))}
-                                      {ptsExpected.length > 1 && (
-                                        <>
-                                          <path d={smoothFill(ptsExpected)} fill="currentColor" className="text-gray-200/40 dark:text-white/5" />
-                                          <path d={smoothPath(ptsExpected)} fill="none" stroke="currentColor" className="text-gray-300 dark:text-gray-600" strokeWidth="1.5" strokeLinecap="round" />
-                                        </>
-                                      )}
-                                      {ptsActual.length > 1 && (
-                                        <>
-                                          <path d={smoothFill(ptsActual)} fill="currentColor" className="text-[#013f2e]/10 dark:text-emerald-400/10" />
-                                          <path d={smoothPath(ptsActual)} fill="none" stroke="currentColor" className="text-[#013f2e] dark:text-emerald-400" strokeWidth="2" strokeLinecap="round" />
-                                        </>
-                                      )}
-                                      {ptsActual.map((p, i) => (
-                                        <circle key={i} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" />
-                                      ))}
-                                      {ptsActual.length < ptsExpected.length && ptsExpected[ptsActual.length] && (
-                                        <circle cx={ptsExpected[ptsActual.length].x} cy={ptsExpected[ptsActual.length].y} r="2.5"
-                                          fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" stroke="currentColor"
-                                          strokeWidth="1" strokeDasharray="2 1" />
-                                      )}
-                                    </svg>
-                                    {/* X-axis labels: date + stage */}
-                                    <div className="flex justify-between px-1 mt-1">
-                                      {visibleStages.map((s) => {
-                                        const dateStr = s.key === 'posted' ? fmtDate(postedDate) : fmtDate(s.date);
-                                        const isCurrent = s.key === currentStageKey;
-                                        return (
-                                          <span key={s.key} className={`text-[7px] font-bold leading-tight text-center ${isCurrent ? 'text-[#013f2e] dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                                            {dateStr}<br/>{s.label}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Readiness Items */}
-                            <div className="space-y-2.5">
-                              {/* CV */}
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  {hasCvReady ? (
-                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600 shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <span className={`text-[11px] font-semibold ${hasCvReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                      Tailored CV
-                                    </span>
-                                    {hasCvReady && keywordMatchScore > 0 && (
-                                      <span className={`ml-1.5 text-[10px] font-bold ${keywordMatchScore >= 70 ? 'text-emerald-600 dark:text-emerald-400' : keywordMatchScore >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                        {keywordMatchScore}%
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                                {hasCvReady ? (
-                                  <button
-                                    onClick={() => primaryJourney ? handleContinueJourney(primaryJourney as any) : void handleOpenDocumentPreview('cv')}
-                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap"
-                                  >
-                                    Edit
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => void handleTailorAndApply()}
-                                    disabled={isCreatingJourney || isApplying}
-                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap disabled:opacity-50"
-                                  >
-                                    {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Generate'}
-                                  </button>
+                          return (
+                            <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                              <div className="flex items-center justify-between text-[10px] mb-1.5">
+                                {appDate && (
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    Applied {formatStageDateTime(appDate) || formatTimelineDate(appDate)}
+                                  </span>
+                                )}
+                                {deadlineDate && (
+                                  <span className={`font-bold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {isOverdue ? `${Math.abs(remainingDays)}d overdue` : `${remainingDays}d left`}
+                                  </span>
                                 )}
                               </div>
+                              {progressPct !== null && (
+                                <div className="w-full h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      isOverdue ? 'bg-rose-500' : isUrgent ? 'bg-amber-500' : 'bg-[#013f2e]'
+                                    }`}
+                                    style={{ width: `${progressPct}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
 
-                              {/* Cover Letter */}
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  {hasCoverLetterReady ? (
-                                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                  ) : (
-                                    <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-gray-300 dark:border-gray-600 shrink-0" />
-                                  )}
-                                  <span className={`text-[11px] font-semibold ${hasCoverLetterReady ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                    Cover Letter
+                        {/* Speed Graph: Expected vs Actual — Smooth Curve with Date Labels */}
+                        {(() => {
+                          // Entry point: job posted date from postedAgeDays (how many days ago the job was made live)
+                          const now = new Date();
+                          const postedAgeDays = (job as any).postedAgeDays;
+                          const postedDate = typeof postedAgeDays === 'number' && postedAgeDays >= 0
+                            ? new Date(now.getTime() - postedAgeDays * 86400000)
+                            : job.createdAt
+                              ? new Date(job.createdAt)
+                              : null;
+                          if (!postedDate) return null;
+
+                          const daysSincePosted = Math.max(0, (now.getTime() - postedDate.getTime()) / 86400000);
+
+                          const appDateRaw = job.applicationDate;
+                          const appDate = appDateRaw ? new Date(appDateRaw) : null;
+
+                          const stageDefinitions: Array<{ key: string; label: string; expected: number; actual: number | null; date: Date | null }> = [
+                            { key: 'posted', label: 'Posted', expected: 0, actual: 0, date: postedDate },
+                            { key: 'created', label: 'Tailored', expected: 3, actual: null, date: null },
+                            { key: 'applied', label: 'Applied', expected: 5, actual: null, date: null },
+                            { key: 'interview', label: 'Interview', expected: 18, actual: null, date: null },
+                            { key: 'offer', label: 'Offer', expected: 35, actual: null, date: null },
+                            { key: 'accepted', label: 'Accepted', expected: 40, actual: null, date: null },
+                          ];
+
+                          // Fill actual values from statusHistory
+                          const history = (job.statusHistory || []) as any[];
+                          stageDefinitions.forEach((def) => {
+                            if (def.key === 'posted') return;
+                            const entry = history.find((h: any) => h.status === def.key && h.changedAt);
+                            if (entry) {
+                              const entryDate = new Date(entry.changedAt);
+                              def.actual = Math.max(0, (entryDate.getTime() - postedDate.getTime()) / 86400000);
+                              def.date = entryDate;
+                            }
+                          });
+
+                          // Use applicationDate if available for the "Applied" stage
+                          if (appDate) {
+                            const appliedDef = stageDefinitions.find(d => d.key === 'applied');
+                            if (appliedDef && appliedDef.actual === null) {
+                              appliedDef.actual = Math.max(0, (appDate.getTime() - postedDate.getTime()) / 86400000);
+                              appliedDef.date = appDate;
+                            }
+                          }
+
+                          // Mark current stage
+                          const currentStageKey = stageItems.find(s => s.status === 'current')?.key || stageItems.find(s => s.status === 'processing')?.key;
+                          if (currentStageKey) {
+                            const def = stageDefinitions.find(d => d.key === currentStageKey);
+                            if (def && def.actual === null) {
+                              def.actual = daysSincePosted;
+                              def.date = now;
+                            }
+                          }
+
+                          // Show stages up to current + 1
+                          const currentIdx = currentStageKey ? stageDefinitions.findIndex(d => d.key === currentStageKey) : 0;
+                          const visibleStages = stageDefinitions.slice(0, Math.max(2, Math.min(stageDefinitions.length, currentIdx + 2)));
+
+                          const maxDays = Math.max(
+                            ...visibleStages.map(s => s.expected),
+                            ...visibleStages.filter(s => s.actual !== null).map(s => s.actual!),
+                            daysSincePosted,
+                            1
+                          );
+
+                          // SVG dimensions
+                          const W = 200, H = 64, PAD_L = 4, PAD_R = 4, PAD_T = 4, PAD_B = 4;
+                          const plotW = W - PAD_L - PAD_R;
+                          const plotH = H - PAD_T - PAD_B;
+                          const n = visibleStages.length;
+
+                          const toX = (i: number) => (i / Math.max(1, n - 1)) * plotW + PAD_L;
+                          const toY = (days: number) => H - PAD_B - (maxDays > 0 ? (days / maxDays) * plotH : 0);
+
+                          const ptsExpected = visibleStages.map((s, i) => ({ x: toX(i), y: toY(s.expected) }));
+                          const actualStages = visibleStages.filter(s => s.actual !== null);
+                          const ptsActual = actualStages.map((s) => {
+                            const origIdx = visibleStages.indexOf(s);
+                            return { x: toX(origIdx), y: toY(s.actual!) };
+                          });
+
+                          // Smooth cubic bezier path
+                          const smoothPath = (pts: Array<{ x: number; y: number }>) => {
+                            if (pts.length < 2) return '';
+                            if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
+                            let d = `M ${pts[0].x},${pts[0].y}`;
+                            for (let i = 0; i < pts.length - 1; i++) {
+                              const p0 = pts[Math.max(0, i - 1)];
+                              const p1 = pts[i];
+                              const p2 = pts[i + 1];
+                              const p3 = pts[Math.min(pts.length - 1, i + 2)];
+                              const t = 0.3;
+                              d += ` C ${p1.x + (p2.x - p0.x) * t},${p1.y + (p2.y - p0.y) * t} ${p2.x - (p3.x - p1.x) * t},${p2.y - (p3.y - p1.y) * t} ${p2.x},${p2.y}`;
+                            }
+                            return d;
+                          };
+
+                          const smoothFill = (pts: Array<{ x: number; y: number }>) => {
+                            if (pts.length < 2) return '';
+                            return `${smoothPath(pts)} L ${pts[pts.length - 1].x},${H} L ${pts[0].x},${H} Z`;
+                          };
+
+                          // Format date: "Sep 19"
+                          const fmtDate = (d: Date | null) => {
+                            if (!d) return '';
+                            const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                            return `${m[d.getMonth()]} ${d.getDate()}`;
+                          };
+
+                          return (
+                            <div className="mb-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress Speed</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="flex items-center gap-1 text-[9px] text-gray-400 dark:text-gray-500">
+                                    <span className="w-2 h-[2px] bg-gray-300 dark:bg-gray-600 rounded" /> Expected
+                                  </span>
+                                  <span className="flex items-center gap-1 text-[9px] text-[#013f2e] dark:text-emerald-400">
+                                    <span className="w-2 h-[2px] bg-[#013f2e] dark:bg-emerald-400 rounded" /> Actual
                                   </span>
                                 </div>
-                                {hasCoverLetterReady ? (
-                                  <button
-                                    onClick={() => void handleOpenDocumentPreview('coverLetter')}
-                                    className="text-[10px] font-bold text-[#013f2e] dark:text-emerald-400 hover:underline whitespace-nowrap"
-                                  >
-                                    View
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => void handleTailorAndApply()}
-                                    disabled={isCreatingJourney || isApplying}
-                                    className="text-[10px] font-bold text-gray-400 dark:text-gray-500 hover:text-[#013f2e] dark:hover:text-emerald-400 whitespace-nowrap disabled:opacity-50"
-                                  >
-                                    {isCreatingJourney ? 'Generating...' : isApplying ? 'Applying...' : 'Optional'}
-                                  </button>
-                                )}
                               </div>
-
-                              {/* Job Info */}
-                              <div className="flex items-center gap-2">
-                                {Boolean(job.company && job.jobTitle) ? (
-                                  <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                                ) : (
-                                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                )}
-                                <span className={`text-[11px] font-semibold ${Boolean(job.company && job.jobTitle) ? 'text-gray-800 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                  {job.company && job.jobTitle ? `${job.company} · ${job.jobTitle}` : 'Missing job details'}
-                                </span>
+                              <div className="relative w-full">
+                                <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
+                                  {[0.25, 0.5, 0.75].map(pct => (
+                                    <line key={pct} x1={PAD_L} y1={H - PAD_B - pct * plotH} x2={W - PAD_R} y2={H - PAD_B - pct * plotH}
+                                      stroke="currentColor" className="text-gray-100 dark:text-white/5" strokeWidth="0.5" />
+                                  ))}
+                                  {ptsExpected.length > 1 && (
+                                    <>
+                                      <path d={smoothFill(ptsExpected)} fill="currentColor" className="text-gray-200/40 dark:text-white/5" />
+                                      <path d={smoothPath(ptsExpected)} fill="none" stroke="currentColor" className="text-gray-300 dark:text-gray-600" strokeWidth="1.5" strokeLinecap="round" />
+                                    </>
+                                  )}
+                                  {ptsActual.length > 1 && (
+                                    <>
+                                      <path d={smoothFill(ptsActual)} fill="currentColor" className="text-[#013f2e]/10 dark:text-emerald-400/10" />
+                                      <path d={smoothPath(ptsActual)} fill="none" stroke="currentColor" className="text-[#013f2e] dark:text-emerald-400" strokeWidth="2" strokeLinecap="round" />
+                                    </>
+                                  )}
+                                  {ptsActual.map((p, i) => (
+                                    <circle key={i} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" />
+                                  ))}
+                                  {ptsActual.length < ptsExpected.length && ptsExpected[ptsActual.length] && (
+                                    <circle cx={ptsExpected[ptsActual.length].x} cy={ptsExpected[ptsActual.length].y} r="2.5"
+                                      fill="currentColor" className="text-[#013f2e] dark:text-emerald-400" stroke="currentColor"
+                                      strokeWidth="1" strokeDasharray="2 1" />
+                                  )}
+                                </svg>
+                                {/* X-axis labels: date + stage */}
+                                <div className="flex justify-between px-1 mt-1">
+                                  {visibleStages.map((s) => {
+                                    const dateStr = s.key === 'posted' ? fmtDate(postedDate) : fmtDate(s.date);
+                                    const isCurrent = s.key === currentStageKey;
+                                    return (
+                                      <span key={s.key} className={`text-[7px] font-bold leading-tight text-center ${isCurrent ? 'text-[#013f2e] dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                        {dateStr}<br/>{s.label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Activity Log */}
-                    {job.statusHistory && job.statusHistory.length > 0 && (
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">Activity</span>
-                        <div className="space-y-2">
-                          {(job.statusHistory as any[]).slice(-5).reverse().map((entry: any, i: number) => (
-                            <div key={i} className="flex items-start gap-2.5">
-                              <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium whitespace-nowrap mt-0.5">
-                                {formatStageDateTime(entry.changedAt) || formatTimelineDate(entry.changedAt)}
-                              </span>
-                              <span className="text-xs text-gray-700 dark:text-gray-300 capitalize">{entry.status}</span>
-                            </div>
-                          ))}
-                        </div>
+                          );
+                        })()}
                       </div>
-                    )}
 
-                    {/* Next Action */}
-                    <div className={`rounded-2xl border p-4 shadow-sm ${guidanceHub.toneClasses}`}>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-2">Next Action</span>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 mb-3">{guidanceHub.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {guidanceHub.primaryAction && (
-                          <motion.button
-                            type="button"
-                            onClick={() => {
-                              haptic('medium');
-                              guidanceHub.primaryAction!.onClick();
-                            }}
-                            disabled={guidanceHub.primaryAction.disabled}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.97 }}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#013f2e] text-white text-xs font-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
-                          >
-                            {guidanceHub.primaryAction.loading ? (
-                              <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
-                            ) : (
-                              guidanceHub.primaryAction.icon && (
-                                <guidanceHub.primaryAction.icon className="w-3.5 h-3.5 shrink-0" />
-                              )
-                            )}
-                            <span>
-                              {guidanceHub.primaryAction.loading
-                                ? guidanceHub.primaryAction.loadingLabel || 'Applying...'
-                                : guidanceHub.primaryAction.label}
-                            </span>
-                          </motion.button>
-                        )}
-                        {guidanceHub.secondaryActions.map((action, idx) => (
-                          <motion.button
-                            key={idx}
-                            type="button"
-                            onClick={() => {
-                              haptic('light');
-                              action.onClick();
-                            }}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.97 }}
-                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-all"
-                          >
-                            {action.icon && <action.icon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
-                            <span>{action.label}</span>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Market Intelligence (collapsible) */}
-                    <details className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                      <summary className="p-4 cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-300 select-none">
-                        Market Intelligence & Trends
-                      </summary>
-                      <div className="px-4 pb-4 space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Company Hiring Pace</span>
-                            <span className="text-xs font-bold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Steady Hiring'}</span>
-                          </div>
-                          <div className="p-3 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5">
-                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block mb-1">Salary Competitiveness</span>
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                              {salaryComp.comparison === 'above' ? 'Above Market' : salaryComp.comparison === 'below' ? 'Below Market' : 'At Market'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </details>
-
-                    {/* JD Quality Audit (collapsible) */}
-                    {job.extractedJd?.jd_quality && (
-                      <details className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810]">
-                        <summary className="p-4 cursor-pointer flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300 select-none">
-                          <span>Job Posting Quality Audit</span>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
-                            job.extractedJd.jd_quality.jd_quality_score >= 70
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          }`}>
-                            {job.extractedJd.jd_quality.jd_quality_score}/100
-                          </span>
-                        </summary>
-                        <div className="px-4 pb-4 space-y-2">
-                          {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
-                            <div className="space-y-2">
-                              <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Flags ({job.extractedJd.jd_quality.jd_red_flags.length})</span>
-                              {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
-                                <div key={i} className="flex items-start gap-2 p-2.5 bg-red-50/60 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl text-[11px] text-gray-700 dark:text-gray-300">
-                                  <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
-                                  <div>
-                                    <strong className="block text-red-900 dark:text-red-300">{flag.flag}</strong>
-                                    <span className="text-gray-600 dark:text-gray-400 mt-0.5 block">{flag.detail}</span>
-                                  </div>
+                      <div className="border-t border-gray-100 px-4 py-3 dark:border-white/5">
+                        <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                          Activity
+                        </span>
+                        {job.statusHistory && job.statusHistory.length > 0 ? (
+                          <div className="space-y-2">
+                            {(job.statusHistory as any[])
+                              .slice(-5)
+                              .reverse()
+                              .map((entry: any, i: number) => (
+                                <div key={i} className="flex items-start gap-2.5">
+                                  <span className="mt-0.5 whitespace-nowrap text-[10px] font-medium text-gray-400 dark:text-gray-500">
+                                    {formatStageDateTime(entry.changedAt) ||
+                                      formatTimelineDate(entry.changedAt)}
+                                  </span>
+                                  <span className="text-xs capitalize text-gray-700 dark:text-gray-300">
+                                    {entry.status}
+                                  </span>
                                 </div>
                               ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                            No stage changes recorded yet.
+                          </p>
+                        )}
+                      </div>
+
+                      <details className="border-t border-gray-100 dark:border-white/5">
+                        <summary className="cursor-pointer select-none px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300">
+                          Market intelligence &amp; trends
+                        </summary>
+                        <div className="space-y-3 px-4 pb-4">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-white/5 dark:bg-white/[0.02]">
+                              <span className="mb-1 block text-[10px] text-gray-500 dark:text-gray-400">
+                                Company Hiring Pace
+                              </span>
+                              <span className="text-xs font-bold text-gray-900 dark:text-white">
+                                {insightsLoading ? '...' : insights?.companyHiringTrend || 'Steady Hiring'}
+                              </span>
                             </div>
-                          )}
+                            <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 dark:border-white/5 dark:bg-white/[0.02]">
+                              <span className="mb-1 block text-[10px] text-gray-500 dark:text-gray-400">
+                                Salary Competitiveness
+                              </span>
+                              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                {salaryComp.comparison === 'above'
+                                  ? 'Above Market'
+                                  : salaryComp.comparison === 'below'
+                                    ? 'Below Market'
+                                    : 'At Market'}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </details>
-                    )}
+
+                      {job.extractedJd?.jd_quality && (
+                        <details className="border-t border-gray-100 dark:border-white/5">
+                          <summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-3 text-xs font-bold text-gray-700 dark:text-gray-300">
+                            <span>Job posting quality audit</span>
+                            <span
+                              className={`rounded px-2 py-0.5 text-[10px] font-black ${
+                                job.extractedJd.jd_quality.jd_quality_score >= 70
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}
+                            >
+                              {job.extractedJd.jd_quality.jd_quality_score}/100
+                            </span>
+                          </summary>
+                          <div className="space-y-2 px-4 pb-4">
+                            {job.extractedJd.jd_quality.jd_red_flags?.length > 0 && (
+                              <div className="space-y-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
+                                  Flags ({job.extractedJd.jd_quality.jd_red_flags.length})
+                                </span>
+                                {job.extractedJd.jd_quality.jd_red_flags.map((flag: any, i: number) => (
+                                  <div
+                                    key={i}
+                                    className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50/60 p-2.5 text-[11px] text-gray-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-gray-300"
+                                  >
+                                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                                    <div>
+                                      <strong className="block text-red-900 dark:text-red-300">
+                                        {flag.flag}
+                                      </strong>
+                                      <span className="mt-0.5 block text-gray-600 dark:text-gray-400">
+                                        {flag.detail}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      )}
+                    </details>
                   </motion.div>
                 )}
 
@@ -4075,7 +4215,7 @@ ${userName}`
                         plus a generic drafted email — which contradicted the actual messages
                         whenever there were any, and showed a reassuring "your application has
                         been received" to a job with no reply at all. */}
-                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#131810] overflow-hidden flex flex-col max-h-[68vh]">
+                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/5 overflow-hidden flex flex-col max-h-[68vh]">
                       {commsLoading ? (
                         <div className="p-6 space-y-5 animate-pulse" aria-busy="true">
                           <div className="space-y-2">
@@ -4121,7 +4261,7 @@ ${userName}`
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#131810]">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block mb-3">Quick Actions</span>
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -4163,7 +4303,7 @@ ${userName}`
                   >
                     {!isEditingNotes && !jobNotes?.trim() ? (
                       /* 1. Empty State: Shown as clean CTA */
-                      <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50/50 p-6 dark:border-white/10 dark:bg-[#131810]/50 transition-all hover:border-gray-300 dark:hover:border-white/20 text-center space-y-3">
+                      <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50/50 p-6 dark:border-white/10 dark:bg-white/[0.03] transition-all hover:border-gray-300 dark:hover:border-white/20 text-center space-y-3">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-lime-500/10 dark:text-lime-400 flex items-center justify-center mx-auto">
                           <FileText className="w-6 h-6" />
                         </div>
@@ -4186,7 +4326,7 @@ ${userName}`
                       </div>
                     ) : !isEditingNotes && Boolean(jobNotes?.trim()) ? (
                       /* 2. Notes Present: Show saved notes preview with Edit CTA */
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 space-y-4">
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
                           <div>
                             <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
@@ -4208,7 +4348,7 @@ ${userName}`
                       </div>
                     ) : (
                       /* 3. Editing State: Live Interactive Notes Editor */
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-4 animate-in fade-in duration-150">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 space-y-4 animate-in fade-in duration-150">
                         <div className="flex items-center justify-between border-b border-gray-100 dark:border-white/5 pb-3">
                           <div>
                             <p className="text-small font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Notes</p>
@@ -4266,13 +4406,13 @@ ${userName}`
                           onChange={(e) => setJobNotes(e.target.value)}
                           placeholder="Type any interview prep notes, referral contacts, salary requirements, or recruiter discussion points here..."
                           rows={8}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-[#181f16]"
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-lime-500 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.02] dark:text-white dark:focus:bg-white/10"
                         />
                       </div>
                     )}
 
                     {/* Job Tags Manager */}
-                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810] space-y-3">
+                    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5 space-y-3">
                       <div className="flex items-center gap-2">
                         <Tag className="w-4 h-4 text-gray-500" />
                         <h4 className="text-small font-bold text-gray-900 dark:text-white">Custom Job Tags</h4>
@@ -4319,7 +4459,7 @@ ${userName}`
                             haptic('success');
                             handleAddTag();
                           }}
-                          className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
+                          className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-white/10 dark:text-white transition-colors"
                         >
                           Add Tag
                         </button>
@@ -4354,7 +4494,7 @@ ${userName}`
                       className="space-y-3"
                     >
                       {/* Applied / Tailored CV Card */}
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-xl bg-lime-50 dark:bg-[#013f2e]/10 text-emerald-600 dark:text-[#013f2e]">
@@ -4395,7 +4535,7 @@ ${userName}`
                               type="button"
                               onClick={() => void handleOpenDocumentPreview('cv')}
                               disabled={previewLoading === 'cv'}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021] transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 transition-colors"
                             >
                               {previewLoading === 'cv' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
                               Preview CV
@@ -4403,7 +4543,7 @@ ${userName}`
                             <button
                               type="button"
                               onClick={() => router.push(`/editor?mode=edit&cvId=${resolvedCvId}`)}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:border-white/10 dark:bg-[#20281d] dark:text-blue-400 transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 dark:border-white/10 dark:bg-white/10 dark:text-blue-400 transition-colors"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                               Edit in CV Builder
@@ -4411,7 +4551,7 @@ ${userName}`
                             <button
                               type="button"
                               onClick={() => handleDownloadDocument('cv')}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-white/10 dark:text-white transition-colors"
                             >
                               <Download className="w-3.5 h-3.5" />
                               Download PDF
@@ -4438,7 +4578,7 @@ ${userName}`
                       </div>
 
                       {/* Tailored / Applied Cover Letter Card */}
-                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                         <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-white/5 pb-3">
                           <div className="flex items-center gap-2.5">
                             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400">
@@ -4467,7 +4607,7 @@ ${userName}`
                               type="button"
                               onClick={() => void handleOpenDocumentPreview('coverLetter')}
                               disabled={previewLoading === 'coverLetter'}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021] transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 transition-colors"
                             >
                               {previewLoading === 'coverLetter' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
                               Preview Cover Letter
@@ -4475,7 +4615,7 @@ ${userName}`
                             <button
                               type="button"
                               onClick={() => handleDownloadDocument('coverLetter')}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white transition-colors"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs font-bold text-gray-800 hover:bg-gray-50 dark:border-white/10 dark:bg-white/10 dark:text-white transition-colors"
                             >
                               <Download className="w-3.5 h-3.5" />
                               Download PDF
@@ -4503,7 +4643,7 @@ ${userName}`
 
                       {/* Application Submission Evidence & Verified Receipt */}
                       {isAdvancedStage && (
-                        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
+                        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
                           <div className="flex items-center gap-2 mb-3">
                             <Shield className="w-4 h-4 text-emerald-500" />
                             <h4 className="text-small font-bold text-gray-900 dark:text-white">Application Submission Evidence</h4>
@@ -4644,12 +4784,12 @@ ${userName}`
                 </button>
               </div>
 
-              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f] mx-6 mt-4">
+              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-white/10 mx-6 mt-4">
                 <button
                   onClick={() => setDetailsModalView('details')}
                   className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
                     detailsModalView === 'details'
-                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white'
                       : 'text-gray-600 dark:text-gray-300'
                   }`}
                 >
@@ -4659,7 +4799,7 @@ ${userName}`
                   onClick={() => setDetailsModalView('insights')}
                   className={`flex-1 rounded-xl px-4 py-2 text-small font-medium transition ${
                     detailsModalView === 'insights'
-                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-white/10 dark:text-white'
                       : 'text-gray-600 dark:text-gray-300'
                   }`}
                 >
@@ -4668,7 +4808,7 @@ ${userName}`
               </div>
 
               {activeActionPayload && (
-                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-small text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300 mx-6">
+                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-small text-gray-600 dark:border-white/10 dark:bg-white/10 dark:text-gray-300 mx-6">
                   {activeActionId === 'open_insights'
                     ? `Insights are filtered to the ${formatStageLabel(activeActionPayload.stage)} stage for this tracker item.`
                     : `This panel opened from the ${formatStageLabel(activeActionPayload.stage)} stage and keeps the current job, journey, and entitlement context together.`}
@@ -4681,7 +4821,7 @@ ${userName}`
                     {/* Left Column */}
                     <div className="space-y-5">
                       {/* Core Details */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10">
                         <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Core Details</h4>
                         <div className="space-y-4">
                           <div className="flex items-start gap-3">
@@ -4749,7 +4889,7 @@ ${userName}`
 
                       {/* Contact Details */}
                       {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10">
                           <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Contact Details</h4>
                           <div className="space-y-4">
                             {job.contactDetails.name && <p className="text-small text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
@@ -4762,7 +4902,7 @@ ${userName}`
 
                       {/* Requirements */}
                       {job.extractedJd?.role_content && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">Job Requirements</h4>
                           
                           {/* Must Have */}
@@ -4819,7 +4959,7 @@ ${userName}`
 
                       {/* Skills & Tech Stack */}
                       {job.extractedJd?.skills && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">Skills & Tech Stack</h4>
                           
                           {/* Technical Skills */}
@@ -4870,7 +5010,7 @@ ${userName}`
                     {/* Right Column */}
                     <div className="space-y-5">
                       {/* Job Description */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10">
                         <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Job Description</h4>
                         <div className="max-h-[300px] overflow-y-auto pr-2">
                           <FormattedJobDescription content={job.jobDescription || fallbacks.defaultJobDescription} />
@@ -4878,7 +5018,7 @@ ${userName}`
                       </div>
 
                       {/* Notes */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-3">
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-3">
                         <div className="flex items-center justify-between">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">Personal Job Notes</h4>
                           <Button
@@ -4901,7 +5041,7 @@ ${userName}`
 
                       {/* Team & Culture */}
                       {job.extractedJd?.team_and_culture && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">Team & Culture</h4>
                           
                           {/* Structure */}
@@ -4951,7 +5091,7 @@ ${userName}`
                     {/* Left Column */}
                     <div className="space-y-5">
                       {/* Application Snapshot */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10">
                         <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -4981,7 +5121,7 @@ ${userName}`
 
                       {/* JD Quality & Flags */}
                       {job.extractedJd?.jd_quality && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <div className="flex items-center justify-between">
                             <h4 className="text-body font-semibold text-gray-900 dark:text-white">JD Quality Audit</h4>
                             <div className="flex items-center gap-2">
@@ -5038,7 +5178,7 @@ ${userName}`
                     {/* Right Column */}
                     <div className="space-y-5">
                       {/* Deeper Insights */}
-                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10">
                         <h4 className="mb-4 text-body font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -5071,7 +5211,7 @@ ${userName}`
 
                       {/* ATS Keywords Section */}
                       {job.extractedJd?.ats_keywords && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">ATS Target Keywords</h4>
                           
                           {/* Primary Keywords */}
@@ -5107,7 +5247,7 @@ ${userName}`
 
                       {/* Interview Prep & Questions */}
                       {job.extractedJd?.tracker_enrichment && (
-                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d] space-y-4">
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-white/10 space-y-4">
                           <h4 className="text-body font-semibold text-gray-900 dark:text-white">Interview Prep Planner</h4>
                           
                           {/* Prep Topics */}
@@ -5200,7 +5340,7 @@ ${userName}`
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full mx-4"
+              className="bg-white dark:bg-white/5 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center gap-3 mb-4">

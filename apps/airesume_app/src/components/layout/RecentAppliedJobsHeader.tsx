@@ -16,7 +16,7 @@ export interface RecentAppliedJob {
   appliedAt: number; // timestamp in ms
 }
 
-const STORAGE_KEY = 'cvcircle_recent_applied_jobs_v1';
+const STORAGE_KEY = 'cvcircle_session_applied_jobs_v1';
 const TEN_MINUTES_MS = 10 * 60 * 1000;
 const MAX_JOBS = 5;
 
@@ -42,11 +42,11 @@ export default function RecentAppliedJobsHeader() {
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const hasInitializedRef = useRef(false);
 
-  // Sync with localStorage
+  // Sync with sessionStorage (session-scoped: only jobs applied in this session)
   const saveToStorage = useCallback((items: RecentAppliedJob[]) => {
     try {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items));
       }
     } catch {
       // Storage unavailable or quota exceeded
@@ -130,13 +130,13 @@ export default function RecentAppliedJobsHeader() {
     });
   }, [pruneExpired, saveToStorage]);
 
-  // Initial load: restore from localStorage or seed from user's applied jobs
+  // Initial load: restore from sessionStorage ONLY (jobs applied in this active session)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const now = Date.now();
 
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as RecentAppliedJob[];
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -152,28 +152,33 @@ export default function RecentAppliedJobsHeader() {
       // Ignore parse error
     }
 
-    // If no recent items in localStorage, seed from user's applied jobs in dashboardContext
-    if (!hasInitializedRef.current && dashboardContext?.jobs && Array.isArray(dashboardContext.jobs)) {
-      const appliedFromDb = dashboardContext.jobs
-        .filter((j: any) => j.status === 'applied' || j.currentStage === 'applied')
-        .slice(0, MAX_JOBS);
+    // Clean initial state for session — do not seed historical database jobs
+    setJobsList([]);
+    hasInitializedRef.current = true;
+  }, [pruneExpired]);
 
-      if (appliedFromDb.length > 0) {
-        const seeded: RecentAppliedJob[] = appliedFromDb.map((j: any, idx: number) => ({
-          id: `${j._id || j.id || idx}-${now - idx * 30000}`,
-          jobId: j._id || j.id,
-          company: j.company || 'Company',
-          companyLogo: j.companyLogo || null,
-          jobTitle: j.jobTitle || j.title || 'Applied Position',
-          // Space them out slightly so the 1st job remains oldest
-          appliedAt: now - idx * 45000,
-        }));
-        setJobsList(seeded);
-        saveToStorage(seeded);
-        hasInitializedRef.current = true;
-      }
-    }
-  }, [dashboardContext?.jobs, pruneExpired, saveToStorage]);
+  // Handle session logout & global clear
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleLogout = () => {
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('cvcircle_recent_applied_jobs_v1');
+      } catch {}
+      setJobsList([]);
+    };
+
+    window.addEventListener('session-logout', handleLogout);
+    window.addEventListener('auth-logout', handleLogout);
+    window.addEventListener('user-logout', handleLogout);
+
+    return () => {
+      window.removeEventListener('session-logout', handleLogout);
+      window.removeEventListener('auth-logout', handleLogout);
+      window.removeEventListener('user-logout', handleLogout);
+    };
+  }, []);
 
   // Listen for global application events
   useEffect(() => {

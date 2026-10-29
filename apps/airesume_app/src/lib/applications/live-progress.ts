@@ -191,7 +191,7 @@ export const QUEUE_STALL_SECONDS = 15 * 60;
 const PHASE_LABELS: Record<ProgressPhaseKey, string> = {
   saved: 'Saved',
   documents: 'Preparing documents',
-  queued: 'Queued for submission',
+  queued: 'Submitting',
   form_detection: 'Finding the application form',
   field_fill: 'Filling the application',
   attachments: 'Attaching your documents',
@@ -670,30 +670,31 @@ export function deriveApplicationProgress(input: ProgressInput): ApplicationProg
       input.queuedForSeconds >= QUEUE_STALL_SECONDS;
     const waitedSeconds =
       typeof input.queuedForSeconds === 'number' ? input.queuedForSeconds : 0;
-    const ahead = input.queuePosition && input.queuePosition > 1 ? input.queuePosition - 1 : 0;
 
     return {
       ...base,
       phase: 'queued',
       phaseLabel: PHASE_LABELS.queued,
       /*
-        The customer is told it is working, in the product's voice, and is given
-        a way out if they would rather not wait. "Queued for 12 min with no
-        worker pickup" was an ops page rendered in a job card: it named an
-        internal role, implied the product was broken, and gave the customer
-        nothing to do. A slow queue and a dead queue now read the same to them —
-        which is fine, because the difference is not theirs to act on.
+        The wait before submission is the product working, not the customer
+        waiting in line.
+
+        It used to read "Queued for Auto-Apply — 3 ahead of you" next to
+        "Estimated start ~1 min" and a bar parked at 40%. Every part of that is
+        true and none of it is useful: it names an internal queue, promises a
+        time we cannot guarantee, and implies the customer has to sit and watch.
+        The work is asynchronous by design — the worker submits it — so the copy
+        says that, and gives the one thing the customer can act on: they can
+        leave. The queue depth and ETA remain on `base` for surfaces that
+        legitimately show them (tracker rows, ops), and the stall diagnosis is
+        still operator-only.
       */
       liveText: stalled
         ? 'Taking a little longer than usual…'
-        : ahead > 0
-          ? `Queued for Auto-Apply — ${ahead} ahead of you.`
-          : 'Queued for Auto-Apply…',
+        : 'Applying for you now — this runs in the background.',
       detail: stalled
         ? 'No action needed — we’ll submit this automatically as soon as it’s ready. If you’d rather not wait, you can apply from the job posting yourself.'
-        : base.eta
-          ? `Estimated start ${base.eta}.`
-          : 'Nothing needed from you — this goes out automatically.',
+        : 'You can close this and keep browsing. We’ll let you know as soon as it’s submitted.',
       /*
         The operator still gets the real story, with the diagnosis and where to
         look. `diagnostic` is never rendered by any UI; it is for logs, telemetry

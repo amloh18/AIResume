@@ -721,6 +721,11 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       canvasContentRef.current,
       pending.anchorId,
     );
+    window.dispatchEvent(new CustomEvent('cv-canvas-reordered'));
+    const t = window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('cv-canvas-reordered'));
+    }, 280);
+    return () => window.clearTimeout(t);
   }, [moveAnimTick]);
 
   // Handle Ctrl/Cmd + Wheel to zoom the canvas area specifically, not the window
@@ -2762,6 +2767,8 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
             const instance = (safeZones[zoneId] || [])[gIdx];
             if (!instance) return;
             handleZoneDrop(targetZoneId, { source: 'canvas', zoneId, index: gIdx, instance }, 9999);
+            window.dispatchEvent(new CustomEvent('cv-canvas-reordered'));
+            setTimeout(() => window.dispatchEvent(new CustomEvent('cv-canvas-reordered')), 160);
           }}
         />
       );
@@ -2971,6 +2978,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
         focusedJsonPath,
         selectedBlockId,
         setSelectedBlockId,
+        isSidebarOpen: Boolean(activeSidebar || replacingSnippet || isTemplateModalOpen),
         pageAssignments,
         /* The per-entry rail portals itself OUT of the page and into the canvas
          * workspace, which puts it beyond the reach of the `.cv-readonly
@@ -3120,7 +3128,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
                  is what makes it track the section while the canvas scrolls.
                  It takes no layout height, so the auto-fit budget above does not
                  reserve for it — see the note next to CANVAS_TOOL_STRIP_PX. */
-              <CanvasToolRail selectedBlockId={selectedBlockId} focusNode={focusedNode} zoom={zoom} />
+              <CanvasToolRail
+                selectedBlockId={selectedBlockId}
+                focusNode={focusedNode}
+                zoom={zoom}
+                isSidebarOpen={Boolean(activeSidebar || replacingSnippet || isTemplateModalOpen)}
+              />
             )}
           </div>
 

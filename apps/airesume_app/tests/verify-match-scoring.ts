@@ -196,22 +196,44 @@ invariant('INV8 · "experience matches" is not claimed for an unknown level', ()
 });
 
 // ── 9. Hard constraints must be consumed, not merely recorded ───────────────
-// Source-level guard: `hardConstraintViolations` is computed in the scorer and
-// read by nobody, so a below-floor salary or an onsite job for a remote-only
-// candidate is still recommended.
-invariant('INV9 · the recommendation routes consume hardConstraintViolations', () => {
+// Source-level guard: a below-floor salary or an onsite job for a remote-only
+// candidate must never reach the feed.
+//
+// WHERE this happens changed, so the guard moved with it. The discover route
+// used to score a page and then drop rows whose `hardConstraintViolations` was
+// non-empty — after `.limit(20)`, so a remote-only candidate could be handed a
+// page of three cards (or none) while the total still claimed thousands. The
+// constraint is now expressed in the Mongo query itself, inside
+// `buildDiscoverFeedPage`, which means it applies before pagination and cannot
+// be outvoted by the soft match score. `recommendedJobsService` still does the
+// post-scoring drop, because it ranks the whole candidate set in memory.
+invariant('INV9 · hard constraints are applied before a page is chosen', () => {
   const root = path.resolve(__dirname, '..');
-  const consumers = [
-    'src/app/api/jobs/discover/route.ts',
-    'src/lib/services/recommendedJobsService.ts',
-  ];
-  const missing: string[] = [];
-  for (const rel of consumers) {
-    const src = fs.readFileSync(path.join(root, rel), 'utf8');
-    if (!src.includes('hardConstraintViolations')) missing.push(rel);
-  }
-  assert.equal(missing.length, 0, `computed but never read in: ${missing.join(', ')}`);
-  return `${consumers.length}/${consumers.length} consumers`;
+  const read = (rel: string) => fs.readFileSync(path.join(root, rel), 'utf8');
+
+  const feed = read('src/lib/jobs/discoverFeed.ts');
+  assert.ok(
+    feed.includes("profile?.hardConstraints") || feed.includes('profile.hardConstraints'),
+    'discoverFeed never reads profile.hardConstraints',
+  );
+  assert.ok(
+    /clauses\.push\(\.\.\.hardConstraintClauses\(/.test(feed),
+    'the hard-constraint clause is not part of the query',
+  );
+
+  const route = read('src/app/api/jobs/discover/route.ts');
+  assert.ok(
+    route.includes('buildDiscoverFeedPage'),
+    'the discover route no longer goes through the shared feed pipeline',
+  );
+
+  const service = read('src/lib/services/recommendedJobsService.ts');
+  assert.ok(
+    service.includes('hardConstraintViolations'),
+    'recommendedJobsService computes violations but never reads them',
+  );
+
+  return 'query-level (discover) + post-scoring (recommended)';
 });
 
 // ── 10. Weights must stay a coherent, documented distribution ───────────────

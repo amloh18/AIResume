@@ -176,36 +176,140 @@ function stageEntry(opts: {
 async function resolveResumeAttachment(
   applicationId: string,
   userId: string,
+  explicitJobApp?: any,
 ): Promise<{ buffer: Buffer; fileName: string } | null> {
   try {
-    const journey: any = await ApplicationJourney.findOne({ jobId: applicationId }).lean();
+    const { mixedIdFilter } = await import('@/lib/utils/mixed-id');
+    let cvId: string | undefined = explicitJobApp?.cvId ? String(explicitJobApp.cvId) : undefined;
 
-    let cvId: string | undefined = journey?.cvId ? String(journey.cvId) : undefined;
     if (!cvId) {
-      const master: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
+      const appDoc: any = await JobApplication.findById(applicationId).lean();
+      if (appDoc?.cvId) {
+        cvId = String(appDoc.cvId);
+      }
+    }
+
+    if (!cvId) {
+      const journey: any = await ApplicationJourney.findOne({
+        $or: [
+          { jobId: applicationId },
+          { jobId: mixedIdFilter(applicationId) },
+          ...(mongoose.Types.ObjectId.isValid(applicationId) ? [{ _id: applicationId }] : []),
+        ],
+        userId: mixedIdFilter(userId),
+      }).lean();
+      cvId = journey?.cvId ? String(journey.cvId) : undefined;
+    }
+
+    if (!cvId) {
+      const master: any = await CV.findOne({
+        userId: mixedIdFilter(userId),
+        $or: [
+          { 'metadata.isMaster': true },
+          { 'metadata.isMaster': 'true' },
+          { isMaster: true },
+          { isMaster: 'true' },
+        ],
+      }).lean();
       cvId = master?._id ? String(master._id) : undefined;
     }
-    if (!cvId) return null;
+
+    if (!cvId) {
+      console.warn('[apply] resolveResumeAttachment: No cvId found for application/user', { applicationId, userId });
+      return null;
+    }
 
     const { getCVWithTemplate } = await import('@/lib/cv-template-utils');
-    const cvWithTemplate = await getCVWithTemplate(cvId);
-    if (!cvWithTemplate?.cvData) return null;
+    let cvWithTemplate = await getCVWithTemplate(cvId);
+    let cvData = cvWithTemplate?.cvData;
+
+    if (!cvData) {
+      const rawCv: any = await CV.findById(cvId).lean();
+      cvData = rawCv?.cvData || rawCv;
+      if (cvWithTemplate) {
+        cvWithTemplate.cvData = cvData;
+      }
+    }
+
+    if (!cvData) {
+      console.warn('[apply] resolveResumeAttachment: CV document has no cvData', { cvId });
+      return null;
+    }
 
     const { resolveTemplate } = await import('@/lib/services/templateResolutionService');
-    const { template } = await resolveTemplate(cvWithTemplate);
-    if (!template) return null;
+    const { template } = await resolveTemplate(cvWithTemplate || { cvData } as any);
+    const resolvedTpl = template || { id: 'modern', name: 'Modern' };
 
-    const { PDFService } = await import('@/lib/services/pdfService');
-    const blob = await PDFService.generatePDF(cvWithTemplate.cvData, template, {
-      paperSize: 'A4',
-      orientation: 'portrait',
-      format: 'pdf',
-    });
+    let buffer: Buffer | null = null;
+    try {
+      const { PDFService } = await import('@/lib/services/pdfService');
+      const blob = await PDFService.generatePDF(cvData, resolvedTpl as any, {
+        paperSize: 'A4',
+        orientation: 'portrait',
+        format: 'pdf',
+      });
+      buffer = Buffer.from(await blob.arrayBuffer());
+    } catch (pdfErr) {
+      console.warn('[apply] PDFService threw, attempting direct jsPDF fallback for resume', pdfErr);
+    }
 
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    if (!buffer.length) return null;
+    if (!buffer || buffer.length === 0) {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      doc.setFont('helvetica');
+      doc.setFontSize(22);
+      doc.setTextColor(37, 99, 235);
+      doc.text(String(cvData.basics?.name || 'Candidate'), 20, 25);
+      doc.setFontSize(11);
+      doc.setTextColor(100, 100, 100);
+      let y = 34;
+      const contact = [cvData.basics?.email, cvData.basics?.phone, cvData.basics?.location?.city].filter(Boolean).join(' | ');
+      if (contact) {
+        doc.text(contact, 20, y);
+        y += 8;
+      }
+      if (cvData.basics?.summary) {
+        doc.setFontSize(14);
+        doc.setTextColor(37, 99, 235);
+        doc.text('Professional Summary', 20, y);
+        y += 7;
+        doc.setFontSize(10);
+        doc.setTextColor(50, 50, 50);
+        const lines = doc.splitTextToSize(String(cvData.basics.summary), 170);
+        doc.text(lines, 20, y);
+        y += lines.length * 5 + 6;
+      }
+      if (Array.isArray(cvData.work) && cvData.work.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(37, 99, 235);
+        doc.text('Work Experience', 20, y);
+        y += 7;
+        for (const exp of cvData.work) {
+          if (!exp) continue;
+          if (y > 260) { doc.addPage(); y = 20; }
+          doc.setFontSize(11);
+          doc.setTextColor(50, 50, 50);
+          doc.text(String(exp.position || exp.title || 'Role'), 20, y);
+          y += 5;
+          doc.setFontSize(9);
+          doc.setTextColor(120, 120, 120);
+          doc.text(`${exp.name || 'Company'} | ${exp.startDate || ''} - ${exp.endDate || 'Present'}`, 20, y);
+          y += 6;
+          const s = exp.summary || (Array.isArray(exp.highlights) ? exp.highlights.join(' ') : '');
+          if (s) {
+            const l = doc.splitTextToSize(String(s), 170);
+            doc.text(l, 20, y);
+            y += l.length * 4.5 + 4;
+          }
+        }
+      }
+      const rawAb = doc.output('arraybuffer');
+      buffer = Buffer.from(rawAb);
+    }
 
-    const rawName = String(cvWithTemplate.cvData?.basics?.name || 'Candidate').trim();
+    if (!buffer || buffer.length === 0) return null;
+
+    const rawName = String(cvData?.basics?.name || 'Candidate').trim();
     const safeName = rawName.replace(/[^A-Za-z0-9 _-]/g, '').trim().replace(/\s+/g, '-') || 'Candidate';
     return { buffer, fileName: `${safeName}-Resume.pdf` };
   } catch (error) {
@@ -430,6 +534,8 @@ export class UnifiedApplyService {
 
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'created',
+        internalStatus: 'review_required',
+        reviewReason: `Quality gate failed: ${failReason}`,
         $push: {
           stageHistory: stageEntry({
             stage: 'staging',
@@ -471,6 +577,11 @@ export class UnifiedApplyService {
 
       await JobApplication.findByIdAndUpdate(jobApp._id, {
         status: 'created',
+        internalStatus: 'review_required',
+        reviewReason:
+          executionMode === 'manual'
+            ? 'Manual mode: documents prepared, automation withheld.'
+            : 'Review mode: documents prepared and held for your approval.',
         $push: {
           stageHistory: stageEntry({
             stage: 'staging',
@@ -574,6 +685,8 @@ export class UnifiedApplyService {
         // CRITICAL USER RULE: If application fails / requires manual submit -> MUST SHOW IN STAGING STAGE ('created')
         await JobApplication.findByIdAndUpdate(jobApp._id, {
           status: 'created',
+          internalStatus: 'review_required',
+          reviewReason: applyResult.message || 'Manual submission required with tailored documents.',
           $push: {
             stageHistory: stageEntry({
               stage: 'staging',
@@ -946,7 +1059,7 @@ export class UnifiedApplyService {
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
-        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId, jobApp);
 
         // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
         // needed a letter, which must not block submission.
@@ -1118,7 +1231,7 @@ export class UnifiedApplyService {
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
-        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId, jobApp);
 
         // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
         // needed a letter, which must not block submission.
@@ -1255,7 +1368,7 @@ export class UnifiedApplyService {
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
-        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId, jobApp);
 
         // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
         // needed a letter, which must not block submission.
@@ -1392,7 +1505,7 @@ export class UnifiedApplyService {
         const primaryCv: any = await CV.findOne({ userId, 'metadata.isMaster': true }).lean();
 
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
-        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
+        const resume = await resolveResumeAttachment(jobApp._id.toString(), userId, jobApp);
 
         // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
         // needed a letter, which must not block submission.

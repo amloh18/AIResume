@@ -365,8 +365,8 @@ const OptimizedNavigation: React.FC = () => {
       description: 'Build and manage your resumes',
       route: '/dashboard/jobs?tab=docs',
       color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
+      bg: 'bg-gray-50 dark:bg-white/5',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-white/10 dark:border-[#36D39B]/40',
     },
     {
       id: 'tracker',
@@ -375,8 +375,8 @@ const OptimizedNavigation: React.FC = () => {
       description: 'Discover and track applications',
       route: '/dashboard/jobs?tab=applications',
       color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
+      bg: 'bg-gray-50 dark:bg-white/5',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-white/10 dark:border-[#36D39B]/40',
     },
     {
       id: 'interview-coach',
@@ -385,8 +385,8 @@ const OptimizedNavigation: React.FC = () => {
       description: 'AI interview prep',
       route: '/dashboard/interview',
       color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
+      bg: 'bg-gray-50 dark:bg-white/5',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-white/10 dark:border-[#36D39B]/40',
     },
     {
       id: 'linkedin-enhancer',
@@ -395,8 +395,8 @@ const OptimizedNavigation: React.FC = () => {
       description: 'Optimize your LinkedIn profile',
       route: '/linkedin-enhancer',
       color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
+      bg: 'bg-gray-50 dark:bg-white/5',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-white/10 dark:border-[#36D39B]/40',
       badge: 'NEW',
     },
     {
@@ -407,8 +407,8 @@ const OptimizedNavigation: React.FC = () => {
       route: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
       external: true,
       color: 'text-gray-600 dark:text-gray-400',
-      bg: 'bg-gray-50 dark:bg-gray-800/30',
-      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-[#1a230f] dark:border-[#36D39B]/40',
+      bg: 'bg-gray-50 dark:bg-white/5',
+      activeBg: 'bg-[#013f2e]/10 border-[#013f2e]/30 dark:bg-white/10 dark:border-[#36D39B]/40',
     },
     ...(isAdmin ? [{
       id: 'admin-dashboard',
@@ -504,7 +504,7 @@ const OptimizedNavigation: React.FC = () => {
               key={section.id}
               {...componentProps}
               className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
-                ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
+                ? 'bg-[#013f2e]/10 dark:bg-white/10 border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
               style={{ outline: 'none', boxShadow: 'none' }}
@@ -577,7 +577,7 @@ const OptimizedNavigation: React.FC = () => {
                   isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'
                 } ${
                   isActive
-                    ? 'bg-[#013f2e]/10 dark:bg-[#1a230f] border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
+                    ? 'bg-[#013f2e]/10 dark:bg-white/10 border border-[#013f2e]/30 dark:border-[#36D39B] text-[#013f2e] dark:text-[#36D39B]'
                     : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
                 style={{ outline: 'none', boxShadow: 'none' }}

@@ -150,7 +150,7 @@ export default function DocumentPreviewSidebar({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 dark:bg-[#1a201a]">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 dark:bg-white/5">
           <div className="max-w-4xl mx-auto bg-white dark:bg-white rounded-lg shadow-sm overflow-hidden min-h-full">
             {isContentLoading ? (
               <div className="flex flex-col items-center justify-center min-h-[400px] p-12 text-gray-400 gap-3">

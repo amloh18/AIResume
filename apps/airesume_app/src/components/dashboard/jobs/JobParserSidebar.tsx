@@ -372,7 +372,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: 'calc(100% + 12px)' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-3 right-3 bottom-3 w-full max-w-[560px] bg-white dark:bg-[#0c0f0a] shadow-2xl flex flex-col z-[9999] rounded-2xl overflow-hidden"
+            className="fixed top-3 right-3 bottom-3 w-full max-w-[560px] bg-white dark:bg-[#141810] shadow-2xl flex flex-col z-[9999] rounded-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="p-6 border-b border-gray-150 dark:border-white/5 flex flex-col relative shrink-0">
@@ -627,7 +627,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
               {/* Separator / Divider */}
               <div className="relative flex items-center justify-center py-4">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-150 dark:border-white/5"></div></div>
-                <div className="relative bg-white dark:bg-[#0c0f0a] px-3">
+                <div className="relative bg-white dark:bg-[#141810] px-3">
                   <span className="text-[10px] text-gray-400 dark:text-gray-600 font-bold uppercase tracking-widest">AI Extraction results</span>
                 </div>
               </div>
@@ -778,7 +778,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                       >
                         <option value="Entry Level">Entry Level</option>
                         <option value="Mid Level">Mid Level</option>
@@ -791,7 +791,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <select
                         value={sponsorship}
                         onChange={(e) => setSponsorship(e.target.value as 'yes' | 'no' | 'unknown')}
-                        className="w-full py-2 px-3 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
+                        className="w-full py-2 px-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none focus:border-lime-500"
                       >
                         <option value="yes">Yes (Sponsored)</option>
                         <option value="no">No</option>
@@ -827,7 +827,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
                       <select
                         value={editedSalary?.period || 'yearly'}
                         onChange={(e) => setEditedSalary({ ...editedSalary, period: e.target.value as 'hourly' | 'monthly' | 'yearly' })}
-                        className="col-span-1 py-2 px-2 bg-gray-50 dark:bg-[#1A201A] border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none"
+                        className="col-span-1 py-2 px-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl text-small text-gray-900 dark:text-white focus:outline-none"
                       >
                         <option value="hourly">Hourly</option>
                         <option value="monthly">Monthly</option>
@@ -975,7 +975,7 @@ const JobParserSidebar: React.FC<JobParserSidebarProps> = ({
 
             {/* Bottom Actions Panel */}
             {parsedData && (
-              <div className="p-6 border-t border-gray-150 dark:border-white/5 bg-gray-50 dark:bg-[#0c0f0a] flex gap-3 shrink-0">
+              <div className="p-6 border-t border-gray-150 dark:border-white/5 bg-gray-50 dark:bg-[#141810] flex gap-3 shrink-0">
                 <Button
                   onClick={handleSave}
                   className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-[#013f2e] hover:bg-[#025c43] text-white font-bold rounded-xl text-small py-5 shadow-sm`}

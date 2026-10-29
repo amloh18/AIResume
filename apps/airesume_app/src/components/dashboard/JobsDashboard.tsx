@@ -532,6 +532,12 @@ export default function JobsDashboard() {
   /** See `applyingRef` — same batched-state race, same fix. */
   const savingRef = useRef<string | null>(null);
   const [suggestedSearches, setSuggestedSearches] = useState<string[]>([]);
+  /**
+   * The server says "Recommended" was requested but the profile has no target
+   * roles, so it could not curate the feed. That is a fixable state, not an
+   * empty result — the grid would otherwise look like the catalogue is broken.
+   */
+  const [needsProfile, setNeedsProfile] = useState(false);
   const [isApplying, setIsApplying] = useState<string | null>(null);
   /**
    * Synchronous companion to `isApplying`.
@@ -1272,11 +1278,17 @@ export default function JobsDashboard() {
     }
   }, []);
 
-  const fetchJobs = useCallback(async (isBackground = false) => {
-    const isFirstPage = page === 1;
-    try {
+  /**
+   * Discover query params for one page.
+   *
+   * Extracted so the background prefetch builds byte-identical params — and
+   * therefore the same `jobCache` key — as the foreground load. When these
+   * drifted apart the prefetch was writing entries nobody ever read.
+   */
+  const buildDiscoverParams = useCallback(
+    (forPage: number): Record<string, string> => {
       const params: Record<string, string> = {
-        page: page.toString(),
+        page: forPage.toString(),
         limit: pageSize.toString(),
         countries: countries.join(','),
         sortBy: filters.sortBy || 'matchScore',
@@ -1301,76 +1313,148 @@ export default function JobsDashboard() {
       if (filters.savedOnly) params.savedOnly = 'true';
       if (filters.unpersonalized) params.unpersonalized = 'true';
 
-      // Check cache for initial page load
-      if (isFirstPage) {
-        const cached = getCachedJobs(params);
-        if (cached) {
-          setJobs(cached.jobs);
-          setTotal(cached.total);
-          setHasMore(cached.hasMore);
-          setError(null);
-          setLoading(false);
-        } else if (!isBackground) {
-          setLoading(true);
-        }
-      } else {
-        setLoadingMore(true);
+      return params;
+    },
+    [filters, pageSize, countries]
+  );
+
+  /**
+   * Warm the cache for the page after `forPage`.
+   *
+   * The server now paginates in MongoDB, so every page costs a real query.
+   * Issuing the next one while the user reads the current page is what keeps
+   * scrolling instant without showing more jobs than were asked for.
+   *
+   * Best-effort by design: a failed prefetch just means the page loads the
+   * normal way when it is requested.
+   */
+  const prefetchPage = useCallback(
+    async (forPage: number) => {
+      const params = buildDiscoverParams(forPage);
+      if (getCachedJobs(params)) return;
+      try {
+        const queryString = new URLSearchParams(params).toString();
+        const response = await fetch(`/api/jobs/discover?${queryString}`, {});
+        if (!response.ok) return;
+        const data = await response.json();
+        setCachedJobs(params, data.jobs || [], data.total ?? 0, data.hasMore === true);
+      } catch {
+        /* prefetch is best-effort */
       }
+    },
+    [buildDiscoverParams]
+  );
 
-      const queryString = new URLSearchParams(params).toString();
-      const response = await fetch(`/api/jobs/discover?${queryString}`, {});
+  const fetchJobs = useCallback(
+    async (isBackground = false, bypassCache = false) => {
+      const isFirstPage = page === 1;
+      const params = buildDiscoverParams(page);
+      let cacheHit = false;
 
-      if (!response.ok) {
+      try {
         /*
-          A non-OK response used to `return` silently, so an outage rendered
-          the plain "No jobs found" empty state — indistinguishable from a
-          genuinely empty result. Surface a friendly error instead, but only
-          where the view would otherwise be empty: cached results (first page
-          with a cache hit) and already-loaded pages (page > 1) are kept as-is,
-          so a background refresh failing never wipes what the user sees.
+          Cached pages.
+
+          Page 1 keeps the original "paint from cache, then refresh" behaviour.
+          Deeper pages are served from the prefetch and return immediately:
+          they were fetched seconds ago for exactly this filter set, so a second
+          round-trip would only delay the append the user is waiting for.
         */
-        console.error('Job discovery request failed with status:', response.status);
-        if (isFirstPage && !getCachedJobs(params)) {
-          const message =
-            response.status >= 500
-              ? `The job service didn't respond (error ${response.status}). Please try again in a moment.`
-              : response.status === 429
-              ? 'Too many requests — please wait a moment and try again.'
-              : `We couldn't load jobs right now (error ${response.status}). Please try again.`;
-          setJobs([]);
-          setError(message);
+        if (!bypassCache) {
+          const cached = getCachedJobs(params);
+          if (cached) {
+            cacheHit = true;
+            if (isFirstPage) {
+              setJobs(cached.jobs);
+              jobsSnapshotRef.current = JSON.stringify({ filters, page: 1, pageSize, countries });
+              setNewJobsCount(0);
+            } else {
+              setJobs((prev) => {
+                const prevIds = new Set(prev.map((j) => j._id));
+                return [...prev, ...cached.jobs.filter((j) => !prevIds.has(j._id))];
+              });
+            }
+            setTotal(cached.total);
+            setHasMore(cached.hasMore);
+            setError(null);
+            setLoading(false);
+            setLoadingMore(false);
+            if (cached.hasMore) void prefetchPage(page + 1);
+            if (!isFirstPage) return;
+          }
         }
-        return;
-      }
 
-      const data = await response.json();
-      const incomingJobs: JobListing[] = data.jobs || [];
+        if (!cacheHit) {
+          if (isFirstPage) {
+            if (!isBackground) setLoading(true);
+          } else {
+            setLoadingMore(true);
+          }
+        }
 
-      if (isFirstPage) {
+        const queryString = new URLSearchParams(params).toString();
+        const response = await fetch(`/api/jobs/discover?${queryString}`, {});
+
+        if (!response.ok) {
+          /*
+            A non-OK response used to `return` silently, so an outage rendered
+            the plain "No jobs found" empty state — indistinguishable from a
+            genuinely empty result. Surface a friendly error instead, but only
+            where the view would otherwise be empty: cached results (first page
+            with a cache hit) and already-loaded pages (page > 1) are kept as-is,
+            so a background refresh failing never wipes what the user sees.
+          */
+          console.error('Job discovery request failed with status:', response.status);
+          if (isFirstPage && !cacheHit) {
+            const message =
+              response.status >= 500
+                ? `The job service didn't respond (error ${response.status}). Please try again in a moment.`
+                : response.status === 429
+                ? 'Too many requests — please wait a moment and try again.'
+                : `We couldn't load jobs right now (error ${response.status}). Please try again.`;
+            setJobs([]);
+            setError(message);
+          }
+          return;
+        }
+
+        const data = await response.json();
+        const incomingJobs: JobListing[] = data.jobs || [];
+
+        // Every page is cached, not just the first: that is what the prefetch
+        // reads from when the user scrolls.
         setCachedJobs(params, incomingJobs, data.total, data.hasMore);
-        setJobs(incomingJobs);
-        jobsSnapshotRef.current = JSON.stringify({ filters, page: 1, pageSize, countries });
-        setNewJobsCount(0);
-      } else {
-        setJobs((prev) => {
-          const prevIds = new Set(prev.map((j) => j._id));
-          const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
-          return [...prev, ...newJobs];
-        });
-      }
 
-      setTotal(data.total);
-      setHasMore(data.hasMore);
-      setSuggestedSearches(data.suggestedSearches || []);
-      setError(null);
-    } catch (err: any) {
-      console.error('Error fetching jobs:', err);
-      if (!isBackground && isFirstPage) setError(err.message);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [filters, page, pageSize, countries]);
+        if (isFirstPage) {
+          setJobs(incomingJobs);
+          jobsSnapshotRef.current = JSON.stringify({ filters, page: 1, pageSize, countries });
+          setNewJobsCount(0);
+        } else {
+          setJobs((prev) => {
+            const prevIds = new Set(prev.map((j) => j._id));
+            const newJobs = incomingJobs.filter((j) => !prevIds.has(j._id));
+            return [...prev, ...newJobs];
+          });
+        }
+
+        setTotal(data.total);
+        setHasMore(data.hasMore);
+        setNeedsProfile(data.needsProfile === true);
+        setSuggestedSearches(data.suggestedSearches || []);
+        setError(null);
+
+        // Chain the prefetch: each loaded page warms the next one.
+        if (data.hasMore) void prefetchPage(page + 1);
+      } catch (err: any) {
+        console.error('Error fetching jobs:', err);
+        if (!isBackground && isFirstPage) setError(err.message);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [buildDiscoverParams, prefetchPage, filters, page, pageSize, countries]
+  );
 
   useEffect(() => {
     fetchMetrics();
@@ -1409,7 +1493,8 @@ export default function JobsDashboard() {
   const handleRetry = () => {
     setError(null);
     fetchMetrics();
-    fetchJobs();
+    // Explicit retry: never answer from the cache we just failed to refresh.
+    fetchJobs(false, true);
   };
 
   const handleCountriesChange = (newCountries: string[]) => {
@@ -1504,7 +1589,7 @@ export default function JobsDashboard() {
       const connectedSources = portalConnections.filter((c: any) => c.state === 'connected');
 
       if (connectedSources.length === 0) {
-        await fetchJobs();
+        await fetchJobs(false, true);
         toast({
           title: 'Jobs Refreshed',
           description: 'Updated with the latest roles from the AIResume job network.',
@@ -1522,7 +1607,7 @@ export default function JobsDashboard() {
         )
       );
 
-      await fetchJobs();
+      await fetchJobs(false, true);
       await fetchPortalConnections();
 
       /*
@@ -1580,7 +1665,7 @@ export default function JobsDashboard() {
       });
       const result = res.ok ? await res.json().catch(() => null) : null;
 
-      await fetchJobs();
+      await fetchJobs(false, true);
       await fetchPortalConnections();
 
       const created = result?.jobsCreated || 0;
@@ -1752,14 +1837,14 @@ export default function JobsDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1.5 pt-1 text-xs">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="font-bold text-sm text-gray-900 dark:text-white shrink-0">
-                  {displayedJobs.length.toLocaleString()}{' '}
+                  {total.toLocaleString()}{' '}
                   {filters.savedOnly
-                    ? (displayedJobs.length === 1 ? 'saved job' : 'saved jobs')
+                    ? (total === 1 ? 'saved job' : 'saved jobs')
                     : filters.matchScoreMin === 0 || filters.unpersonalized
-                    ? (displayedJobs.length === 1 ? 'available job' : 'available jobs')
+                    ? (total === 1 ? 'available job' : 'available jobs')
                     : filters.sortBy === 'postedDate'
-                    ? (displayedJobs.length === 1 ? 'recent job' : 'recent jobs')
-                    : `${displayedJobs.length === 1 ? 'matching job' : 'matching jobs'}${total > displayedJobs.length ? ` of ${total.toLocaleString()}` : ''}`}
+                    ? (total === 1 ? 'recent job' : 'recent jobs')
+                    : (total === 1 ? 'matching job' : 'matching jobs')}
                 </span>
 
                 <span className="text-gray-500 dark:text-gray-400">
@@ -1787,6 +1872,12 @@ export default function JobsDashboard() {
                     </span>
                   )}
                 </span>
+
+                {total > displayedJobs.length && (
+                  <span className="text-gray-400 dark:text-gray-500">
+                    · showing {displayedJobs.length.toLocaleString()} loaded
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1820,6 +1911,42 @@ export default function JobsDashboard() {
                 >
                   Retry
                 </button>
+              </div>
+            )}
+
+            {/* Recommended needs target roles to curate on. Without them the
+                server can only return the catalogue, which looks like a broken
+                feed unless we say so. */}
+            {needsProfile && !filters.savedOnly && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-xl border border-[#013f2e]/20 dark:border-[#36D39B]/25 bg-[#013f2e]/[0.04] dark:bg-[#36D39B]/[0.06]">
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 mt-0.5 shrink-0 text-[#013f2e] dark:text-[#36D39B]" />
+                  <div className="text-xs">
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      Add your target roles to unlock Recommended
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 mt-0.5">
+                      Recommended only shows jobs that match the roles you&apos;re targeting. Until
+                      you pick a few, we can only show the full catalogue.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('settings')}
+                    className="px-3 py-1.5 rounded-lg bg-[#013f2e] hover:bg-[#025c43] text-white font-bold text-xs transition-colors shadow-xs"
+                  >
+                    Add target roles
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFilterChange({ unpersonalized: true, matchScoreMin: 0 })}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-[#013f2e]/40 dark:hover:border-[#36D39B]/40 transition-colors"
+                  >
+                    Browse all
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2073,7 +2200,7 @@ export default function JobsDashboard() {
                     setSelectedTrackerJob(null);
                   }}
                   onRefresh={() => {
-                    fetchJobs(true);
+                    fetchJobs(true, true);
                   }}
                 />
               );
@@ -2087,7 +2214,7 @@ export default function JobsDashboard() {
                 onClose={() => setConnectModalOpen(false)}
                 onSuccess={() => {
                   fetchPortalConnections();
-                  fetchJobs();
+                  fetchJobs(false, true);
                 }}
               />
             )}

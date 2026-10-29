@@ -1794,7 +1794,7 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             the bar is now anchored to the thing being edited. */}
         <MoriSelectionBar
           document={isCoverLetterDoc ? 'cover-letter' : 'cv'}
-          enabled={!isMoriOpen}
+          enabled={!isMoriOpen && !activeUtilityPanel && !state.reportOpen && !showJobParserDialog}
           onOpenChat={() => handleMoriOpenChange(true)}
         />
 

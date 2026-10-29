@@ -3379,7 +3379,7 @@ export default function ResumeEnhancerContainer({
           else if (step.id === 'review') IconComponent = FileText;
 
           const activePill = (
-            <div className="flex items-center bg-[#f1f9ec] dark:bg-[#1a2312] border border-[#dcedd9] dark:border-[#2a3c1d] rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
+            <div className="flex items-center bg-[#f1f9ec] dark:bg-white/5 border border-[#dcedd9] dark:border-white/10 rounded-2xl px-4 py-1.5 shadow-sm transition-all duration-300">
               <div className="w-8 h-8 rounded-full bg-lime-600 dark:bg-[#02523c] flex items-center justify-center text-white flex-shrink-0">
                 <IconComponent className="w-4 h-4 stroke-[2.5]" />
               </div>

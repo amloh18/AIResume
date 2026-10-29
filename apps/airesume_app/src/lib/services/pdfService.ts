@@ -275,30 +275,32 @@ export class PDFService extends BaseService {
     // Set font
     doc.setFont('helvetica');
 
+    const basics = cvData?.basics || {} as any;
+
     // Header
     doc.setFontSize(24);
     doc.setTextColor(37, 99, 235);
-    doc.text(cvData.basics.name || '', 20, 30);
+    doc.text(String(basics.name || 'Candidate'), 20, 30);
 
     // Contact info
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
     let yPos = 40;
-    if (cvData.basics.email) {
-      doc.text(cvData.basics.email, 20, yPos);
+    if (basics.email) {
+      doc.text(String(basics.email), 20, yPos);
       yPos += 7;
     }
-    if (cvData.basics.phone) {
-      doc.text(cvData.basics.phone, 20, yPos);
+    if (basics.phone) {
+      doc.text(String(basics.phone), 20, yPos);
       yPos += 7;
     }
-    if (cvData.basics.location?.city) {
-      doc.text(cvData.basics.location.city, 20, yPos);
+    if (basics.location?.city) {
+      doc.text(String(basics.location.city), 20, yPos);
       yPos += 7;
     }
 
     // Summary
-    if (cvData.basics.summary) {
+    if (basics.summary) {
       yPos += 10;
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
@@ -306,36 +308,42 @@ export class PDFService extends BaseService {
       yPos += 10;
       doc.setFontSize(12);
       doc.setTextColor(50, 50, 50);
-      const summaryLines = doc.splitTextToSize(cvData.basics.summary, 170);
+      const summaryLines = doc.splitTextToSize(String(basics.summary), 170);
       doc.text(summaryLines, 20, yPos);
       yPos += summaryLines.length * 7 + 10;
     }
 
     // Experience
-    if (cvData.work && cvData.work.length > 0) {
+    if (Array.isArray(cvData?.work) && cvData.work.length > 0) {
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
       doc.text('Work Experience', 20, yPos);
       yPos += 10;
 
-      cvData.work.forEach((exp) => {
+      cvData.work.forEach((exp: any) => {
+        if (!exp) return;
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
 
+        const roleTitle = String(exp.position || exp.title || exp.role || 'Position');
+        const companyName = String(exp.name || exp.company || 'Company');
+        const dateRange = `${exp.startDate || ''} - ${exp.endDate || 'Present'}`;
+
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
-        doc.text(exp.position, 20, yPos);
+        doc.text(roleTitle, 20, yPos);
         yPos += 7;
 
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        doc.text(`${exp.name} | ${exp.startDate} - ${exp.endDate || 'Present'}`, 20, yPos);
+        doc.text(`${companyName} | ${dateRange}`, 20, yPos);
         yPos += 7;
 
-        if (exp.summary) {
-          const descLines = doc.splitTextToSize(exp.summary, 170);
+        const summaryText = exp.summary || (Array.isArray(exp.highlights) ? exp.highlights.join(' ') : '');
+        if (summaryText) {
+          const descLines = doc.splitTextToSize(String(summaryText), 170);
           doc.text(descLines, 20, yPos);
           yPos += descLines.length * 7;
         }
@@ -345,7 +353,7 @@ export class PDFService extends BaseService {
     }
 
     // Education
-    if (cvData.education && cvData.education.length > 0) {
+    if (Array.isArray(cvData?.education) && cvData.education.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
@@ -356,26 +364,29 @@ export class PDFService extends BaseService {
       doc.text('Education', 20, yPos);
       yPos += 10;
 
-      cvData.education.forEach((edu) => {
+      cvData.education.forEach((edu: any) => {
+        if (!edu) return;
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
 
+        const degreeStr = [edu.studyType, edu.area ? `in ${edu.area}` : ''].filter(Boolean).join(' ') || edu.degree || 'Degree';
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
-        doc.text(`${edu.studyType} ${edu.area && `in ${edu.area}`}`, 20, yPos);
+        doc.text(String(degreeStr), 20, yPos);
         yPos += 7;
 
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        doc.text(`${edu.institution} | ${edu.startDate} - ${edu.endDate || 'Present'}`, 20, yPos);
+        const instStr = `${edu.institution || edu.school || 'University'} | ${edu.startDate || ''} - ${edu.endDate || 'Present'}`;
+        doc.text(String(instStr), 20, yPos);
         yPos += 10;
       });
     }
 
     // Skills
-    if (cvData.skills && cvData.skills.length > 0) {
+    if (Array.isArray(cvData?.skills) && cvData.skills.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
@@ -387,6 +398,7 @@ export class PDFService extends BaseService {
       yPos += 10;
 
       cvData.skills.forEach((skill) => {
+        if (!skill) return;
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;

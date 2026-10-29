@@ -300,12 +300,14 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     window.addEventListener('mori-open-section-menu', onOpenSection as EventListener);
     window.addEventListener('mori-open-document-menu', onOpenDocument);
     window.addEventListener('mori-close-menus', onClose);
+    window.addEventListener('set-builder-sidebar', (e: any) => { if (e.detail) setAnchor(null); });
     window.addEventListener('keydown', onKeyDown);
     document.addEventListener('pointerdown', onPointerDown, true);
     return () => {
       window.removeEventListener('mori-open-section-menu', onOpenSection as EventListener);
       window.removeEventListener('mori-open-document-menu', onOpenDocument);
       window.removeEventListener('mori-close-menus', onClose);
+      window.removeEventListener('set-builder-sidebar', (e: any) => { if (e.detail) setAnchor(null); });
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown, true);
     };
@@ -322,19 +324,17 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
       return undefined;
     }
     const measure = () => {
-      if (!anchor.el.isConnected) {
-        if (anchor.scope === 'section' && anchor.blockId) {
-          const fresh = document.querySelector(`[data-block-id="${CSS.escape(anchor.blockId)}"]`) as HTMLElement | null;
-          if (fresh && fresh.isConnected) {
-            anchor.el = fresh;
-          } else {
-            setAnchor(null);
-            return;
-          }
-        } else {
+      if (anchor.scope === 'section' && anchor.blockId) {
+        const fresh = document.querySelector(`[data-block-id="${CSS.escape(anchor.blockId)}"]`) as HTMLElement | null;
+        if (fresh && fresh.isConnected) {
+          anchor.el = fresh;
+        } else if (!anchor.el.isConnected) {
           setAnchor(null);
           return;
         }
+      } else if (!anchor.el.isConnected) {
+        setAnchor(null);
+        return;
       }
       setRect(anchor.el.getBoundingClientRect());
       const workspace = document.querySelector('[data-cv-workspace]') as HTMLElement | null;
@@ -353,6 +353,14 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     };
     measure();
 
+    const onCanvasReordered = () => {
+      measure();
+      window.requestAnimationFrame(measure);
+      window.setTimeout(measure, 120);
+      window.setTimeout(measure, 280);
+    };
+    window.addEventListener('cv-canvas-reordered', onCanvasReordered);
+
     const ro = typeof ResizeObserver !== 'undefined' && anchor.el ? new ResizeObserver(measure) : null;
     if (ro && anchor.el) ro.observe(anchor.el);
 
@@ -364,6 +372,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     scrollContainers.forEach(c => c.addEventListener('scroll', measure, { passive: true }));
     window.addEventListener('resize', measure);
     return () => {
+      window.removeEventListener('cv-canvas-reordered', onCanvasReordered);
       ro?.disconnect();
       mo?.disconnect();
       scrollContainers.forEach(c => c.removeEventListener('scroll', measure));
