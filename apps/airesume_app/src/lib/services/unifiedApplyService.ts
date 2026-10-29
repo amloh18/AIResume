@@ -6,6 +6,7 @@ import User from '@/models/User';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
 import ApplicationJourney from '@/models/ApplicationJourney';
+import CoverLetter from '@/models/CoverLetter';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { acquirePlaywrightBrowser } from '@/lib/services/browserService';
 import { decryptToken } from '@/lib/auth/token-encryption';
@@ -217,6 +218,64 @@ async function resolveResumeAttachment(
   }
 }
 
+/**
+ * Resolve the tailored cover letter for an application as a PDF buffer.
+ *
+ * `atsPlaywrightService` has accepted `coverLetterPdf` / `coverLetterFileName` from the start and
+ * uploads them in all four ATS flows (Greenhouse, Lever, Ashby, Workable) — but **nothing in the repo
+ * ever set them**. The result was visible to employers: every automated application arrived with a
+ * resume and no cover letter, while the journey had already generated and stored one.
+ *
+ * The letter is resolved through `ApplicationJourney.coverLetterId`, which is the single source of
+ * truth for the letter↔job relationship, so this attaches exactly the letter the user sees in the
+ * editor and journey sidebar.
+ *
+ * Differs from `resolveResumeAttachment` in one deliberate way: a missing letter returns `null` and the
+ * submission continues. A resume is mandatory, so its absence parks the application; a cover letter is
+ * optional, so its absence must not block an otherwise valid application.
+ */
+async function resolveCoverLetterAttachment(
+  applicationId: string,
+  userId: string,
+  candidateName?: string | null,
+): Promise<{ buffer: Buffer; fileName: string } | null> {
+  try {
+    const journey: any = await ApplicationJourney.findOne({ jobId: applicationId }).lean();
+    const coverLetterId = journey?.coverLetterId ? String(journey.coverLetterId) : undefined;
+    if (!coverLetterId) return null;
+
+    const coverLetter: any = await CoverLetter.findOne({ _id: coverLetterId }).lean();
+    if (!coverLetter) return null;
+
+    // Ownership is checked in JS rather than in the query: `CoverLetter.userId` is an ObjectId while
+    // callers pass a string, and a cast mismatch would silently return "no letter" for every user.
+    if (String(coverLetter.userId) !== String(userId)) return null;
+
+    const content = String(coverLetter.content || '').trim();
+    if (!content) return null;
+
+    const { renderCoverLetterPdf, coverLetterFileName } = await import('./coverLetterRenderService');
+    const blob = await renderCoverLetterPdf(
+      { content, title: coverLetter.title, metadata: coverLetter.metadata },
+      // The real name, not the `[Your Name]` placeholder the download route emits — a letter sent to an
+      // employer must be signed.
+      { paperSize: 'A4', orientation: 'portrait', signatureName: candidateName || undefined },
+    );
+
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    if (!buffer.length) return null;
+
+    return { buffer, fileName: coverLetterFileName(candidateName) };
+  } catch (error) {
+    // Best-effort: an unrenderable letter must not park an otherwise submittable application.
+    console.error(
+      '[apply] Could not build the cover letter attachment',
+      JSON.stringify({ applicationId, error: error instanceof Error ? error.message : String(error) }),
+    );
+    return null;
+  }
+}
+
 export interface ApplyJobContext {
   jobId: string;
   title: string;
@@ -328,9 +387,25 @@ export class UnifiedApplyService {
       };
     }
 
+    /*
+      Record which documents this application was prepared with.
+
+      `JobApplication.cvId` and `.coverLetterId` have always existed on the schema, but nothing in the
+      repo ever wrote them: of 48 applications that had prepared documents, 0 carried either id. That
+      left two questions unanswerable after the fact — "which resume did we send?" and "which letter
+      did we send?" — and it left the submission path with no way to find the letter to attach, which
+      is why only the CV ever reached an ATS form.
+
+      Written here because this is the single point that holds all three ids at once. Every later path
+      (quality gate, review hold, submission) re-reads the application and inherits the link.
+    */
+    const documentLink: Record<string, string> = {};
+    if (docResult.cvId) documentLink.cvId = String(docResult.cvId);
+    if (docResult.coverLetterId) documentLink.coverLetterId = String(docResult.coverLetterId);
+
     // At this point, documents are successfully created -> Ensure job is in Staging ('created')
     await JobApplication.findByIdAndUpdate(jobApp._id, {
-      status: 'created',
+      $set: { status: 'created', ...documentLink },
       $push: {
         stageHistory: stageEntry({
           stage: 'staging',
@@ -873,6 +948,16 @@ export class UnifiedApplyService {
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
         const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
 
+        // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
+        // needed a letter, which must not block submission.
+        const coverLetter = await resolveCoverLetterAttachment(
+          jobApp._id.toString(),
+          userId,
+          user?.firstName && user?.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : primaryCv?.basics?.name,
+        );
+
         const fillResult = await fillGreenhouseFields(page, detection.fields, {
           firstName: user?.firstName || primaryCv?.basics?.name?.split(' ')[0] || '',
           lastName: user?.lastName || primaryCv?.basics?.name?.split(' ').slice(1).join(' ') || '',
@@ -881,6 +966,8 @@ export class UnifiedApplyService {
           linkedin: primaryCv?.basics?.url || '',
           resumePdf: resume?.buffer,
           resumeFileName: resume?.fileName,
+          coverLetterPdf: coverLetter?.buffer,
+          coverLetterFileName: coverLetter?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'greenhouse', 'filled', context, {
@@ -1033,6 +1120,16 @@ export class UnifiedApplyService {
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
         const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
 
+        // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
+        // needed a letter, which must not block submission.
+        const coverLetter = await resolveCoverLetterAttachment(
+          jobApp._id.toString(),
+          userId,
+          user?.firstName && user?.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : primaryCv?.basics?.name,
+        );
+
         const fillResult = await fillLeverFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
@@ -1040,6 +1137,8 @@ export class UnifiedApplyService {
           linkedin: primaryCv?.basics?.url || '',
           resumePdf: resume?.buffer,
           resumeFileName: resume?.fileName,
+          coverLetterPdf: coverLetter?.buffer,
+          coverLetterFileName: coverLetter?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'lever', 'filled', context, {
@@ -1158,6 +1257,16 @@ export class UnifiedApplyService {
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
         const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
 
+        // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
+        // needed a letter, which must not block submission.
+        const coverLetter = await resolveCoverLetterAttachment(
+          jobApp._id.toString(),
+          userId,
+          user?.firstName && user?.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : primaryCv?.basics?.name,
+        );
+
         const fillResult = await fillAshbyFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
@@ -1165,6 +1274,8 @@ export class UnifiedApplyService {
           linkedin: primaryCv?.basics?.url || '',
           resumePdf: resume?.buffer,
           resumeFileName: resume?.fileName,
+          coverLetterPdf: coverLetter?.buffer,
+          coverLetterFileName: coverLetter?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'ashby', 'filled', context, {
@@ -1283,12 +1394,24 @@ export class UnifiedApplyService {
         // The tailored CV as a PDF, so the form is submitted with a resume attached.
         const resume = await resolveResumeAttachment(jobApp._id.toString(), userId);
 
+        // The tailored cover letter, when the journey has one. Resolves to null for jobs that never
+        // needed a letter, which must not block submission.
+        const coverLetter = await resolveCoverLetterAttachment(
+          jobApp._id.toString(),
+          userId,
+          user?.firstName && user?.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : primaryCv?.basics?.name,
+        );
+
         const fillResult = await fillWorkableFields(page, detection.fields, {
           fullName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : primaryCv?.basics?.name || '',
           email: user?.email || primaryCv?.basics?.email || '',
           phone: user?.phone || primaryCv?.basics?.phone || '',
           resumePdf: resume?.buffer,
           resumeFileName: resume?.fileName,
+          coverLetterPdf: coverLetter?.buffer,
+          coverLetterFileName: coverLetter?.fileName,
         });
 
         await reportAtsStep(jobApp._id.toString(), 'workable', 'filled', context, {

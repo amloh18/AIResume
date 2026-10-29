@@ -41,6 +41,7 @@
     "verify:canvas-focus": "npx tsx tests/verify-canvas-focus.ts",
     "verify:entry-duplicate": "npx tsx tests/verify-entry-duplicate.ts",
     "verify:turbopack-patch": "npx tsx tests/verify-turbopack-patch.ts",
+    "verify:cover-letter-attachment": "npx tsx tests/verify-cover-letter-attachment.ts",
     "verify:public-access": "npm run verify:public-jobs && npm run verify:public-route-policy",
     "build:worker": "node scripts/build-worker.mjs",
     "worker": "node scripts/build-worker.mjs && node dist/worker.mjs",

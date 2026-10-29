@@ -10,6 +10,7 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import redisRateLimiter from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
 import { validateDownloadParams, sanitizeFilename, validateFileSize } from '@/lib/utils/downloadValidation';
+import { renderCoverLetterPdf } from '@/lib/services/coverLetterRenderService';
 import { logger } from '@/lib/structured-logger';
 
 export async function GET(
@@ -143,7 +144,7 @@ export async function GET(
     let filename: string;
 
     if (format === 'pdf') {
-      fileBlob = await generateCoverLetterPDF(coverLetter, paperSize, orientation);
+      fileBlob = await renderCoverLetterPdf(coverLetter, { paperSize, orientation });
       mimeType = 'application/pdf';
       filename = `${baseName}|CoverLetter.pdf`;
     } else if (format === 'docx' || format === 'doc') {
@@ -208,88 +209,6 @@ export async function GET(
       { status: 500 }
     );
   }
-}
-
-/**
- * Generate cover letter PDF
- */
-async function generateCoverLetterPDF(
-  coverLetter: any,
-  paperSize: 'A4' | 'Letter',
-  orientation: 'portrait' | 'landscape'
-): Promise<Blob> {
-  const { jsPDF } = await import('jspdf');
-  const doc = new jsPDF({
-    orientation: orientation === 'landscape' ? 'landscape' : 'portrait',
-    unit: 'mm',
-    format: paperSize === 'Letter' ? 'letter' : 'a4'
-  });
-
-  // Set margins
-  const margin = 20;
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const contentWidth = pageWidth - (margin * 2);
-  let yPos = margin + 20;
-
-  // Date (top right)
-  const today = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  doc.setFontSize(11);
-  doc.setTextColor(100, 100, 100);
-  doc.text(today, pageWidth - margin - doc.getTextWidth(today), yPos);
-  yPos += 15;
-
-  // Recipient info (if available)
-  if (coverLetter.metadata?.targetCompany) {
-    doc.setFontSize(11);
-    doc.setTextColor(0, 0, 0);
-    doc.text(coverLetter.metadata.targetCompany, margin, yPos);
-    yPos += 7;
-  }
-
-  // Greeting
-  yPos += 10;
-  doc.setFontSize(11);
-  doc.text('Dear Hiring Manager,', margin, yPos);
-  yPos += 10;
-
-  // Content
-  doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-
-  // Split content into paragraphs
-  const paragraphs = coverLetter.content.split('\n\n').filter(p => p.trim());
-
-  paragraphs.forEach((paragraph: string) => {
-    // Check if we need a new page
-    if (yPos > pageHeight - margin - 20) {
-      doc.addPage();
-      yPos = margin + 20;
-    }
-
-    const lines = doc.splitTextToSize(paragraph.trim(), contentWidth);
-    doc.text(lines, margin, yPos);
-    yPos += lines.length * 6 + 5; // Line height + spacing
-  });
-
-  // Closing
-  if (yPos > pageHeight - margin - 30) {
-    doc.addPage();
-    yPos = margin + 20;
-  }
-
-  yPos += 10;
-  doc.text('Sincerely,', margin, yPos);
-  yPos += 10;
-
-  // Signature space
-  doc.text('[Your Name]', margin, yPos);
-
-  return doc.output('blob');
 }
 
 /**
