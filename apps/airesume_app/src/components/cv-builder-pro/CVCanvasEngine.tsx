@@ -1463,6 +1463,12 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
     if (fluencyMatch) {
       updated = setNestedValue(updated, `${fluencyMatch[1]}.level`, fluencyToLevel(value));
     }
+    const skillsTextMatch = path.match(/^skills\.(\d+)\.skillsText$/);
+    if (skillsTextMatch) {
+      const gIdx = parseInt(skillsTextMatch[1], 10);
+      const parsed = typeof value === 'string' ? value.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+      updated = setNestedValue(updated, `skills.${gIdx}.skills`, parsed);
+    }
     onDataChange(updated);
   };
 
@@ -2949,7 +2955,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           return (
             <div 
               key={pageIdx} 
-              className="cv-page shadow-2xl relative bg-white overflow-hidden flex flex-col" 
+              className="cv-page shadow-2xl relative bg-white flex flex-col" 
               style={{ 
                 width: 'var(--cv-page-width)', 
                 height: 'var(--cv-page-height)', 
@@ -3847,7 +3853,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           font-family: var(--cv-font) !important; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
           background: #ffffff;
           box-sizing: border-box;
-          overflow: hidden;
+          overflow: visible;
         }
         .cv-document .text-gray-900 { color: #111827; }
         .cv-document .text-gray-800 { color: #1f2937; }
@@ -4081,6 +4087,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           @page { margin: 0; size: ${design.pageSize.toLowerCase()}; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
           .no-print { display: none !important; }
+          .cv-page { overflow: hidden !important; }
           .cv-document-wrapper { transform: none !important; padding: 0 !important; box-shadow: none !important; margin: 0 !important; overflow: visible !important; }
           .cv-document { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; display: block !important; height: auto !important; mask-image: none !important; -webkit-mask-image: none !important; }
           .cv-page-breakable { margin-top: 0 !important; }

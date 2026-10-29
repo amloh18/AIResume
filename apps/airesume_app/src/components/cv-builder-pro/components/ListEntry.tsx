@@ -26,25 +26,19 @@ import { duplicateEntryAt } from '../helpers';
 const RAIL_CLOSE_DELAY_MS = 180;
 
 /**
- * The ghost row shown under the LAST entry of a list, on hover.
- *
- * It previews the entry that will be created: the same default the engine seeds
- * (`createDefaultListEntry`), so what the user sees in the preview is literally
- * what appears when they click. Kept here rather than being written by hand in
- * each of the 40+ list snippets — the snippets all render `ListEntry`, so this is
- * one change that reaches every one of them, in every layout.
+ * Default titles and subtitles for adding entries to list collections.
  */
-const ADD_ENTRY_PREVIEW: Record<string, { title: string; subtitle: string }> = {
-  experience: { title: 'Job Title', subtitle: 'New Company · Date' },
-  education: { title: 'Degree', subtitle: 'Institution Name · Date' },
-  projects: { title: 'Project Name', subtitle: 'Role · Date' },
-  certifications: { title: 'Certification Name', subtitle: 'Issuer · Date' },
-  awards: { title: 'Award Name', subtitle: 'Issuer · Date' },
-  publications: { title: 'Publication Title', subtitle: 'Publisher · Date' },
-  volunteer: { title: 'Role', subtitle: 'Org Name · Date' },
-  references: { title: 'Ref Name', subtitle: 'Role · Contact Info' },
-  languages: { title: 'Language', subtitle: 'Fluency' },
-  interests: { title: 'Interest', subtitle: 'Add to interests' },
+export const ADD_ENTRY_PREVIEW: Record<string, { title: string; subtitle: string }> = {
+  experience: { title: 'Add Experience', subtitle: 'Add a new role with company, dates, and achievements' },
+  education: { title: 'Add Education', subtitle: 'Add a degree, institution, and study period' },
+  projects: { title: 'Add Project', subtitle: 'Showcase another project, link, or key milestone' },
+  certifications: { title: 'Add Certification', subtitle: 'Add a professional credential or license' },
+  awards: { title: 'Add Award', subtitle: 'Highlight another honor or achievement' },
+  publications: { title: 'Add Publication', subtitle: 'Add a paper, article, or authored work' },
+  volunteer: { title: 'Add Volunteer Work', subtitle: 'Add community contribution or cause' },
+  references: { title: 'Add Reference', subtitle: 'Add a referee contact or recommendation' },
+  languages: { title: 'Add Language', subtitle: 'Add another language and proficiency' },
+  interests: { title: 'Add Interest', subtitle: 'Add another hobby or personal interest' },
 };
 
 // REUSABLE ENTRY WRAPPER
@@ -356,10 +350,6 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
   };
 
   const entryId = ctx?.cvData?.[collection]?.[index]?.id;
-  const collectionLength = Array.isArray(ctx?.cvData?.[collection]) ? ctx.cvData[collection].length : 0;
-  const isLastEntry = index === collectionLength - 1;
-  const addPreview = ADD_ENTRY_PREVIEW[collection];
-  const showAddPreview = !readOnly && isLastEntry && Boolean(addPreview) && Boolean(ctx?.addEntryForCollection);
 
   if (snippetCtx && entryId) {
     const entryUnitId = `${snippetCtx.blockId}_entry_${entryId}`;
@@ -450,31 +440,6 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
     >
       {rail}
       {children}
-      {showAddPreview && (
-        /* Absolutely positioned: the canvas paginator measures `.cv-item`
-           heights, so a row in normal flow would be counted as document content
-           and push entries onto the next page just because the pointer was
-           nearby. `top-full` keeps it fully outside the entry's box. */
-        <div className="no-print absolute left-0 right-0 top-full z-[115] pointer-events-none opacity-0 translate-y-[-4px] transition-all duration-150 ease-out group-hover/entry:opacity-100 group-hover/entry:translate-y-0">
-          <button
-            type="button"
-            data-add-entry-preview
-            onClick={(event) => {
-              event.stopPropagation();
-              ctx?.addEntryForCollection?.(collection);
-            }}
-            title={`Add another ${collection.replace(/s$/, '')} entry`}
-            className="pointer-events-auto w-full flex items-center gap-2 rounded-lg border border-dashed border-emerald-400/70 bg-emerald-50/80 dark:bg-emerald-500/10 px-2.5 py-1.5 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/15"
-          >
-            <Plus size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-bold leading-tight text-emerald-800 dark:text-emerald-300">{addPreview.title}</span>
-              <span className="block text-[10px] leading-snug text-emerald-700/70 dark:text-emerald-400/70">{addPreview.subtitle}</span>
-            </span>
-            <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Add</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };

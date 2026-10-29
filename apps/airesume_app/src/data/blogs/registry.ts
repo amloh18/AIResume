@@ -40,6 +40,8 @@ export const ARTICLE_SLUGS = [
   'choose-a-resume-template',
   'product-manager-resume-2026',
   'what-is-an-ai-resume-builder',
+  'how-workday-ats-actually-works-knockout-questions-keyword-filters-midnight-rejections',
+  'why-multi-column-resume-formats-break-in-ats',
 ] as const;
 
 export type ArticleSlug = (typeof ARTICLE_SLUGS)[number];
@@ -81,6 +83,8 @@ import article32 from './32-best-resume-builders-2026.json';
 import article33 from './33-choose-a-resume-template.json';
 import article34 from './34-product-manager-resume-2026.json';
 import article35 from './35-what-is-an-ai-resume-builder.json';
+import article36 from './36-how-workday-ats-actually-works-knockout-questions-keyword-filters-midnight-rejections.json';
+import article37 from './37-why-multi-column-resume-formats-break-in-ats.json';
 
 const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'why-ai-resume-beats-cakecv': article01,
@@ -118,6 +122,8 @@ const ARTICLE_REGISTRY: Record<ArticleSlug, BlogArticle> = {
   'choose-a-resume-template': article33,
   'product-manager-resume-2026': article34,
   'what-is-an-ai-resume-builder': article35,
+  'how-workday-ats-actually-works-knockout-questions-keyword-filters-midnight-rejections': article36,
+  'why-multi-column-resume-formats-break-in-ats': article37,
 };
 
 /**

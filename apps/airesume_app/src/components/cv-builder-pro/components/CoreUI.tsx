@@ -5,6 +5,7 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
+import { ADD_ENTRY_PREVIEW } from './ListEntry';
 import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
 import { suggestNextSections } from '../section-suggestions';
 import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
@@ -234,6 +235,14 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     if (arrayIndex !== undefined) {
       const fullStr = getNestedValue(data, path) || '';
       const arr = fullStr.split(',').map((s: string) => s.trim());
+      if (cleanHtml.includes(',')) {
+        const parts = cleanHtml.split(',').map((s: string) => s.trim()).filter(Boolean);
+        if (parts.length > 1) {
+          arr.splice(arrayIndex, 1, ...parts);
+          onChange(path, arr.join(', '));
+          return;
+        }
+      }
       arr[arrayIndex] = cleanHtml;
       onChange(path, arr.join(', '));
     } else {
@@ -241,6 +250,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     }
   };
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (arrayIndex !== undefined && (e.key === ',' || (!multiline && e.key === 'Enter'))) {
+      e.preventDefault();
+      const fullStr = getNestedValue(data, path) || '';
+      const arr = fullStr.split(',').map((s: string) => s.trim()).filter(Boolean);
+      arr.splice(arrayIndex + 1, 0, 'New skill');
+      onChange(path, arr.join(', '));
+      return;
+    }
+
     if (!multiline && e.key === 'Enter') {
       e.preventDefault();
       return;
@@ -488,11 +506,26 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
    * the controls.
    */
   const usePortalSlot = (id: string) => {
-    const [el, setEl] = useState<HTMLElement | null>(null);
+    const [el, setEl] = useState<HTMLElement | null>(() => (typeof document !== 'undefined' ? document.getElementById(id) : null));
     useEffect(() => {
-      setEl(document.getElementById(id));
+      const found = document.getElementById(id);
+      if (found) {
+        setEl(found);
+        return;
+      }
+      let rafId: number;
+      const poll = () => {
+        const target = document.getElementById(id);
+        if (target) {
+          setEl(target);
+        } else {
+          rafId = requestAnimationFrame(poll);
+        }
+      };
+      rafId = requestAnimationFrame(poll);
+      return () => cancelAnimationFrame(rafId);
     }, [id]);
-    return el;
+    return el || (typeof document !== 'undefined' ? document.getElementById(id) : null);
   };
 
   /**
@@ -714,13 +747,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     /** `null` = nothing to act on (or the anchor is scrolled out of view). */
     const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-    const shouldHide = Boolean(isSidebarOpen || ctx?.isSidebarOpen);
-
     useEffect(() => {
-      if (shouldHide) {
-        setPos(null);
-        return undefined;
-      }
       // Either document's scroll container will do. The rail only needs the box
       // whose content coordinates its absolute `top`/`left` are measured in, and
       // the cover letter's workspace is that box for the letter.
@@ -819,9 +846,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
         window.removeEventListener('cv-canvas-reordered', onCanvasReordered);
         observer?.disconnect();
       };
-    }, [selectedBlockId, focusNode, zoom, shouldHide]);
-
-    if (shouldHide) return null;
+    }, [selectedBlockId, focusNode, zoom]);
 
     return (
       <div
@@ -1152,7 +1177,15 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const assignedPage = ctx?.pageAssignments?.[headerUnitId] ?? ctx?.pageAssignments?.[instance.id] ?? 0;
   const isHeaderPage = assignedPage === pageIdx;
 
-  const showInlineControls = !readOnly && primaryTitleKey && isHeaderPage;
+  const collectionKey = (SnippetComponent?.category || '').toLowerCase();
+  const addEntryInfo = ADD_ENTRY_PREVIEW[collectionKey];
+  const listEntries = cvData?.[collectionKey];
+  const hasListEntries = Array.isArray(listEntries) && listEntries.length > 0;
+  const lastListEntry = hasListEntries ? listEntries[listEntries.length - 1] : null;
+  const isSnippetLastPage = !lastListEntry || (ctx?.pageAssignments?.[`${instance.id}_entry_${lastListEntry.id}`] ?? 0) === pageIdx;
+  const showInflowAddEntry = !readOnly && Boolean(content) && hasListEntries && isSnippetLastPage && Boolean(addEntryInfo) && Boolean(onAddListEntry) && SnippetComponent?.category !== 'Skills';
+
+  const showInlineControls = !readOnly && Boolean(primaryTitleKey) && (isHeaderPage || isSelected);
   // The section action rail always hangs off the section's RIGHT edge. It used
   // to sit on the left, where it landed on top of the per-entry rail (which is
   // pinned to every entry's left edge) — two vertical rails fighting over the
@@ -1492,6 +1525,31 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
                 <div className="text-[11px] uppercase tracking-widest mt-3 font-bold text-gray-500 flex items-center justify-center gap-1"><PlusCircle size={14}/> Add {SnippetComponent.category}</div>
               </div>
             ))}
+            {showInflowAddEntry && (
+              <div
+                className={`no-print mt-2 pt-1 transition-all duration-150 ${
+                  isSelected ? 'opacity-100' : 'opacity-0 group-hover/inner:opacity-100'
+                }`}
+              >
+                <button
+                  type="button"
+                  data-add-entry-preview
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddListEntry?.(SnippetComponent.category);
+                  }}
+                  title={`Add another ${SnippetComponent.category} entry`}
+                  className="w-full flex items-center gap-2 rounded-lg border border-dashed border-emerald-400/70 bg-emerald-50/70 dark:bg-emerald-500/10 px-2.5 py-1.5 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/15 cursor-pointer"
+                >
+                  <Plus size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[11px] font-bold leading-tight text-emerald-800 dark:text-emerald-300">{addEntryInfo.title}</span>
+                    <span className="block text-[10px] leading-snug text-emerald-700/70 dark:text-emerald-400/70">{addEntryInfo.subtitle}</span>
+                  </span>
+                  <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Add</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1559,13 +1617,17 @@ export const InsertSnippetHandle = ({
   if (!isExpanded) {
     return (
       <div
-        className="group/insert relative w-full h-[12px] -my-[6px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
+        className="group/insert relative w-full h-[32px] -my-[16px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
         onMouseEnter={openPanel}
         onFocus={openPanel}
         onClick={openPanel}
         title="Add section here"
       >
-        <div className="w-full h-[2px] bg-emerald-400/0 group-hover/insert:bg-emerald-500/80 transition-all rounded-full pointer-events-none" />
+        <div className="w-full h-[2px] bg-emerald-400/0 group-hover/insert:bg-emerald-500/80 transition-all rounded-full pointer-events-none relative flex items-center justify-center">
+          <span className="opacity-0 group-hover/insert:opacity-100 transition-opacity bg-emerald-600 text-white rounded-full p-0.5 shadow-xs scale-75">
+            <Plus size={10} strokeWidth={3} />
+          </span>
+        </div>
       </div>
     );
   }

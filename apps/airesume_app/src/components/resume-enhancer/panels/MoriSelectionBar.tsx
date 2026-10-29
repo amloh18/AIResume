@@ -24,6 +24,8 @@ interface MoriSelectionBarProps {
   document: MoriDocument;
   /** Renders nothing while the docked conversation panel is open. */
   enabled: boolean;
+  /** When a sidebar/utility panel is open, suggestion chips are hidden while the AI chat bar stays visible. */
+  isSidebarOpen?: boolean;
   /**
    * Opens the conversation in the utility panel — the one and only chat host.
    * Called after `send` queues the prompt, so the panel's chat drains it the
@@ -152,7 +154,7 @@ const dispatchToMoriTarget = (path: string, text: string) => {
  * chat (lib/stores/moriChatStore) and the caller opens the AI panel to show it,
  * so there is a single conversation whatever the entry point.
  */
-const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enabled, onOpenChat }) => {
+const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enabled, isSidebarOpen = false, onOpenChat }) => {
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
   /** The canvas area — the frame the whole-document bar is centred in. */
@@ -523,8 +525,10 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
     <>
       {/* Suggestion chips — in the canvas GUTTER beside the bar, right-aligned
           against the workspace edge so they never sit on the page. Hidden while
-          the conversation is open: it takes that space instead. */}
-      <div
+          the conversation is open or when a sidebar is open so chips do not
+          collide with side panels. */}
+      {!isSidebarOpen && (
+        <div
           ref={barRef}
           data-mori-selection-bar
           className="fixed z-[190] flex flex-col items-start no-print"
@@ -542,6 +546,7 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
             </button>
           ))}
         </div>
+      )}
 
       {/* The search bar — centred on the target and, for a section, sitting
           outside it. This is the only input in the inline flow. */}

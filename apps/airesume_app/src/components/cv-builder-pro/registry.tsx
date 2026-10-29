@@ -769,14 +769,14 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === SKILLS (6) ===
-  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
       <div className="snippet-anim cv-section">
         <Title titleKey="skills" />
         <div className="flex flex-col cv-gap-sm">
-          {groups.map((group, index) => (
+          {groups.map((group) => (
             <div key={group.key} className="cv-item-avoid">
               <div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
@@ -784,7 +784,6 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
               <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
               </div>
-              <InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.(index)} isDark={isDark} />
             </div>
           ))}
         </div>
@@ -798,35 +797,34 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
    * under the caret — the pill being edited was unmounted and focus was lost after
    * exactly one character. Pills also happen to be what the user picked, in every
    * layout, so the layout is now stable and wraps instead of switching. */
-  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
     if (allSkills.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}<InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.()} isDark={isDark} /></div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-3 py-1.5 text-[0.85em] font-semibold rounded-md border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}</div></div>);
   }},
-  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
     if (allSkills.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}<InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.()} isDark={isDark} /></div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`max-w-full break-words px-4 py-1.5 text-[0.85em] font-semibold rounded-full border cv-item-avoid ${isDark ? "bg-slate-700 border-slate-600 text-slate-200" : "bg-slate-100 border-slate-200 text-slate-700"}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} /></span>))}</div></div>);
   }},
-  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const allSkills = flattenSkillItems(data?.skills);
     if (allSkills.length === 0) return null;
-    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><LevelMeter path={skill.pathLevel} value={skill.rating} valueType="number" isDark={isDark} /></div>))}<InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.()} isDark={isDark} /></div></div>);
+    return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><LevelMeter path={skill.pathLevel} value={skill.rating} valueType="number" isDark={isDark} /></div>))}</div></div>);
   }},
-  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
       <div className="snippet-anim cv-section">
         <Title titleKey="skills" />
         <div className="flex flex-col cv-gap-sm">
-          {groups.map((group, index) => (
+          {groups.map((group) => (
             <div key={group.key} className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} cv-item-avoid`}>
               <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>
                 {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
               </span>
               {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
-              <InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.(index)} isDark={isDark} label="skill" />
             </div>
           ))}
         </div>
@@ -1139,10 +1137,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
-  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-md">{groups.map((group, index) => (<div key={group.key}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className="flex flex-wrap gap-1.5">{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}<InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.(index)} isDark={isDark} /></div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-md">{groups.map((group) => (<div key={group.key}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className="flex flex-wrap gap-1.5">{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
@@ -1271,10 +1269,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SIDEBAR (5 new)
   // =======================================================
-  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-lg">{groups.map((group, index) => (<div key={group.key}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.join(', ')}</div><InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.(index)} isDark={isDark} /></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-lg">{groups.map((group) => (<div key={group.key}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.join(', ')}</div></div>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">
@@ -1300,10 +1298,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     </div>
     );
   }}
-  ,'sidebar-tech-list': { id: 'sidebar-tech-list', name: 'Tech Stack List', category: 'Sidebar', render: ({ data, Editable, isDark, Title, onAddSkill, readOnly }: any) => {
+  ,'sidebar-tech-list': { id: 'sidebar-tech-list', name: 'Tech Stack List', category: 'Sidebar', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
     const all = flattenSkillItems(data?.skills);
     if (all.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-sm">{all.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></div>))}<InlineAddSkill onClick={readOnly ? undefined : () => onAddSkill?.()} isDark={isDark} /></div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-sm">{all.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></div>))}</div></div>);
   }}
   ,'sidebar-social-links': { id: 'sidebar-social-links', name: 'Social Links', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design }: any) => (
     <div className="snippet-anim cv-section">
