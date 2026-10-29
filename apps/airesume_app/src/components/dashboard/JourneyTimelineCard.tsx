@@ -2922,100 +2922,62 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <p className="text-small text-white/60">No cover letter yet</p>
                       <motion.button
                         onClick={async () => {
-                          if (!session?.user?.id || !journey.cvId || !journey.jobId) {
+                          if (!session?.user?.id || !journey.id) {
                             toast.error('Missing required data to generate cover letter');
                             return;
                           }
 
                           setIsAutoCreatingCoverLetter(true);
                           try {
-                            // First fetch CV and Job data
-                            const [cvRes, jobRes] = await Promise.all([
-                              fetch(`/api/cvs/${journey.cvId}?userId=${session.user.id}`),
-                              fetch(`/api/jobs/${journey.jobId}?userId=${session.user.id}`)
-                            ]);
+                            /*
+                              Generate through the journey, not around it.
 
-                            if (!cvRes.ok || !jobRes.ok) {
-                              throw new Error('Failed to fetch CV or Job data');
-                            }
+                              This used to fetch the CV and job client-side, POST to
+                              /api/ai/cover-letter-generate, save the text via /api/cover-letters and
+                              then PUT the id back onto the journey. Three problems came with that:
 
-                            const cvData = await cvRes.json();
-                            const jobData = await jobRes.json();
+                                - it was a second generation path with a different prompt. That prompt
+                                  truncated the job description to 5000 characters and never sent
+                                  `cvId`, so the letter was not tied to the CV it was written from;
+                                - it produced a letter the editor could not find, because the editor
+                                  reads `journey.coverLetterId`, so editing that letter created a
+                                  duplicate instead of updating it;
+                                - any of the three requests could fail on its own, leaving a letter
+                                  with no journey or a journey pointing at nothing.
 
-                            // Generate cover letter content using AI
-                            const generateRes = await fetch('/api/ai/cover-letter-generate', {
+                              /api/journey-documents/create runs the same server-side generator the
+                              sidebar and the auto-apply worker use — full job description, ATS
+                              keywords, gap analysis and the CV's serialized experience — and writes
+                              `journey.coverLetterId` itself. One path, one letter. It reuses an
+                              existing `cvId` and only generates what is missing, so clicking this
+                              does not replace a tailored CV.
+                            */
+                            const res = await fetch('/api/journey-documents/create', {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                cvData: cvData.data?.cv || cvData.cv || cvData,
-                                jobData: jobData.data?.job || jobData.job || jobData,
-                                userId: session.user.id
-                              })
+                              body: JSON.stringify({ journeyId: journey.id }),
                             });
 
-                            if (!generateRes.ok) {
-                              throw new Error('Failed to generate cover letter content');
+                            if (!res.ok) {
+                              const payload = await res.json().catch(() => null);
+                              throw new Error(
+                                payload?.error || 'Document generation failed (HTTP ' + res.status + ')'
+                              );
                             }
 
-                            const generateResult = await generateRes.json();
-                            const coverLetterContent = generateResult.content || generateResult.body || generateResult.data?.content;
-
-                            // Create cover letter document and link to journey
-                            const createRes = await fetch('/api/cover-letters', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                userId: session.user.id,
-                                title: `Cover Letter - ${journey.jobTitle} at ${journey.company}`,
-                                content: coverLetterContent,
-                                jobId: journey.jobId,
-                                journeyId: journey.id,
-                                status: 'draft'
-                              })
-                            });
-
-                            if (!createRes.ok) {
-                              throw new Error('Failed to create cover letter');
-                            }
-
-                            const createResult = await createRes.json();
-                            const newCoverLetterId = createResult.data?.id || createResult.id;
-
-                            if (newCoverLetterId) {
-                              // PUT, not PATCH. `/api/application-journey/[id]`
-                              // exports GET and PUT only, so the previous PATCH
-                              // returned 405: the cover letter was created but
-                              // never linked to the journey, while the success
-                              // toast below still fired. The response is now
-                              // checked so a link failure surfaces as an error
-                              // instead of a false success.
-                              const linkRes = await fetch(`/api/application-journey/${journey.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  userId: session.user.id,
-                                  coverLetterId: newCoverLetterId
-                                })
-                              });
-
-                              if (!linkRes.ok) {
-                                throw new Error(
-                                  `Failed to link cover letter to journey (HTTP ${linkRes.status})`
-                                );
-                              }
-
-                              toast.success('Cover letter generated successfully!');
-                              // Trigger refresh of journey data
-                              window.location.reload();
-                            }
+                            toast.success('Cover letter generated successfully!');
+                            // Trigger refresh of journey data
+                            window.location.reload();
                           } catch (error) {
                             console.error('Error generating cover letter:', error);
-                            toast.error('Failed to generate cover letter');
+                            toast.error(
+                              error instanceof Error ? error.message : 'Failed to generate cover letter'
+                            );
                           } finally {
                             setIsAutoCreatingCoverLetter(false);
                           }
                         }}
-                        disabled={isAutoCreatingCoverLetter}
+                                                disabled={isAutoCreatingCoverLetter}
                         className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-small font-medium rounded transition-colors border border-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
