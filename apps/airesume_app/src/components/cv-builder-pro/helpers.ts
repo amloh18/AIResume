@@ -25,6 +25,22 @@ export const setNestedValue = (obj: any, path: string, value: any) => {
 export const generateId = () => Math.random().toString(36).substr(2, 9);
 
 /**
+ * Default titles and subtitles for adding entries to list collections.
+ */
+export const ADD_ENTRY_PREVIEW: Record<string, { title: string; subtitle: string }> = {
+  experience: { title: 'Add Experience', subtitle: 'Add a new role with company, dates, and achievements' },
+  education: { title: 'Add Education', subtitle: 'Add a degree, institution, and study period' },
+  projects: { title: 'Add Project', subtitle: 'Showcase another project, link, or key milestone' },
+  certifications: { title: 'Add Certification', subtitle: 'Add a professional credential or license' },
+  awards: { title: 'Add Award', subtitle: 'Highlight another honor or achievement' },
+  publications: { title: 'Add Publication', subtitle: 'Add a paper, article, or authored work' },
+  volunteer: { title: 'Add Volunteer Work', subtitle: 'Add community contribution or cause' },
+  references: { title: 'Add Reference', subtitle: 'Add a referee contact or recommendation' },
+  languages: { title: 'Add Language', subtitle: 'Add another language and proficiency' },
+  interests: { title: 'Add Interest', subtitle: 'Add another hobby or personal interest' },
+};
+
+/**
  * A copy of `list[index]`, inserted directly AFTER it, with a fresh id.
  *
  * The id is the entry's identity everywhere else — the pagination key

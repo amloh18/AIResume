@@ -11,35 +11,7 @@ import {
   ENTRY_RAIL_WIDTH_PX,
   computeEntryRailPosition,
 } from './CoreUI';
-import { duplicateEntryAt } from '../helpers';
-
-/**
- * Grace period between the pointer leaving an entry (or its rail) and the rail
- * fading out.
- *
- * The rail does not touch the entry — it floats in the page's left gutter — so
- * crossing to it always leaves the entry's box first. Without this delay
- * `mouseleave` would close the rail while the pointer is still in the gap, and
- * the control would be impossible to click. Long enough to cross 10px at any
- * sane pointer speed, short enough that the rail still feels attached.
- */
-const RAIL_CLOSE_DELAY_MS = 180;
-
-/**
- * Default titles and subtitles for adding entries to list collections.
- */
-export const ADD_ENTRY_PREVIEW: Record<string, { title: string; subtitle: string }> = {
-  experience: { title: 'Add Experience', subtitle: 'Add a new role with company, dates, and achievements' },
-  education: { title: 'Add Education', subtitle: 'Add a degree, institution, and study period' },
-  projects: { title: 'Add Project', subtitle: 'Showcase another project, link, or key milestone' },
-  certifications: { title: 'Add Certification', subtitle: 'Add a professional credential or license' },
-  awards: { title: 'Add Award', subtitle: 'Highlight another honor or achievement' },
-  publications: { title: 'Add Publication', subtitle: 'Add a paper, article, or authored work' },
-  volunteer: { title: 'Add Volunteer Work', subtitle: 'Add community contribution or cause' },
-  references: { title: 'Add Reference', subtitle: 'Add a referee contact or recommendation' },
-  languages: { title: 'Add Language', subtitle: 'Add another language and proficiency' },
-  interests: { title: 'Add Interest', subtitle: 'Add another hobby or personal interest' },
-};
+import { duplicateEntryAt, ADD_ENTRY_PREVIEW } from '../helpers';
 
 // REUSABLE ENTRY WRAPPER
 // ==========================================

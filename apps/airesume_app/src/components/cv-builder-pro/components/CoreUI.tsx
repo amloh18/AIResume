@@ -5,10 +5,9 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
-import { ADD_ENTRY_PREVIEW } from './ListEntry';
 import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
 import { suggestNextSections } from '../section-suggestions';
-import { getNestedValue, escapeRegExp, formatCVDate } from '../helpers';
+import { getNestedValue, escapeRegExp, formatCVDate, ADD_ENTRY_PREVIEW } from '../helpers';
 import { AnimatePresence } from 'framer-motion';
 import { SNIPPET_CATEGORY_JSON_PATH } from '@/lib/utils/cv-snippet-data';
 import { resolveEmptyFieldPlaceholder } from '@/lib/utils/cv-field-labels';
@@ -506,26 +505,19 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
    * the controls.
    */
   const usePortalSlot = (id: string) => {
-    const [el, setEl] = useState<HTMLElement | null>(() => (typeof document !== 'undefined' ? document.getElementById(id) : null));
+    const [el, setEl] = useState<HTMLElement | null>(null);
     useEffect(() => {
       const found = document.getElementById(id);
       if (found) {
         setEl(found);
         return;
       }
-      let rafId: number;
-      const poll = () => {
-        const target = document.getElementById(id);
-        if (target) {
-          setEl(target);
-        } else {
-          rafId = requestAnimationFrame(poll);
-        }
-      };
-      rafId = requestAnimationFrame(poll);
-      return () => cancelAnimationFrame(rafId);
+      const timer = setTimeout(() => {
+        setEl(document.getElementById(id));
+      }, 50);
+      return () => clearTimeout(timer);
     }, [id]);
-    return el || (typeof document !== 'undefined' ? document.getElementById(id) : null);
+    return el;
   };
 
   /**
@@ -1178,8 +1170,8 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const isHeaderPage = assignedPage === pageIdx;
 
   const collectionKey = (SnippetComponent?.category || '').toLowerCase();
-  const addEntryInfo = ADD_ENTRY_PREVIEW[collectionKey];
-  const listEntries = cvData?.[collectionKey];
+  const addEntryInfo = ADD_ENTRY_PREVIEW?.[collectionKey];
+  const listEntries = collectionKey ? cvData?.[collectionKey] : null;
   const hasListEntries = Array.isArray(listEntries) && listEntries.length > 0;
   const lastListEntry = hasListEntries ? listEntries[listEntries.length - 1] : null;
   const isSnippetLastPage = !lastListEntry || (ctx?.pageAssignments?.[`${instance.id}_entry_${lastListEntry.id}`] ?? 0) === pageIdx;
