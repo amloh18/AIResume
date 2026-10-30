@@ -96,7 +96,7 @@ export default function JobStatusActionChip({
           onAutomationAction(job, badge.action!.id);
         }}
         title={badge.title || badge.action.label}
-        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full transition-colors whitespace-nowrap ${ACTION_STYLES[badge.action.id]}`}
+        className={`text-[11px] font-semibold px-2 py-0.5 rounded-md transition-colors whitespace-nowrap ${ACTION_STYLES[badge.action.id]}`}
       >
         {badge.action.label}
       </button>

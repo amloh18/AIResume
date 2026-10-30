@@ -2446,7 +2446,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         )}
                         <p className="text-small font-semibold">{generationState.title}</p>
                         {generationBadgeLabel && (
-                          <span className="rounded-full border border-current/20 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
+                          <span className="rounded-md border border-current/20 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
                             {generationBadgeLabel}
                           </span>
                         )}

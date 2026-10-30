@@ -1,9 +1,12 @@
 // @ts-nocheck pre-existing type escape — removal tracked as R14 in docs/application-automation/fix-tasks.md
 import { getConnection } from '@/lib/database';
 import { JobApplication, ApplicationJourney, User } from '@/models';
-import { sendEmail } from '@/lib/email-service';
+import ActivityLog from '@/models/ActivityLog';
 import SystemEmailTracker from './SystemEmailTracker';
 import { mixedIdFilter } from '@/lib/utils/mixed-id';
+import { triggerService } from './triggerEmailService';
+import { getAutomationConfig } from './emailAutomationService';
+import { renderDigestItems, type DigestItem } from '@/lib/email-automations';
 
 interface DailySummary {
   jobsAdded: number;
@@ -12,56 +15,67 @@ interface DailySummary {
   documentsReady: number;
 }
 
+interface DigestResult {
+  summary: DailySummary;
+  actionItems: DigestItem[];
+}
+
 interface UserSummary {
   userId: string;
   email: string;
   firstName: string;
   summary: DailySummary;
-  isFreePlan: boolean;
+  actionItems: DigestItem[];
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function startOfToday(): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function daysUntil(date: Date): string {
+  const diffHours = Math.round((date.getTime() - Date.now()) / (60 * 60 * 1000));
+  if (diffHours < 0) {
+    const days = Math.abs(Math.ceil(diffHours / 24));
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  }
+  if (diffHours <= 24) return 'today';
+  const days = Math.ceil(diffHours / 24);
+  return `in ${days} day${days === 1 ? '' : 's'}`;
+}
+
+/**
+ * Daily digest service.
+ *
+ * This is now the single daily email: the old "Job Application Report" and the
+ * per-job deadline / follow-up / action-required emails are merged into one
+ * message. The per-job notification services keep their in-app notifications
+ * but no longer request an email channel, so the email quota is spent once per
+ * user per day instead of once per job event.
+ */
 class DailySummaryEmailService {
-  /**
-   * Get daily summary for a user
-   */
   async getUserDailySummary(
     userId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<DailySummary | null> {
+  ): Promise<DigestResult | null> {
     await getConnection();
 
-    // `JobApplication.userId` is a `Schema.Types.Mixed` path, so Mongoose does not cast the query
-    // value: a bare ObjectId misses the string-stored rows and vice versa (SB-06). Measured
-    // 2026-09-27 — objectId 84 / string 15.
     const userFilter = mixedIdFilter(userId);
 
-    // Get jobs added in the last 24 hours
     const jobsAdded = await JobApplication.countDocuments({
       userId: userFilter,
       createdAt: { $gte: startDate, $lte: endDate },
     });
 
-    /*
-      Jobs submitted in the last 24 hours.
-
-      `appliedAt` is the authoritative submission timestamp — the same field `/api/dashboard/streak`
-      and `entitlement-service` already count on — and it is set by both writers that reach
-      `applied` (`processApplication.ts:208`, `unifiedApplyService.ts:471`).
-
-      This used to query `'statusHistory.status'` / `'statusHistory.changedAt'` with a
-      `statusHistory: { $exists: false }` fallback. `JobApplication` has **no** `statusHistory`
-      path — the same defect class as SB-17 — so the first branch matched nothing (measured: 0 of 99
-      documents carry the field) and the fallback's guard was a tautology that excluded nothing.
-      The count therefore silently degraded to "status is `applied` AND `updatedAt` is in the
-      window", which any unrelated write (a note, a stage change) drags into today and re-counts.
-    */
     const jobsApplied = await JobApplication.countDocuments({
       userId: userFilter,
       $or: [
         { appliedAt: { $gte: startDate, $lte: endDate } },
         {
-          // The state machine's own trail, for a transition recorded without a timestamp write.
           stageHistory: {
             $elemMatch: {
               internalStatus: 'applied',
@@ -70,7 +84,6 @@ class DailySummaryEmailService {
           },
         },
         {
-          // Legacy rows that reached `applied` with no timestamp at all (measured: 2 of 11).
           status: 'applied',
           appliedAt: { $exists: false },
           updatedAt: { $gte: startDate, $lte: endDate },
@@ -78,15 +91,6 @@ class DailySummaryEmailService {
       ],
     });
 
-    /*
-      Interviews in the last 24 hours.
-
-      There is no `interviewAt` field, and the state machine has never recorded an `interview`
-      entry (measured: `stageHistory.internalStatus` only ever holds processing / review_required /
-      saved / form_detected / automation_failed / queued), so this is necessarily derived from the
-      current status. The history branch is kept so it starts counting the moment the state machine
-      does record one.
-    */
     const interviewsScheduled = await JobApplication.countDocuments({
       userId: userFilter,
       $or: [
@@ -102,9 +106,6 @@ class DailySummaryEmailService {
       ],
     });
 
-    // Get documents ready in the last 24 hours (journeys with documents created).
-    // `ApplicationJourney.userId` is a plain `String` path, so Mongoose casts the value for us and
-    // the raw string is the correct query — deliberately no `mixedIdFilter` here (SB-06).
     const documentsReady = await ApplicationJourney.countDocuments({
       userId,
       'metadata.updatedAt': { $gte: startDate, $lte: endDate },
@@ -114,165 +115,142 @@ class DailySummaryEmailService {
       ],
     });
 
-    // NOTE: a `jobsByStatus` block used to run six more `countDocuments` here and return the result.
-    // Nothing ever read it — neither template touches it and `getUserDailySummary` has exactly one
-    // caller, `sendDailySummary` — so it was six wasted round-trips **per user** on a cron that
-    // walks the whole user table. Removed rather than left as decoration.
+    const actionItems = await this.getActionItems(userId);
 
-    // Only return summary if there's activity
-    if (jobsAdded === 0 && jobsApplied === 0 && interviewsScheduled === 0 && documentsReady === 0) {
+    if (
+      jobsAdded === 0 &&
+      jobsApplied === 0 &&
+      interviewsScheduled === 0 &&
+      documentsReady === 0 &&
+      actionItems.length === 0
+    ) {
       return null;
     }
 
     return {
-      jobsAdded,
-      jobsApplied,
-      interviewsScheduled,
-      documentsReady,
+      summary: { jobsAdded, jobsApplied, interviewsScheduled, documentsReady },
+      actionItems,
     };
   }
 
   /**
-   * Generate HTML email template for daily summary
+   * Everything that needs the user's attention today: deadlines in the next
+   * three days, overdue follow-ups, and applications parked for approval or
+   * retry. Capped so the email stays readable.
    */
-  private getEmailTemplate(userSummary: UserSummary): string {
-    const { summary, firstName, isFreePlan } = userSummary;
-    const date = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  private async getActionItems(userId: string): Promise<DigestItem[]> {
+    const userFilter = mixedIdFilter(userId);
+    const now = new Date();
+    const inThreeDays = new Date(now.getTime() + 3 * DAY_MS);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * DAY_MS);
+    const items: DigestItem[] = [];
 
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Job Application Report</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #ffffff; background-color: #1a230f; margin: 0; padding: 0;">
-  
-  <!-- Main Container -->
-  <div style="max-width: 600px; margin: 0 auto; background-color: #141810; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);">
-    
-    <!-- Header -->
-    <div style="background-color: #141810; padding: 30px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
-        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/images/logo.png" alt="AIResume" style="height: 40px; display: block;">
-      </div>
-      <p style="color: #757575; margin: 0; font-size: 14px;">${date}</p>
-    </div>
-    
-    <!-- Content -->
-    <div style="padding: 30px;">
-      <p style="font-size: 16px; margin: 0 0 25px 0; color: #ffffff;">Hi ${firstName || 'there'},</p>
-      
-      <p style="font-size: 16px; margin: 0 0 30px 0; color: #e5e5e5;">Here is your daily snapshot of your job search progress.</p>
-      
-      <!-- Daily Activity Cards -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
-        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsAdded}</div>
-          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Jobs Added</div>
-        </div>
-        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.jobsApplied}</div>
-          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Applied</div>
-        </div>
-        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
-          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Interviews</div>
-        </div>
-        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
-          <div style="font-size: 24px; font-weight: 800; color: #013f2e; margin-bottom: 5px;">${summary.documentsReady}</div>
-          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Docs Ready</div>
-        </div>
-      </div>
-      
-      <!-- Upgrade Section (Only for Free Plan) -->
-      ${isFreePlan ? `
-      <div style="background: linear-gradient(135deg, rgba(1, 63, 46, 0.1) 0%, rgba(1, 63, 46, 0.05) 100%); border: 1px solid rgba(1, 63, 46, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
-        <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 18px;">Unlock Your Full Potential 🚀</h3>
-        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.</p>
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing" 
-           style="display: inline-block; background: linear-gradient(to right, #013f2e, #02523c); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
-          Upgrade to Pro
-        </a>
-      </div>
-      ` : ''}
+    const [deadlines, followUps, blocked] = await Promise.all([
+      JobApplication.find({
+        userId: userFilter,
+        deadline: { $gte: sevenDaysAgo, $lte: inThreeDays },
+        status: { $nin: ['rejected', 'withdrawn', 'hired'] },
+      })
+        .select('_id jobTitle company deadline status')
+        .limit(10)
+        .lean(),
+      JobApplication.find({
+        userId: userFilter,
+        followUps: { $exists: true, $ne: [] },
+        status: { $in: ['applied', 'screening', 'interview'] },
+      })
+        .select('_id jobTitle company followUps')
+        .limit(10)
+        .lean(),
+      JobApplication.find({
+        userId: userFilter,
+        status: { $in: ['review_required', 'automation_failed'] },
+      })
+        .select('_id jobTitle company status automationReason')
+        .limit(10)
+        .lean(),
+    ]);
 
-      <!-- Dashboard Button -->
-      <div style="text-align: center;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard" 
-           style="display: inline-block; background-color: #313a28; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.08);">
-          Go to Dashboard
-        </a>
-      </div>
-      
-    </div>
-    
-    <div style="background-color: #141810; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
-      <p style="font-size: 12px; color: #757575; margin: 0;">
-        &copy; 2026 AIResume by Morigrid Labs. All rights reserved.<br>
-        You received this email because you have active job applications.
-      </p>
-    </div>
-  </div>
-</body>
-</html>
-    `.trim();
+    for (const job of deadlines as any[]) {
+      const deadline = new Date(job.deadline);
+      const when = daysUntil(deadline);
+      const missed = deadline.getTime() < now.getTime();
+      items.push({
+        kind: 'deadline',
+        title: missed
+          ? `Deadline missed — ${job.jobTitle} at ${job.company}`
+          : `Deadline ${when} — ${job.jobTitle} at ${job.company}`,
+        message: missed
+          ? 'This deadline has passed. Update the status so your tracker stays accurate.'
+          : 'Finish and submit this application before the deadline.',
+        url: `/dashboard/jobs?tab=applications&jobId=${job._id}`,
+        priority: missed ? 'high' : when === 'today' ? 'urgent' : 'high',
+      });
+    }
+
+    for (const job of followUps as any[]) {
+      const overdue = (job.followUps || []).find(
+        (f: any) => f?.date && new Date(f.date) < now && !f.outcome
+      );
+      if (!overdue) continue;
+      const days = Math.max(
+        1,
+        Math.floor((now.getTime() - new Date(overdue.date).getTime()) / DAY_MS)
+      );
+      items.push({
+        kind: 'follow_up',
+        title: `Follow up — ${job.jobTitle} at ${job.company}`,
+        message: `Your follow-up was scheduled ${days} day${days === 1 ? '' : 's'} ago and is still open.`,
+        url: `/dashboard/jobs?tab=applications&jobId=${job._id}`,
+        priority: days > 7 ? 'high' : 'medium',
+      });
+    }
+
+    for (const job of blocked as any[]) {
+      items.push({
+        kind: 'action_required',
+        title:
+          job.status === 'automation_failed'
+            ? `Submission failed — ${job.jobTitle} at ${job.company}`
+            : `Approval needed — ${job.jobTitle} at ${job.company}`,
+        message:
+          job.automationReason ||
+          (job.status === 'automation_failed'
+            ? 'Open the application to retry, or take over and apply manually.'
+            : 'We paused this application until you confirm the details.'),
+        url: `/dashboard/jobs?tab=applications&jobId=${job._id}`,
+        priority: 'urgent',
+      });
+    }
+
+    const rank: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+    return items.sort((a, b) => (rank[a.priority || 'medium'] ?? 2) - (rank[b.priority || 'medium'] ?? 2)).slice(0, 8);
+  }
+
+  private digestSummaryHtml(summary: DailySummary): string {
+    return (
+      `Since yesterday you added <strong>${summary.jobsAdded}</strong> job${summary.jobsAdded === 1 ? '' : 's'}, ` +
+      `submitted <strong>${summary.jobsApplied}</strong> application${summary.jobsApplied === 1 ? '' : 's'}, ` +
+      `have <strong>${summary.interviewsScheduled}</strong> interview${summary.interviewsScheduled === 1 ? '' : 's'} scheduled ` +
+      `and <strong>${summary.documentsReady}</strong> document${summary.documentsReady === 1 ? '' : 's'} ready.`
+    );
+  }
+
+  private async alreadySentToday(userEmail: string): Promise<boolean> {
+    const existing = await ActivityLog.findOne({
+      userEmail,
+      action: 'system_email_sent',
+      'resource.id': 'automation:daily_digest',
+      timestamp: { $gte: startOfToday() },
+    })
+      .select('_id')
+      .lean();
+    return !!existing;
   }
 
   /**
-   * Generate text email template for daily summary
-   */
-  private getTextTemplate(userSummary: UserSummary): string {
-    const { summary, firstName, isFreePlan } = userSummary;
-    const date = new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    return `
-Job Application Report
-${date}
-
-Hi ${firstName || 'there'},
-
-Here is your daily snapshot of your job search progress.
-
-TODAY'S ACTIVITY
-----------------
-Jobs Added: ${summary.jobsAdded}
-Applied: ${summary.jobsApplied}
-Interviews: ${summary.interviewsScheduled}
-Docs Ready: ${summary.documentsReady}
-
-${isFreePlan ? `
-UNLOCK YOUR FULL POTENTIAL
---------------------------
-Get unlimited AI tailoring, advanced analytics, and priority support with AIResume Pro.
-Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard/settings?tab=billing
-` : ''}
-
-View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com'}/dashboard
-
----
-© 2026 AIResume by Morigrid Labs. All rights reserved.
-    `.trim();
-  }
-
-  /**
-   * Send daily summary email to a user
-   * 
-   * IMPORTANT: This method ONLY uses real database data. It NEVER uses hardcoded or mock data.
-   * - All job counts are queried from the database
-   * - If there's no activity, the email is NOT sent (returns early)
-   * - All summary data comes from actual user job applications
+   * Send the digest to one user. Returns early (no email) when the automation is
+   * disabled, the user opted out, or there is nothing to report.
    */
   async sendDailySummary(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -283,61 +261,75 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume
         return { success: false, error: 'User not found or no email address' };
       }
 
-      // Check if daily summary email is enabled in user settings
-      const dailySummaryEnabled = user.settings?.notifications?.email?.dailySummary ?? true;
-      if (!dailySummaryEnabled) {
-        return { success: true, error: 'Daily summary email is disabled by user' };
+      const config = await getAutomationConfig('daily_digest');
+      if (!config || !config.enabled) {
+        return { success: true, error: 'Daily digest automation is disabled' };
       }
 
-      // Get summary for last 24 hours - ALL DATA COMES FROM DATABASE, NO HARDCODED VALUES
+      const dailySummaryEnabled = user.settings?.notifications?.email?.dailySummary ?? true;
+      if (!dailySummaryEnabled) {
+        return { success: true, error: 'Daily digest email is disabled by user' };
+      }
+
+      if (await this.alreadySentToday(user.email)) {
+        return { success: true, error: 'Daily digest already sent today' };
+      }
+
       const endDate = new Date();
-      const startDate = new Date(endDate);
-      startDate.setDate(startDate.getDate() - 1);
+      const startDate = new Date(endDate.getTime() - DAY_MS);
 
-      const summary = await this.getUserDailySummary(userId, startDate, endDate);
-
-      // Only send if there's activity - NO MOCK DATA IS EVER USED
-      if (!summary) {
+      const result = await this.getUserDailySummary(userId, startDate, endDate);
+      if (!result) {
         return { success: true, error: 'No activity to summarize' };
       }
 
-      // Check if user is on free plan (starter_monthly is the renamed free plan)
-      const isFreePlan = !user.subscription?.planId ||
-        user.subscription.planId === 'free' ||
-        user.subscription.planId === 'starter_monthly';
-
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
       const userSummary: UserSummary = {
         userId,
         email: user.email,
         firstName: user.firstName || 'there',
-        summary,
-        isFreePlan,
+        summary: result.summary,
+        actionItems: result.actionItems,
       };
 
-      const html = this.getEmailTemplate(userSummary);
-      const text = this.getTextTemplate(userSummary);
+      const sent = await triggerService.sendCustom(
+        {
+          key: 'daily_digest',
+          name: config.name,
+          category: config.category,
+          subject: config.subject,
+          htmlContent: config.htmlContent,
+          previewText: config.previewText,
+          fromName: config.fromName,
+          fromEmail: config.fromEmail,
+          tags: ['automated', 'reports', 'daily_digest'],
+        },
+        {
+          id: String(user._id),
+          email: user.email,
+          firstName: userSummary.firstName,
+        },
+        {
+          appUrl,
+          digestSummary: this.digestSummaryHtml(userSummary.summary),
+          digestItems: renderDigestItems(userSummary.actionItems, appUrl),
+        },
+        false
+      );
 
-      const result = await sendEmail({
-        to: user.email,
-        subject: `Job Application Report`,
-        text,
-        html,
-      });
-
-      if (result.success) {
-        console.log(`✅ Daily summary email sent to user ${userId}`);
+      if (sent) {
+        console.log(`✅ Daily digest sent to user ${userId}`);
       }
 
-      return result;
+      return sent
+        ? { success: true }
+        : { success: false, error: 'Email delivery failed' };
     } catch (error: any) {
-      console.error(`❌ Failed to send daily summary to user ${userId}:`, error);
+      console.error(`❌ Failed to send daily digest to user ${userId}:`, error);
       return { success: false, error: error.message };
     }
   }
 
-  /**
-   * Send daily summary emails to all active users
-   */
   async sendDailySummariesToAllUsers(): Promise<{
     sent: number;
     skipped: number;
@@ -354,19 +346,26 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume
     };
 
     try {
-      // Get all users with email addresses
-      const users = await User.find({ email: { $exists: true, $ne: '' } })
-        .select('_id email firstName')
+      const config = await getAutomationConfig('daily_digest');
+      if (!config || !config.enabled) {
+        console.log('📧 Daily digest automation is disabled — nothing to send.');
+        return results;
+      }
+
+      const users = await User.find({
+        email: { $exists: true, $ne: '' },
+        isAnonymous: { $ne: true },
+      })
+        .select('_id')
         .lean();
 
-      console.log(`📧 Processing daily summaries for ${users.length} users`);
+      console.log(`📧 Processing daily digests for ${users.length} users`);
 
       for (const user of users) {
         try {
           const result = await this.sendDailySummary(user._id.toString());
-
           if (result.success) {
-            if (result.error === 'No activity to summarize') {
+            if (result.error) {
               results.skipped++;
             } else {
               results.sent++;
@@ -381,16 +380,17 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume
         }
       }
 
-      console.log(`✅ Daily summary emails completed: ${results.sent} sent, ${results.skipped} skipped, ${results.failed} failed`);
+      console.log(
+        `✅ Daily digests completed: ${results.sent} sent, ${results.skipped} skipped, ${results.failed} failed`
+      );
 
-      // Track this batch in the system campaign log
       if (results.sent > 0) {
         await SystemEmailTracker.trackEmail('daily_summary', results.sent);
       }
 
       return results;
     } catch (error: any) {
-      console.error('❌ Error sending daily summaries:', error);
+      console.error('❌ Error sending daily digests:', error);
       throw error;
     }
   }

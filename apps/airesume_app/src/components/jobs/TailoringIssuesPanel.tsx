@@ -139,7 +139,7 @@ export const TailoringIssuesPanel: React.FC<TailoringIssuesPanelProps> = ({
                 {hasBlockers ? 'CV / Cover Letter Requires Attention' : 'Tailoring Optimization Suggested'}
               </h4>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
                   score >= 80
                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                     : score >= 50

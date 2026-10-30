@@ -753,17 +753,24 @@ export async function POST(request: NextRequest) {
     // Trigger Automated Emails (Fire and Forget)
     setTimeout(async () => {
       try {
-        const { triggerService } = await import('@/lib/services/triggerEmailService');
+        const { sendAutomationEmail } = await import('@/lib/services/emailAutomationService');
         // We need full user for personalization
         const { User } = await import('@/models');
         const user = await User.findById(userId).select('email firstName lastName');
         if (user) {
-          // 1. Saved Success (with deduplication to avoid spamming every save)
-          await triggerService.trigger('5-draft-saved', user, {}, true);
+          const recipient = {
+            id: String(user._id),
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          };
+
+          // 1. Draft saved (deduplicated — one email per user, not per save)
+          await sendAutomationEmail('draft_saved', recipient);
 
           // 2. Guide to Master CV (if first CV)
           if (isFirstCV) {
-            await triggerService.trigger('9-master-cv-guide', user, {}, true);
+            await sendAutomationEmail('master_cv_guide', recipient);
           }
         }
       } catch (err) {

@@ -3229,13 +3229,43 @@ ${userName}`
                       </div>
                     </div>
 
-                    <div className="relative hidden lg:block space-y-4 pl-1">
-                      {/* Connecting Vertical Track */}
-                      <div className="absolute left-[17px] top-4 bottom-4 w-[2px] bg-gray-200/80 dark:bg-white/10" />
+                    <div className="relative hidden lg:block pl-1">
+                      {/*
+                        Timeline track, drawn as one segment PER STAGE.
 
+                        It used to be a single grey rule spanning the whole list with
+                        the nodes sitting on top of it — so the rail was equally
+                        heavy above the first node and after the last one, and it
+                        told you nothing about progress: a journey stuck on
+                        "Tailored" looked exactly like one at "Offer".
+
+                        Each stage now owns the segment that leaves it, and that
+                        segment carries the stage's state:
+
+                          completed  solid emerald — the journey has been here
+                          current /  emerald fading into the upcoming grey — the
+                          processing journey is *in* this stage, not past it
+                          blocked /  amber or rose — the run stopped here
+                          failed
+                          upcoming   hairline grey — not reached yet
+
+                        The fill therefore stops exactly at the node the user is
+                        on, which is what makes it read as a timeline rather than
+                        a decorative line.
+                      */}
                       {stageItems.map((stage, stageIndex) => {
                         const Icon = stage.icon;
                         const status = stage.status as StageStatus;
+                        const segmentTone =
+                          status === 'completed'
+                            ? 'bg-emerald-500'
+                            : status === 'failed'
+                              ? 'bg-rose-500/50'
+                              : status === 'blocked'
+                                ? 'bg-amber-500/60'
+                                : status === 'current' || status === 'processing'
+                                  ? 'bg-gradient-to-b from-emerald-500 via-emerald-500/50 to-gray-200 dark:to-white/10'
+                                  : 'bg-gray-200 dark:bg-white/10';
 
                         const nodeClasses = (() => {
                           switch (status) {
@@ -3260,8 +3290,22 @@ ${userName}`
                             initial={{ opacity: 0, x: -12 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: stageIndex * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                            className="relative flex items-start gap-3.5 group"
+                            className={`relative flex items-start gap-3.5 group ${
+                              stageIndex === stageItems.length - 1 ? '' : 'pb-4'
+                            }`}
                           >
+                            {/*
+                              The connector runs from the bottom of this node to the
+                              top of the next one, across the row's own padding —
+                              never above the first node and never past the last, so
+                              the track has a defined start and end.
+                            */}
+                            {stageIndex < stageItems.length - 1 && (
+                              <span
+                                aria-hidden="true"
+                                className={`absolute left-[17px] top-9 bottom-0 w-[2px] rounded-full ${segmentTone}`}
+                              />
+                            )}
                             {/* Round Icon Node */}
                             <div
                               className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 border ${nodeClasses}`}
@@ -3604,86 +3648,19 @@ ${userName}`
                             </span>
                           </div>
 
-                          {/* The stage rail — every stage, live, one row */}
-                          <div
-                            role="list"
-                            aria-label="Application stages"
-                            className="flex items-start justify-between border-t border-gray-100 px-2 pb-2 pt-3 dark:border-white/5"
-                          >
-                            {stageItems.map((stage, stageIndex) => {
-                              const Icon = stage.icon;
-                              const status = stage.status as StageStatus;
-                              const isDone = status === 'completed';
-                              const isLive = status === 'current' || status === 'processing';
-                              const connector = isDone
-                                ? 'bg-emerald-500'
-                                : isLive
-                                  ? 'bg-lime-500/50'
-                                  : 'bg-gray-200 dark:bg-white/10';
-                              const nodeClasses = isDone
-                                ? `${stage.completedColor} shadow-sm`
-                                : status === 'processing'
-                                  ? 'animate-pulse border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                  : status === 'current'
-                                    ? 'border-lime-500/40 bg-lime-500/15 text-lime-700 dark:text-lime-300'
-                                    : status === 'blocked'
-                                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                                      : status === 'failed'
-                                        ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                        : 'border-gray-200/80 bg-gray-50 text-gray-400 dark:border-white/10 dark:bg-white/5 dark:text-gray-500';
+                          {/*
+                            No second stage rail here.
 
-                              return (
-                                <div
-                                  key={stage.key}
-                                  role="listitem"
-                                  className="relative flex min-w-0 flex-1 flex-col items-center gap-1.5 px-0.5"
-                                  title={`${stage.label} — ${stage.statusLabel || stage.subLabel || ''}`}
-                                >
-                                  {stageIndex > 0 && (
-                                    <span
-                                      aria-hidden="true"
-                                      className={`absolute left-0 top-4 h-[2px] w-1/2 -translate-x-1/2 ${connector}`}
-                                    />
-                                  )}
-                                  {stageIndex < stageItems.length - 1 && (
-                                    <span
-                                      aria-hidden="true"
-                                      className={`absolute right-0 top-4 h-[2px] w-1/2 translate-x-1/2 ${connector}`}
-                                    />
-                                  )}
-                                  <div
-                                    className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-all ${nodeClasses}`}
-                                  >
-                                    {isDone ? (
-                                      <Check className="h-3.5 w-3.5 stroke-[2.5]" />
-                                    ) : status === 'processing' ? (
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : status === 'blocked' ? (
-                                      <span className="text-xs font-black">!</span>
-                                    ) : status === 'failed' ? (
-                                      <X className="h-3.5 w-3.5 stroke-[2.5]" />
-                                    ) : (
-                                      <Icon className="h-3.5 w-3.5 stroke-[2]" />
-                                    )}
-                                  </div>
-                                  <span
-                                    className={`w-full truncate text-center text-[9px] font-bold leading-tight ${
-                                      isLive || isDone
-                                        ? 'text-gray-800 dark:text-gray-100'
-                                        : status === 'blocked'
-                                          ? 'text-amber-700 dark:text-amber-400'
-                                          : status === 'failed'
-                                            ? 'text-rose-700 dark:text-rose-400'
-                                            : 'text-gray-500 dark:text-gray-400'
-                                    }`}
-                                  >
-                                    {stage.label}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-
+                            This tab used to repeat the whole pipeline as a
+                            horizontal strip of six nodes. On desktop the same
+                            six stages were already drawn as the vertical timeline in
+                            the column beside this one, so the sidebar showed the
+                            journey twice — once vertically, once horizontally, at
+                            different sizes and with different colour runs. The rail
+                            lives in the stage column only; this card keeps what the
+                            duplicate could not say: which stage it is on, the step
+                            running now, what is ready, and what to do next.
+                          */}
                           {/* The step running now — or an honest note about the stage */}
                           <div className="border-t border-gray-100 px-4 py-3 dark:border-white/5">
                             {activeProgress ? (

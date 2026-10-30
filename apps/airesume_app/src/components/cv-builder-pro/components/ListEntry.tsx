@@ -13,6 +13,22 @@ import {
 } from './CoreUI';
 import { duplicateEntryAt, ADD_ENTRY_PREVIEW } from '../helpers';
 
+/**
+ * Grace period between the pointer leaving an entry (or its rail) and the rail
+ * fading out.
+ *
+ * The rail does not touch the entry — it floats in the page's left gutter — so
+ * crossing to it always leaves the entry's box first. Without this delay
+ * `mouseleave` would close the rail while the pointer is still in the gap, and
+ * the control would be impossible to click. Long enough to cross 10px at any
+ * sane pointer speed, short enough that the rail still feels attached.
+ *
+ * This lived beside the old ADD_ENTRY_PREVIEW table; when that table moved to
+ * `helpers.ts` the constant was removed with it while `closeRailSoon` kept
+ * reading it, so every entry `mouseleave` threw `ReferenceError` at runtime.
+ */
+const RAIL_CLOSE_DELAY_MS = 180;
+
 // REUSABLE ENTRY WRAPPER
 // ==========================================
 const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any) => {

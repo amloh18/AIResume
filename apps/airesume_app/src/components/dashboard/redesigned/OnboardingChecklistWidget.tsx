@@ -247,7 +247,7 @@ export default function OnboardingChecklistWidget() {
             Welcome to AIResume.
           </h3>
           <div className="flex items-center gap-2 shrink-0">
-            <div className="flex items-center gap-1.5 rounded-full bg-white/80 dark:bg-white/10 border border-white/80 dark:border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-300 shadow-2xs">
+            <div className="flex items-center gap-1.5 rounded-md bg-white/80 dark:bg-white/10 border border-white/80 dark:border-white/10 px-2.5 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-300 shadow-2xs">
               <Target className="w-3 h-3 text-sky-600 dark:text-sky-300" />
               <span>Profile Score</span>
             </div>

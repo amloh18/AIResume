@@ -426,7 +426,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                               <div className="flex items-center gap-1.5 mr-1 text-[11px] font-semibold">
                                 {needsAttention && (
                                   <span
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300"
                                     title="CV/Cover letter requires attention before submitting"
                                   >
                                     <AlertTriangle className="w-3 h-3 text-amber-500" />

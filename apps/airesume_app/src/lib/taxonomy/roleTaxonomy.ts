@@ -495,6 +495,32 @@ function buildLookup(): Map<string, string> {
  * Resolve a job title to its role family ID.
  * Returns null if no match found.
  */
+/**
+ * Does `haystack` contain `phrase` as a whole word sequence?
+ * Used instead of `String.includes` so short keywords ("ai", "qa", "ml") only
+ * match when they stand alone.
+ */
+function containsWholePhrase(haystack: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, 'i').test(haystack);
+}
+
+/**
+ * Words a role title is compared on: lowercase, split on punctuation, 2+ chars.
+ *
+ * Two characters, not three: "qa", "ai" and "ml" are real role words, and the
+ * substring bug that made them dangerous is fixed at the comparison site (whole
+ * words only). Dropping them here instead would silently shorten a phrase
+ * (`"qa lead"` → `["lead"]`) and make it match on the surviving word alone,
+ * which is how "Marketing Lead" resolved to QA.
+ */
+function splitRoleWords(value: string): string[] {
+  return value
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length >= 2);
+}
+
 export function resolveRoleFamily(title: string): string | null {
   const normalized = title.toLowerCase().trim();
   const lookup = buildLookup();
@@ -502,30 +528,64 @@ export function resolveRoleFamily(title: string): string | null {
   // Exact match
   if (lookup.has(normalized)) return lookup.get(normalized)!;
 
-  // Substring match against primary titles (longest match first)
+  /*
+   * Phrase match against primary titles (longest match first), on WORD BOUNDARIES.
+   *
+   * `normalized.includes(pattern)` was a raw substring test, so a two-letter
+   * keyword claimed any word containing it: "av**ai**lable" matched the `ai`
+   * keyword and gave a Janitor posting the ML_ENGINEERING family. Boundaries keep
+   * the legitimate case ("AI Engineer" really does contain the word "ai") and
+   * drop the accidental one.
+   */
   let bestMatch: string | null = null;
   let bestLength = 0;
 
   for (const [pattern, familyId] of lookup) {
-    if (normalized.includes(pattern) && pattern.length > bestLength) {
-      bestMatch = familyId;
-      bestLength = pattern.length;
-    }
+    if (pattern.length <= bestLength) continue;
+    if (!containsWholePhrase(normalized, pattern)) continue;
+    bestMatch = familyId;
+    bestLength = pattern.length;
   }
 
   if (bestMatch) return bestMatch;
 
-  // Word-level match
-  const words = normalized.split(/\s+/);
+  /*
+   * Word-level match — whole words only, best match wins.
+   *
+   * This used to accept a partial substring in either direction
+   * (`w.includes(pw) || pw.includes(w)`), and a single-character or
+   * two-letter pattern word was enough to claim a family. The false positives
+   * were not marginal: `"Janitor/Custodian - Multiple Shifts Available"`
+   * resolved to ML_ENGINEERING because "av-**ai**-lable" contains "ai", and
+   * `"Helper - FASS-HQ"` resolved to SOFTWARE_ENGINEERING. Both then earned the
+   * full same-family role credit (28/35) and appeared as ~50% matches for a
+   * software engineer — the clearest case of a percentage that could not be
+   * trusted.
+   *
+   * Matching is now on whole words of 3+ characters, and the best overlap wins
+   * rather than whichever family happens to come first in the lookup table.
+   */
+  const words = new Set(splitRoleWords(normalized));
+  if (words.size === 0) return null;
+
+  let bestOverlap = 0;
+  let bestOverlapFamily: string | null = null;
+
   for (const [pattern, familyId] of lookup) {
-    const patternWords = pattern.split(/\s+/);
-    const overlap = patternWords.filter((pw) => words.some((w) => w.includes(pw) || pw.includes(w)));
-    if (overlap.length >= Math.ceil(patternWords.length * 0.6)) {
-      return familyId;
+    const patternWords = splitRoleWords(pattern);
+    if (patternWords.length === 0) continue;
+
+    const overlap = patternWords.filter((word) => words.has(word)).length;
+    const required = Math.max(1, Math.ceil(patternWords.length * 0.6));
+    if (overlap < required) continue;
+
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      bestOverlapFamily = familyId;
     }
   }
 
-  return null;
+  return bestOverlapFamily;
 }
 
 /**

@@ -37,7 +37,7 @@ const EDITABLE_FIELDS = [
 
 const MUTABLE_STATUSES = ['draft', 'scheduled', 'cancelled'];
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin(request);
     const EmailCampaign = await loadModels();
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAdmin(request);
     const EmailCampaign = await loadModels();
@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAdmin(request);
     const EmailCampaign = await loadModels();

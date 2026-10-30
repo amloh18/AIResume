@@ -3,7 +3,7 @@
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
+import { ImageIcon, Plus, X, RefreshCw, ChevronUp, ChevronDown, Trash2, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, Sparkles, ChevronLeft, ChevronRight, Columns } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { buildHybridBands, type HybridBlock } from '../hybrid-flow';
 import { suggestNextSections } from '../section-suggestions';
@@ -62,33 +62,16 @@ export const TOOLRAIL_EDGE_Y_PX = 4;
 /**
  * Geometry of the "Add Section" divider (`InsertSnippetHandle`).
  *
- * The strip is 6px tall and pulled 3px into EACH neighbour (`my-[-3px]`), so it
- * straddles the boundary — which means the section above it ends 3px below the
- * strip's own top. The section's lime frame then overhangs that edge by
- * SECTION_FRAME_INSET_Y. So the frame's outer border sits
- * `SNIPPET_STRIP_OVERLAP + SECTION_FRAME_INSET_Y` px below the strip's top.
+ * The collapsed strip is 18px tall and pulled 9px into EACH neighbour
+ * (`-my-[9px]`), so 18 - 18 = 0: it is a hover target that straddles the
+ * boundary between two sections without reserving any document space at all and
+ * without overhanging the section above it (which is what the old 32px strip did
+ * and why the expanded panel looked like it covered the paragraph above it).
  *
- * The pill must hang below THAT edge — not below the strip. Anchoring it to the
- * strip (`top: calc(100% + 4px)`, which is what this used to do) put its top at
- * 196 against a frame bottom of 195: one pixel of clearance, which reads as the
- * pill sitting *on* the border, and overlaps the frame's 4px halo outright.
- * `PILL_BORDER_CLEARANCE` is the visible breather the user asked for.
+ * Keep the two numbers married — height = 2 × inset. If the strip ever grows,
+ * the negative margin has to grow with it or the CV gains a gap between sections.
+ * (`h-[18px] -my-[9px]` on the collapsed strip in `InsertSnippetHandle`.)
  */
-const SNIPPET_STRIP_H = 6; // h-[6px]
-const SNIPPET_STRIP_OVERLAP = SNIPPET_STRIP_H / 2; // my-[-3px]
-export const PILL_BORDER_CLEARANCE = 6;
-/** `top` is relative to the strip's top, so discount the strip's own height. */
-export const PILL_TOP_OFFSET_PX =
-  SNIPPET_STRIP_OVERLAP + SECTION_FRAME_INSET_Y + PILL_BORDER_CLEARANCE - SNIPPET_STRIP_H; // = 9
-
-/**
- * When the section BELOW this handle is selected (`isNextSelected`), that section
- * has the top format rail (`CanvasToolRail`, height 36px, gap 14px) mounted above it.
- * The "+ Add Section" pill must sit OUTSIDE of the section and be offset ABOVE the
- * format rail so the top format rail and section content remain completely visible.
- */
-export const PILL_ABOVE_TOOLRAIL_OFFSET_PX =
-  TOOLRAIL_GAP_PX + TOOLRAIL_HEIGHT_PX + 4; // = 14 + 36 + 4 = 54px
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
@@ -1175,7 +1158,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const hasListEntries = Array.isArray(listEntries) && listEntries.length > 0;
   const lastListEntry = hasListEntries ? listEntries[listEntries.length - 1] : null;
   const isSnippetLastPage = !lastListEntry || (ctx?.pageAssignments?.[`${instance.id}_entry_${lastListEntry.id}`] ?? 0) === pageIdx;
-  const showInflowAddEntry = !readOnly && Boolean(content) && hasListEntries && isSnippetLastPage && Boolean(addEntryInfo) && Boolean(onAddListEntry) && SnippetComponent?.category !== 'Skills';
+
+  /* Declared before anything reads them. `isSelected` and `content` are both
+   * consumed by expressions further up (the inline add-entry affordance and the
+   * section rail), and a `const` read before its declaration is a TDZ
+   * ReferenceError that takes the whole canvas down — the CV Builder error
+   * boundary, not a missing control. Keep the order: selectors first, then
+   * anything derived from rendered content (see `showInflowAddEntry` below). */
+  const isSelected = ctx?.selectedBlockId === instance.id;
 
   const showInlineControls = !readOnly && Boolean(primaryTitleKey) && (isHeaderPage || isSelected);
   // The section action rail always hangs off the section's RIGHT edge. It used
@@ -1185,7 +1175,6 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   // text-formatting rail above, section rail right.
   const sectionRailSide = 'right' as const;
   const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References', 'Languages', 'Interests', 'Skills'].includes(SnippetComponent.category);
-  const isSelected = ctx?.selectedBlockId === instance.id;
   const controls = showInlineControls ? (
     <div
       data-section-rail
@@ -1439,7 +1428,17 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     onAddSkill: ctx?.addSkillToGroup,
     onAddSkillCategory: ctx?.addSkillCategory,
   });
-  
+
+  /* Rendered content exists now, so the emptiness / last-entry checks can run. */
+  const showInflowAddEntry =
+    !readOnly &&
+    Boolean(content) &&
+    hasListEntries &&
+    isSnippetLastPage &&
+    Boolean(addEntryInfo) &&
+    Boolean(onAddListEntry) &&
+    SnippetComponent?.category !== 'Skills';
+
   // In chat mode, hovering a section highlights it as a chat target. Suppressed
   // while the section is the SELECTED object: the lime frame already owns that
   // state, and an emerald ring on the same box read as a second border.
@@ -1518,9 +1517,28 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
               </div>
             ))}
             {showInflowAddEntry && (
+              /*
+                The add-entry card is an OVERLAY, not a row.
+
+                It used to sit in the flow (`mt-2 pt-1` + a ~33px button), so
+                every list section reserved ~44px of empty space for a control
+                that was invisible until you hovered it. On the canvas that read
+                as a gap under the last bullet — and because the gap belonged to
+                the *section*, it also inflated the space above the "Add Section"
+                banner that follows. Absolutely positioned, it costs the document
+                nothing: no layout shift on hover, no extra page height, and the
+                pagination measurement never sees it.
+
+                It is a card in the same visual language as the editor's rail
+                tiles (hairline border, soft surface, lift on hover) rather than
+                a dashed green bar, so the two add affordances on the page —
+                entry and section — read as one family.
+              */
               <div
-                className={`no-print mt-2 pt-1 transition-all duration-150 ${
-                  isSelected ? 'opacity-100' : 'opacity-0 group-hover/inner:opacity-100'
+                className={`no-print absolute left-0 right-0 top-full z-[70] mt-1 transition-all duration-200 ${
+                  isSelected
+                    ? 'pointer-events-auto opacity-100'
+                    : 'pointer-events-none opacity-0 group-hover/inner:pointer-events-auto group-hover/inner:opacity-100'
                 }`}
               >
                 <button
@@ -1531,14 +1549,21 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
                     onAddListEntry?.(SnippetComponent.category);
                   }}
                   title={`Add another ${SnippetComponent.category} entry`}
-                  className="w-full flex items-center gap-2 rounded-lg border border-dashed border-emerald-400/70 bg-emerald-50/70 dark:bg-emerald-500/10 px-2.5 py-1.5 text-left transition-colors hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/15 cursor-pointer"
+                  // Same card as the bottom-right popups: white surface, hairline
+                  // border, one accent edge, tinted icon disc, bold line + grey line.
+                  // Literal colours, not theme tokens — it is drawn on the CV page,
+                  // which is white in both themes, so a `dark:` half would paint a
+                  // black card onto white paper.
+                  className="group/add-entry flex w-full items-center gap-2.5 rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 bg-white px-2.5 py-2 text-left shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl cursor-pointer"
                 >
-                  <Plus size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold leading-tight text-emerald-800 dark:text-emerald-300">{addEntryInfo.title}</span>
-                    <span className="block text-[10px] leading-snug text-emerald-700/70 dark:text-emerald-400/70">{addEntryInfo.subtitle}</span>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/add-entry:scale-110">
+                    <Plus size={12} strokeWidth={2.6} />
                   </span>
-                  <span className="shrink-0 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">Add</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[11px] font-semibold leading-tight text-gray-900">{addEntryInfo.title}</span>
+                    <span className="mt-0.5 block truncate text-[9.5px] leading-snug text-gray-500">{addEntryInfo.subtitle}</span>
+                  </span>
+                  <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-[0.12em] text-emerald-700">Add</span>
                 </button>
               </div>
             )}
@@ -1608,8 +1633,19 @@ export const InsertSnippetHandle = ({
 
   if (!isExpanded) {
     return (
+      /*
+        The collapsed target is exactly the gap between two sections (18px), and
+        its negative margins cancel its own height — so it is a hover target that
+        costs the document zero pixels, and it no longer overhangs the sections
+        above and below it.
+
+        It used to be `h-[32px] -my-[16px]`: 32px of box centred on a 15px gap,
+        which meant its top half lay OVER the previous section's last line. That
+        is why the expanded panel looked like it was covering the paragraph
+        above it — the panel's anchor was already overlapping the text.
+      */
       <div
-        className="group/insert relative w-full h-[32px] -my-[16px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
+        className="group/insert relative w-full h-[18px] -my-[9px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
         onMouseEnter={openPanel}
         onFocus={openPanel}
         onClick={openPanel}
@@ -1617,7 +1653,7 @@ export const InsertSnippetHandle = ({
       >
         <div className="w-full h-[2px] bg-emerald-400/0 group-hover/insert:bg-emerald-500/80 transition-all rounded-full pointer-events-none relative flex items-center justify-center">
           <span className="opacity-0 group-hover/insert:opacity-100 transition-opacity bg-emerald-600 text-white rounded-full p-0.5 shadow-xs scale-75">
-            <Plus size={10} strokeWidth={3} />
+            <Plus size={9} strokeWidth={3} />
           </span>
         </div>
       </div>
@@ -1625,63 +1661,97 @@ export const InsertSnippetHandle = ({
   }
 
   return (
+    /*
+     * Expanded: one card, in the same visual family as the bottom-right popups.
+     *
+     * The old shell was a 2px dashed emerald rectangle padded around a block of
+     * content: it read as a placeholder rather than a control, and its emerald
+     * fill fought the lime section frame next to it. Now the insertion point is a
+     * thin dashed rule, and the panel below it is a white card — hairline border,
+     * a single emerald accent edge, tinted icon disc, title + grey caption — that
+     * happens to sit on the CV page. Colours are literal because the paper is
+     * white in both themes.
+     */
     <div
-      className="w-full my-3 z-[50] transition-all duration-200 no-print"
+      className="w-full my-2.5 z-[50] transition-all duration-200 no-print"
       onMouseEnter={openPanel}
       onMouseLeave={closePanelSoon}
       data-add-section-panel
     >
-      <div className="w-full rounded-2xl border-2 border-dashed border-emerald-400/70 dark:border-emerald-500/50 bg-emerald-50/50 dark:bg-emerald-950/25 p-3.5 shadow-xs transition-all duration-200">
-        <div className="flex items-center justify-between gap-3 mb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-              <Plus size={12} strokeWidth={3} />
-            </div>
-            <div>
-              <span className="text-[12px] font-bold text-gray-900 dark:text-gray-100 block leading-tight">Add Section</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 block leading-tight">Visualise section space & insert here</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            data-insert-browse
-            onClick={browseAll}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 transition-colors cursor-pointer"
-          >
-            All sections <ChevronRight size={12} />
-          </button>
-        </div>
+      <div className="relative mx-auto w-full max-w-[430px]">
+        {/* the seam this panel inserts at */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-[11px] left-0 right-0 h-[2px] rounded-full bg-[repeating-linear-gradient(90deg,rgba(16,185,129,0.6)_0_6px,transparent_6px_12px)]"
+        />
 
-        {suggestions.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {suggestions.map((suggestion) => (
+        <div className="overflow-hidden rounded-2xl border border-gray-200 border-l-4 border-l-emerald-500 bg-white text-gray-900 shadow-2xl shadow-black/10">
+          <div className="flex items-start gap-2.5 p-2.5">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <Plus size={13} strokeWidth={2.6} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] font-semibold leading-snug text-gray-900">Add Section</p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
+                Previews its space here before you insert it.
+              </p>
+            </div>
+            {/* No close affordance when the panel is pinned to an EMPTY zone:
+                there `alwaysVisible` keeps it expanded, so an X would be a dead
+                control. It only exists on the hover-opened panel. */}
+            {!alwaysVisible && (
               <button
-                key={suggestion.category}
                 type="button"
-                data-insert-suggestion={suggestion.category}
-                onClick={(e) => addSuggested(e, suggestion.snippetType)}
-                className="flex flex-col items-start gap-1 p-2.5 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 bg-white/90 dark:bg-black/30 hover:border-emerald-500 dark:hover:border-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-left transition-all duration-150 cursor-pointer group shadow-2xs"
+                onClick={() => setOpen(false)}
+                title="Close"
+                aria-label="Close add section panel"
+                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
               >
-                <div className="flex items-center gap-1.5 w-full">
-                  <span className="w-4 h-4 rounded-md bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                    <Plus size={10} strokeWidth={2.5} />
-                  </span>
-                  <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate">{suggestion.category}</span>
-                </div>
-                <span className="text-[9.5px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">{suggestion.reason}</span>
+                <X size={13} />
               </button>
-            ))}
+            )}
           </div>
-        ) : (
-          <button
-            type="button"
-            data-insert-snippet-btn
-            onClick={browseAll}
-            className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-black/20 text-emerald-600 dark:text-emerald-400 font-bold text-[11px] hover:bg-emerald-500/10 transition-colors cursor-pointer"
-          >
-            <Plus size={13} strokeWidth={2.5} /> Browse & Add Section
-          </button>
-        )}
+
+          {suggestions.length > 0 && (
+            <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion.category}
+                  type="button"
+                  data-insert-suggestion={suggestion.category}
+                  onClick={(e) => addSuggested(e, suggestion.snippetType)}
+                  className="group/sug flex items-start gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-white hover:shadow-md cursor-pointer"
+                >
+                  <span className="mt-[1px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/sug:scale-110">
+                    <Plus size={9} strokeWidth={2.8} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900">
+                      {suggestion.category}
+                    </span>
+                    <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 line-clamp-2">
+                      {suggestion.reason}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-2.5 py-1.5">
+            <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400">
+              Inserts here
+            </span>
+            <button
+              type="button"
+              data-insert-browse
+              onClick={browseAll}
+              className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-700 transition-colors hover:bg-gray-200 cursor-pointer"
+            >
+              {suggestions.length > 0 ? 'All sections' : 'Browse & Add Section'} <ChevronRight size={11} />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

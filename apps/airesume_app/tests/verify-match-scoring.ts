@@ -3,10 +3,15 @@
  * Run with: `npm run verify:match-scoring`.
  *
  * This file encodes the *acceptance criteria* for
- * `docs/application-automation/job-recommendation-plan.md`, so it is EXPECTED
- * TO FAIL until P0/P1 of that plan land. Each failing invariant names the
- * defect it pins; a fix that satisfies the invariant flips the line to `ok`
- * and the exit code to 0.
+ * `docs/application-automation/job-recommendation-plan.md`. Every invariant here
+ * currently holds; when one goes red it names the behaviour that regressed — an
+ * invariant is a regression guard now, not a to-do list.
+ *
+ * INV4, INV5, INV7 and INV11–13 were rewritten when the score became
+ * confidence-weighted fit (plan §4.1a): recency moved out of the match number,
+ * dimensions with no evidence left the denominator, and skill evidence started
+ * coming from the posting body. Their thresholds follow from that model — a
+ * posting that says nothing about the work cannot reach the STRONG band.
  *
  * Everything here is synthetic on purpose — no Mongo, no network — so it keeps
  * working as the `jobs` corpus and the ingestion schema evolve.
@@ -174,17 +179,24 @@ invariant('INV6 · a broad target role does not confer full role credit', () => 
   return scores.join(', ');
 });
 
-// ── 7. Freshness must be a ranking input ────────────────────────────────────
-// AGENTS §11 makes freshness first-class; the scorer has no recency dimension,
-// so a 30-day-old repost and a 2-hour-old posting score the same.
+// ── 7. Freshness must be a RANKING input, not part of "% match" ─────────────
+// AGENTS §13 separates Candidate Fit from Opportunity Quality. Freshness is a
+// property of the posting, not of the candidate, so it orders the feed
+// (`opportunityScore`) and must NOT move the number shown as "N% Match"
+// (`score`). Before the split, two identical jobs read 87% and 50% purely
+// because one was 12 days older.
 
-invariant('INV7 · a stale posting scores below an identical fresh one', () => {
+invariant('INV7 · recency ranks a job without changing its match %', () => {
   const fresh = { ...onsiteJob, postedAt: new Date(Date.now() - 2 * 3600_000) };
   const stale = { ...onsiteJob, postedAt: new Date(Date.now() - 30 * 86400_000) };
-  const a = scoreJobForCandidate(fresh, extractedProfile).score;
-  const b = scoreJobForCandidate(stale, extractedProfile).score;
-  assert.ok(b < a, `2h=${a} vs 30d=${b} — recency is not scored`);
-  return `fresh=${a} stale=${b}`;
+  const a = scoreJobForCandidate(fresh, extractedProfile);
+  const b = scoreJobForCandidate(stale, extractedProfile);
+  assert.equal(b.score, a.score, `match moved with age: 2h=${a.score} 30d=${b.score}`);
+  assert.ok(
+    b.opportunityScore < a.opportunityScore,
+    `ranking ignored recency: 2h=${a.opportunityScore} 30d=${b.opportunityScore}`
+  );
+  return `match ${a.score}/${b.score}, opportunity ${a.opportunityScore}/${b.opportunityScore}`;
 });
 
 // ── 8. Explanations must not assert things the data does not say ────────────
@@ -234,6 +246,55 @@ invariant('INV9 · hard constraints are applied before a page is chosen', () => 
   );
 
   return 'query-level (discover) + post-scoring (recommended)';
+});
+
+// ── 9b. Skills must be read from the posting, not only from keywords[] ─────
+// The `keywords[]` array is optional (aggregator payloads usually omit it) and
+// noisy when present. Coverage was already punished for that: an identical role
+// scored 88% with a keyword list and 58% without one. Requirements stated in the
+// title or body now count as evidence.
+
+invariant('INV11 · skills stated in the description are scored', () => {
+  const described = scoreJobForCandidate(
+    job({
+      title: 'Product Designer',
+      description:
+        'You will own our design system in Figma, run user research sessions and ship prototypes.',
+    }),
+    extractedProfile
+  );
+  const silent = scoreJobForCandidate(job({ title: 'Product Designer', description: '' }), extractedProfile);
+  assert.ok(
+    described.breakdown.skills > 0,
+    `description mentioned 4 of the candidate's skills but paid ${described.breakdown.skills}`
+  );
+  assert.ok(
+    described.score > silent.score,
+    `described job ${described.score} did not beat silent job ${silent.score}`
+  );
+  return `skills=${described.breakdown.skills} score ${silent.score} → ${described.score}`;
+});
+
+invariant('INV12 · a skill mentioned once in passing is not full coverage', () => {
+  const oneSkill = scoreJobForCandidate(
+    job({ description: 'We use Figma.' }),
+    extractedProfile
+  );
+  assert.ok(
+    oneSkill.breakdown.skills < 25,
+    `a single passing mention scored the full 25 (${oneSkill.breakdown.skills})`
+  );
+  return `skills=${oneSkill.breakdown.skills}`;
+});
+
+invariant('INV13 · punctuation variants of a skill still match', () => {
+  const p = { ...extractedProfile, skills: ['Node.js', 'React', 'CI/CD'] };
+  const r = scoreJobForCandidate(
+    job({ title: 'Backend Engineer', description: 'NodeJS, React and CI CD pipelines. NodeJS services.' }),
+    p
+  );
+  assert.ok(r.breakdown.skills >= 13, `Node.js/React/CI-CD matched ${r.breakdown.skills}/25`);
+  return `skills=${r.breakdown.skills}`;
 });
 
 // ── 10. Weights must stay a coherent, documented distribution ───────────────

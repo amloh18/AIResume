@@ -87,7 +87,9 @@ export function ProgressToastProvider({ children }: { children: React.ReactNode 
       {children}
 
       {/* Toast container - bottom right */}
-      <div className="fixed bottom-4 right-4 z-[10000] flex flex-col gap-3 max-h-screen overflow-hidden pointer-events-none">
+      {/* Same top-of-stack rule as the other two toasters — a long-running
+          progress card must be readable while a job sidebar is open. */}
+      <div className="fixed bottom-4 right-4 z-[2147483000] flex flex-col gap-3 max-h-screen overflow-hidden pointer-events-none">
         {toasts.map((toast) => (
           <ProgressToast
             key={toast.id}

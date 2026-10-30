@@ -16,7 +16,18 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed bottom-4 right-4 z-[9999] flex max-h-screen w-full flex-col-reverse p-4 tablet:right-4 tablet:flex-col-reverse tablet:max-w-[420px]",
+      /*
+       * Above every overlay in the app, deliberately.
+       *
+       * Toasts report the outcome of something the user just asked for, so they
+       * must not be hidden by the surface that triggered them. The job/journey
+       * sidebars sit at z-[99999] and their nested modals at z-[100001]+ when a
+       * card opens them, which was exactly the case where the toast vanished
+       * behind the panel it was talking about. `2147483000` is the established
+       * top-of-stack value in this codebase (see JobSidebar / payment modal) —
+       * not a new scale.
+       */
+      "fixed bottom-4 right-4 z-[2147483000] flex max-h-screen w-full flex-col-reverse p-4 tablet:right-4 tablet:flex-col-reverse tablet:max-w-[420px]",
       className
     )}
     {...props}

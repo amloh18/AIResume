@@ -23,5 +23,13 @@ export default function GatedHotToaster() {
 
   if (isToastSuppressedPath(pathname, isAuthenticated)) return null;
 
-  return <Toaster position="bottom-right" />;
+  /*
+   * `containerStyle` is where react-hot-toast accepts a z-index, and it is the
+   * only thing that decides whether a toast can be seen over the current surface.
+   * Its default (9999) is below the journey/job sidebars (z-[99999]) and their
+   * nested modals, so toasts raised *from* the sidebar — save result, apply
+   * failure, copy confirmation — appeared behind the panel that caused them.
+   * `2147483000` is the top-of-stack value already used across this app.
+   */
+  return <Toaster position="bottom-right" containerStyle={{ zIndex: 2147483000 }} />;
 }

@@ -311,7 +311,7 @@ function GhostButton({
 
 function GreenLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
+    <span className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
       {children}
     </span>
   );
@@ -629,7 +629,7 @@ function MyCvsPanel() {
               filtered list here; this matches it.
             */}
             {sorted.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 dark:border-white/10 tabular-nums">
                 {sorted.length}
               </span>
             )}
@@ -687,7 +687,7 @@ function MyCvsPanel() {
                           {cv.title || 'Untitled CV'}
                         </span>
                         {isMaster && (
-                          <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-1.5 py-0.5 text-[10px] font-medium border border-emerald-200 dark:border-emerald-800/40">
+                          <span className="shrink-0 inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 px-1.5 py-0.5 text-[10px] font-medium dark:border-emerald-800/40">
                             Default
                           </span>
                         )}
@@ -835,7 +835,7 @@ function CoverLettersPanel() {
           <GhostButton onClick={() => router.push('/editor?tab=cover-letter')}>
             <span>View all</span>
             {sorted.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 dark:border-white/10 tabular-nums">
                 {sorted.length}
               </span>
             )}
@@ -1060,7 +1060,7 @@ function RecentJobsPanel() {
         <GhostButton onClick={() => router.push('/dashboard/jobs?tab=applications')}>
           <span>View all</span>
           {effectiveJobs.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 tabular-nums">
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 dark:border-white/10 tabular-nums">
               {effectiveJobs.length}
             </span>
           )}
@@ -1256,12 +1256,12 @@ function ContinueJobCard({ job, cvs, onOpenSidebar }: ContinueJobCardProps) {
             </span>
           )}
           {job.freshness?.score >= 80 && (
-            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
               <Flame size={9} /> Fresh
             </span>
           )}
           {job.isTargetCompany && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
               Target
             </span>
           )}

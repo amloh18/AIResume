@@ -42,7 +42,7 @@ class FollowUpNotificationService {
               },
               interactive: true,
               priority: daysOverdue > 7 ? 'high' : 'medium',
-              channels: ['in-app', 'email'],
+              channels: ['in-app'],
               persistent: false,
               metadata: {
                 jobId: job._id.toString(),

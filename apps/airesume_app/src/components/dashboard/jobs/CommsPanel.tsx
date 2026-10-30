@@ -1379,7 +1379,7 @@ function EmailRow({
 
             {threadCount && threadCount > 1 ? (
               <span
-                className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded-full"
+                className="inline-flex items-center gap-1 text-[10px] font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded-md"
                 title={`${threadCount} messages in thread`}
               >
                 <MessageSquare className="w-2.5 h-2.5" />
@@ -1884,7 +1884,7 @@ export function EmailDetail({
               })}
             </span>
             {threadMessages.length > 1 && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md dark:border-emerald-800/40">
                 <MessageSquare className="w-2.5 h-2.5" />
                 <span>{threadMessages.length} messages</span>
               </span>
@@ -2110,7 +2110,7 @@ export function EmailDetail({
               <span className="text-xs font-bold text-gray-900 dark:text-white">
                 Your Response Draft
               </span>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/50 dark:border-emerald-700/50">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700/50">
                 <Sparkles className="w-2.5 h-2.5" />
                 <span>AI Assisted</span>
               </span>

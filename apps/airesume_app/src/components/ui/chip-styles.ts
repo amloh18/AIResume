@@ -8,12 +8,19 @@
  * an outline in others.
  *
  * ── The design ────────────────────────────────────────────────────────────────
- * An outlined capsule: fully-rounded, hairline 1px border, NO fill.
+ * TWO shapes, split by what the chip IS:
+ *
+ * INTERACTIVE (`chipState`, `Pill`, filters) — an outlined capsule:
  *
  *   idle      hairline neutral border, secondary text
  *   hover     border strengthens, text brightens
  *   active    app-green border + app-green text (still no fill)
  *   disabled  dimmed border + tertiary text, inert
+ *
+ * STATUS (`chipTone`, `chipToneDark`, `CHIP_INLINE`) — a small rounded rectangle
+ * (6px corners), no border, soft tint. A fully-rounded, outlined badge is a
+ * button shape: it was eating the label it annotates. Only the RECIPE is
+ * unified across tones — fill + readable hue — never the interaction shell.
  *
  * ── Why `var(--color-primary)` and not a literal green ────────────────────────
  * "App green" is theme-dependent. `--color-primary` is `#013f2e` (forest) in
@@ -66,6 +73,27 @@ export const CHIP_BASE = [
 ].join(" ")
 
 /**
+ * Geometry for STATUS chips (previously the same capsule as a filter chip).
+ *
+ * A status is a label, not a button, and the capsule shape made every one of
+ * them read as something clickable: a fully-rounded, outlined badge has more
+ * presence than the text it annotates, especially in a dense card footer where
+ * three of them sit side by side. Status chips are now a small rounded rectangle
+ * — 6px corners, no border, a whisper of tint — so the *word* carries the state
+ * and the shape only groups it.
+ *
+ * Interactive chips (`Pill`, the filter bar, the kanban filters) keep the
+ * capsule and the hairline border: those are click targets and their outline is
+ * the affordance. This is the deliberate split.
+ */
+export const BADGE_BASE = [
+  "inline-flex items-center justify-center gap-1",
+  "rounded-md whitespace-nowrap shrink-0 select-none",
+  "font-semibold leading-none",
+  "transition-colors duration-150 ease-out",
+].join(" ")
+
+/**
  * Interactive chip heights (`Pill`). Taller, because they are click targets —
  * these are the exact heights the filter bar, kanban and applications panel
  * already use, so unifying the look does not reflow any dense layout.
@@ -84,9 +112,9 @@ export const CHIP_SIZES: Record<ChipSize, string> = {
  * (capsule, hairline border, tone recipe) is what is shared.
  */
 export const BADGE_SIZES: Record<ChipSize, string> = {
-  sm: "h-5 px-2 text-[10px] gap-1",
-  md: "h-6 px-2.5 text-xs gap-1.5",
-  lg: "h-7 px-3 text-xs gap-1.5",
+  sm: "h-[18px] px-1.5 text-[10px] gap-1",
+  md: "h-[22px] px-2 text-[11px] gap-1",
+  lg: "h-6 px-2.5 text-xs gap-1.5",
 }
 
 export const CHIP_STATES: Record<ChipState, string> = {
@@ -187,27 +215,42 @@ export function chipToneDark(
   return `${badgeBase(size)} ${CHIP_TONES_DARK[tone]}`
 }
 
+/*
+ * Status colours: tint only.
+ *
+ * The border is gone on purpose. On a status chip the outline competed with the
+ * dimmed `text-*-300` half and doubled the chip's visual weight, which is what
+ * made a row of them look like a row of buttons. What is left is the hue — soft
+ * fill, readable text — and the hue alone still says "delivered / pending /
+ * failed":
+ *
+ *   Delivered ✓  lavender    Sent ↗  grey
+ *   Opened ✉     green       Bounced ⚠  red
+ *
+ * `neutral` stays theme-aware because it sits on both light and dark surfaces;
+ * every other tone is a literal hue pair with a `dark:` half.
+ */
 export const CHIP_TONES: Record<ChipTone, string> = {
   neutral:
-    "border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-secondary)]",
-  green: "border-lime-500/30 bg-lime-500/10 text-lime-700 dark:text-lime-400",
+    "bg-[var(--bg-secondary)] text-[var(--text-secondary)] dark:bg-white/10 dark:text-gray-300",
+  green: "bg-lime-500/10 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300",
   emerald:
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  teal: "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300",
-  cyan: "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
-  sky: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  blue: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300",
+    "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
+  teal: "bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300",
+  cyan: "bg-cyan-500/10 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
+  sky: "bg-sky-500/10 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
+  blue: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
   indigo:
-    "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+    "bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300",
   violet:
-    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    "bg-violet-500/10 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300",
   purple:
-    "border-purple-500/30 bg-purple-500/10 text-purple-700 dark:text-purple-300",
-  rose: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+    "bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300",
+  rose: "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
   orange:
-    "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300",
-  amber: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  slate: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    "bg-orange-500/10 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300",
+  amber: "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  slate: "bg-slate-500/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
 }
 
 /**
@@ -254,7 +297,7 @@ export function chipBase(size: ChipSize = "md"): string {
 
 /** Static-chip base: shared treatment, compact scale. */
 export function badgeBase(size: ChipSize = "md"): string {
-  return `${CHIP_BASE} ${BADGE_SIZES[size]}`
+  return `${BADGE_BASE} ${BADGE_SIZES[size]}`
 }
 
 /**
@@ -284,4 +327,4 @@ export function chipTone(
  * a `CHIP_TONES[...]` entry; add `font-medium`/`font-bold` at the call site.
  */
 export const CHIP_INLINE =
-  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap shrink-0 transition-colors duration-150 ease-out"
+  "inline-flex items-center gap-1 rounded-md px-1.5 py-[3px] text-[10px] font-semibold leading-none whitespace-nowrap shrink-0 transition-colors duration-150 ease-out"

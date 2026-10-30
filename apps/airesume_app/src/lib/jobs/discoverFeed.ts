@@ -452,6 +452,19 @@ export async function buildDiscoverFeedPage(opts: DiscoverFeedOptions): Promise<
   const wantsCurated = !opts.unpersonalized && !hasSearchQuery;
   const roleClause = wantsCurated ? buildRoleRelevanceClause(targetRoles, roleFamilies) : null;
   const curated = wantsCurated && roleClause !== null;
+  /*
+    `needsProfile` answers "does this account have target roles to curate on?" —
+    NOT "did a clause come out of them?".
+
+    It used to be `curated === false`, which conflated the two: a profile whose
+    roles resolved to nothing the taxonomy recognises (or a role string that
+    produced no usable phrase) made the feed fall back to the catalogue AND told
+    the user to add target roles — while their roles were already saved. Asking
+    someone to set what they have already set is the one thing this banner must
+    never do, so the flag is now driven by the raw profile only. A clause that
+    fails to build is a taxonomy gap to fix here, not a user action.
+  */
+  const hasTargetRoles = targetRoles.length > 0 || roleFamilies.length > 0;
 
   const page = Math.max(opts.page, 1);
   const limit = opts.limit;
@@ -566,15 +579,23 @@ export async function buildDiscoverFeedPage(opts: DiscoverFeedOptions): Promise<
         .lean();
       const watched = new Set(entries.map((w: any) => (w.company || '').toLowerCase().trim()));
       if (watched.size > 0) {
-        for (const job of pageJobs) {
-          if (watched.has((job.company || '').toLowerCase().trim())) {
-            job.matchScore = Math.min(98, job.matchScore + 15);
-            job.matchTier = scoreTier(job.matchScore);
-          }
-        }
+        /*
+         * The watchlist influences ORDER, never the number.
+         *
+         * It used to add a flat +15 to `matchScore` — a company the user starred
+         * therefore "matched" 15 points better than an identical posting
+         * elsewhere, which is not a fact about the candidate or the job. A match
+         * percentage that moves for a reason the user cannot see is exactly the
+         * kind of number they stop trusting. The boost is now a sort key.
+         */
+        const rankingBonus = (job: (typeof pageJobs)[number]) =>
+          watched.has((job.company || '').toLowerCase().trim()) ? 15 : 0;
+
         if (opts.sortBy === 'matchScore') {
           const dir = opts.sortOrder === 'asc' ? 1 : -1;
-          pageJobs = [...pageJobs].sort((a, b) => (a.matchScore - b.matchScore) * dir);
+          pageJobs = [...pageJobs].sort(
+            (a, b) => (a.matchScore + rankingBonus(a) - (b.matchScore + rankingBonus(b))) * dir
+          );
         }
       }
     } catch {
@@ -590,7 +611,7 @@ export async function buildDiscoverFeedPage(opts: DiscoverFeedOptions): Promise<
     hasMore,
     curated,
     profileUsed: !!opts.profile,
-    needsProfile: wantsCurated && !curated,
+    needsProfile: wantsCurated && !hasTargetRoles,
     suggestedSearches:
       total === 0 && hasSearchQuery
         ? ['software engineer', 'product manager', 'data analyst', 'designer']

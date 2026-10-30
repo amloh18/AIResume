@@ -175,7 +175,40 @@ export async function PATCH(request: NextRequest) {
     if (body.userLifecycleState) updateFields['userLifecycleState'] = body.userLifecycleState;
     if (body.hasSeenWelcome !== undefined) updateFields['settings.hasSeenWelcome'] = body.hasSeenWelcome;
 
+    const previous = await userRepository.findById(userId);
+    const wasCompleted = previous?.onboarding?.activation_status === 'completed';
+
     const updatedUser = await userRepository.updateById(userId, { $set: updateFields } as any);
+
+    // Onboarding completion email — fires once, on the pending → completed transition.
+    const isNowCompleted =
+      onboardingData.activation_status === 'completed' ||
+      updatedUser?.onboarding?.activation_status === 'completed';
+
+    if (isNowCompleted && !wasCompleted && updatedUser?.email) {
+      const score =
+        onboardingData.transformed_score ??
+        onboardingData.initial_score ??
+        updatedUser.onboarding?.transformed_score ??
+        updatedUser.onboarding?.initial_score ??
+        updatedUser.onboarding?.confidence_score;
+
+      import('@/lib/services/emailAutomationService')
+        .then(({ sendAutomationEmail }) =>
+          sendAutomationEmail(
+            'onboarding_complete',
+            {
+              id: String(updatedUser._id),
+              email: updatedUser.email!,
+              firstName: updatedUser.firstName,
+              lastName: updatedUser.lastName,
+            },
+            { score: score ?? '—' },
+            { checkDuplicate: true }
+          )
+        )
+        .catch((err) => console.error('[Onboarding] completion email failed:', err));
+    }
 
     return NextResponse.json({
       success: true,

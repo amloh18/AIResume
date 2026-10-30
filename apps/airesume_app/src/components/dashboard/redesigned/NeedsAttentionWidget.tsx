@@ -217,7 +217,7 @@ export default function NeedsAttentionWidget({ limit = 5 }: NeedsAttentionWidget
             <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           </div>
           <h2 className="dashboard-panel-title text-[var(--text-primary)]">Needs Attention</h2>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 tabular-nums">
+          <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 tabular-nums">
             {items.length}
           </span>
         </div>

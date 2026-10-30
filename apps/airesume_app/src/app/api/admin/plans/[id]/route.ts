@@ -42,7 +42,7 @@ const EDITABLE_FIELDS = [
   'durationType',
 ] as const;
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireAdmin(request);
     const { id } = await params;

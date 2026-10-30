@@ -32,7 +32,29 @@ export const SCORING_WEIGHTS = {
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface MatchScoreResult {
+  /**
+   * Candidate FIT — the % the UI shows as "N% Match".
+   *
+   * Sum of the seven fit dimensions: role, skills, experience, location,
+   * workplace, salary, industry. It answers exactly one question — "how well
+   * does this job fit this candidate" — and nothing else. See `opportunityScore`
+   * for the ranking figure.
+   */
   score: number; // 0 - 100
+  /**
+   * OPPORTUNITY — fit blended with freshness and application readiness.
+   *
+   * `0.75·fit + 0.15·freshness + 0.10·readiness`. Used to ORDER a feed (a fresh,
+   * applicable job is worth more attention than a stale identical one) and never
+   * displayed as the match percentage: recency is not a property of the
+   * candidate, so folding it into "your match" made two identical jobs read as
+   * 87% and 50% purely because of their posting date.
+   */
+  opportunityScore: number; // 0 - 100
+  /** Fit-only points (identical to `score`; kept explicit for readers). */
+  fitScore: number;
+  freshnessScore: number; // 0 - 100, recency curve
+  readinessScore: number; // 0 - 100, auto-apply feasibility
   breakdown: {
     roleAlignment: number;
     skills: number;
@@ -57,6 +79,78 @@ function tokenize(text: string): string[] {
     .filter((t) => t.length > 1);
 }
 
+/**
+ * Token form of a skill name, punctuation-insensitive.
+ *
+ * `Node.js`, `nodejs`, `Node JS` and `NODE.JS` all have to collapse to the same
+ * thing before a job's requirement can be compared to a CV's skill, otherwise a
+ * candidate who lists "Node.js" is scored as not knowing it when the posting
+ * writes "NodeJS" — one of the ways the old coverage ratio understated obvious
+ * matches. `+` becomes "plus" rather than being dropped, so `C++` does not
+ * silently become `C`.
+ */
+function skillTokens(value: unknown): string[] {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/\+/g, ' plus ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/** Contiguous token-sequence search: "design systems" matches, "systems design" does not. */
+function containsSequence(haystack: string[], needle: string[]): boolean {
+  if (needle.length === 0) return false;
+  if (needle.length === 1) return haystack.includes(needle[0]);
+  outer: for (let i = 0; i + needle.length <= haystack.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) continue outer;
+    }
+    return true;
+  }
+  return false;
+}
+
+/** How much of a job description is worth tokenising. Short bodies are common; the
+ *  cap only stops a 200KB scraped page from being tokenised per card. */
+const MAX_SKILL_SCAN_CHARS = 12000;
+
+/**
+ * Job bodies arrive as ESCAPED HTML from several sources
+ * (`&lt;div class=&quot;…`), so a raw slice spends its budget on entity soup and
+ * boilerplate: the first 4–6KB of a typical Greenhouse posting is the company
+ * blurb, and the actual requirements sit past it. Decoding and stripping first
+ * is what lets a real requirement be seen at all — before this, a "Software
+ * Engineer, Payments" posting matched none of a front-end CV's 72 skills because
+ * the crate of `&lt;p&gt;&lt;span style=…` hid everything past the cap.
+ */
+function plainTextForScan(html: unknown): string {
+  return String(html ?? '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+}
+
+/**
+ * The least weight the fit score will ever divide by.
+ *
+ * 0.75 = role + skills + one more dimension. Below that, the posting simply has
+ * not told us enough for a confident percentage, so the score is diluted toward
+ * "not enough evidence" instead of being scaled up by a single agreement.
+ *
+ * Lowering it to 0.6 was measured and rejected: a job whose requirements were
+ * verifiable then tied with one whose description we never really had (72 = 72),
+ * so "we checked your skills against this posting" stopped being worth anything.
+ */
+const MIN_EVIDENCE_WEIGHT = 0.75;
+
 // ── Scoring ─────────────────────────────────────────────────────────────────
 
 export function scoreJobForCandidate(
@@ -69,10 +163,28 @@ export function scoreJobForCandidate(
   const reasons: string[] = [];
   const hardConstraintViolations: string[] = [];
 
+  /*
+   * Which dimensions this posting actually carries evidence for.
+   *
+   * These decide the fit score's DENOMINATOR, not just its numerator (see
+   * `MIN_EVIDENCE_WEIGHT` below). A dimension the posting says nothing about is
+   * left out of the division entirely — it neither rewards nor punishes.
+   */
+  const inScope = {
+    role: false,
+    skills: false,
+    experience: false,
+    location: false,
+    workplace: false,
+    salary: false,
+    industry: false,
+  };
+
   // ── 1. Role Alignment (35% max) ──────────────────────────────────────────
   let roleScore = 0;
   const rawJobTitle = (job.normalizedTitle || job.title || '').trim();
   const jobTitleNorm = rawJobTitle.toLowerCase();
+  inScope.role = jobTitleNorm.length > 0;
   const jobRoleFamily = job.roleFamily || resolveRoleFamily(job.title || '');
 
   const userRoleFamilies = (profile.roleFamilies.length > 0
@@ -142,50 +254,82 @@ export function scoreJobForCandidate(
   }
 
   // ── 2. Skills Coverage (25% max) ──────────────────────────────────────────
+  /*
+   * The job's requirements are read from EVERYWHERE the posting states them, not
+   * just from the `keywords[]` array.
+   *
+   * That array is optional: direct-ATS adapters fill it, aggregator payloads
+   * usually do not, and even when it exists it is a scraper's guess (10–30
+   * strings, often including benefits and company blurb). Scoring coverage as
+   * `matched / keywords.length` therefore punished jobs for having thin metadata
+   * rather than for being a worse fit — the same role could score 87% with a
+   * keyword list and 50% without one, which is exactly the “the number looks made
+   * up” symptom. The evidence is now:
+   *
+   *   declared  the posting's own skill list, if it has one
+   *   mentioned candidate skills that appear verbatim in the title or body
+   *
+   * and coverage is matched / evidence, with a 4-skill floor when the posting
+   * declares no list and only mentions a couple of things (otherwise one “React”
+   * in a paragraph would read as full coverage).
+   */
   let skillsScore = 0;
-  const rawJobSkills: string[] = Array.isArray(job.skills) ? job.skills : [];
-  const jobSkills = rawJobSkills
-    .map((s) => String(s).trim().toLowerCase())
-    .filter((s) => s.length > 0);
+  const rawJobSkills: string[] = Array.isArray(job.skills)
+    ? job.skills
+    : typeof job.skills === 'string'
+      ? [job.skills]
+      : [];
 
-  const candidateSkills = profile.skills
-    .map((s) => String(s).trim().toLowerCase())
-    .filter((s) => s.length > 0);
+  const candidateSkillSets = Array.from(
+    new Set(
+      profile.skills
+        .map((s) => skillTokens(s).join(' '))
+        .filter((s) => s.length > 0)
+    )
+  );
 
-  if (jobSkills.length > 0 && candidateSkills.length > 0) {
-    let matchedCount = 0;
-    const matchedList: string[] = [];
+  if (candidateSkillSets.length > 0) {
+    const declared = Array.from(
+      new Set(
+        rawJobSkills
+          .map((s) => skillTokens(s).join(' '))
+          .filter((s) => s.length > 0)
+      )
+    );
 
-    for (const jSkill of jobSkills) {
-      let isMatched = false;
-      for (const cSkill of candidateSkills) {
-        if (cSkill === jSkill) {
-          isMatched = true;
-          matchedList.push(cSkill);
-          break;
-        }
-        // Semantic synonym match
-        const sem = checkSemanticMatch(cSkill, jSkill);
-        if (sem.matched) {
-          isMatched = true;
-          matchedList.push(cSkill);
-          break;
-        }
-      }
-      if (isMatched) {
-        matchedCount++;
-      }
+    const jobTextTokens = skillTokens(
+      `${job.title || job.normalizedTitle || ''} ${plainTextForScan(job.description).slice(0, MAX_SKILL_SCAN_CHARS)}`
+    );
+
+    const evidence = new Set<string>(declared);
+    for (const skill of candidateSkillSets) {
+      if (containsSequence(jobTextTokens, skill.split(' '))) evidence.add(skill);
     }
 
-    if (matchedCount > 0) {
-      const coverageRatio = matchedCount / jobSkills.length;
+    const matched = Array.from(evidence).filter((skill) => {
+      if (candidateSkillSets.includes(skill)) return true;
+      // Synonym bridge for the remaining declared requirements (e.g. "ReactJS"
+      // in the posting vs "React" in the CV).
+      return candidateSkillSets.some((candidate) => checkSemanticMatch(candidate, skill).matched);
+    });
+
+    const denominator = declared.length > 0 ? evidence.size : Math.max(evidence.size, 4);
+
+    // A posting that never names a skill the candidate has, and declares no
+    // list, says nothing about skills — it is not evidence of a skills gap.
+    inScope.skills = evidence.size > 0;
+
+    if (matched.length > 0 && denominator > 0) {
+      const coverageRatio = Math.min(1, matched.length / denominator);
       skillsScore = Math.round(coverageRatio * 25);
-      reasons.push(`Key skill overlap: ${Array.from(new Set(matchedList)).slice(0, 3).join(', ')}`);
+      reasons.push(
+        `Key skill overlap: ${Array.from(new Set(matched)).slice(0, 3).join(', ')}`
+      );
     } else {
       skillsScore = 0;
     }
   } else {
-    // SB-29: Job with no skills specified or candidate with no skills pays 0, not 3
+    // SB-29: A candidate with no skills has no coverage to claim.
     skillsScore = 0;
   }
 
@@ -196,6 +340,7 @@ export function scoreJobForCandidate(
   const userLevel = profile.experienceLevel ? profile.experienceLevel.toLowerCase() : '';
 
   // SB-27 / INV8: 'unknown' or missing seniority is NOT a match and claims no reason
+  inScope.experience = Boolean(jobLevel && jobLevel !== 'unknown' && userLevel && userLevel !== 'unknown');
   if (jobLevel && jobLevel !== 'unknown' && userLevel && userLevel !== 'unknown') {
     // If candidate has zero role alignment, they are in an unrelated profession (INV3)
     if (roleScore > 0) {
@@ -221,6 +366,7 @@ export function scoreJobForCandidate(
   // ── 4. Location / Remote Compatibility (10% max) ──────────────────────────
   let locScore = 0;
   const jobRemote = Boolean(job.location?.remote || job.remote);
+  inScope.location = jobRemote || Boolean(job.location?.city || job.location?.country);
 
   if (jobRemote) {
     locScore = 10;
@@ -248,6 +394,7 @@ export function scoreJobForCandidate(
   const workplacePref = profile.workplacePreference.toLowerCase();
 
   // SB-27 / INV5: 'any' leaves D entirely — pays 0, not 5
+  inScope.workplace = workplacePref !== 'any';
   if (workplacePref !== 'any') {
     if (workplacePref === 'remote' && jobRemote) {
       workplaceScore = 5;
@@ -267,6 +414,7 @@ export function scoreJobForCandidate(
   const userMinSal = profile.minSalary || 0;
 
   // SB-27 / INV5: Unknown salary leaves D entirely — pays 0, not 3
+  inScope.salary = jobSalMax > 0 && userMinSal > 0;
   if (jobSalMax > 0 && userMinSal > 0) {
     if (jobSalMax >= userMinSal) {
       salScore = 5;
@@ -287,6 +435,7 @@ export function scoreJobForCandidate(
   const jobIndustry = (job.industry || job.department || '').toLowerCase();
 
   // SB-27 / INV5: No industry preference leaves D entirely — pays 0, not 3
+  inScope.industry = profile.preferredIndustries.length > 0 && Boolean(jobIndustry);
   if (profile.preferredIndustries.length > 0 && jobIndustry) {
     for (const ind of profile.preferredIndustries) {
       if (jobIndustry.includes(ind.toLowerCase())) {
@@ -297,8 +446,7 @@ export function scoreJobForCandidate(
     }
   }
 
-  // ── Combined Opportunity Calculation (§4) ─────────────────────────────────
-  // Fit points (0 - 100)
+  // ── Fit (§4.1) ────────────────────────────────────────────────────────────
   const fitPoints =
     roleScore +
     skillsScore +
@@ -307,6 +455,58 @@ export function scoreJobForCandidate(
     workplaceScore +
     salScore +
     industryScore;
+
+  /*
+   * Renormalise by the weight that was actually measured.
+   *
+   * Paying zero for a dimension the posting says nothing about made the number
+   * depend on how complete the posting is rather than on the fit: across 60 real
+   * jobs from this database, `keywords[]` was empty on every single one and
+   * `seniority` was mostly absent, so 40 of the 100 points were unreachable and
+   * the BEST relevant role — a Senior Software Engineer for a senior engineer —
+   * scored 49. Nothing could ever reach the STRONG band, and the difference
+   * between "we don't know" and "you don't match" was invisible.
+   *
+   * `fit(d) = Σ w_d·s_d / Σ_{d ∈ D} w_d` for the dimensions D with evidence. A
+   * missing salary, an unstated seniority or an absent industry preference no
+   * longer silently lowers every score.
+   *
+   * The denominator is floored at `MIN_EVIDENCE_WEIGHT` so a posting that says
+   * one thing about the job cannot produce a confident score: a title-only match
+   * divides by 0.6 instead of 0.35 and lands in the 40s, while a posting that
+   * supports a real skills comparison lands where its evidence does. That floor
+   * is what keeps §4.1's ceiling out of reach for thin evidence.
+   */
+  const inScopeWeight =
+    (inScope.role ? SCORING_WEIGHTS.ROLE_ALIGNMENT : 0) +
+    (inScope.skills ? SCORING_WEIGHTS.SKILLS : 0) +
+    (inScope.experience ? SCORING_WEIGHTS.EXPERIENCE : 0) +
+    (inScope.location ? SCORING_WEIGHTS.LOCATION : 0) +
+    (inScope.workplace ? SCORING_WEIGHTS.WORKPLACE : 0) +
+    (inScope.salary ? SCORING_WEIGHTS.SALARY : 0) +
+    (inScope.industry ? SCORING_WEIGHTS.INDUSTRY : 0);
+
+  /*
+   * Confidence multiplier.
+   *
+   * Renormalising alone lets three cheap agreements (right title, same
+   * seniority, right city) look like a near-perfect fit — there is nothing left
+   * in the denominator to disagree with. The score is therefore scaled by how
+   * much of the fit was actually measured: full evidence keeps 100% of the
+   * value, a posting that only told us its title keeps ~70% of it.
+   *
+   *   0.55 + 0.45·coverage      coverage 1.00 → ×1.00
+   *                             coverage 0.75 → ×0.89
+   *                             coverage 0.35 → ×0.71
+   *
+   * This is what keeps a title-only posting in the "maybe" band and reserves the
+   * STRONG band for jobs whose requirements we could genuinely compare.
+   */
+  const evidenceCoverage = Math.min(1, inScopeWeight);
+  const fitScore = Math.round(
+    (fitPoints / Math.max(inScopeWeight, MIN_EVIDENCE_WEIGHT)) *
+      (0.55 + 0.45 * evidenceCoverage)
+  );
 
   // Freshness score (0 - 100) via piecewise decay curve (§4.2)
   const freshnessScore = computeFreshnessScore(
@@ -317,12 +517,17 @@ export function scoreJobForCandidate(
   const hasApplyUrl = Boolean(job.applyUrl || job.source?.applicationUrl || job.applicationUrl);
   const readinessScore = hasApplyUrl ? 85 : 60;
 
-  // OPPORTUNITY = 0.75·fit + 0.15·fresh + 0.10·readiness
+  // OPPORTUNITY = 0.75·fit + 0.15·fresh + 0.10·readiness.
+  //
+  // This is the RANKING figure, not the displayed match. `score` below stays the
+  // fit so that "% Match" describes the candidate-to-job fit the user is being
+  // asked to judge; recency is shown separately ("Posted 3 hours ago") and used
+  // to order the feed, where it belongs.
   const opportunityScore = Math.round(
-    0.75 * fitPoints + 0.15 * freshnessScore + 0.10 * readinessScore
+    0.75 * fitScore + 0.15 * freshnessScore + 0.10 * readinessScore
   );
 
-  const totalScore = Math.min(98, Math.max(5, opportunityScore));
+  const totalScore = Math.min(98, Math.max(5, fitScore));
 
   // Determine match tier
   let matchTier: MatchScoreResult['matchTier'];
@@ -333,6 +538,10 @@ export function scoreJobForCandidate(
 
   return {
     score: totalScore,
+    opportunityScore: Math.min(98, Math.max(5, opportunityScore)),
+    fitScore: totalScore,
+    freshnessScore,
+    readinessScore,
     breakdown: {
       roleAlignment: roleScore,
       skills: skillsScore,

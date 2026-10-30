@@ -41,7 +41,7 @@ class DeadlineNotificationService {
             },
             interactive: true,
             priority: 'high',
-            channels: ['in-app', 'email'],
+            channels: ['in-app'],
             persistent: false,
             expiresAt: deadline, // Expires when deadline passes
             metadata: {
@@ -72,7 +72,7 @@ class DeadlineNotificationService {
             },
             interactive: true,
             priority: 'urgent',
-            channels: ['in-app', 'email', 'push'],
+            channels: ['in-app', 'push'],
             persistent: false,
             expiresAt: new Date(deadline.getTime() + 24 * 60 * 60 * 1000), // Expires 24h after deadline
             metadata: {
@@ -103,7 +103,7 @@ class DeadlineNotificationService {
             },
             interactive: true,
             priority: 'high',
-            channels: ['in-app', 'email'],
+            channels: ['in-app'],
             persistent: true, // Persistent - user should acknowledge this
             metadata: {
               jobId: job._id.toString(),

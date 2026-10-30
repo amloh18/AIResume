@@ -1,174 +1,268 @@
-
+import mongoose from 'mongoose';
+import { format } from 'date-fns';
 import { sendEmail } from '@/lib/email-service';
 import EmailCampaign from '@/models/admin/EmailCampaign';
+import EmailAutomation from '@/models/EmailAutomation';
 import { getCampaignTemplateById } from '@/lib/campaign-templates';
-import { format } from 'date-fns';
+
+/**
+ * Shared sender for every automated email (trigger templates and lifecycle
+ * automations).
+ *
+ * Two defects in the previous implementation are fixed here:
+ *  1. `EmailCampaign.createdBy` is required, but the container was created with
+ *     `creatorId` (not a schema path), so `create()` threw a ValidationError and
+ *     every automated send silently failed. The container now carries a stable
+ *     system ObjectId.
+ *  2. Duplicate detection queried `resourceId`, a field ActivityLog does not
+ *     have (it stores `resource.id`), so the guard never matched and the same
+ *     email could be sent repeatedly. The query now reads `resource.id`.
+ */
+const SYSTEM_CREATOR_ID = new mongoose.Types.ObjectId('000000000000000000000001');
+const SYSTEM_CREATOR_EMAIL = 'automation@buildairesume.com';
+const SYSTEM_CREATOR_NAME = 'Automation Engine';
+
+export interface CustomEmailInput {
+  key: string;
+  name: string;
+  category: string;
+  subject: string;
+  htmlContent: string;
+  previewText?: string;
+  fromName?: string;
+  fromEmail?: string;
+  tags?: string[];
+}
+
+export interface RecipientLike {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  id?: string;
+  [key: string]: any;
+}
+
+const TOKEN_RE = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+
+function escapeHtml(value: any): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderTokens(input: string, values: Record<string, any>): string {
+  return input.replace(TOKEN_RE, (match, token: string) => {
+    // Resolved later against the campaign container id — see step 3.
+    if (token === 'unsubscribeUrl') return match;
+    const value = values[token];
+    return value === undefined || value === null ? '' : String(value);
+  });
+}
 
 class TriggerEmailService {
-
-    /**
-     * Trigger an automated email based on a template ID.
-     * @param templateId The ID of the template from campaign-templates.ts (e.g., '1-welcome')
-     * @param user The user object (must contain email, firstName, etc.)
-     * @param metadata Optional metadata for replacing extra variables
-     * @param checkDuplicate If true, checks if user already received this template to avoid spam
-     */
-    async trigger(templateId: string, user: { email: string; firstName?: string; lastName?: string; id?: string;[key: string]: any }, metadata: any = {}, checkDuplicate = false) {
-        try {
-            // 0. Check Duplicates (if requested)
-            if (checkDuplicate && user.email) {
-                // We can use the SystemEmailTracker or ActivityLog. 
-                // For now, let's use a simple query on EmailCampaign if we tracked it there? No, EmailCampaign is aggregate.
-                // We need to query ActivityLog.
-                // Dynamic import to avoid circular dep if any
-                const { default: ActivityLog } = await import('@/models/ActivityLog');
-                const exists = await ActivityLog.findOne({
-                    userEmail: user.email,
-                    action: 'system_email_sent',
-                    resourceId: templateId
-                });
-                if (exists) {
-                    console.log(`Skipping duplicate trigger '${templateId}' for ${user.email}`);
-                    return false;
-                }
-            }
-
-            // 1. Get Template
-            const template = getCampaignTemplateById(templateId);
-            if (!template) {
-                console.error(`Trigger Error: Template '${templateId}' not found.`);
-                return false;
-            }
-
-            // 2. Resolve Content
-            let htmlContent = template.htmlContent;
-            let subject = template.subjectTemplate;
-
-            // Basic Personalization
-            const firstName = user.firstName || 'there';
-            const lastName = user.lastName || '';
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
-
-            htmlContent = htmlContent.replace(/{{firstName}}/g, firstName);
-            subject = subject.replace(/{{firstName}}/g, firstName);
-
-            htmlContent = htmlContent.replace(/{{lastName}}/g, lastName);
-            htmlContent = htmlContent.replace(/{{appUrl}}/g, appUrl);
-            htmlContent = htmlContent.replace(/{{email}}/g, user.email);
-
-            // Metadata replacement
-            Object.keys(metadata).forEach(key => {
-                const regex = new RegExp(`{{${key}}}`, 'g');
-                htmlContent = htmlContent.replace(regex, metadata[key]);
-                subject = subject.replace(regex, metadata[key]);
-            });
-
-            // 3. Find or Create "Monthly Bucket" Campaign Container
-            // We group automated sends by Month to keep stats manageable but historical
-            const today = new Date();
-            const monthStr = format(today, 'MMM yyyy'); // e.g. "Jan 2026"
-            const campaignName = `Automated: ${template.name} - ${monthStr}`;
-
-            let campaign = await EmailCampaign.findOne({
-                campaignName,
-                status: 'sent'  // It's an "active" automated campaign
-            });
-
-            if (!campaign) {
-                campaign = await EmailCampaign.create({
-                    campaignName,
-                    subject,
-                    status: 'sent', // Mark as sent so it shows up in "Past Campaigns" / Performance
-                    htmlContent: template.htmlContent, // Store base template
-                    campaignType: template.category === 'transactional' ? 'transactional' : 'trigger', // Use specific type
-                    targetFilters: template.suggestedFilters || {},
-                    campaignGoal: 'automation',
-                    performance: {
-                        sent: 0,
-                        delivered: 0,
-                        opened: 0,
-                        clicked: 0
-                    },
-                    fromName: template.defaultFromName || 'AIResume Team',
-                    fromEmail: template.defaultFromEmail || 'noreply@buildairesume.com',
-                    creatorId: 'automation',
-                    createdByName: 'Automation Engine',
-                    tags: ['automated', template.category, template.id],
-                    sentAt: today,
-                    isRecurring: false // It's not "Recurring" in the scheduler sense, it's "Triggered"
-                });
-            }
-
-            // 4. Inject Unsubscribe (Linked to this Container Campaign)
-            const unsubscribeUrl = `${appUrl}/unsubscribe?email=${encodeURIComponent(user.email)}&c=${campaign._id}`;
-            const unsubscribeFooter = `
-                <div style="text-align: center; margin-top: 20px; font-size: 11px; color: #666;">
-                    <a href="${unsubscribeUrl}" style="color: #666;">Unsubscribe</a>.
-                </div>
-            `;
-
-            // Should be handled by base template usually, but ensures it exists
-            if (htmlContent.includes('{{unsubscribeUrl}}')) {
-                htmlContent = htmlContent.replace(/{{unsubscribeUrl}}/g, unsubscribeUrl);
-            } else if (!htmlContent.includes('Unsubscribe')) {
-                if (htmlContent.includes('</body>')) {
-                    htmlContent = htmlContent.replace('</body>', `${unsubscribeFooter}</body>`);
-                } else {
-                    htmlContent += unsubscribeFooter;
-                }
-            }
-
-            // 5. Send Email
-            const sent = await sendEmail({
-                to: user.email,
-                subject,
-                html: htmlContent,
-                text: template.previewText || subject // Fallback
-            });
-
-            // 6. Update Stats
-            if (sent.success) {
-                await EmailCampaign.updateOne(
-                    { _id: campaign._id },
-                    {
-                        $inc: {
-                            'performance.sent': 1,
-                            'performance.delivered': 1, // Assumed
-                            'sentCount': 1
-                        },
-                        $set: { updatedAt: new Date() }
-                    }
-                );
-
-                // Log user action for deduplication
-                const { ActivityLogService } = await import('@/lib/services/activityLogService');
-                await ActivityLogService.logUserAction({
-                    userId: user.id || 'system',
-                    userEmail: user.email,
-                    action: 'system_email_sent',
-                    resourceType: 'other' as any, // Use 'other' as fallback
-                    resourceId: templateId,
-                    resourceName: template.name,
-                    status: 'success',
-                    metadata: { campaignId: (campaign as any)._id.toString() }
-                });
-
-                console.log(`✅ Triggered '${templateId}' for ${user.email}`);
-                return true;
-            } else {
-                console.error(`❌ Failed to send '${templateId}' to ${user.email}:`, sent.error);
-                await EmailCampaign.updateOne(
-                    { _id: campaign._id },
-                    { $inc: { 'performance.bounced': 1 } }
-                );
-                return false;
-            }
-
-        } catch (error) {
-            console.error(`Trigger Service Error (${templateId}):`, error);
-            return false;
-        }
+  /**
+   * Trigger an automated email from a campaign template.
+   */
+  async trigger(
+    templateId: string,
+    user: RecipientLike,
+    metadata: any = {},
+    checkDuplicate = false
+  ): Promise<boolean> {
+    const template = getCampaignTemplateById(templateId);
+    if (!template) {
+      console.error(`Trigger Error: Template '${templateId}' not found.`);
+      return false;
     }
+
+    return this.sendCustom(
+      {
+        key: templateId,
+        name: template.name,
+        category: template.category,
+        subject: template.subjectTemplate,
+        htmlContent: template.htmlContent,
+        previewText: template.previewText,
+        fromName: template.defaultFromName,
+        fromEmail: template.defaultFromEmail,
+        tags: ['automated', template.category, template.id],
+      },
+      user,
+      metadata,
+      checkDuplicate
+    );
+  }
+
+  /**
+   * Send an arbitrary HTML email through the automation pipeline: monthly
+   * campaign container, unsubscribe injection, stats and dedupe log.
+   */
+  async sendCustom(
+    input: CustomEmailInput,
+    user: RecipientLike,
+    metadata: Record<string, any> = {},
+    checkDuplicate = false
+  ): Promise<boolean> {
+    const dedupeKey = input.key.startsWith('automation:')
+      ? input.key
+      : `automation:${input.key}`;
+
+    try {
+      if (!user?.email) {
+        console.error(`Trigger Service Error (${input.key}): recipient has no email.`);
+        return false;
+      }
+
+      // 0. Duplicate guard
+      if (checkDuplicate) {
+        const { default: ActivityLog } = await import('@/models/ActivityLog');
+        const exists = await ActivityLog.findOne({
+          userEmail: user.email,
+          action: 'system_email_sent',
+          'resource.id': dedupeKey,
+        })
+          .select('_id')
+          .lean();
+        if (exists) {
+          console.log(`Skipping duplicate trigger '${input.key}' for ${user.email}`);
+          return false;
+        }
+      }
+
+      // 1. Resolve content
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
+      const values: Record<string, any> = {
+        firstName: user.firstName || 'there',
+        lastName: user.lastName || '',
+        email: user.email,
+        appUrl,
+        ...metadata,
+      };
+      // Metadata is trusted HTML (digest rows); recipient fields are not.
+      const htmlValues: Record<string, any> = {
+        ...values,
+        firstName: escapeHtml(values.firstName),
+        lastName: escapeHtml(values.lastName),
+        email: escapeHtml(user.email),
+      };
+
+      let htmlContent = renderTokens(input.htmlContent, htmlValues);
+      let subject = renderTokens(input.subject, values);
+
+      // 2. Find or create the monthly stats container
+      const today = new Date();
+      const monthStr = format(today, 'MMM yyyy');
+      const campaignName = `Automated: ${input.name} - ${monthStr}`;
+
+      let campaign = await EmailCampaign.findOne({ campaignName, status: 'sent' });
+
+      if (!campaign) {
+        campaign = await EmailCampaign.create({
+          campaignName,
+          subject: input.subject,
+          status: 'sent',
+          htmlContent: input.htmlContent,
+          targetFilters: {},
+          campaignGoal: 'automation',
+          performance: { sent: 0, delivered: 0, opened: 0, clicked: 0 },
+          fromName: input.fromName || 'AIResume Team',
+          fromEmail: input.fromEmail || 'noreply@buildairesume.com',
+          createdBy: SYSTEM_CREATOR_ID,
+          createdByName: SYSTEM_CREATOR_NAME,
+          createdByEmail: SYSTEM_CREATOR_EMAIL,
+          tags: input.tags || ['automated', input.category, input.key],
+          sentAt: today,
+          isRecurring: false,
+        });
+      }
+
+      // 3. Unsubscribe link
+      const unsubscribeUrl = `${appUrl}/unsubscribe?email=${encodeURIComponent(
+        user.email
+      )}&c=${campaign._id}`;
+
+      if (htmlContent.includes('{{unsubscribeUrl}}')) {
+        htmlContent = htmlContent.replace(/{{unsubscribeUrl}}/g, unsubscribeUrl);
+      } else if (!htmlContent.includes('Unsubscribe')) {
+        const footer = `<div style="text-align:center;margin-top:20px;font-size:11px;color:#666;"><a href="${unsubscribeUrl}" style="color:#666;">Unsubscribe</a></div>`;
+        htmlContent = htmlContent.includes('</body>')
+          ? htmlContent.replace('</body>', `${footer}</body>`)
+          : htmlContent + footer;
+      }
+
+      // 4. Send
+      const sent = await sendEmail({
+        to: user.email,
+        subject,
+        html: htmlContent,
+        text: input.previewText || subject,
+      });
+
+      if (!sent.success) {
+        console.error(`❌ Failed to send '${input.key}' to ${user.email}:`, sent.error);
+        await Promise.all([
+          EmailCampaign.updateOne(
+            { _id: campaign._id },
+            { $inc: { 'performance.bounced': 1 } }
+          ),
+          EmailAutomation.updateOne(
+            { key: input.key },
+            { $set: { 'stats.lastError': sent.error || 'send failed' } }
+          ),
+        ]);
+        return false;
+      }
+
+      // 5. Stats + dedupe log
+      await EmailCampaign.updateOne(
+        { _id: campaign._id },
+        {
+          $inc: {
+            'performance.sent': 1,
+            'performance.delivered': 1,
+            sentCount: 1,
+          },
+          $set: { updatedAt: new Date() },
+        }
+      );
+
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logUserAction({
+        userId: user.id || 'system',
+        userEmail: user.email,
+        action: 'system_email_sent',
+        resourceType: 'other' as any,
+        resourceId: dedupeKey,
+        resourceName: input.name,
+        status: 'success',
+        metadata: { campaignId: String(campaign._id), automationKey: input.key },
+      });
+
+      await EmailAutomation.updateOne(
+        { key: input.key },
+        {
+          $inc: { 'stats.sent': 1 },
+          $set: {
+            'stats.lastSentAt': new Date(),
+            'stats.lastError': null,
+          },
+        }
+      );
+
+      console.log(`✅ Triggered '${input.key}' for ${user.email}`);
+      return true;
+    } catch (error: any) {
+      console.error(`Trigger Service Error (${input.key}):`, error);
+      await EmailAutomation.updateOne(
+        { key: input.key },
+        { $set: { 'stats.lastError': error?.message || 'unknown error' } }
+      ).catch(() => undefined);
+      return false;
+    }
+  }
 }
 
 export const triggerService = new TriggerEmailService();

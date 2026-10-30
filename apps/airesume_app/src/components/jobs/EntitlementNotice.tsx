@@ -132,7 +132,7 @@ export const EntitlementNotice: React.FC<EntitlementNoticeProps> = ({
                     Focused Plan
                   </span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300 font-bold">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/10 text-gray-300 font-bold">
                   50 / day
                 </span>
               </div>

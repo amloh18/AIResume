@@ -365,7 +365,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
             <div className="flex items-center gap-2 flex-wrap">
               <Zap className="w-5 h-5 text-lime-600 dark:text-[#013f2e]" />
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Automation</h2>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400">
+              <span className="px-2.5 py-0.5 rounded-md text-xs font-bold dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400">
                 Auto-Apply …
               </span>
             </div>
@@ -528,7 +528,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                     Application Automation
                   </h2>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+                  <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border flex items-center gap-1.5 ${
                     preferences.enabled
                       ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                       : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10'
@@ -723,7 +723,7 @@ export function AutoApplyPanel({ userId, region, onProfileSaved }: AutoApplyPane
             <span className="text-lime-900 dark:text-lime-200 font-medium">
               Profile updates sync automatically across all matching algorithms.
             </span>
-            <span className="text-[10px] font-bold text-lime-700 dark:text-[#013f2e] bg-lime-500/20 px-2 py-0.5 rounded-full shrink-0">
+            <span className="text-[10px] font-bold text-lime-700 dark:text-[#013f2e] bg-lime-500/20 px-2 py-0.5 rounded-md shrink-0">
               Live
             </span>
           </div>

@@ -581,7 +581,7 @@ export default function FiltersBar({
                 <Briefcase className="w-3.5 h-3.5 opacity-70 shrink-0" />
                 <span>Experience</span>
                 {Boolean(filters.experienceLevel?.length) && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 tabular-nums bg-lime-400/15 text-lime-300">
+                  <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold shrink-0 tabular-nums bg-lime-400/15 text-lime-300">
                     {filters.experienceLevel?.length}
                   </span>
                 )}

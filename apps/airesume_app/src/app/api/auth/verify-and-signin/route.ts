@@ -116,8 +116,13 @@ export async function POST(request: NextRequest) {
 
           // Trigger Welcome Email (Fire and Forget)
           setTimeout(() => {
-            import('@/lib/services/triggerEmailService').then(({ triggerService }) => {
-              triggerService.trigger('1-welcome', user);
+            import('@/lib/services/emailAutomationService').then(({ sendAutomationEmail }) => {
+              sendAutomationEmail('welcome', {
+                id: String(user._id),
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+              });
             }).catch(err => console.error('Failed to trigger welcome email:', err));
           }, 1000);
 
