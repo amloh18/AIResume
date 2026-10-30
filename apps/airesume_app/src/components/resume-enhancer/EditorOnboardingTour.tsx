@@ -35,6 +35,8 @@ import {
   Wand2,
   ArrowRight,
   X,
+  Briefcase,
+  PlusCircle,
 } from 'lucide-react';
 
 export type TourPlacement = 'top' | 'bottom' | 'left' | 'right';
@@ -143,6 +145,43 @@ export const EDITOR_TOUR_STEPS: TourStep[] = [
     icon: MousePointerClick,
     title: 'Click a section to work on it',
     body: 'Click any heading in your CV — Work Experience, Education, Skills. That section lights up and its text becomes editable: click a line and type. No forms, no pop-ups.',
+    prepare: () => {
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+    },
+  },
+  {
+    id: 'add-entry',
+    target: '[data-add-entry-preview]',
+    placement: 'bottom',
+    pad: 8,
+    icon: Briefcase,
+    title: 'Add a new role in Experience',
+    body: 'Need to add another job or role? Click the green line with the + button at the bottom of the section to instantly insert a new experience entry and fill in your details.',
+    prepare: () => {
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+      const expBlock = (document.querySelector('[data-json-section="experience"]') || document.querySelector('[data-block-id]')) as HTMLElement | null;
+      if (expBlock) {
+        expBlock.click();
+        expBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
+  },
+  {
+    id: 'add-section',
+    target: '[data-add-section-handle]',
+    placement: 'bottom',
+    pad: 8,
+    icon: PlusCircle,
+    title: 'Add a new section in canvas',
+    body: 'Hover between any two sections to reveal the green line with the + button. Click it to open the section picker card and insert recommended sections like Projects, Certifications, or Languages.',
+    prepare: () => {
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+      const handle = document.querySelector('[data-add-section-handle]') as HTMLElement | null;
+      if (handle) {
+        handle.setAttribute('data-tour-active', 'true');
+        handle.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
   },
   {
     id: 'panels',
@@ -152,6 +191,9 @@ export const EDITOR_TOUR_STEPS: TourStep[] = [
     icon: LayoutGrid,
     title: 'These five panels do the heavy lifting',
     body: 'Analysis scores your CV the way a recruiter\'s software reads it and lists what to fix. Add Section drops in a new block. Design controls spacing, fonts and paper size. Template changes how it looks. JSON shows the raw data behind the page.',
+    prepare: () => {
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+    },
   },
   {
     id: 'page-controls',
@@ -161,6 +203,9 @@ export const EDITOR_TOUR_STEPS: TourStep[] = [
     icon: ZoomIn,
     title: 'Pages, zoom and undo',
     body: 'Down here: how many pages your CV fills, and the paper size (A4 for India and Europe, Letter for the US — click to switch). The slider zooms in and out, the percentage resets it, and FIT puts the whole page back on screen. Undo and redo sit beside them.',
+    prepare: () => {
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+    },
   },
   {
     id: 'selection',
@@ -171,9 +216,7 @@ export const EDITOR_TOUR_STEPS: TourStep[] = [
     title: 'The toolbar for the section you picked',
     body: 'Select a section and this bar appears above it. AI runs AI actions on that section, Improve rewrites the line your cursor is in, B/I/U formats it, the list and arrow buttons rearrange it, and the up/down buttons move the section higher or lower. The small rail on the edge of each entry does the same for that one entry. And when the AI has a suggestion for a line, a pill appears next to it — click the pill to read it and accept it.',
     prepare: () => {
-      // Select the first section so the toolbar this step points at is on
-      // screen. Doing it for the user (rather than telling them to do it)
-      // keeps the step honest: we only ever highlight what exists.
+      document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
       const firstBlock = document.querySelector('[data-block-id]') as HTMLElement | null;
       firstBlock?.click();
     },
@@ -278,6 +321,10 @@ export const EditorOnboardingTour: React.FC<EditorOnboardingTourProps> = ({ acti
 
   const step = EDITOR_TOUR_STEPS[index];
 
+  useEffect(() => () => {
+    document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
+  }, []);
+
   useEffect(() => {
     if (!running) return undefined;
     const onResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -332,6 +379,7 @@ export const EditorOnboardingTour: React.FC<EditorOnboardingTourProps> = ({ acti
   }, [active, running]);
 
   const finish = useCallback(() => {
+    document.querySelectorAll('[data-tour-active]').forEach((el) => el.removeAttribute('data-tour-active'));
     try {
       window.localStorage.setItem(TOUR_STORAGE_KEY, 'done');
     } catch {

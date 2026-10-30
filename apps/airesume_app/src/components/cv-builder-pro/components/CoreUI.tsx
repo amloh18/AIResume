@@ -1619,6 +1619,7 @@ export const InsertSnippetHandle = ({
   return (
     <div
       ref={containerRef}
+      data-add-section-handle
       className="group/insert relative w-full h-[22px] -my-[11px] flex items-center justify-center z-[50] no-print"
       title="Add section here"
     >
@@ -1637,7 +1638,7 @@ export const InsertSnippetHandle = ({
           className={`w-full h-[3.5px] rounded-full transition-all duration-200 ${
             open || alwaysVisible
               ? 'bg-[#10b981] opacity-100'
-              : 'bg-[#10b981] opacity-0 group-hover/insert:opacity-100'
+              : 'bg-[#10b981] opacity-0 group-hover/insert:opacity-100 group-data-[tour-active]/insert:opacity-100'
           }`}
         />
 
@@ -1646,7 +1647,7 @@ export const InsertSnippetHandle = ({
           className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded-full bg-[#10b981] text-white shadow-md shadow-emerald-500/25 transition-all duration-150 ${
             open || alwaysVisible
               ? 'opacity-100 scale-100'
-              : 'opacity-0 scale-75 group-hover/insert:opacity-100 group-hover/insert:scale-100'
+              : 'opacity-0 scale-75 group-hover/insert:opacity-100 group-hover/insert:scale-100 group-data-[tour-active]/insert:opacity-100 group-data-[tour-active]/insert:scale-100'
           } group-hover/insert:scale-110 active:scale-95`}
         >
           <Plus size={13} strokeWidth={2.8} />
