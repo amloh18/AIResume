@@ -1666,11 +1666,15 @@ export const InsertSnippetHandle = ({
      *
      * The old shell was a 2px dashed emerald rectangle padded around a block of
      * content: it read as a placeholder rather than a control, and its emerald
-     * fill fought the lime section frame next to it. Now the insertion point is a
-     * thin dashed rule, and the panel below it is a white card — hairline border,
-     * a single emerald accent edge, tinted icon disc, title + grey caption — that
-     * happens to sit on the CV page. Colours are literal because the paper is
-     * white in both themes.
+     * fill fought the lime section frame next to it. Now the panel itself marks the
+     * insertion point: a white card with a hairline border, a single emerald
+     * accent edge, a tinted icon disc and a title + grey caption — the same
+     * recipe as the bottom-right popups. Colours are literal because the card is
+     * drawn on the CV page, which is white in both themes.
+     *
+     * There is deliberately NO dashed seam above the card. The gap it would sit in
+     * is the section's own bottom padding (≈6px at the canvas scale), so a rule
+     * drawn above the card lands ON the previous section's last line of text.
      */
     <div
       className="w-full my-2.5 z-[50] transition-all duration-200 no-print"
@@ -1679,12 +1683,6 @@ export const InsertSnippetHandle = ({
       data-add-section-panel
     >
       <div className="relative mx-auto w-full max-w-[430px]">
-        {/* the seam this panel inserts at */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-[11px] left-0 right-0 h-[2px] rounded-full bg-[repeating-linear-gradient(90deg,rgba(16,185,129,0.6)_0_6px,transparent_6px_12px)]"
-        />
-
         <div className="overflow-hidden rounded-2xl border border-gray-200 border-l-4 border-l-emerald-500 bg-white text-gray-900 shadow-2xl shadow-black/10">
           <div className="flex items-start gap-2.5 p-2.5">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
