@@ -339,11 +339,22 @@ const ListEntry = ({ collection, index, moveEntry, deleteEntry, children }: any)
 
   const entryId = ctx?.cvData?.[collection]?.[index]?.id;
 
-  if (snippetCtx && entryId) {
-    const entryUnitId = `${snippetCtx.blockId}_entry_${entryId}`;
-    const assignedPage = snippetCtx.pageAssignments[entryUnitId] ?? 0;
-    if (assignedPage !== snippetCtx.pageIdx) {
-      return null;
+  if (snippetCtx) {
+    if (entryId) {
+      const entryUnitId = `${snippetCtx.blockId}_entry_${entryId}`;
+      if (entryUnitId in snippetCtx.pageAssignments) {
+        if (snippetCtx.pageAssignments[entryUnitId] !== snippetCtx.pageIdx) {
+          return null;
+        }
+      } else if (snippetCtx.blockId in snippetCtx.pageAssignments) {
+        if (snippetCtx.pageAssignments[snippetCtx.blockId] !== snippetCtx.pageIdx) {
+          return null;
+        }
+      }
+    } else if (snippetCtx.blockId in snippetCtx.pageAssignments) {
+      if (snippetCtx.pageAssignments[snippetCtx.blockId] !== snippetCtx.pageIdx) {
+        return null;
+      }
     }
   }
 

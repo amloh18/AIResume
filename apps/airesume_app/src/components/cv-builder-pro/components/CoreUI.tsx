@@ -909,6 +909,13 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     if (!slot || !targetNode) return null;
 
     const isFocusMode = Boolean(anchorBlockId || targetNode.closest('[data-block-id]'));
+    const sectionEl = targetNode?.closest('[data-block-id]') || (anchorBlockId ? document.querySelector(`[data-block-id="${anchorBlockId}"]`) : null);
+    const path = (targetNode?.getAttribute('data-path') || '').toLowerCase();
+    const isHeaderField = Boolean(
+      (sectionEl?.getAttribute('data-json-section') === 'basics' && !path.startsWith('basics.summary')) ||
+      (path.startsWith('basics.') && !path.startsWith('basics.summary')) ||
+      path.startsWith('personalinfo.')
+    );
 
     return createPortal(
       <>
@@ -941,15 +948,19 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
             <Icon size={14} />
           </button>
         ))}
-        <div className={TOOLRAIL_DIVIDER} />
-        <button
-          onClick={(e) => execCmd(e, 'insertUnorderedList')}
-          className={TOOLRAIL_BTN}
-          title="Bullet List"
-          type="button"
-        >
-          <List size={14} />
-        </button>
+        {!isHeaderField && (
+          <>
+            <div className={TOOLRAIL_DIVIDER} />
+            <button
+              onClick={(e) => execCmd(e, 'insertUnorderedList')}
+              className={TOOLRAIL_BTN}
+              title="Bullet List"
+              type="button"
+            >
+              <List size={14} />
+            </button>
+          </>
+        )}
         <div className={TOOLRAIL_DIVIDER} />
         {([
           { cmd: 'justifyLeft', Icon: AlignLeft, title: 'Align Left' },
@@ -1157,7 +1168,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const listEntries = collectionKey ? cvData?.[collectionKey] : null;
   const hasListEntries = Array.isArray(listEntries) && listEntries.length > 0;
   const lastListEntry = hasListEntries ? listEntries[listEntries.length - 1] : null;
-  const isSnippetLastPage = !lastListEntry || (ctx?.pageAssignments?.[`${instance.id}_entry_${lastListEntry.id}`] ?? 0) === pageIdx;
+  const isSnippetLastPage = !lastListEntry || (ctx?.pageAssignments?.[`${instance.id}_entry_${lastListEntry.id}`] ?? ctx?.pageAssignments?.[instance.id] ?? 0) === pageIdx;
 
   /* Declared before anything reads them. `isSelected` and `content` are both
    * consumed by expressions further up (the inline add-entry affordance and the
@@ -1248,13 +1259,15 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
       >
         <RefreshCw size={13}/>
       </button>
-      <button
-        onClick={() => removeSnippet(zoneId, index)}
-        className={`${TOOLRAIL_BTN} text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:scale-105 active:scale-95`}
-        title="Delete section"
-      >
-        <Trash2 size={13}/>
-      </button>
+      {!isHeader && (
+        <button
+          onClick={() => removeSnippet(zoneId, index)}
+          className={`${TOOLRAIL_BTN} text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:scale-105 active:scale-95`}
+          title="Delete section"
+        >
+          <Trash2 size={13}/>
+        </button>
+      )}
       {!isHeader && (
         <>
           <div className={TOOLRAIL_DIVIDER} />
@@ -1428,8 +1441,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     hasListEntries &&
     isSnippetLastPage &&
     Boolean(addEntryInfo) &&
-    Boolean(onAddListEntry) &&
-    SnippetComponent?.category !== 'Skills';
+    Boolean(onAddListEntry);
 
   // In chat mode, hovering a section highlights it as a chat target. Suppressed
   // while the section is the SELECTED object: the lime frame already owns that

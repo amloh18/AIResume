@@ -38,6 +38,7 @@ export const ADD_ENTRY_PREVIEW: Record<string, { title: string; subtitle: string
   references: { title: 'Add Reference', subtitle: 'Add a referee contact or recommendation' },
   languages: { title: 'Add Language', subtitle: 'Add another language and proficiency' },
   interests: { title: 'Add Interest', subtitle: 'Add another hobby or personal interest' },
+  skills: { title: 'Add Skill Category', subtitle: 'Add a new group of skills' },
 };
 
 /**

@@ -87,7 +87,7 @@ const collectionAsArray = (data: any, collection: string) => {
   const raw = data?.[collection];
   if (collection === 'languages') return coerceLanguagesForEdit(raw);
   if (collection === 'interests') return coerceInterestsForEdit(raw);
-  if (collection === 'skills') return Array.isArray(raw) ? raw : [];
+  if (collection === 'skills') return Array.isArray(raw) ? [...raw] : [];
   return Array.isArray(raw) ? [...raw] : [];
 };
 

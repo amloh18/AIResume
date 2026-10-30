@@ -769,7 +769,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === SKILLS (6) ===
-  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly, moveEntry, deleteEntry }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
@@ -777,14 +777,16 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="skills" />
         <div className="flex flex-col cv-gap-sm">
           {groups.map((group) => (
-            <div key={group.key} className="cv-item-avoid">
-              <div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+            <ListEntry key={group.key} collection="skills" index={group.groupIndex} moveEntry={moveEntry} deleteEntry={deleteEntry}>
+              <div className="cv-item-avoid">
+                <div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </div>
+                <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+                </div>
               </div>
-              <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
-              </div>
-            </div>
+            </ListEntry>
           ))}
         </div>
       </div>
@@ -812,7 +814,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     if (allSkills.length === 0) return null;
     return (<div className="snippet-anim w-full cv-section"><Title titleKey="skills" /><div className="grid grid-cols-1 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body} cv-item-avoid`}><span className={`min-w-0 truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}><Editable path={skill.pathSkills} overrideValue={skill.label} arrayIndex={skill.skillIndex} nowrap /></span><LevelMeter path={skill.pathLevel} value={skill.rating} valueType="number" isDark={isDark} /></div>))}</div></div>);
   }},
-  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly, moveEntry, deleteEntry }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
     return (
@@ -820,12 +822,14 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <Title titleKey="skills" />
         <div className="flex flex-col cv-gap-sm">
           {groups.map((group) => (
-            <div key={group.key} className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} cv-item-avoid`}>
-              <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>
-                {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
-              </span>
-              {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
-            </div>
+            <ListEntry key={group.key} collection="skills" index={group.groupIndex} moveEntry={moveEntry} deleteEntry={deleteEntry}>
+              <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} cv-item-avoid`}>
+                <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>
+                  {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+                </span>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            </ListEntry>
           ))}
         </div>
       </div>
@@ -1137,10 +1141,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
-  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, Editable, isDark, Title, readOnly, moveEntry, deleteEntry }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-md">{groups.map((group) => (<div key={group.key}><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className="flex flex-wrap gap-1.5">{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-md">{groups.map((group) => (<ListEntry key={group.key} collection="skills" index={group.groupIndex} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-item-avoid"><div className={`text-[0.72em] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className="flex flex-wrap gap-1.5">{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.map((skill: string, i: number) => (<span key={i} className={`max-w-full break-words text-[0.85em] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div></ListEntry>))}</div></div>);
   }}
   ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
     const items = flattenSkillItems(data?.skills);
@@ -1269,10 +1273,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // =======================================================
   // NEW SNIPPETS — SIDEBAR (5 new)
   // =======================================================
-  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, Editable, isDark, Title, readOnly }: any) => {
+  ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, Editable, isDark, Title, readOnly, moveEntry, deleteEntry }: any) => {
     const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-lg">{groups.map((group) => (<div key={group.key}><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.join(', ')}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col cv-gap-lg">{groups.map((group) => (<ListEntry key={group.key} collection="skills" index={group.groupIndex} moveEntry={moveEntry} deleteEntry={deleteEntry}><div className="cv-item-avoid"><div className={`text-[0.78em] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{group.pathSkills ? <Editable path={group.pathSkills} /> : group.skills.join(', ')}</div></div></ListEntry>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">
