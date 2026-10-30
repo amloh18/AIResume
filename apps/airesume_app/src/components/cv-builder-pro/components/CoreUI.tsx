@@ -1195,15 +1195,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
           <ImageIcon size={13}/>
         </button>
       )}
-      {canAddListEntry && (
-        <button
-          onClick={() => onAddListEntry(SnippetComponent.category)}
-          className={`${TOOLRAIL_BTN} text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:scale-105 active:scale-95`}
-          title={`Add ${SnippetComponent.category} entry`}
-        >
-          <Plus size={13}/>
-        </button>
-      )}
+
       {/* ⚠️ No skills-specific AI button here.
           A Skills section used to render a wand titled "AI Skill Suggestions"
           in this slot, while a focused skills field rendered a "Skills" pill in
@@ -1518,53 +1510,38 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
             ))}
             {showInflowAddEntry && (
               /*
-                The add-entry card is an OVERLAY, not a row.
-
-                It used to sit in the flow (`mt-2 pt-1` + a ~33px button), so
-                every list section reserved ~44px of empty space for a control
-                that was invisible until you hovered it. On the canvas that read
-                as a gap under the last bullet — and because the gap belonged to
-                the *section*, it also inflated the space above the "Add Section"
-                banner that follows. Absolutely positioned, it costs the document
-                nothing: no layout shift on hover, no extra page height, and the
-                pagination measurement never sees it.
-
-                It is a card in the same visual language as the editor's rail
-                tiles (hairline border, soft surface, lift on hover) rather than
-                a dashed green bar, so the two add affordances on the page —
-                entry and section — read as one family.
+                The add-entry affordance is a thick emerald line with a center + icon,
+                matching the add-section affordance. When hovered or selected,
+                it smoothly expands within the section's dotted frame. Clicking
+                it directly adds an entry to this section.
               */
               <div
-                className={`no-print absolute left-0 right-0 top-full z-[70] mt-1 transition-all duration-200 ${
+                className={`no-print grid transition-all duration-200 ease-out ${
                   isSelected
-                    ? 'pointer-events-auto opacity-100'
-                    : 'pointer-events-none opacity-0 group-hover/inner:pointer-events-auto group-hover/inner:opacity-100'
+                    ? 'grid-rows-[1fr] opacity-100 pt-2.5 pointer-events-auto'
+                    : 'grid-rows-[0fr] opacity-0 pt-0 pointer-events-none group-hover/inner:grid-rows-[1fr] group-hover/inner:opacity-100 group-hover/inner:pt-2.5 group-hover/inner:pointer-events-auto'
                 }`}
               >
-                <button
-                  type="button"
-                  data-add-entry-preview
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onAddListEntry?.(SnippetComponent.category);
-                  }}
-                  title={`Add another ${SnippetComponent.category} entry`}
-                  // Same card as the bottom-right popups: white surface, hairline
-                  // border, one accent edge, tinted icon disc, bold line + grey line.
-                  // Literal colours, not theme tokens — it is drawn on the CV page,
-                  // which is white in both themes, so a `dark:` half would paint a
-                  // black card onto white paper.
-                  className="group/add-entry flex w-full items-center gap-2.5 rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 bg-white px-2.5 py-2 text-left shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl cursor-pointer"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/add-entry:scale-110">
-                    <Plus size={12} strokeWidth={2.6} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[11px] font-semibold leading-tight text-gray-900">{addEntryInfo.title}</span>
-                    <span className="mt-0.5 block truncate text-[9.5px] leading-snug text-gray-500">{addEntryInfo.subtitle}</span>
-                  </span>
-                  <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-[0.12em] text-emerald-700">Add</span>
-                </button>
+                <div className="overflow-hidden min-h-0 py-1">
+                  <button
+                    type="button"
+                    data-add-entry-preview
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAddListEntry?.(SnippetComponent.category);
+                    }}
+                    title={`Add ${SnippetComponent.category} entry`}
+                    className="group/entryline relative w-full h-[22px] flex items-center justify-center cursor-pointer focus:outline-none"
+                  >
+                    {/* Horizontal thick line */}
+                    <div className="w-full h-[3.5px] bg-[#10b981] rounded-full transition-all duration-200" />
+
+                    {/* Center circular + button */}
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded-full bg-[#10b981] text-white shadow-md shadow-emerald-500/25 transition-transform duration-150 group-hover/entryline:scale-110 active:scale-95">
+                      <Plus size={13} strokeWidth={2.8} />
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1586,31 +1563,40 @@ export const InsertSnippetHandle = ({
 }: any) => {
   const ctx = React.useContext(CanvasContext);
   const [open, setOpen] = useState(false);
-  const closeTimer = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [flipAbove, setFlipAbove] = useState(false);
 
-  const openPanel = () => {
-    if (closeTimer.current !== null) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
+  useEffect(() => {
+    if (!open) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      if (window.innerHeight - rect.bottom < 260 && rect.top > 260) {
+        setFlipAbove(true);
+      } else {
+        setFlipAbove(false);
+      }
     }
-    setOpen(true);
-  };
-  const closePanelSoon = () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => {
-      closeTimer.current = null;
-      setOpen(false);
-    }, 260);
-  };
-  useEffect(() => () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-  }, []);
+  }, [open]);
 
-  /* What this document is missing — not a fixed checklist.
-   *
-   * The section-based box between two sections is the moment the user is deciding what the
-   * CV needs next. It renders IN-FLOW (inserted into the document rather than an overlay) so
-   * hovering expands the canvas and physically previews the new section's space before adding. */
+  const isNarrowZone = ['sidebar', 'left', 'right'].includes((zoneId || '').replace(/_page_\d+$/, ''));
+
   const suggestions = useMemo(
     () => suggestNextSections({ presentCategories, cvData: ctx?.cvData, afterCategory, limit: 3 }),
     [presentCategories, ctx?.cvData, afterCategory]
@@ -1619,6 +1605,7 @@ export const InsertSnippetHandle = ({
   const browseAll = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    setOpen(false);
     onAddSnippet(zoneId, index);
   };
 
@@ -1629,75 +1616,62 @@ export const InsertSnippetHandle = ({
     onAddSnippet(zoneId, index, snippetType);
   };
 
-  const isExpanded = open || alwaysVisible;
-
-  if (!isExpanded) {
-    return (
-      /*
-        The collapsed target is exactly the gap between two sections (18px), and
-        its negative margins cancel its own height — so it is a hover target that
-        costs the document zero pixels, and it no longer overhangs the sections
-        above and below it.
-
-        It used to be `h-[32px] -my-[16px]`: 32px of box centred on a 15px gap,
-        which meant its top half lay OVER the previous section's last line. That
-        is why the expanded panel looked like it was covering the paragraph
-        above it — the panel's anchor was already overlapping the text.
-      */
-      <div
-        className="group/insert relative w-full h-[18px] -my-[9px] flex items-center justify-center z-[50] transition-all no-print cursor-pointer"
-        onMouseEnter={openPanel}
-        onFocus={openPanel}
-        onClick={openPanel}
-        title="Add section here"
-      >
-        <div className="w-full h-[2px] bg-emerald-400/0 group-hover/insert:bg-emerald-500/80 transition-all rounded-full pointer-events-none relative flex items-center justify-center">
-          <span className="opacity-0 group-hover/insert:opacity-100 transition-opacity bg-emerald-600 text-white rounded-full p-0.5 shadow-xs scale-75">
-            <Plus size={9} strokeWidth={3} />
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    /*
-     * Expanded: one card, in the same visual family as the bottom-right popups.
-     *
-     * The old shell was a 2px dashed emerald rectangle padded around a block of
-     * content: it read as a placeholder rather than a control, and its emerald
-     * fill fought the lime section frame next to it. Now the panel itself marks the
-     * insertion point: a white card with a hairline border, a single emerald
-     * accent edge, a tinted icon disc and a title + grey caption — the same
-     * recipe as the bottom-right popups. Colours are literal because the card is
-     * drawn on the CV page, which is white in both themes.
-     *
-     * There is deliberately NO dashed seam above the card. The gap it would sit in
-     * is the section's own bottom padding (≈6px at the canvas scale), so a rule
-     * drawn above the card lands ON the previous section's last line of text.
-     */
     <div
-      className="w-full my-2.5 z-[50] transition-all duration-200 no-print"
-      onMouseEnter={openPanel}
-      onMouseLeave={closePanelSoon}
-      data-add-section-panel
+      ref={containerRef}
+      className="group/insert relative w-full h-[22px] -my-[11px] flex items-center justify-center z-[50] no-print"
+      title="Add section here"
     >
-      <div className="relative mx-auto w-full max-w-[430px]">
-        <div className="overflow-hidden rounded-2xl border border-gray-200 border-l-4 border-l-emerald-500 bg-white text-gray-900 shadow-2xl shadow-black/10">
-          <div className="flex items-start gap-2.5 p-2.5">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              <Plus size={13} strokeWidth={2.6} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-semibold leading-snug text-gray-900">Add Section</p>
-              <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
-                Previews its space here before you insert it.
-              </p>
-            </div>
-            {/* No close affordance when the panel is pinned to an EMPTY zone:
-                there `alwaysVisible` keeps it expanded, so an X would be a dead
-                control. It only exists on the hover-opened panel. */}
-            {!alwaysVisible && (
+      {/* Thick line affordance */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((prev) => !prev);
+        }}
+        className="relative w-full h-full flex items-center justify-center cursor-pointer focus:outline-none"
+        aria-label="Add section"
+      >
+        {/* Horizontal thick line */}
+        <div
+          className={`w-full h-[3.5px] rounded-full transition-all duration-200 ${
+            open || alwaysVisible
+              ? 'bg-[#10b981] opacity-100'
+              : 'bg-[#10b981] opacity-0 group-hover/insert:opacity-100'
+          }`}
+        />
+
+        {/* Center circular + button */}
+        <div
+          className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded-full bg-[#10b981] text-white shadow-md shadow-emerald-500/25 transition-all duration-150 ${
+            open || alwaysVisible
+              ? 'opacity-100 scale-100'
+              : 'opacity-0 scale-75 group-hover/insert:opacity-100 group-hover/insert:scale-100'
+          } group-hover/insert:scale-110 active:scale-95`}
+        >
+          <Plus size={13} strokeWidth={2.8} />
+        </div>
+      </button>
+
+      {/* Floating OVERLAY card when clicked */}
+      {open && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`absolute left-1/2 -translate-x-1/2 w-full max-w-[430px] z-[120] cursor-default animate-in fade-in zoom-in-95 duration-150 ${
+            flipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
+        >
+          <div className="@container overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl shadow-black/15">
+            <div className="flex items-start gap-2.5 p-2.5">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                <Plus size={13} strokeWidth={2.6} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-semibold leading-snug text-gray-900">Add Section</p>
+                <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
+                  Select a section to insert here.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -1707,50 +1681,50 @@ export const InsertSnippetHandle = ({
               >
                 <X size={13} />
               </button>
-            )}
-          </div>
-
-          {suggestions.length > 0 && (
-            <div className="grid grid-cols-1 gap-1.5 px-2.5 pb-2.5 sm:grid-cols-3">
-              {suggestions.map((suggestion) => (
-                <button
-                  key={suggestion.category}
-                  type="button"
-                  data-insert-suggestion={suggestion.category}
-                  onClick={(e) => addSuggested(e, suggestion.snippetType)}
-                  className="group/sug flex items-start gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-white hover:shadow-md cursor-pointer"
-                >
-                  <span className="mt-[1px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/sug:scale-110">
-                    <Plus size={9} strokeWidth={2.8} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900">
-                      {suggestion.category}
-                    </span>
-                    <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 line-clamp-2">
-                      {suggestion.reason}
-                    </span>
-                  </span>
-                </button>
-              ))}
             </div>
-          )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-2.5 py-1.5">
-            <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400">
-              Inserts here
-            </span>
-            <button
-              type="button"
-              data-insert-browse
-              onClick={browseAll}
-              className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-700 transition-colors hover:bg-gray-200 cursor-pointer"
-            >
-              {suggestions.length > 0 ? 'All sections' : 'Browse & Add Section'} <ChevronRight size={11} />
-            </button>
+            {suggestions.length > 0 && (
+              <div className={`grid gap-1.5 px-2.5 pb-2.5 ${isNarrowZone ? 'grid-cols-1' : 'grid-cols-1 @[380px]:grid-cols-3'}`}>
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.category}
+                    type="button"
+                    data-insert-suggestion={suggestion.category}
+                    onClick={(e) => addSuggested(e, suggestion.snippetType)}
+                    className="group/sug flex items-start gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-white hover:shadow-md cursor-pointer"
+                  >
+                    <span className="mt-[1px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/sug:scale-110">
+                      <Plus size={9} strokeWidth={2.8} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900">
+                        {suggestion.category}
+                      </span>
+                      <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 line-clamp-2">
+                        {suggestion.reason}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-2.5 py-1.5">
+              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                Inserts here
+              </span>
+              <button
+                type="button"
+                data-insert-browse
+                onClick={browseAll}
+                className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-700 transition-colors hover:bg-gray-200 cursor-pointer"
+              >
+                {suggestions.length > 0 ? 'All sections' : 'Browse & Add Section'} <ChevronRight size={11} />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
