@@ -478,6 +478,16 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const isInternalLayoutChange = React.useRef(false);
   const layoutWriteLock = React.useRef(false);
   const zonesRef = React.useRef<Record<string, any[]>>({});
+  /* The design/template/zone write-back to `cvData.metadata` is debounced, and
+   * during that window the metadata prop still holds the PREVIOUS design. This
+   * records the exact value being superseded so the external-sync effect below
+   * can tell a stale echo apart from a genuine external change (undo, load,
+   * another panel) and not revert the pending edit. */
+  const pendingDesignWriteRef = React.useRef<{ from: string; to: string; at: number } | null>(null);
+  const designRef = React.useRef<any>(null);
+  const activeTemplateRef = React.useRef<any>(null);
+  const latestCvDataRef = React.useRef<any>(null);
+  const onDataChangeRef = React.useRef(onDataChange);
   const { userData } = useUserData();
 
   const [activeTemplate, setActiveTemplate] = useState(() =>
@@ -533,6 +543,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
   zonesRef.current = zones;
+  designRef.current = design;
+  activeTemplateRef.current = activeTemplate;
+  latestCvDataRef.current = cvData;
+  onDataChangeRef.current = onDataChange;
 
   /* The utility column is owned by the editor shell (`Step3CV`), not by this
    * engine — the Design / Template / JSON panel bodies are portalled into
@@ -800,9 +814,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     // 2. Sync design if metadata changed externally
     if (cvData.metadata?.canvasDesign) {
-      const currentDesignStr = JSON.stringify(design);
+      const currentDesignStr = JSON.stringify(designRef.current);
       const nextDesignStr = JSON.stringify(cvData.metadata.canvasDesign);
-      if (currentDesignStr !== nextDesignStr) {
+      /* A design edit that has not been written back yet leaves the prop holding
+       * the previous design. Adopting it here would undo the edit the user just
+       * made (and cancel its pending write), which is why design changes could
+       * look like they were never saved. Only the exact superseded value is
+       * ignored — a genuine external design still applies. The record is kept
+       * until the write is echoed back, because a content edit can re-emit
+       * metadata with the old design while the write is still in flight. */
+      const pending = pendingDesignWriteRef.current;
+      if (pending && (nextDesignStr === pending.to || Date.now() - pending.at > 10000)) {
+        pendingDesignWriteRef.current = null;
+      }
+      const currentPending = pendingDesignWriteRef.current;
+      const isSupersededLocalValue =
+        !!currentPending && nextDesignStr === currentPending.from && currentDesignStr === currentPending.to;
+      if (currentDesignStr !== nextDesignStr && !isSupersededLocalValue) {
         setDesign(cvData.metadata.canvasDesign);
       }
     }
@@ -847,31 +875,102 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     }
   }, [template]);
 
+  /* Design, template and zone changes live in this component's state and must be
+   * written back into `cvData.metadata`; that is what the editor's autosave
+   * persists. The write is debounced because dragging a slider or a section
+   * fires far more often than a save should.
+   *
+   * Two things used to make the write vanish:
+   *  - `isInternalLayoutChange` (a drag is in flight or just landed) made it
+   *    return without ever retrying, dropping design changes for good;
+   *  - a content edit inside the debounce window re-emitted metadata that still
+   *    held the old design, and the sync effect above adopted it.
+   * It now retries until the layout window closes and records the superseded
+   * value so it cannot be reverted. */
   useEffect(() => {
     // Only trigger save if not readOnly
     if (readOnly) return;
 
-    // Use a small timeout to prevent too many updates, but keep data synced
-    const timer = setTimeout(() => {
-      if (isInternalLayoutChange.current) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const commit = () => {
+      if (cancelled) return;
+      if (isInternalLayoutChange.current) {
+        timer = setTimeout(commit, 200);
+        return;
+      }
+
+      // Read the latest values rather than this render's closure: a content
+      // keystroke or template switch may have landed while the timer ran.
+      const current = latestCvDataRef.current;
+      const currentDesign = designRef.current;
+      const currentTemplate = activeTemplateRef.current;
+      const currentZones = zonesRef.current;
+
       const updatedMetadata = {
-        ...cvData?.metadata,
-        canvasDesign: design,
-        canvasTemplate: activeTemplate,
-        canvasZones: zones
+        ...current?.metadata,
+        canvasDesign: currentDesign,
+        canvasTemplate: currentTemplate,
+        canvasZones: currentZones
       };
 
       if (
-        JSON.stringify(cvData?.metadata?.canvasDesign) !== JSON.stringify(design) ||
-        JSON.stringify(cvData?.metadata?.canvasTemplate?.id) !== JSON.stringify(activeTemplate.id) ||
-        JSON.stringify(cvData?.metadata?.canvasZones) !== JSON.stringify(zones)
+        JSON.stringify(current?.metadata?.canvasDesign) !== JSON.stringify(currentDesign) ||
+        JSON.stringify(current?.metadata?.canvasTemplate?.id) !== JSON.stringify(currentTemplate?.id) ||
+        JSON.stringify(current?.metadata?.canvasZones) !== JSON.stringify(currentZones)
       ) {
-        onDataChange({ ...cvData, metadata: updatedMetadata });
+        onDataChangeRef.current?.({ ...current, metadata: updatedMetadata });
+        // `pendingDesignWriteRef` stays set until this write is echoed back by
+        // the prop (see the sync effect); clearing it here reopened the window
+        // in which a stale metadata emit could revert the design.
+      } else {
+        pendingDesignWriteRef.current = null;
       }
-    }, 500);
+    };
 
-    return () => clearTimeout(timer);
+    const currentDesignStr = JSON.stringify(design);
+    const persistedDesignStr = JSON.stringify(latestCvDataRef.current?.metadata?.canvasDesign);
+    if (currentDesignStr !== persistedDesignStr) {
+      pendingDesignWriteRef.current = { from: persistedDesignStr, to: currentDesignStr, at: Date.now() };
+    } else {
+      pendingDesignWriteRef.current = null;
+    }
+
+    timer = setTimeout(commit, 400);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [design, activeTemplate, zones, readOnly]);
+
+  /* Flush a design change that is still inside the debounce window when the
+   * canvas goes away (step change, document switch). Without this the change
+   * never reached `cvData` and the exit save could not persist it. */
+  useEffect(() => () => {
+    if (!pendingDesignWriteRef.current) return;
+    pendingDesignWriteRef.current = null;
+    const current = latestCvDataRef.current;
+    if (!current) return;
+    const latestDesign = designRef.current;
+    const latestTemplate = activeTemplateRef.current;
+    const latestZones = zonesRef.current;
+    const alreadyPersisted =
+      JSON.stringify(current.metadata?.canvasDesign) === JSON.stringify(latestDesign) &&
+      JSON.stringify(current.metadata?.canvasTemplate?.id) === JSON.stringify(latestTemplate?.id) &&
+      JSON.stringify(current.metadata?.canvasZones) === JSON.stringify(latestZones);
+    if (alreadyPersisted) return;
+    onDataChangeRef.current?.({
+      ...current,
+      metadata: {
+        ...current.metadata,
+        canvasDesign: latestDesign,
+        canvasTemplate: latestTemplate,
+        canvasZones: latestZones,
+      },
+    });
+  }, []);
 
   useEffect(() => {
     if (readOnly) return;

@@ -79,6 +79,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('CV export error:', error);
+    // A designed CV that could not be printed by a headless renderer must not be
+    // answered with something else. The client uses this status to fall back to
+    // a high-DPI capture of the live canvas, which keeps the design.
+    if ((error as any)?.code === 'PDF_RENDERER_UNAVAILABLE') {
+      return NextResponse.json(
+        { error: 'PDF renderer unavailable', code: 'PDF_RENDERER_UNAVAILABLE' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to export CV' },
       { status: 500 }
@@ -128,6 +137,9 @@ async function generatePDFExport(
       filename: `${options.filename || cvData.basics?.name || 'CV'}.pdf`
     };
   } catch (error) {
+    if ((error as any)?.code === 'PDF_RENDERER_UNAVAILABLE') {
+      throw error;
+    }
     console.error('PDF generation failed, falling back to HTML:', error);
     // Fallback: Return HTML with a warning (not a valid PDF but better than crashing)
     // In production, you may want to throw an error instead

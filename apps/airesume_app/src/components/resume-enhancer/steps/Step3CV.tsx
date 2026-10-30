@@ -66,6 +66,44 @@ type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
  */
 const COVER_LETTER_DISABLED_PANELS: UtilityPanelId[] = ['sections', 'json'];
 
+/**
+ * Normalized signature of the user-authored part of a CV (no `metadata`).
+ * Used to tell a stale concurrency token apart from another session's edit: the
+ * server merges `metadata` and re-defaults empty values when it saves, so a
+ * byte comparison would report a conflict for what is the same edit. Empty
+ * values are dropped on both sides and only the JSON Resume sections are kept.
+ */
+const CV_CONTENT_KEYS = [
+  'basics', 'work', 'volunteer', 'education', 'awards', 'certificates',
+  'publications', 'skills', 'languages', 'interests', 'references', 'projects',
+] as const;
+
+const isEmptyValue = (value: any): boolean =>
+  value === undefined || value === null || value === '' ||
+  (Array.isArray(value) && value.length === 0) ||
+  (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0);
+
+const stripEmptyValues = (value: any): any => {
+  if (Array.isArray(value)) {
+    return value.map(stripEmptyValues).filter((item) => !isEmptyValue(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .map(([key, entry]) => [key, stripEmptyValues(entry)])
+        .filter(([, entry]) => !isEmptyValue(entry))
+    );
+  }
+  return value;
+};
+
+const cvContentSignature = (cv: any): string => {
+  if (!cv || typeof cv !== 'object') return '';
+  return JSON.stringify(
+    stripEmptyValues(Object.fromEntries(CV_CONTENT_KEYS.map((key) => [key, (cv as any)[key]])))
+  );
+};
+
 const DEFAULT_SECTION_TITLES: Record<string, string> = {
   summary: 'Professional Summary',
   experience: 'Professional Experience',
@@ -107,6 +145,13 @@ interface Step3CVProps {
    * unsaved-changes snapshot.
    */
   onSaveStatus?: (status: 'saving' | 'success' | 'error', savedCvDataJson?: string) => void;
+  /**
+   * The optimistic-concurrency token (`CV.updatedAt`) shared with the editor
+   * shell. Step 3 autosaves and the shell's Save button/step transitions both
+   * write the same document; with separate tokens one path always looked like an
+   * external edit and the next autosave was rejected with 409.
+   */
+  savedAtRef?: React.MutableRefObject<string | null>;
 }
 
 export interface Step3CVRef {
@@ -119,7 +164,7 @@ export interface Step3CVRef {
 }
 
 const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
-  ({ onComplete, onActiveSectionChange, onSaveStatus, activeDocument, onActiveDocumentChange, isOnboarding = false }, ref) => {
+  ({ onComplete, onActiveSectionChange, onSaveStatus, activeDocument, onActiveDocumentChange, isOnboarding = false, savedAtRef }, ref) => {
     const { data: session } = useSession();
     const isGuestMode = !session;
     const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap, goToStep } = useResumeEnhancer();
@@ -154,7 +199,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
     const lastSavedCvDataStrRef = useRef<string>('');
     const autoSaveAbortRef = useRef<AbortController | null>(null);
-    const lastSavedAtRef = useRef<string | null>(null);
+    // Shared with the editor shell when provided — see `savedAtRef` in the props.
+    const localSavedAtRef = useRef<string | null>(null);
+    const lastSavedAtRef = savedAtRef || localSavedAtRef;
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -300,16 +347,39 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
         onSaveStatus?.('saving');
 
         try {
-          const response = await fetch(`/api/cvs/${state.cvId}`, {
+          const putCv = (updatedAt: string | null) => fetch(`/api/cvs/${state.cvId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             signal: controller.signal,
             body: JSON.stringify({
               cvData: state.cvData,
               active_issues_json: pillIssues ?? [],
-              updatedAt: lastSavedAtRef.current || undefined,
+              updatedAt: updatedAt || undefined,
             })
           });
+
+          let response = await putCv(lastSavedAtRef.current);
+
+          /* The Save button, step transitions and the score/analysis routes
+           * write this document and bump `updatedAt`, so the token captured
+           * above can be stale even though the user's content is still the
+           * newest. The old code then marked the change as saved anyway, which
+           * is how edits (design changes especially, since they only reach
+           * `cvData` after the canvas writes them back) disappeared without an
+           * error. Retry once with the server's token, but only when the
+           * server's content is still ours — otherwise it is another session's
+           * edit and overwriting it would destroy their work. */
+          if (response.status === 409) {
+            const conflict = await response.json().catch(() => ({}));
+            const serverUpdatedAt = conflict?.serverVersion?.updatedAt || null;
+            const serverContent = conflict?.serverVersion?.cvData;
+            const isSameContent = !!serverContent &&
+              cvContentSignature(serverContent) === cvContentSignature(state.cvData);
+            if (serverUpdatedAt && isSameContent) {
+              lastSavedAtRef.current = serverUpdatedAt;
+              response = await putCv(serverUpdatedAt);
+            }
+          }
 
           if (response.ok) {
             const result = await response.json().catch(() => ({}));
@@ -323,9 +393,9 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
             console.log('CV Auto-saved successfully (content only)');
             onSaveStatus?.('success', currentSaveKey);
           } else if (response.status === 409) {
-            // Conflict: server has a newer version. Discard local changes and reload.
+            // Real conflict with another session: stay dirty so the change is
+            // not silently treated as persisted.
             console.warn('CV Auto-save conflict — server has newer version');
-            lastSavedCvDataStrRef.current = currentSaveKey;
             onSaveStatus?.('error');
             toast.error('This CV was updated elsewhere. Reload the page before editing further.', { id: 'cv-autosave-conflict' });
           } else {
@@ -1513,44 +1583,50 @@ const Step3CV = forwardRef<Step3CVRef, Step3CVProps>(
          `layout ? … : …` ternary, so Design and JSON both fell through to the
          analysis panel and the user saw "analysis" behind the Design tile. */
       <div className="h-full w-full flex flex-col overflow-hidden rounded-2xl border border-[var(--border-primary)] bg-[#f3f2ee] dark:bg-[#1a1a1a] shadow-sm">
-        {activeUtilityPanel === 'layout' ? (
-          <CoverLetterHeaderStyles
-            templateType={clTemplateType}
-            onSelect={(type) => {
-              setClTemplateType(type);
-              setClDesign((prev) => ({ ...prev, fontFamily: type === 'classic' ? 'font-serif' : 'font-sans' }));
-            }}
-            onClose={closeUtilityPanel}
-            cvData={state.cvData}
-            jobData={state.jobData}
-          />
-        ) : activeUtilityPanel === 'design' ? (
-          <CoverLetterDesignPanel design={clDesign} setDesign={setClDesign} onClose={closeUtilityPanel} />
-        ) : activeUtilityPanel === 'mori' ? (
-          /* Same engine as the CV chat, pointed at the letter: the AI tile means
-             "the AI for the document I am looking at", and it opens here rather
-             than as a popup floating over the canvas. */
+        {/* Always mounted, like the CV chat below: the letter thread and the
+            queued prompt from the canvas ask bar must survive a tile switch
+            (the store is the hand-off, so the consumer has to stay alive). */}
+        <div className={activeUtilityPanel === 'mori' ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : 'hidden'}>
+          {/* Same engine as the CV chat, pointed at the letter: the AI tile means
+              "the AI for the document I am looking at", and it opens here rather
+              than as a popup floating over the canvas. */}
           <MoriCoverLetterChat
             onBodyChange={(content: string) =>
               dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: content } })
             }
             onClose={closeUtilityPanel}
           />
-        ) : (
-          /* `analysis` — and `null`, so the panel is never blank while its width
-             animates open. `json` cannot reach here: the tile is disabled for
-             letters (see UtilityPanelRail). */
-          <LetterGuidePanel
-            matchScore={state.autoGeneratedCoverLetterMetadata?.match_quality ?? 82}
-            templateType={clTemplateType}
-            setTemplateType={setClTemplateType}
-            design={clDesign}
-            setDesign={setClDesign}
-            isEditing={clIsEditing}
-            setIsEditing={setClIsEditing}
-            onComplete={onComplete}
-            onUpdateTarget={() => setShowJobParserDialog(true)}
-          />
+        </div>
+        {activeUtilityPanel !== 'mori' && (
+          activeUtilityPanel === 'layout' ? (
+            <CoverLetterHeaderStyles
+              templateType={clTemplateType}
+              onSelect={(type) => {
+                setClTemplateType(type);
+                setClDesign((prev) => ({ ...prev, fontFamily: type === 'classic' ? 'font-serif' : 'font-sans' }));
+              }}
+              onClose={closeUtilityPanel}
+              cvData={state.cvData}
+              jobData={state.jobData}
+            />
+          ) : activeUtilityPanel === 'design' ? (
+            <CoverLetterDesignPanel design={clDesign} setDesign={setClDesign} onClose={closeUtilityPanel} />
+          ) : (
+            /* `analysis` — and `null`, so the panel is never blank while its width
+               animates open. `json` cannot reach here: the tile is disabled for
+               letters (see UtilityPanelRail). */
+            <LetterGuidePanel
+              matchScore={state.autoGeneratedCoverLetterMetadata?.match_quality ?? 82}
+              templateType={clTemplateType}
+              setTemplateType={setClTemplateType}
+              design={clDesign}
+              setDesign={setClDesign}
+              isEditing={clIsEditing}
+              setIsEditing={setClIsEditing}
+              onComplete={onComplete}
+              onUpdateTarget={() => setShowJobParserDialog(true)}
+            />
+          )
         )}
       </div>
     ) : (

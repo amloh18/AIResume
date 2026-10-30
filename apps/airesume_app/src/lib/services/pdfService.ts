@@ -21,6 +21,25 @@ export interface PDFGenerationOptions {
   htmlContent?: string;
 }
 
+/**
+ * Raised when a caller supplied rendered canvas markup (a designed CV) but this
+ * process has no headless browser to print it with.
+ *
+ * The text-only jsPDF fallback cannot represent a designed document, so
+ * returning it would silently hand the user a different document than the one
+ * on screen. Callers that can do better (the editor falls back to a high-DPI
+ * raster capture of the live canvas) must be able to tell this apart from a
+ * generic failure.
+ */
+export class PDFRendererUnavailableError extends Error {
+  readonly code = 'PDF_RENDERER_UNAVAILABLE';
+
+  constructor(message = 'No headless renderer is configured for HTML PDF export') {
+    super(message);
+    this.name = 'PDFRendererUnavailableError';
+  }
+}
+
 export class PDFService extends BaseService {
   private static instance: PDFService;
 
@@ -82,71 +101,98 @@ export class PDFService extends BaseService {
         }
       }
 
+      // A designed CV arrives as pre-rendered canvas markup. Printing it with
+      // a headless browser is the ONLY way to keep the design as vector text;
+      // the jsPDF fallback below draws plain Helvetica sections and would hand
+      // the user a completely different document. Fail loudly instead so the
+      // editor can use its design-preserving raster capture.
+      const requiresHtmlFidelity = !!options.htmlContent;
+
       // Generate PDF with retry logic
-      return this.withRetry(
-        async () => {
-          // Check renderer health
-          const isHealthy = await rendererHealthService.checkHealth();
-          if (!isHealthy) {
-            logger.warn(`${this.serviceName}: Renderer health check failed, using fallback`);
-            return await this.generatePDFFallback(cvData, template, options);
+      const renderPdf = async () => {
+        // Check renderer health
+        const isHealthy = await rendererHealthService.checkHealth();
+        if (!isHealthy) {
+          if (requiresHtmlFidelity) {
+            throw new PDFRendererUnavailableError(
+              'Renderer health check failed; refusing to emit a text-only PDF for a designed CV'
+            );
           }
+          logger.warn(`${this.serviceName}: Renderer health check failed, using fallback`);
+          return await this.generatePDFFallback(cvData, template, options);
+        }
+        // Render template to HTML
+        logger.info('PDF Generation - Rendering template to HTML', {
+          templateName: template?.name,
+          templateId: template?.id || template?._id,
+          customRenderer: template?.customRenderer,
+          hasCustomRenderer: !!template?.customRenderer,
+          paperSize: options.paperSize || 'A4',
+          hasCustomHtml: !!options.htmlContent
+        });
 
-          // Render template to HTML
-          logger.info('PDF Generation - Rendering template to HTML', {
+        const html = options.htmlContent || await templateRendererService.renderToHTML(cvData, template, {
+          paperSize: options.paperSize || 'A4',
+          orientation: options.orientation || 'portrait',
+          sectionOrder: options.sectionOrder,
+          sectionVisibility: options.sectionVisibility
+        });
+
+        // Log the first 500 chars of HTML for debugging template identification
+        logger.info('PDF Generation - HTML rendered', {
+          htmlLength: html.length,
+          htmlPreview: html.substring(0, 500),
+          containsCustomTemplateClass: html.includes('data-driven-pro-template') ||
+            html.includes('tech-pro-blue-template') ||
+            html.includes('elegant-timeline-template'),
+          containsGenericCV: html.includes('cv-container')
+        });
+
+        // Generate PDF from HTML using Puppeteer pool
+        let pdfBuffer: Buffer;
+        try {
+          pdfBuffer = await this.generatePDFFromHTML(cvData, html, options);
+        } catch (puppeteerError) {
+          logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)), {
             templateName: template?.name,
-            templateId: template?.id || template?._id,
-            customRenderer: template?.customRenderer,
-            hasCustomRenderer: !!template?.customRenderer,
-            paperSize: options.paperSize || 'A4',
-            hasCustomHtml: !!options.htmlContent
+            customRenderer: template?.customRenderer
           });
-
-          const html = options.htmlContent || await templateRendererService.renderToHTML(cvData, template, {
-            paperSize: options.paperSize || 'A4',
-            orientation: options.orientation || 'portrait',
-            sectionOrder: options.sectionOrder,
-            sectionVisibility: options.sectionVisibility
-          });
-
-          // Log the first 500 chars of HTML for debugging template identification
-          logger.info('PDF Generation - HTML rendered', {
-            htmlLength: html.length,
-            htmlPreview: html.substring(0, 500),
-            containsCustomTemplateClass: html.includes('data-driven-pro-template') ||
-              html.includes('tech-pro-blue-template') ||
-              html.includes('elegant-timeline-template'),
-            containsGenericCV: html.includes('cv-container')
-          });
-
-          // Generate PDF from HTML using Puppeteer pool
-          let pdfBuffer: Buffer;
-          try {
-            pdfBuffer = await this.generatePDFFromHTML(cvData, html, options);
-          } catch (puppeteerError) {
-            logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)), {
-              templateName: template?.name,
-              customRenderer: template?.customRenderer
-            });
-            // Fallback to alternative method
-            logger.warn('Falling back to jsPDF (template styling will NOT be applied)');
-            return await this.generatePDFFallback(cvData, template, options);
+          if (requiresHtmlFidelity) {
+            throw new PDFRendererUnavailableError(
+              `Headless rendering failed: ${puppeteerError instanceof Error ? puppeteerError.message : String(puppeteerError)}`
+            );
           }
+          // Fallback to alternative method
+          logger.warn('Falling back to jsPDF (template styling will NOT be applied)');
+          return await this.generatePDFFallback(cvData, template, options);
+        }
 
-          // Apply protection if password provided
-          if (options.password) {
-            pdfBuffer = await fileProtectionService.protectPDF(pdfBuffer, options.password);
-          }
+        // Apply protection if password provided
+        if (options.password) {
+          pdfBuffer = await fileProtectionService.protectPDF(pdfBuffer, options.password);
+        }
 
-          const blob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' });
+        const blob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' });
 
-          // Cache the result
-          if (cacheKey) {
-            await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
-          }
+        // Cache the result
+        if (cacheKey) {
+          await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
+        }
 
-          return blob;
-        },
+        return blob;
+      };
+
+      // An unavailable browser is not transient, and the editor has a
+      // design-preserving fallback of its own — retrying only delays it. It also
+      // keeps PDFRendererUnavailableError intact: `withRetry` wraps failures in
+      // a generic ServiceError, which the export route would no longer be able
+      // to recognise.
+      if (requiresHtmlFidelity) {
+        return renderPdf();
+      }
+
+      return this.withRetry(
+        renderPdf,
         configService.getRetryConfig(),
         { cvId: (cvData as any).id, templateId: template?.id || template?._id }
       );

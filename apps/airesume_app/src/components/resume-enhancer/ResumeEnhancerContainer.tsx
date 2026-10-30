@@ -3929,6 +3929,7 @@ export default function ResumeEnhancerContainer({
                         onComplete={handleStep3Complete}
                         onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
                         onSaveStatus={handleStep3SaveStatus}
+                        savedAtRef={lastSavedAtRef}
                         activeDocument={activeDocument}
                         onActiveDocumentChange={setActiveDocument}
                         isOnboarding={isFromOnboarding}

@@ -1629,11 +1629,17 @@ export const InsertSnippetHandle = ({
   };
 
   return (
+    /* While the card is open the handle must stop reacting to hover and sit
+       above the sibling rails/sections. Those siblings are `z-[50]` too and come
+       later in the DOM, and a hovered section lifts its inner content to
+       `hover:z-[150]`, so anything at or below that was painted over the open
+       card; the lingering group-hover line + plus stayed visible on top of the
+       card as well. */
     <div
       ref={containerRef}
       data-add-section-handle
-      className="group/insert relative w-full h-[22px] -my-[11px] flex items-center justify-center z-[50] no-print"
-      title="Add section here"
+      className={`${open ? 'z-[200]' : 'group/insert z-[50]'} relative w-full h-[22px] -my-[11px] flex items-center justify-center no-print`}
+      title={open ? undefined : 'Add section here'}
     >
       {/* Thick line affordance */}
       <button
@@ -1648,19 +1654,23 @@ export const InsertSnippetHandle = ({
         {/* Horizontal thick line */}
         <div
           className={`w-full h-[3.5px] rounded-full transition-all duration-200 ${
-            open || alwaysVisible
-              ? 'bg-[#10b981] opacity-100'
-              : 'bg-[#10b981] opacity-0 group-hover/insert:opacity-100 group-data-[tour-active]/insert:opacity-100'
+            open
+              ? 'opacity-0'
+              : alwaysVisible
+                ? 'bg-[#10b981] opacity-100'
+                : 'bg-[#10b981] opacity-0 group-hover/insert:opacity-100 group-data-[tour-active]/insert:opacity-100'
           }`}
         />
 
         {/* Center circular + button */}
         <div
           className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center w-6 h-6 rounded-full bg-[#10b981] text-white shadow-md shadow-emerald-500/25 transition-all duration-150 ${
-            open || alwaysVisible
-              ? 'opacity-100 scale-100'
-              : 'opacity-0 scale-75 group-hover/insert:opacity-100 group-hover/insert:scale-100 group-data-[tour-active]/insert:opacity-100 group-data-[tour-active]/insert:scale-100'
-          } group-hover/insert:scale-110 active:scale-95`}
+            open
+              ? 'opacity-0 scale-75'
+              : alwaysVisible
+                ? 'opacity-100 scale-100 group-hover/insert:scale-110'
+                : 'opacity-0 scale-75 group-hover/insert:opacity-100 group-hover/insert:scale-100 group-data-[tour-active]/insert:opacity-100 group-data-[tour-active]/insert:scale-100'
+          } active:scale-95`}
         >
           <Plus size={13} strokeWidth={2.8} />
         </div>
@@ -1674,14 +1684,18 @@ export const InsertSnippetHandle = ({
             flipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
         >
-          <div className="@container overflow-hidden rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md text-gray-900 dark:text-gray-100 shadow-2xl shadow-black/15 dark:shadow-black/50 p-3.5">
+          {/* This card lives inside `.cv-document`, whose injected stylesheet pins
+              every `.text-gray-*` utility to its light-mode value — that beat the
+              `dark:` variants and left "Add Section" dark-on-dark. Arbitrary
+              values are not targeted by those rules, so they follow the theme. */}
+          <div className="@container overflow-hidden rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md text-[#111827] dark:text-[#f4f4f5] shadow-2xl shadow-black/15 dark:shadow-black/50 p-3.5">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                 <Plus size={15} strokeWidth={2.6} />
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">Add Section</h4>
-                <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
+                <h4 className="text-xs font-bold text-[#111827] dark:text-[#f4f4f5]">Add Section</h4>
+                <p className="mt-1 text-[11px] leading-relaxed text-[#4b5563] dark:text-[#9ca3af]">
                   Select a section to insert here, or browse all section templates.
                 </p>
               </div>
@@ -1690,7 +1704,7 @@ export const InsertSnippetHandle = ({
                 onClick={() => setOpen(false)}
                 title="Close"
                 aria-label="Close add section panel"
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors -mr-1 -mt-1 cursor-pointer"
+                className="p-1 rounded-lg text-[#9ca3af] hover:text-[#4b5563] dark:hover:text-[#e5e7eb] hover:bg-gray-100 dark:hover:bg-white/5 transition-colors -mr-1 -mt-1 cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -1710,10 +1724,10 @@ export const InsertSnippetHandle = ({
                       <Plus size={9} strokeWidth={2.8} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900 dark:text-gray-100">
+                      <span className="block truncate text-[10.5px] font-semibold leading-tight text-[#111827] dark:text-[#f4f4f5]">
                         {suggestion.category}
                       </span>
-                      <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">
+                      <span className="mt-0.5 block text-[9px] leading-snug text-[#6b7280] dark:text-[#9ca3af] line-clamp-2">
                         {suggestion.reason}
                       </span>
                     </span>
@@ -1723,7 +1737,7 @@ export const InsertSnippetHandle = ({
             )}
 
             <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 dark:border-white/10 pt-2.5">
-              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#9ca3af] dark:text-[#6b7280]">
                 Inserts here
               </span>
               <button

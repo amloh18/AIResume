@@ -180,6 +180,44 @@ const splitHtmlIntoBlocks = (html: string): string[] => {
   });
 };
 
+/**
+ * A body that opens with blank paragraphs (what the editor leaves behind when
+ * Enter is pressed at the very top) rendered as an empty band between the
+ * header and the first real line. They carry no content, so drop the leading
+ * ones — internal blank lines are kept, they are deliberate spacing.
+ */
+const isVisuallyEmpty = (html: string): boolean =>
+  html
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .trim() === '';
+
+const dropLeadingEmptyBlocks = (blocks: string[]): string[] => {
+  let start = 0;
+  while (start < blocks.length && isVisuallyEmpty(blocks[start])) start++;
+  return start === 0 ? blocks : blocks.slice(start);
+};
+
+/** One blank block at the very start, e.g. `<p><br></p>` or `<div>&nbsp;</div>`. */
+const LEADING_BLANK_BLOCK = /^\s*(?:<p\b[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>|<div\b[^>]*>(?:\s|&nbsp;|<br\s*\/?>)*<\/div>)/i;
+
+/**
+ * The same trim for the editable HTML handed to the WYSIWYG — the editor shows
+ * the stored body verbatim, so leading blank paragraphs have to be removed
+ * before they render as a band under the header. Plain-text bodies are left to
+ * the editor's own normalisation.
+ */
+const stripLeadingBlankBlocks = (html: string): string => {
+  let out = html;
+  let previous: string;
+  do {
+    previous = out;
+    out = out.replace(LEADING_BLANK_BLOCK, '');
+  } while (out !== previous);
+  return out;
+};
+
 export default function CoverLetterLayoutEngine({
   headerProps,
   bodyContent,
@@ -240,8 +278,10 @@ export default function CoverLetterLayoutEngine({
 
   // Unify body content into block units (HTML tags or double newlines)
   const letterBlocks = useMemo(() => {
-    return splitHtmlIntoBlocks(bodyContent);
+    return dropLeadingEmptyBlocks(splitHtmlIntoBlocks(bodyContent));
   }, [bodyContent]);
+
+  const editorBodyContent = useMemo(() => stripLeadingBlankBlocks(bodyContent), [bodyContent]);
 
   const width = pageFormat === 'letter' ? getPageDimensions('Letter').widthCss : getPageDimensions('A4').widthCss;
   const minHeight = pageFormat === 'letter' ? getPageDimensions('Letter').heightCss : getPageDimensions('A4').heightCss;
@@ -403,6 +443,15 @@ export default function CoverLetterLayoutEngine({
             outline: none !important;
             border-color: transparent !important;
           }
+          /* The body opens directly under the header. The editor gives every
+             paragraph a top margin (see WYSIWYGEditor's contenteditable rules),
+             which pushed the first line down and left a blank band where the
+             header's spacing had already ended. Same for the preview, whose
+             first block carries the paragraph margin of its own paragraph tag. */
+          .cl-document .editor-content > :first-child,
+          .cl-document .cl-body > :first-child > :first-child {
+            margin-top: 0 !important;
+          }
         `}
       </style>
       {activePages.map(pageIdx => {
@@ -454,7 +503,7 @@ export default function CoverLetterLayoutEngine({
               )}
 
               {/* Body Layout - Single Column Responsive */}
-              <div className="flex-1 min-h-0 mt-4">
+              <div className="cl-body flex-1 min-h-0">
                 {isEditing ? (
                   <CanvasSectionWrapper
                     isEditing={isEditing}
@@ -463,10 +512,13 @@ export default function CoverLetterLayoutEngine({
                     onClick={() => onSelectUnit?.('body')}
                   >
                     <WYSIWYGEditor
-                      value={bodyContent}
+                      value={editorBodyContent}
                       onChange={onBodyChange || (() => {})}
-                      className="w-full text-black bg-transparent mt-2"
-                      showToolbar={true}
+                      className="w-full text-black bg-transparent"
+                      // The letter's formatting lives in the Design panel; the
+                      // floating in-canvas toolbar was a second route to it that
+                      // also covered the header above the body.
+                      showToolbar={false}
                       reviewMode={false}
                       grammarLocale="us"
                       textColor="black"
