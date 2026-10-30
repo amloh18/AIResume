@@ -1032,7 +1032,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const isDarkUI = theme === 'dark';
 
   const bgApp = isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100';
-  const bgNav = isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200 shadow-sm';
+  const bgNav = isDarkUI ? 'bg-[#141414]/95 border-white/10 shadow-black/50' : 'bg-white/95 border-gray-200/80 shadow-black/15';
   const bgPanel = isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200';
   const bgWorkspace = isDarkUI ? 'bg-[#1a1a1a]' : 'bg-[#f3f2ee]';
   const textPrimary = isDarkUI ? 'text-gray-100' : 'text-gray-900';
@@ -3146,7 +3146,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
           {!readOnly && (
             <div data-canvas-page-controls className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
               {/* Page Count and Size Info */}
-              <div className={`px-2 md:px-3 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 md:gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-2 md:px-3 h-9 rounded-2xl border shadow-2xl backdrop-blur-md flex items-center gap-2 md:gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <div className="hidden md:flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
                   <FileText size={12} className={brandGreen} />
                   <span>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages'}</span>
@@ -3161,7 +3161,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               </div>
 
               {/* Zoom Controls */}
-              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>                <div className="flex items-center gap-0.5">
+              <div className={`px-2 h-9 rounded-2xl border shadow-2xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>                <div className="flex items-center gap-0.5">
                   <button 
                     onClick={() => setZoom(Math.max(50, zoom - ZOOM_STEP))}
                     title="Zoom out"
@@ -3207,7 +3207,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
               </div>
 
               {/* Undo / Redo History Controls */}
-              <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+              <div className={`px-2 h-9 rounded-2xl border shadow-2xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                 <button
                   onClick={() => enhancerDispatch({ type: 'UNDO' })}
                   disabled={enhancerState.undoStack.length === 0}
@@ -3236,7 +3236,7 @@ ${JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2)}`;
 
               {/* Debug Toggle (admin/superadmin only) */}
               {isAdmin && (
-                <div className={`px-2 h-9 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                <div className={`px-2 h-9 rounded-2xl border shadow-2xl backdrop-blur-md flex items-center gap-1.5 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
                   <button
                     onClick={() => setDebugMode(!debugMode)}
                     className={`p-1.5 transition-all flex items-center justify-center hover:scale-105 active:scale-95 rounded-lg ${

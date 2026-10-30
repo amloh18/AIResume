@@ -443,7 +443,7 @@ const CoverLetterCanvas: React.FC<CoverLetterCanvasProps> = ({
 
       {/* Tools — mirrors the CV canvas tools so the two documents feel like one editor. */}
       <div className="absolute bottom-4 left-3 right-3 md:bottom-6 md:left-auto md:right-6 z-[40] flex flex-wrap justify-end items-center gap-1.5 md:gap-2 pointer-events-none">
-        <div className="flex items-center gap-1.5 md:gap-2 pointer-events-auto rounded-xl border border-gray-200 dark:border-[#2a2a2a] bg-white/90 dark:bg-[#111]/90 backdrop-blur-md px-2 h-9 shadow-xl">
+        <div className="flex items-center gap-1.5 md:gap-2 pointer-events-auto rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md px-2.5 h-9 shadow-2xl shadow-black/15 dark:shadow-black/50">
           <button
             type="button"
             onClick={() => setPageFormat(pageFormat === 'a4' ? 'letter' : 'a4')}

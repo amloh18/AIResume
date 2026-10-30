@@ -104,9 +104,9 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, hi
  * the editor's dark olive in dark mode, and the brand emerald reserved for the
  * interactive accents. */
 const SURFACE =
-  'rounded-xl border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 backdrop-blur-md shadow-xl shadow-black/20';
+  'rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md shadow-2xl shadow-black/15 dark:shadow-black/50';
 const CHIP_SURFACE =
-  'border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 backdrop-blur-md shadow-md text-gray-700 dark:text-gray-200 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white';
+  'border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md shadow-lg shadow-black/15 dark:shadow-black/40 text-gray-700 dark:text-gray-200 hover:border-emerald-500 hover:bg-emerald-500 hover:text-white';
 
 const flatten = (el: HTMLElement, max: number) =>
   (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -557,21 +557,21 @@ const MoriSelectionBar: React.FC<MoriSelectionBarProps> = ({ document: doc, enab
         }}
         ref={askBarRef}
         data-mori-ask-bar
-        className={`fixed z-[190] flex items-center gap-1.5 rounded-xl pl-3.5 pr-1.5 py-1.5 no-print ${SURFACE}`}
+        className={`fixed z-[190] flex items-center gap-2 rounded-2xl pl-3.5 pr-1.5 py-1.5 no-print ${SURFACE}`}
         style={{ top: barTop, left: barLeft, width: barW, height: BAR_H }}
       >
-        <Sparkles size={14} className="shrink-0 text-emerald-500" />
+        <Sparkles size={14} className="shrink-0 text-emerald-500 dark:text-emerald-400" />
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder={ASK_PLACEHOLDER}
           aria-label={`ASK Mori AI for adjustments to ${anchor.title}`}
-          className="min-w-0 flex-1 bg-transparent text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none dark:text-white dark:placeholder:text-slate-400"
+          className="min-w-0 flex-1 bg-transparent text-xs font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none dark:text-gray-100 dark:placeholder:text-gray-500"
         />
         <button
           type="submit"
           disabled={!value.trim()}
-          className="shrink-0 rounded-lg p-1.5 bg-emerald-500 text-white shadow-[0_2px_8px_rgba(16,185,129,0.35)] transition-colors hover:bg-emerald-600 disabled:bg-transparent disabled:text-slate-400 disabled:shadow-none dark:disabled:text-slate-500"
+          className="shrink-0 rounded-xl p-1.5 bg-[#013f2e] dark:bg-emerald-600 text-white shadow-sm transition-all hover:bg-[#02523c] dark:hover:bg-emerald-500 disabled:bg-transparent disabled:text-gray-400 disabled:shadow-none dark:disabled:text-gray-600 cursor-pointer"
           aria-label="Send"
         >
           <ChevronRight size={15} />

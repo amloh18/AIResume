@@ -513,12 +513,12 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
    * colour, so the dark surface is a literal rather than
    * `dark:bg-[var(--bg-secondary)]/95`.
    */
-  export const TOOLRAIL_SURFACE = 'rounded-xl border border-gray-200/80 dark:border-[#2a2a2a] bg-white/95 dark:bg-[#111111]/95 shadow-xl shadow-black/20 backdrop-blur-md';
+  export const TOOLRAIL_SURFACE = 'rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 shadow-2xl shadow-black/15 dark:shadow-black/50 backdrop-blur-md';
 
   /* Chrome for a button inside a rail. Matches the page controls: subtle
    * rounded corners, grey glyphs, and a light hover tint. Exported because
    * ListEntry's side rail uses the same buttons. */
-  export const TOOLRAIL_BTN = 'w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-300 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white';
+  export const TOOLRAIL_BTN = 'w-7 h-7 flex items-center justify-center rounded-xl text-gray-500 dark:text-gray-400 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white';
   const TOOLRAIL_DIVIDER = 'w-px h-5 mx-1 bg-gray-200 dark:bg-white/10';
 
   /** A viewport-space rect (the subset of DOMRect this maths needs). */
@@ -847,7 +847,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
                 }
                 window.dispatchEvent(new CustomEvent('mori-open-document-menu'));
               }}
-              className="h-7 pl-1.5 pr-2.5 flex flex-row items-center gap-1.5 rounded-lg bg-[#013f2e] text-white text-[10px] font-black uppercase tracking-wider transition-transform duration-150 hover:scale-[1.04] active:scale-95"
+              className="h-7 pl-2 pr-2.5 flex flex-row items-center gap-1.5 rounded-xl bg-[#013f2e] hover:bg-[#02523c] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all duration-150 hover:scale-[1.04] active:scale-95 shadow-sm"
               title="AI actions for this CV"
             >
               <Sparkles size={12} className="shrink-0" />
@@ -1674,15 +1674,15 @@ export const InsertSnippetHandle = ({
             flipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
         >
-          <div className="@container overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-900 shadow-2xl shadow-black/15">
-            <div className="flex items-start gap-2.5 p-2.5">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                <Plus size={13} strokeWidth={2.6} />
-              </span>
+          <div className="@container overflow-hidden rounded-2xl border border-gray-200/80 dark:border-white/10 bg-white/95 dark:bg-[#141414]/95 backdrop-blur-md text-gray-900 dark:text-gray-100 shadow-2xl shadow-black/15 dark:shadow-black/50 p-3.5">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                <Plus size={15} strokeWidth={2.6} />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-semibold leading-snug text-gray-900">Add Section</p>
-                <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
-                  Select a section to insert here.
+                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">Add Section</h4>
+                <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
+                  Select a section to insert here, or browse all section templates.
                 </p>
               </div>
               <button
@@ -1690,30 +1690,30 @@ export const InsertSnippetHandle = ({
                 onClick={() => setOpen(false)}
                 title="Close"
                 aria-label="Close add section panel"
-                className="shrink-0 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-900 cursor-pointer"
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors -mr-1 -mt-1 cursor-pointer"
               >
-                <X size={13} />
+                <X size={14} />
               </button>
             </div>
 
             {suggestions.length > 0 && (
-              <div className={`grid gap-1.5 px-2.5 pb-2.5 ${isNarrowZone ? 'grid-cols-1' : 'grid-cols-1 @[380px]:grid-cols-3'}`}>
+              <div className={`mt-3 grid gap-1.5 ${isNarrowZone ? 'grid-cols-1' : 'grid-cols-1 @[380px]:grid-cols-3'}`}>
                 {suggestions.map((suggestion) => (
                   <button
                     key={suggestion.category}
                     type="button"
                     data-insert-suggestion={suggestion.category}
                     onClick={(e) => addSuggested(e, suggestion.snippetType)}
-                    className="group/sug flex items-start gap-1.5 rounded-xl border border-gray-200 bg-gray-50 px-2 py-1.5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-white hover:shadow-md cursor-pointer"
+                    className="group/sug flex items-start gap-1.5 rounded-xl border border-gray-200/80 dark:border-white/10 bg-gray-50/80 dark:bg-white/5 p-2 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500/40 hover:bg-white dark:hover:bg-white/10 hover:shadow-md cursor-pointer"
                   >
-                    <span className="mt-[1px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 transition-transform duration-200 group-hover/sug:scale-110">
+                    <span className="mt-[1px] flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 transition-transform duration-200 group-hover/sug:scale-110">
                       <Plus size={9} strokeWidth={2.8} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900">
+                      <span className="block truncate text-[10.5px] font-semibold leading-tight text-gray-900 dark:text-gray-100">
                         {suggestion.category}
                       </span>
-                      <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 line-clamp-2">
+                      <span className="mt-0.5 block text-[9px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">
                         {suggestion.reason}
                       </span>
                     </span>
@@ -1722,17 +1722,17 @@ export const InsertSnippetHandle = ({
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-2.5 py-1.5">
-              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400">
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 dark:border-white/10 pt-2.5">
+              <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
                 Inserts here
               </span>
               <button
                 type="button"
                 data-insert-browse
                 onClick={browseAll}
-                className="flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-semibold text-gray-700 transition-colors hover:bg-gray-200 cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-semibold bg-[#013f2e] hover:bg-[#02523c] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white transition-all shadow-sm active:scale-95 cursor-pointer"
               >
-                {suggestions.length > 0 ? 'All sections' : 'Browse & Add Section'} <ChevronRight size={11} />
+                {suggestions.length > 0 ? 'All sections' : 'Browse & Add Section'} <ChevronRight size={12} />
               </button>
             </div>
           </div>
