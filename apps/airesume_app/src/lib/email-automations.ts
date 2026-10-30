@@ -7,6 +7,10 @@ import type { AutomationCategory, AutomationTriggerType } from '@/models/EmailAu
  * The admin UI edits the DB override (`EmailAutomation`); the runtime in the
  * product app resolves `DB override ?? this default`. Adding a new automation
  * means adding one entry here — no admin migration required.
+ *
+ * Templates support two kinds of tokens:
+ *   `{{firstName}}`                      — replaced with a value (fallback if empty)
+ *   `{{#if couponCode}}…{{else}}…{{/if}}` — block kept only when the value exists
  */
 export interface AutomationDefinition {
   key: string;
@@ -40,6 +44,7 @@ export interface AutomationDefinition {
 }
 
 const APP_URL = '{{appUrl}}';
+const DASHBOARD = `${APP_URL}/dashboard`;
 
 function hero(tag: string, title: string, desc: string): string {
   return `
@@ -61,8 +66,6 @@ function cta(href: string, label: string): string {
 function page(title: string, content: string): string {
   return BASE_TEMPLATE(content, title);
 }
-
-const DASHBOARD = `${APP_URL}/dashboard`;
 
 export const AUTOMATION_CATALOG: AutomationDefinition[] = [
   {
@@ -88,7 +91,7 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
             '2. We score it and show exactly what to improve.<br/>' +
             '3. Tailor it to a job in one click.'
         ) +
-        cta(`${APP_URL}/dashboard/jobs`, 'Build my first resume')
+        cta(`${DASHBOARD}/jobs`, 'Build my first resume')
     ),
     variables: ['firstName', 'lastName', 'email', 'appUrl'],
   },
@@ -100,8 +103,8 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     enabled: true,
     triggerType: 'event',
     event: 'onboarding.completed',
-    subject: 'Your resume is ready — here is your score',
-    previewText: 'See your score and the next step to land more interviews.',
+    subject: '{{firstName}}, your resume is ready — here is your score',
+    previewText: 'See your {{score}} score and the next step to land more interviews.',
     htmlContent: page(
       'Your resume is ready',
       hero(
@@ -111,11 +114,11 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
       ) +
         block(
           'Your current resume score is <strong>{{score}}</strong>. The biggest wins usually come from quantifying achievements and matching keywords from the job description.<br/><br/>' +
-            'Next step: pick a job and tailor your resume in one click — the AI rewrites the parts that matter for that role.'
+            'You are on the <strong>{{planName}}</strong> plan. Next step: pick a job and tailor your resume in one click — the AI rewrites the parts that matter for that role.'
         ) +
         cta(`${DASHBOARD}/jobs`, 'Tailor my resume to a job')
     ),
-    variables: ['firstName', 'lastName', 'email', 'score', 'appUrl'],
+    variables: ['firstName', 'lastName', 'email', 'score', 'planName', 'appUrl'],
   },
   {
     key: 'abandoned_onboarding_1',
@@ -126,14 +129,14 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'createdAt',
     delayHours: 24,
-    subject: 'You are 2 minutes away from your first tailored CV',
-    previewText: 'Finish your profile and let AI do the heavy lifting.',
+    subject: '{{firstName}}, your profile is one step from ready',
+    previewText: 'Everything you added is saved — pick up where you left off.',
     htmlContent: page(
       'Finish your profile',
       hero(
         'Still with us?',
-        '{{firstName}}, you are 2 minutes away from your first tailored CV.',
-        'You started building your profile but did not quite finish. Pick up exactly where you left off.'
+        '{{firstName}}, your profile is one step from ready.',
+        'You started building your master profile but did not finish. Pick up exactly where you left off — everything you added is saved.'
       ) +
         block(
           'A complete master profile unlocks one-click tailoring, ATS scoring and job tracking — the three things that move the needle fastest.'
@@ -152,8 +155,8 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'createdAt',
     delayHours: 72,
-    subject: 'Still thinking? Let us finish your resume together',
-    previewText: 'Your progress is saved — one short step to go.',
+    subject: 'Your progress is saved, {{firstName}}',
+    previewText: 'One short step to go — let us finish your resume together.',
     htmlContent: page(
       'Your progress is saved',
       hero(
@@ -178,7 +181,7 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'createdAt',
     delayHours: 26,
-    subject: 'Your AI resume is waiting to be built',
+    subject: '{{firstName}}, let us build your first AI resume',
     previewText: 'Start from your existing CV or build one from scratch.',
     htmlContent: page(
       'Build your first resume',
@@ -188,7 +191,7 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
         'Upload an existing CV or answer a few questions and we will build a recruiter-ready resume for you.'
       ) +
         block(
-          'It takes about three minutes, and you can edit everything afterwards. Your first resume score is included.'
+          'You can edit everything afterwards and your first resume score is included. A scored profile is what unlocks tailored applications.'
         ) +
         cta(`${DASHBOARD}/cvs`, 'Build my resume')
     ),
@@ -203,7 +206,7 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     enabled: true,
     triggerType: 'event',
     event: 'cv.draft_saved',
-    subject: 'Your draft is saved — want it recruiter-ready?',
+    subject: 'Your draft is saved, {{firstName}} — want it recruiter-ready?',
     previewText: 'Turn your draft into a scored, tailored resume.',
     htmlContent: page(
       'Draft saved',
@@ -227,8 +230,8 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     enabled: true,
     triggerType: 'event',
     event: 'cv.first_created',
-    subject: 'Turn your CV into a master profile',
-    previewText: 'Build once, tailor for every job.',
+    subject: '{{firstName}}, build once and tailor for every job',
+    previewText: 'Your master profile is how you stop starting from scratch.',
     htmlContent: page(
       'Master profile guide',
       hero(
@@ -262,12 +265,13 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
         'You have seen what AIResume can do. Pro removes every limit so you can tailor as many applications as you like.'
       ) +
         block(
-          'Pro includes unlimited AI tailoring, advanced ATS analysis, priority support and every future feature we ship.'
+          '{{#if cvCount}}You have already built <strong>{{cvCount}}</strong> master resume{{cvCountPlural}} — imagine applying that quality to every role you want.<br/><br/>{{/if}}' +
+            'Pro includes unlimited AI tailoring, advanced ATS analysis, priority support and every future feature we ship.'
         ) +
         cta(`${APP_URL}/#pricing`, 'See Pro plans')
     ),
     audience: { plans: ['free', 'starter_monthly'], requireCv: true },
-    variables: ['firstName', 'lastName', 'email', 'appUrl'],
+    variables: ['firstName', 'lastName', 'email', 'cvCount', 'cvCountPlural', 'appUrl'],
   },
   {
     key: 'free_to_pro_2',
@@ -278,7 +282,7 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'createdAt',
     delayHours: 336,
-    subject: 'The fastest way to more interviews',
+    subject: '{{firstName}}, the fastest way to more interviews',
     previewText: 'Tailored applications get more replies. Here is how Pro helps.',
     htmlContent: page(
       'More interviews with Pro',
@@ -288,12 +292,12 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
         '{{firstName}}, the difference between a generic CV and a tailored one is often the difference between silence and an interview.'
       ) +
         block(
-          'Pro gives you unlimited tailored resumes, cover letters and ATS checks — so every application you send is the strongest version of you.'
+          'You are currently on the <strong>{{planName}}</strong> plan. Pro gives you unlimited tailored resumes, cover letters and ATS checks — so every application you send is the strongest version of you.'
         ) +
         cta(`${APP_URL}/#pricing`, 'Upgrade to Pro')
     ),
     audience: { plans: ['free', 'starter_monthly'], requireCv: true },
-    variables: ['firstName', 'lastName', 'email', 'appUrl'],
+    variables: ['firstName', 'lastName', 'email', 'planName', 'appUrl'],
   },
   {
     key: 'free_to_pro_3',
@@ -304,22 +308,22 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'createdAt',
     delayHours: 720,
-    subject: 'Your exclusive upgrade offer',
-    previewText: 'A limited-time discount on AIResume Pro.',
+    subject: '{{firstName}}, your exclusive upgrade offer',
+    previewText: 'A limited-time offer on AIResume Pro.',
     htmlContent: page(
       'Your exclusive offer',
       hero(
         'Limited offer',
         'An exclusive upgrade offer, just for you.',
-        '{{firstName}}, here is a limited-time discount on AIResume Pro — unlimited tailoring, ATS scoring and priority support.'
+        '{{firstName}}, here is a limited-time offer on AIResume Pro — unlimited tailoring, ATS scoring and priority support.'
       ) +
         block(
-          'Use code <strong>{{couponCode}}</strong> at checkout. This offer expires in {{expiresIn}}.'
+          '{{#if couponCode}}Use code <strong>{{couponCode}}</strong> at checkout{{#if couponExpiry}} — valid until {{couponExpiry}}{{/if}}.{{else}}Upgrade today and lock in the best price we can offer on Pro.{{/if}}'
         ) +
-        cta(`${APP_URL}/#pricing`, 'Claim my discount')
+        cta(`${APP_URL}/#pricing`, 'Claim my offer')
     ),
     audience: { plans: ['free', 'starter_monthly'], requireCv: true },
-    variables: ['firstName', 'lastName', 'email', 'couponCode', 'expiresIn', 'appUrl'],
+    variables: ['firstName', 'lastName', 'email', 'couponCode', 'couponExpiry', 'appUrl'],
   },
   {
     key: 'limit_reached',
@@ -329,13 +333,13 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     enabled: true,
     triggerType: 'event',
     event: 'usage.limit_reached',
-    subject: 'You have hit your free limit — keep going with Pro',
+    subject: '{{firstName}}, you have hit your {{planName}} limit',
     previewText: 'Unlock unlimited AI actions and keep your momentum.',
     htmlContent: page(
       'Keep your momentum',
       hero(
         'Limit reached',
-        '{{firstName}}, you have used all your free AI actions.',
+        '{{firstName}}, you have used all your {{planName}} AI actions.',
         'You are clearly putting in the work. Pro removes the limit so you can keep applying without slowing down.'
       ) +
         block(
@@ -354,8 +358,9 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'lastLogin',
     delayHours: 168,
-    subject: 'New jobs matched to your profile this week',
-    previewText: 'Fresh matches are waiting for you.',
+    subject:
+      '{{#if jobCount}}{{jobCount}} new roles matched your profile, {{firstName}}{{else}}New roles are waiting for you, {{firstName}}{{/if}}',
+    previewText: 'Fresh matches picked for your profile are waiting.',
     htmlContent: page(
       'New matches for you',
       hero(
@@ -363,7 +368,10 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
         '{{firstName}}, new jobs are waiting for you.',
         'It has been a week since your last visit. Fresh roles matched to your profile have landed since then.'
       ) +
-        block('Pick up where you left off and tailor an application in one click.') +
+        block(
+          '{{#if jobCount}}<strong>{{jobCount}}</strong> new roles have been added since your last visit. {{else}}New roles have been added since your last visit. {{/if}}' +
+            'Pick up where you left off and tailor an application in one click.'
+        ) +
         cta(`${DASHBOARD}/jobs`, 'See my matches')
     ),
     variables: ['firstName', 'lastName', 'email', 'jobCount', 'appUrl'],
@@ -377,21 +385,21 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     triggerType: 'relative',
     anchor: 'lastLogin',
     delayHours: 720,
-    subject: 'We saved your progress — pick up where you left off',
-    previewText: 'Your profile and applications are exactly where you left them.',
+    subject: '{{firstName}}, your progress is still saved',
+    previewText: 'Pick up exactly where you left off.',
     htmlContent: page(
       'Pick up where you left off',
       hero(
         'Still here for you',
         'Your progress is exactly where you left it.',
-        '{{firstName}}, it has been a while. Your profile, resumes and application tracker are all saved.'
+        '{{firstName}}, it has been {{daysInactive}} days since your last visit. Your profile, resumes and application tracker are all saved.'
       ) +
         block(
           'Whether you paused your search or got busy, restarting takes one click — and we will show you what changed in the market while you were away.'
         ) +
         cta(`${DASHBOARD}/jobs`, 'Restart my job search')
     ),
-    variables: ['firstName', 'lastName', 'email', 'appUrl'],
+    variables: ['firstName', 'lastName', 'email', 'daysInactive', 'appUrl'],
   },
   {
     key: 'daily_digest',
@@ -402,8 +410,9 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
     enabled: true,
     triggerType: 'schedule',
     schedule: 'daily 08:00',
-    subject: 'Your daily job search brief',
-    previewText: 'Applications, deadlines and follow-ups that need you today.',
+    subject: '{{firstName}}, your job search brief for {{date}}',
+    previewText:
+      '{{#if itemCount}}{{itemCount}} need you today{{else}}A quick look at yesterday and what is next{{/if}}',
     htmlContent: page(
       'Your daily job search brief',
       hero(
@@ -420,7 +429,16 @@ export const AUTOMATION_CATALOG: AutomationDefinition[] = [
       includeFollowUps: true,
       includeActionRequired: true,
     },
-    variables: ['firstName', 'lastName', 'email', 'digestSummary', 'digestItems', 'appUrl'],
+    variables: [
+      'firstName',
+      'lastName',
+      'email',
+      'date',
+      'itemCount',
+      'digestSummary',
+      'digestItems',
+      'appUrl',
+    ],
   },
 ];
 
@@ -454,6 +472,27 @@ export const AUTOMATION_CATEGORIES: Array<{ id: AutomationCategory; label: strin
   { id: 'transactional', label: 'Transactional' },
 ];
 
+/** Human explanation of every token, used by the AI template writer. */
+export const EMAIL_TOKEN_HINTS: Record<string, string> = {
+  firstName: "recipient's first name",
+  lastName: "recipient's last name",
+  email: "recipient's email address",
+  appUrl: 'base application URL (use for links such as {{appUrl}}/dashboard)',
+  score: 'resume score from 0 to 100',
+  planName: "recipient's current plan name (for example Free or Pro)",
+  cvCount: 'number of resumes the recipient has created',
+  cvCountPlural: 'plural suffix for cvCount, either "" or "s"',
+  jobCount: 'number of new jobs added since the last visit',
+  couponCode: 'active discount code (may be empty)',
+  couponExpiry: 'coupon expiry date (may be empty)',
+  daysInactive: 'number of days since the last login',
+  date: "today's date, for example 30 Oct 2026",
+  itemCount: 'number of action items in the digest, for example 3 items',
+  digestSummary: 'pre-rendered HTML summary sentence from the product (never invent this)',
+  digestItems: 'pre-rendered HTML list of action items from the product (never invent this)',
+  unsubscribeUrl: 'unsubscribe link (keep the token untouched)',
+};
+
 export interface AutomationRenderData {
   firstName?: string;
   lastName?: string;
@@ -461,21 +500,56 @@ export interface AutomationRenderData {
   appUrl?: string;
   score?: string | number;
   planName?: string;
-  couponCode?: string;
-  expiresIn?: string;
+  cvCount?: string | number;
+  cvCountPlural?: string;
   jobCount?: string | number;
+  couponCode?: string;
+  couponExpiry?: string;
+  daysInactive?: string | number;
+  date?: string;
+  itemCount?: string;
   digestSummary?: string;
   digestItems?: string;
   unsubscribeUrl?: string;
   [key: string]: string | number | undefined;
 }
 
-const TOKEN_RE = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+export interface RenderOptions {
+  /** Tokens that must survive rendering (resolved later, e.g. the unsubscribe link). */
+  preserve?: string[];
+}
 
-export function renderAutomationTemplate(
+const TOKEN_RE = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
+const IF_BLOCK_RE = /{{#if\s+([a-zA-Z0-9_]+)\s*}}([\s\S]*?){{\/if}}/g;
+const ELSE_RE = /\{\{\s*else\s*\}\}/;
+
+function todayLabel(): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date());
+}
+
+function hasValue(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  const str = String(value).trim();
+  return str !== '' && str !== '0' && str.toLowerCase() !== 'false';
+}
+
+/**
+ * Renders `{{token}}` values and `{{#if token}}…{{else}}…{{/if}}` blocks.
+ *
+ * Conditionals are evaluated on the raw value first, so an empty optional value
+ * (coupon, new-job count) cleanly removes the block instead of printing a gap.
+ */
+export function renderEmailTemplate(
   template: string,
-  data: AutomationRenderData
+  data: AutomationRenderData = {},
+  options: RenderOptions = {}
 ): string {
+  if (!template) return '';
   const appUrl = data.appUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://buildairesume.com';
   const fallback: Record<string, string> = {
     firstName: 'there',
@@ -484,21 +558,54 @@ export function renderAutomationTemplate(
     appUrl,
     score: '—',
     planName: 'Free',
-    couponCode: '',
-    expiresIn: '7 days',
+    cvCount: '',
+    cvCountPlural: '',
     jobCount: '0',
+    couponCode: '',
+    couponExpiry: '',
+    daysInactive: '30',
+    date: todayLabel(),
+    itemCount: '',
     digestSummary: '',
     digestItems: '',
     unsubscribeUrl: `${appUrl}/unsubscribe`,
   };
 
-  return template.replace(TOKEN_RE, (_match, token: string) => {
+  const resolve = (token: string): string => {
     const value = data[token];
     if (value === undefined || value === null || value === '') {
       return fallback[token] ?? '';
     }
     return String(value);
+  };
+
+  let output = template;
+  for (let pass = 0; pass < 5; pass++) {
+    const next = output.replace(IF_BLOCK_RE, (_match, token: string, body: string) => {
+      const [truthy, falsy = ''] = body.split(ELSE_RE);
+      return hasValue(resolve(token)) ? truthy : falsy;
+    });
+    if (next === output) break;
+    output = next;
+  }
+
+  return output.replace(TOKEN_RE, (match, token: string) => {
+    if (options.preserve?.includes(token)) return match;
+    return resolve(token);
   });
+}
+
+/** Renders a subject line or preview text against the sample/real values. */
+export function renderAutomationTemplate(
+  template: string,
+  data: AutomationRenderData
+): string {
+  return renderEmailTemplate(template, data);
+}
+
+/** Wraps a body fragment in the shared dark email shell (used by AI generation). */
+export function wrapEmailPage(content: string, title: string): string {
+  return BASE_TEMPLATE(content, title);
 }
 
 export interface DigestItem {
@@ -537,13 +644,13 @@ export function renderDigestItems(items: DigestItem[], appUrl?: string): string 
       const href = /^https?:\/\//.test(item.url) ? item.url : `${base}${item.url}`;
       const color = PRIORITY_COLOR[item.priority || 'medium'] || PRIORITY_COLOR.medium;
       return `
-      <div style="background-color:#20291d;border:1px solid rgba(1,63,46,0.18);border-radius:18px;padding:18px 20px;margin-bottom:12px;">
+      <div style="background-color:#1c2620;border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px 20px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:${color};">${esc(item.kind.replace(/_/g, ' '))}</span>
         </div>
         <p style="margin:8px 0 6px;font-size:16px;font-weight:700;color:#ffffff;">${esc(item.title)}</p>
-        <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:rgba(255,255,255,0.65);">${esc(item.message)}</p>
-        <a href="${esc(href)}" style="display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#013f2e;text-decoration:none;">Open &rarr;</a>
+        <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:rgba(255,255,255,0.66);">${esc(item.message)}</p>
+        <a href="${esc(href)}" style="display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#34d399;text-decoration:none;">Open &rarr;</a>
       </div>`;
     })
     .join('');

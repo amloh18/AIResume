@@ -4,6 +4,7 @@ import { sendEmail } from '@/lib/email-service';
 import EmailCampaign from '@/models/admin/EmailCampaign';
 import EmailAutomation from '@/models/EmailAutomation';
 import { getCampaignTemplateById } from '@/lib/campaign-templates';
+import { renderEmailTemplate } from '@/lib/email-automations';
 
 /**
  * Shared sender for every automated email (trigger templates and lifecycle
@@ -42,8 +43,6 @@ export interface RecipientLike {
   [key: string]: any;
 }
 
-const TOKEN_RE = /{{\s*([a-zA-Z0-9_]+)\s*}}/g;
-
 function escapeHtml(value: any): string {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -53,13 +52,11 @@ function escapeHtml(value: any): string {
     .replace(/'/g, '&#39;');
 }
 
-function renderTokens(input: string, values: Record<string, any>): string {
-  return input.replace(TOKEN_RE, (match, token: string) => {
-    // Resolved later against the campaign container id — see step 3.
-    if (token === 'unsubscribeUrl') return match;
-    const value = values[token];
-    return value === undefined || value === null ? '' : String(value);
-  });
+/** Hidden inbox preview line — the first text clients show next to the subject. */
+function preheaderBlock(text: string): string {
+  return `<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;color:#0c1310;">${escapeHtml(
+    text
+  )}</div>`;
 }
 
 class TriggerEmailService {
@@ -149,8 +146,14 @@ class TriggerEmailService {
         email: escapeHtml(user.email),
       };
 
-      let htmlContent = renderTokens(input.htmlContent, htmlValues);
-      let subject = renderTokens(input.subject, values);
+      let htmlContent = renderEmailTemplate(input.htmlContent, htmlValues, {
+        // Resolved below against the campaign container id — see step 3.
+        preserve: ['unsubscribeUrl'],
+      });
+      const subject = renderEmailTemplate(input.subject, values);
+      const previewText = input.previewText
+        ? renderEmailTemplate(input.previewText, values)
+        : '';
 
       // 2. Find or create the monthly stats container
       const today = new Date();
@@ -193,12 +196,20 @@ class TriggerEmailService {
           : htmlContent + footer;
       }
 
+      // 3b. Hidden preview text (inbox snippet)
+      if (previewText) {
+        const block = preheaderBlock(previewText);
+        htmlContent = /<body[^>]*>/i.test(htmlContent)
+          ? htmlContent.replace(/<body([^>]*)>/i, `<body$1>${block}`)
+          : block + htmlContent;
+      }
+
       // 4. Send
       const sent = await sendEmail({
         to: user.email,
         subject,
         html: htmlContent,
-        text: input.previewText || subject,
+        text: previewText || subject,
       });
 
       if (!sent.success) {

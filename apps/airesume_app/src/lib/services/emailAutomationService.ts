@@ -106,6 +106,18 @@ export function normalizePlanId(planId?: string | null): string {
   return planId === 'starter_monthly' ? 'free' : planId;
 }
 
+/** Human-readable plan name used inside email copy. */
+export function planDisplayName(planId?: string | null): string {
+  const id = normalizePlanId(planId);
+  if (id === 'free') return 'Free';
+  if (id.startsWith('starter')) return 'Starter';
+  if (id.startsWith('focused')) return 'Pro';
+  return id
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
 export function meetsAudience(
   config: ResolvedAutomation,
   state: AutomationAudienceState

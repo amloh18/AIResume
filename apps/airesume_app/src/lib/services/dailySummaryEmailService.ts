@@ -311,6 +311,15 @@ class DailySummaryEmailService {
         },
         {
           appUrl,
+          date: new Intl.DateTimeFormat('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+            timeZone: 'UTC',
+          }).format(new Date()),
+          itemCount: result.actionItems.length
+            ? `${result.actionItems.length} item${result.actionItems.length === 1 ? '' : 's'}`
+            : '',
           digestSummary: this.digestSummaryHtml(userSummary.summary),
           digestItems: renderDigestItems(userSummary.actionItems, appUrl),
         },

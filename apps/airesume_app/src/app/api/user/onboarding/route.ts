@@ -194,7 +194,7 @@ export async function PATCH(request: NextRequest) {
         updatedUser.onboarding?.confidence_score;
 
       import('@/lib/services/emailAutomationService')
-        .then(({ sendAutomationEmail }) =>
+        .then(({ sendAutomationEmail, planDisplayName }) =>
           sendAutomationEmail(
             'onboarding_complete',
             {
@@ -203,7 +203,13 @@ export async function PATCH(request: NextRequest) {
               firstName: updatedUser.firstName,
               lastName: updatedUser.lastName,
             },
-            { score: score ?? '—' },
+            {
+              score: score ?? '—',
+              planName: planDisplayName(
+                (updatedUser as any).subscription?.planKey ||
+                  (updatedUser as any).currentPlanKey
+              ),
+            },
             { checkDuplicate: true }
           )
         )

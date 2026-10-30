@@ -15,23 +15,27 @@ export interface CampaignTemplate {
 
 // THEME CONSTANTS - Matching the User Dashboard
 const THEME = {
-  bg: '#141810', // Deep Dark Green
-  surface: '#1a2015', // Slightly Lighter Green-Black
-  card: '#20291d', // Card background
+  bg: '#0c1310', // Deep green-black
+  surface: '#141c17', // Slightly lighter surface
+  card: '#1c2620', // Card background
   text: '#ffffff',
-  textMuted: 'rgba(255, 255, 255, 0.6)',
-  accent: '#013f2e', // Neon Lime (from landing page)
-  accentSoft: 'rgba(1, 63, 46, 0.1)',
-  border: 'rgba(1, 63, 46, 0.1)',
+  textMuted: 'rgba(255, 255, 255, 0.66)',
+  textFaint: 'rgba(255, 255, 255, 0.38)',
+  accent: '#34d399', // Emerald (dashboard accent)
+  accentText: '#04120c', // Near-black text for contrast on emerald
+  accentSoft: 'rgba(52, 211, 153, 0.12)',
+  border: 'rgba(255, 255, 255, 0.08)',
   fontPrimary: "'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 };
 
 export const BASE_TEMPLATE = (content: string, title: string) => `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
   <title>${title}</title>
   <style>
     body { margin: 0; padding: 0; background-color: ${THEME.bg}; font-family: ${THEME.fontPrimary}; color: ${THEME.text}; -webkit-font-smoothing: antialiased; }
@@ -43,18 +47,20 @@ export const BASE_TEMPLATE = (content: string, title: string) => `
     .logo { width: 160px; height: auto; display: inline-block; }
     
     /* Content Blocks */
-    .content-block { padding: 50px 40px; border-top: 1px solid ${THEME.border}; }
-    .section-title { font-size: 22px; font-weight: 800; margin-bottom: 20px; color: ${THEME.text}; }
-    .body-text { color: ${THEME.textMuted}; font-size: 16px; line-height: 1.7; margin-bottom: 24px; font-weight: 400; }
+    .content-block { padding: 40px; border-top: 1px solid ${THEME.border}; }
+    .section-title { font-size: 20px; font-weight: 800; margin: 0 0 16px; color: ${THEME.text}; }
+    .body-text { color: ${THEME.textMuted}; font-size: 16px; line-height: 1.7; margin: 0 0 20px; font-weight: 400; }
+    .body-text:last-child { margin-bottom: 0; }
+    .body-text strong { color: ${THEME.text}; font-weight: 700; }
     
     /* Image Container */
     .img-container { margin: 30px 0; border-radius: 24px; overflow: hidden; border: 1px solid ${THEME.border}; background-color: ${THEME.card}; }
     .content-img { width: 100%; height: auto; display: block; }
 
     /* Hero Section */
-    .hero-content { padding: 50px 40px; }
-    .hero-tag { display: inline-block; padding: 6px 16px; background: ${THEME.accentSoft}; color: ${THEME.accent}; border: 1px solid ${THEME.accent}; border-radius: 100px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; }
-    .hero-title { font-size: 38px; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; margin: 0; margin-bottom: 20px; color: ${THEME.text}; }
+    .hero-content { padding: 50px 40px 40px; }
+    .hero-tag { display: inline-block; padding: 6px 16px; background: ${THEME.accentSoft}; color: #6ee7b7; border: 1px solid rgba(52, 211, 153, 0.45); border-radius: 100px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; }
+    .hero-title { font-size: 38px; font-weight: 900; line-height: 1.12; letter-spacing: -0.02em; margin: 0 0 20px; color: ${THEME.text}; }
     .hero-desc { color: ${THEME.textMuted}; font-size: 17px; line-height: 1.6; margin: 0; font-weight: 400; }
     
     /* Founder Letter */
@@ -64,27 +70,30 @@ export const BASE_TEMPLATE = (content: string, title: string) => `
     .founder-title { font-size: 12px; color: ${THEME.textMuted}; text-transform: uppercase; letter-spacing: 0.05em; }
 
     /* Button */
-    .btn-container { text-align: center; margin-top: 30px; }
-    .btn { display: inline-block; background-color: ${THEME.accent}; color: #000; padding: 18px 40px; border-radius: 100px; font-weight: 800; text-decoration: none; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; transition: opacity 0.2s; }
+    .btn-container { text-align: center; margin-top: 28px; }
+    .btn { display: inline-block; background-color: ${THEME.accent}; color: ${THEME.accentText}; padding: 17px 38px; border-radius: 100px; font-weight: 800; text-decoration: none; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; mso-padding-alt: 0; }
+    .btn:hover { background-color: #6ee7b7; }
     
     /* Footer */
-    .footer { padding: 50px 40px; text-align: center; border-top: 1px solid ${THEME.border}; }
-    .footer-text { color: rgba(255, 255, 255, 0.3); font-size: 11px; line-height: 1.8; }
-    .footer-links { margin-bottom: 25px; }
+    .footer { padding: 44px 40px 50px; text-align: center; border-top: 1px solid ${THEME.border}; }
+    .footer-text { color: ${THEME.textFaint}; font-size: 11px; line-height: 1.8; margin: 0; }
+    .footer-links { margin-bottom: 22px; }
     .footer-links a { color: ${THEME.textMuted}; text-decoration: none; margin: 0 10px; font-size: 11px; font-weight: 600; }
     .footer-links a:hover { color: ${THEME.accent}; }
     
     @media only screen and (max-width: 600px) {
-      .main { margin-top: 0; border-radius: 0; border: none; }
-      .hero-title { font-size: 30px; }
-      .hero-content, .content-block { padding: 40px 20px; }
+      .wrapper { padding-bottom: 0; }
+      .main { margin-top: 0; border-radius: 0; border-left: none; border-right: none; }
+      .hero-title { font-size: 29px; }
+      .hero-content, .content-block { padding: 36px 22px; }
+      .footer { padding: 36px 22px 44px; }
     }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="header">
-      <img src="{{appUrl}}/images/logo.png" alt="AIResume" class="logo" />
+      <img src="{{appUrl}}/images/logo.png" alt="AIResume" class="logo" width="160" />
     </div>
     <div class="main">
       <div class="content">
