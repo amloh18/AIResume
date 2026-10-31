@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Fingerprint } from 'lucide-react';
 
 interface SocialAuthButtonsProps {
   onGoogleAuth: () => void;
   onAppleAuth?: () => void;
   onMagicLinkAuth?: () => void;
   onLinkedInAuth?: () => void;
+  onPasskeyAuth?: () => void;
   isLoading: boolean;
   mode: 'signin' | 'signup';
 }
@@ -17,6 +19,7 @@ export default function SocialAuthButtons({
   onAppleAuth,
   onMagicLinkAuth,
   onLinkedInAuth,
+  onPasskeyAuth,
   isLoading,
   mode
 }: SocialAuthButtonsProps) {
@@ -82,6 +85,21 @@ export default function SocialAuthButtons({
           </motion.button>
         )}
       </div>
+
+      {/* Passkey / Biometrics Button for 1-click login */}
+      {onPasskeyAuth && mode === 'signin' && (
+        <motion.button
+          type="button"
+          onClick={onPasskeyAuth}
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-white/5 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white py-2.5 px-4 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-small font-medium shadow-xs group"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <Fingerprint className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform" />
+          <span>Sign in with Passkey</span>
+        </motion.button>
+      )}
 
       {/* Code-based Passwordless Button - Only for signup mode */}
       {onMagicLinkAuth && mode === 'signup' && (

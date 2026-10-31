@@ -34,6 +34,18 @@ const USER_PLAN_KEYS: UserPlanKey[] = [
   'focused_yearly'
 ];
 
+export interface IUserPasskey {
+  credentialID: string;
+  credentialPublicKey: string; // Base64 encoded
+  counter: number;
+  transports?: string[];
+  deviceType?: string;
+  backedUp?: boolean;
+  name: string;
+  createdAt: Date;
+  lastUsedAt?: Date;
+}
+
 export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
   authProviderId: string; // The unique string ID from NextAuth
@@ -50,6 +62,7 @@ export interface IUser extends Document {
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
   stalwartEmail?: string;
+  passkeys?: IUserPasskey[];
 
   // Guest support
   isAnonymous: boolean;
@@ -969,7 +982,18 @@ const userSchema = new Schema<IUser>({
         totalApplied: 0,
       })
     }
-  }
+  },
+  passkeys: [{
+    credentialID: { type: String, required: true },
+    credentialPublicKey: { type: String, required: true },
+    counter: { type: Number, required: true, default: 0 },
+    transports: [String],
+    deviceType: { type: String, default: 'singleDevice' },
+    backedUp: { type: Boolean, default: false },
+    name: { type: String, default: 'Passkey' },
+    createdAt: { type: Date, default: Date.now },
+    lastUsedAt: { type: Date }
+  }]
 }, {
   timestamps: true,
   toJSON: {
@@ -1056,5 +1080,6 @@ userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
 userSchema.index({ email: 1, authProvider: 1 }); // For NextAuth lookups
 userSchema.index({ 'credits.lastResetDate': 1 }); // For credit reset cron job
+userSchema.index({ 'passkeys.credentialID': 1 }); // For fast WebAuthn passkey lookups
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema);

@@ -917,6 +917,52 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
+  const handlePasskeyAuth = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // 1. Fetch challenge and authentication options from server
+      const optRes = await fetch('/api/auth/passkey/login-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email ? email.trim().toLowerCase() : undefined }),
+      });
+      const optData = await optRes.json();
+
+      if (!optData.success || !optData.options) {
+        throw new Error(optData.message || 'Could not initiate passkey sign-in.');
+      }
+
+      // 2. Prompt native browser biometric authentication (TouchID, FaceID, Windows Hello)
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+      const authResponse = await startAuthentication(optData.options);
+
+      // 3. Complete authentication through NextAuth
+      const result = await signIn('passkey', {
+        response: JSON.stringify(authResponse),
+        redirect: false,
+        callbackUrl,
+      });
+
+      if (result?.error) {
+        setError('Passkey verification failed. Please try again or use another sign-in method.');
+        setIsLoading(false);
+      } else if (result?.ok) {
+        window.location.href = callbackUrl;
+      }
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        // User cancelled the prompt
+        console.log('User cancelled passkey sign-in.');
+      } else {
+        console.error('Passkey auth error:', err);
+        setError(err?.message || 'Failed to sign in with passkey.');
+      }
+      setIsLoading(false);
+    }
+  };
+
   const handleDevBypass = async (role: 'user' | 'admin') => {
     setIsLoading(true);
     setError('');
@@ -1239,6 +1285,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       onGoogleAuth={handleGoogleAuth}
       onAppleAuth={handleAppleAuth}
       onLinkedInAuth={handleLinkedInAuth}
+      onPasskeyAuth={mode === 'signin' ? handlePasskeyAuth : undefined}
       onMagicLinkAuth={mode === 'signin' ? () => switchMode('magic-link') : undefined}
       isLoading={isLoading}
       mode={mode === 'signup' ? 'signup' : 'signin'}

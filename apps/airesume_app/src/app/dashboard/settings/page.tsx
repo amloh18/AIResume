@@ -54,6 +54,7 @@ import { getPlanLabel } from '@/lib/entitlements/catalog';
 import toast from '@/lib/hot-toast';
 import EmailConnectModal from '@/components/dashboard/jobs/EmailConnectModal';
 import LoginSessions from '@/components/settings/LoginSessions';
+import PasskeySettings from '@/components/settings/PasskeySettings';
 
 const fetchSettingsUserData = async (): Promise<User> => {
   const response = await fetch('/api/user');
@@ -1735,6 +1736,9 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 </form>
               )}
             </div>
+
+            {/* Passkeys & Biometrics Section */}
+            <PasskeySettings />
           </div>
         </div>
 

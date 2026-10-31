@@ -16,6 +16,8 @@ import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { encryptToken, decryptToken } from './token-encryption';
 import { getAppleClientSecret } from './apple-provider-secret';
 import { SessionService } from '@/lib/services/session-service';
+import { verifyAuthenticationResponse } from '@simplewebauthn/server';
+import { verifyChallengeToken } from './passkey-helper';
 // Explicit import: this file is `@ts-nocheck`, so the previous reliance on a global
 // `crypto` was never checked. It happens to exist in Node 20+, but a missing global
 // here throws *before* the surrounding try/catch and would break every sign-in flow.
@@ -502,6 +504,120 @@ export class UnifiedAuthService {
                 stack: error.stack,
                 name: error.name
               });
+              return null;
+            }
+          },
+        }),
+
+        // WebAuthn Passkey Provider
+        CredentialsProvider({
+          id: 'passkey',
+          name: 'Passkey',
+          credentials: {
+            response: { type: 'text' },
+            challengeToken: { type: 'text' },
+          },
+          async authorize(credentials, req) {
+            try {
+              if (!credentials?.response) {
+                console.error('❌ Passkey provider: Missing response payload');
+                return null;
+              }
+
+              const authResponse = JSON.parse(credentials.response);
+              const credentialID = authResponse?.id;
+              if (!credentialID) {
+                console.error('❌ Passkey provider: Missing credential ID in response');
+                return null;
+              }
+
+              await getConnection();
+              const userDoc = await User.findOne({
+                'passkeys.credentialID': credentialID,
+              });
+
+              if (!userDoc) {
+                console.error('❌ Passkey provider: No user found with passkey credential', credentialID);
+                return null;
+              }
+
+              const passkey = (userDoc.passkeys || []).find((p: any) => p.credentialID === credentialID);
+              if (!passkey) {
+                console.error('❌ Passkey provider: Passkey missing on user record');
+                return null;
+              }
+
+              // Verify challenge from explicit token or cookies
+              let verifiedChallengeData = null;
+              if (credentials.challengeToken) {
+                verifiedChallengeData = verifyChallengeToken(credentials.challengeToken);
+              }
+              if (!verifiedChallengeData && req?.headers?.cookie) {
+                const match = req.headers.cookie.match(/buildairesume_passkey_challenge=([^;]+)/);
+                if (match && match[1]) {
+                  verifiedChallengeData = verifyChallengeToken(decodeURIComponent(match[1]));
+                }
+              }
+
+              if (!verifiedChallengeData?.challenge) {
+                console.error('❌ Passkey provider: Missing or expired challenge token');
+                return null;
+              }
+
+              // Determine WebAuthn RP ID and expected origin
+              let origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+              const reqHeaders = req?.headers as any;
+              if (reqHeaders) {
+                const host = reqHeaders['x-forwarded-host'] || reqHeaders.host;
+                const proto = reqHeaders['x-forwarded-proto'] || (host?.includes('localhost') ? 'http' : 'https');
+                if (host) origin = `${proto}://${host}`;
+              }
+              const rpID = new URL(origin).hostname;
+
+              const verification = await verifyAuthenticationResponse({
+                response: authResponse,
+                expectedChallenge: verifiedChallengeData.challenge,
+                expectedOrigin: origin,
+                expectedRPID: rpID,
+                credential: {
+                  id: passkey.credentialID,
+                  publicKey: Buffer.from(passkey.credentialPublicKey, 'base64'),
+                  counter: passkey.counter,
+                  transports: passkey.transports as any,
+                },
+                requireUserVerification: false,
+              });
+
+              if (!verification.verified) {
+                console.error('❌ Passkey provider: Cryptographic verification failed');
+                return null;
+              }
+
+              // Update counter and last used
+              await User.updateOne(
+                { _id: userDoc._id, 'passkeys.credentialID': credentialID },
+                {
+                  $set: {
+                    'passkeys.$.counter': verification.authenticationInfo.newCounter,
+                    'passkeys.$.lastUsedAt': new Date(),
+                    lastLogin: new Date(),
+                  },
+                }
+              );
+
+              console.log('✅ Passkey provider: Authorization successful for user', userDoc._id.toString());
+
+              return {
+                id: String(userDoc._id.toString()).substring(0, 100),
+                email: String(userDoc.email).substring(0, 255),
+                name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
+                role: userDoc.role,
+                image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
+                  ? userDoc.avatar.substring(0, 500)
+                  : undefined,
+              };
+            } catch (error: any) {
+              console.error('❌ Passkey provider authorize error:', error);
               return null;
             }
           },
