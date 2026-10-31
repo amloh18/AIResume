@@ -17,7 +17,7 @@ import { encryptToken, decryptToken } from './token-encryption';
 import { getAppleClientSecret } from './apple-provider-secret';
 import { SessionService } from '@/lib/services/session-service';
 import { verifyAuthenticationResponse } from '@simplewebauthn/server';
-import { verifyChallengeToken } from './passkey-helper';
+import { verifyChallengeToken, getWebAuthnConfig } from './passkey-helper';
 // Explicit import: this file is `@ts-nocheck`, so the previous reliance on a global
 // `crypto` was never checked. It happens to exist in Node 20+, but a missing global
 // here throws *before* the surrounding try/catch and would break every sign-in flow.
@@ -564,15 +564,8 @@ export class UnifiedAuthService {
                 return null;
               }
 
-              // Determine WebAuthn RP ID and expected origin
-              let origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-              const reqHeaders = req?.headers as any;
-              if (reqHeaders) {
-                const host = reqHeaders['x-forwarded-host'] || reqHeaders.host;
-                const proto = reqHeaders['x-forwarded-proto'] || (host?.includes('localhost') ? 'http' : 'https');
-                if (host) origin = `${proto}://${host}`;
-              }
-              const rpID = new URL(origin).hostname;
+              // Determine WebAuthn RP ID and expected origin safely
+              const { origin, rpID } = getWebAuthnConfig(req);
 
               const verification = await verifyAuthenticationResponse({
                 response: authResponse,
