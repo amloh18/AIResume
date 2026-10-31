@@ -18,6 +18,7 @@ export interface RepositoryOptions {
   populate?: string | string[] | any;
   select?: string;
   session?: ClientSession;
+  sort?: Record<string, 1 | -1> | any;
 }
 
 // Type helper for lean queries
@@ -79,6 +80,7 @@ export abstract class BaseRepository<T extends Document> {
     if (options.lean) query = query.lean();
     if (options.populate) query = query.populate(options.populate);
     if (options.select) query = query.select(options.select);
+    if (options.sort) query = query.sort(options.sort);
     if (options.session) query = query.session(options.session);
 
     return query.exec();

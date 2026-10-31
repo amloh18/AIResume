@@ -314,8 +314,8 @@ export class UnifiedAuthService {
                 // User was already verified by atomic-signup
                 // Just find them and return user data
                 const user = await User.findOne({
-                  email: credentials.email.toLowerCase(),
-                }).lean().exec();
+                  email: credentials.email.toLowerCase().trim(),
+                }).sort({ lastLogin: -1, updatedAt: -1, createdAt: 1 }).lean().exec();
 
                 const userDoc = Array.isArray(user) ? user[0] : user;
 
@@ -392,8 +392,8 @@ export class UnifiedAuthService {
 
               // Find or create user
               const user = await User.findOne({
-                email: credentials.email.toLowerCase(),
-              }).lean().exec();
+                email: credentials.email.toLowerCase().trim(),
+              }).sort({ lastLogin: -1, updatedAt: -1, createdAt: 1 }).lean().exec();
 
               let userDoc = Array.isArray(user) ? user[0] : user;
 

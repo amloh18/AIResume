@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
+import mongoose from 'mongoose';
 import { authConfig } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
@@ -34,10 +35,22 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       
       // Get full user data from database if needed
       await getConnection();
-      const email = String(session.user.email).toLowerCase();
+      const email = String(session.user.email).toLowerCase().trim();
       
-      // Check User collection first
-      let dbUser = await User.findOne({ email });
+      // Check User collection: prioritize lookup by session.user.id for exact match
+      let dbUser: any = null;
+      const sessionUserId = (session.user as any)?.id;
+      if (sessionUserId && mongoose.Types.ObjectId.isValid(sessionUserId)) {
+        dbUser = await User.findById(sessionUserId);
+        if (dbUser && dbUser.email?.toLowerCase().trim() !== email) {
+          dbUser = null;
+        }
+      }
+
+      // Fallback: deterministic lookup by email sorted by most recently active
+      if (!dbUser) {
+        dbUser = await User.findOne({ email }).sort({ lastLogin: -1, updatedAt: -1, createdAt: 1 });
+      }
       
       // If not found in User collection, check AdminAuth collection
       if (!dbUser) {

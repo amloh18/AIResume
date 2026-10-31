@@ -19,8 +19,8 @@ export class UserRepository extends BaseRepository<IUser> {
    */
   async findByEmail(email: string): Promise<IUser | null> {
     return this.findOne(
-      { email: email.toLowerCase() } as FilterQuery<IUser>,
-      { lean: true }
+      { email: email.toLowerCase().trim() } as FilterQuery<IUser>,
+      { lean: true, sort: { lastLogin: -1, updatedAt: -1, createdAt: 1 } }
     );
   }
 
@@ -29,8 +29,8 @@ export class UserRepository extends BaseRepository<IUser> {
    */
   async findByEmailWithPassword(email: string): Promise<IUser | null> {
     return this.findOne(
-      { email: email.toLowerCase() } as FilterQuery<IUser>,
-      { select: '+password', lean: true }
+      { email: email.toLowerCase().trim() } as FilterQuery<IUser>,
+      { select: '+password', lean: true, sort: { lastLogin: -1, updatedAt: -1, createdAt: 1 } }
     );
   }
 
