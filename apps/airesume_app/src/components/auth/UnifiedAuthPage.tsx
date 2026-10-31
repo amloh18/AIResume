@@ -219,11 +219,17 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         return;
       }
 
+      // Ensure callbackUrl is a valid absolute URL for NextAuth client
+      const safeCallbackUrl = typeof window !== 'undefined'
+        ? new URL(callbackUrl, window.location.origin).toString()
+        : callbackUrl;
+
       // No 2FA required - proceed with normal NextAuth sign-in
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         portal: layoutVariant,
+        callbackUrl: safeCallbackUrl,
         redirect: false,
       });
 
@@ -939,17 +945,22 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       const authResponse = await startAuthentication(optData.options);
 
       // 3. Complete authentication through NextAuth
+      const safeCallbackUrl = typeof window !== 'undefined'
+        ? new URL(callbackUrl, window.location.origin).toString()
+        : callbackUrl;
+
       const result = await signIn('passkey', {
         response: JSON.stringify(authResponse),
         redirect: false,
-        callbackUrl,
+        callbackUrl: safeCallbackUrl,
       });
 
       if (result?.error) {
         setError('Passkey verification failed. Please try again or use another sign-in method.');
         setIsLoading(false);
       } else if (result?.ok) {
-        window.location.href = callbackUrl;
+        const dest = result.url || callbackUrl || '/dashboard/jobs';
+        window.location.href = dest;
       }
     } catch (err: any) {
       if (err?.name === 'NotAllowedError') {

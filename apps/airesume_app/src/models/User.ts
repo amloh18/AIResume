@@ -1075,7 +1075,6 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 };
 
 // Critical indexes for performance
-userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
 userSchema.index({ email: 1, authProvider: 1 }); // For NextAuth lookups

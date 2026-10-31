@@ -989,7 +989,7 @@ export class UnifiedAuthService {
 
         async redirect({ url, baseUrl }) {
           const envUrl = process.env.NEXTAUTH_URL;
-          let canonicalOrigin = baseUrl;
+          let canonicalOrigin = baseUrl || 'https://buildairesume.com';
           if (envUrl) {
             try {
               const parsedEnv = envUrl.startsWith('http://') || envUrl.startsWith('https://')
@@ -1002,19 +1002,23 @@ export class UnifiedAuthService {
           }
 
           if (url) {
-            // NextAuth accepts relative values — prefer relative when possible.
+            // NextAuth's client signIn(..., { redirect: false }) parses `data.url` with `new URL(data.url)`.
+            // Calling `new URL()` on a relative path without a base causes a browser TypeError:
+            // "Failed to construct 'URL': Invalid URL".
+            // Therefore, always return a fully qualified absolute URL with `canonicalOrigin`.
             if (url.startsWith('/') && !url.startsWith('//')) {
-              return url;
+              return `${canonicalOrigin}${url}`;
             }
 
             // Return an absolute URL only when one is supplied and matches trusted origins
             try {
-              const parsed = new URL(url);
+              const parsed = new URL(url, canonicalOrigin);
               if (
                 parsed.origin === canonicalOrigin ||
                 parsed.origin === baseUrl ||
                 parsed.hostname === 'localhost' ||
-                parsed.hostname === '127.0.0.1'
+                parsed.hostname === '127.0.0.1' ||
+                parsed.hostname.endsWith('buildairesume.com')
               ) {
                 return new URL(parsed.pathname + parsed.search + parsed.hash, canonicalOrigin).toString();
               }
@@ -1023,7 +1027,7 @@ export class UnifiedAuthService {
             }
           }
 
-          return '/';
+          return canonicalOrigin;
         },
       },
 
